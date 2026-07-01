@@ -1,0 +1,53 @@
+name: "🔨 Build task"
+description: Implement a chosen solution — a tool, guide, dataset, or prototype.
+title: "[Build] <what you'll build>"
+labels: ["stage: build", "status: available"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Time to make something real. Keep the first version small and working. Output goes in `projects/<slug>/`.
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - child-welfare
+        - grant-access
+        - civic-transparency
+        - ai-policy
+        - biosecurity
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: What to build
+      description: The thing, and the smallest useful first version of it.
+    validations:
+      required: true
+  - type: input
+    id: solution
+    attributes:
+      label: Solution it implements
+      description: Link the solutions/ file or Ideate issue.
+      placeholder: "solutions/grant-matcher-for-small-charities.md"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & done criteria
+      description: What's in the first version, what's explicitly out, and how we'll know it's done.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: This implements a solution that came from research (link above).
+          required: true
+        - label: The first version is small enough for one contributor to ship.
+          required: true

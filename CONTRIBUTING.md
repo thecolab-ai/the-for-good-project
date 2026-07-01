@@ -1,0 +1,76 @@
+# Contributing
+
+Welcome. This is the method that keeps The For Good Project useful. It's short on purpose — read it once and you're ready.
+
+The work here informs real decisions about real people. That's why the bar is "cited and honest," not "fast and confident."
+
+## The pipeline
+
+Every piece of work is a GitHub Issue moving through four stages:
+
+| Stage | Label | You're doing this |
+|---|---|---|
+| 🔍 Discover | `stage: discover` | Framing a real NZ problem into researchable questions |
+| 📚 Research | `stage: research` | Investigating one question, with citations |
+| 💡 Ideate | `stage: ideate` | Turning findings into feasible solutions |
+| 🔨 Build | `stage: build` | Implementing a solution |
+
+Issues link forward: a Discover issue spawns Research issues; a Research finding feeds an Ideate issue; a chosen idea becomes a Build issue. Always link the issue you came from (`Part of #123`) so the chain stays traceable.
+
+## The workflow
+
+1. **Find work.** Browse [`status: available`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+available%22) issues. New? Filter for [`good first issue`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+2. **Claim it.** Assign yourself and swap the label `status: available` → `status: claimed`. This is how we avoid two people doing the same work. If an issue is claimed but stale (no update in ~5 days), comment and take it over.
+3. **Do the work** following the method below for your stage.
+4. **Open a pull request.** Use the PR template. Link the issue (`Closes #123`). Put your output in the right place (see [Where things go](#where-things-go)).
+5. **Review.** A maintainer or the project's review agent checks your PR against the method — adversarially (the job is to *refute* your claims, not rubber-stamp them). Address the feedback. On approval it merges, and the issue closes.
+
+Don't have write access to labels? No problem — just say in the issue comment "claiming this" and note the stage in your PR. Maintainers keep labels tidy.
+
+## The research method
+
+This applies most strictly to Research, but the spirit holds everywhere.
+
+1. **Clarify the question.** State exactly what you're answering in one sentence. If the issue is vague, narrow it and say how.
+2. **Cite every claim.** Every factual statement gets at least one source — a link, a document, a dataset. No citation, no claim. Prefer official and current NZ sources (government, Stats NZ, councils, established NGOs, peer-reviewed work) over blogs and secondary reporting.
+3. **Verify the surprising ones.** Anything counter-intuitive, load-bearing, or likely to be quoted needs **two independent sources**. If you can only find one, say so and flag it.
+4. **Mark your confidence.** Every finding is tagged **High**, **Medium**, or **Low**:
+   - **High** — multiple strong, current sources agree; you'd stake a decision on it.
+   - **Medium** — reasonable support, some gaps or dated sources.
+   - **Low** — thin evidence, worth stating but treat as a lead, not a fact.
+5. **Say what would change your mind.** End with what evidence would overturn the conclusion, and what you couldn't verify. This is the most valuable part — it's where the next person starts.
+6. **Stay in your lane on ethics.** These are sensitive domains. Don't publish personal data. Don't overstate. Don't claim you contacted an organisation or ran a programme you didn't. Flag anything that needs a human with lived experience or domain authority to weigh in.
+
+A finding that honestly reads _"Low confidence, one dated source, needs a Stats NZ pull to confirm"_ is a real contribution. A confident paragraph with no links is not.
+
+## Where things go
+
+| Your output | Put it in | Follow |
+|---|---|---|
+| A cited research finding | `research/findings/<domain>/<slug>.md` | [`research/TEMPLATE.md`](research/TEMPLATE.md) |
+| A proposed solution | `solutions/<slug>.md` | [`solutions/TEMPLATE.md`](solutions/TEMPLATE.md) |
+| An implementation | `projects/<slug>/` | [`projects/README.md`](projects/README.md) |
+
+`<domain>` is one of the folders in `research/findings/` (child-welfare, grant-access, civic-transparency, ai-policy, biosecurity, …). `<slug>` is short-kebab-case, e.g. `grant-discovery-for-small-charities.md`.
+
+## Pull request checklist
+
+- [ ] Linked the issue (`Closes #123`) and any parent (`Part of #120`)
+- [ ] Used the right template and put files in the right place
+- [ ] Every claim has a source; surprising claims have two
+- [ ] Confidence marked (High/Med/Low) on findings
+- [ ] Stated what would change the conclusion / what's unverified
+- [ ] No personal data, no overstated claims
+
+## Good conduct
+
+Be kind, be rigorous, assume good faith. Full text in [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). This is a community effort under [thecolab.ai](https://thecolab.ai) — treat it like the commons it is.
+
+## Licence
+
+By contributing you agree your contribution is licensed to the project and the public:
+
+- **Research, findings, docs, and other content:** [CC BY 4.0](LICENSE) — anyone can use and remix it with attribution.
+- **Code under `projects/`:** [MIT](projects/LICENSE).
+
+Cite your sources; expect to be cited.

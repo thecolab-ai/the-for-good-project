@@ -1,0 +1,53 @@
+name: "💡 Solution idea"
+description: Propose a feasible solution built on research findings.
+title: "[Ideate] <the solution>"
+labels: ["stage: ideate", "status: available"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Turn findings into something a small volunteer team could actually ship. The output will be a solution write-up in `solutions/` using the template.
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - child-welfare
+        - grant-access
+        - civic-transparency
+        - ai-policy
+        - biosecurity
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would we build or do? Be concrete.
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings it builds on
+      description: Link the research this stands on (files in research/findings/ or Research issues). Ideas should come from evidence.
+      placeholder: "research/findings/grant-access/grant-discovery-for-small-charities.md"
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      placeholder: "Part of #12"
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: This builds on at least one research finding (not just a hunch).
+          required: true
+        - label: A small volunteer team with AI tooling could plausibly ship a first version.
+          required: true

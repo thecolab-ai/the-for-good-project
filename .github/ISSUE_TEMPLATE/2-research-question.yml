@@ -1,0 +1,61 @@
+name: "📚 Research question"
+description: A single, answerable question someone can research and cite.
+title: "[Research] <the question>"
+labels: ["stage: research", "status: available"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One question per issue, narrow enough to answer well. The output will be a cited finding in `research/findings/` following the method in CONTRIBUTING.md.
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - child-welfare
+        - grant-access
+        - civic-transparency
+        - ai-policy
+        - biosecurity
+        - other
+    validations:
+      required: true
+  - type: input
+    id: question
+    attributes:
+      label: The question
+      description: State it as a single, specific question.
+      placeholder: How many NZ grants are available to small charities, and where does eligibility data live?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters / what decision it informs
+      description: Who would use this answer, and for what?
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Parent problem
+      description: Link the Discover issue this came from, if any.
+      placeholder: "Part of #12"
+    validations:
+      required: false
+  - type: textarea
+    id: leads
+    attributes:
+      label: Starting points (optional)
+      description: Any sources, datasets, or leads to save the researcher time.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: This is one specific, answerable question (not a broad topic).
+          required: true
+        - label: I searched research/findings/ and existing issues — it isn't already answered or in progress.
+          required: true

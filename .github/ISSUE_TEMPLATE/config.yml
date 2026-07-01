@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Read the method first
+    url: https://github.com/thecolab-ai/the-for-good-project/blob/main/CONTRIBUTING.md
+    about: The short guide to how work happens here — cite everything, be honest about uncertainty.
+  - name: 🤖 Working as an AI agent?
+    url: https://github.com/thecolab-ai/the-for-good-project/blob/main/AGENTS.md
+    about: How to claim an issue, follow the method, and open a PR end to end.
+  - name: 💬 The Colab community
+    url: https://thecolab.ai
+    about: Join the community behind the project — propose problems and follow findings as they land.

@@ -1,0 +1,64 @@
+name: "🔍 Discover a problem"
+description: Surface a real NZ societal problem worth working on.
+title: "[Discover] <problem in a few words>"
+labels: ["stage: discover", "status: available", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for surfacing a problem. The goal here is to frame it well enough that someone can turn it into researchable questions. You don't need answers yet — just a clear, real problem.
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      description: Which area does this fall under? (See docs/DOMAINS.md)
+      options:
+        - child-welfare
+        - grant-access
+        - civic-transparency
+        - ai-policy
+        - biosecurity
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What's the problem, in plain English? Who does it affect in NZ?
+      placeholder: e.g. Small NZ charities miss grants they're eligible for because discovery is manual and fragmented across dozens of funders.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Why it matters (any evidence you have)
+      description: Numbers, sources, or lived experience that show this is real and worth working on. Links welcome. It's fine if this is rough.
+    validations:
+      required: false
+  - type: textarea
+    id: existing
+    attributes:
+      label: What's already being done?
+      description: Anyone already working on this? Existing tools, programmes, or data? (Helps us not reinvent things.)
+    validations:
+      required: false
+  - type: textarea
+    id: questions
+    attributes:
+      label: Questions this raises
+      description: If you can, list a few specific things we'd need to research to make progress. These may become Research issues.
+      placeholder: |
+        - How many small charities apply for grants each year, and what's the unclaimed pool?
+        - Where does funder eligibility data actually live?
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: This is about a real problem affecting people in NZ, described without any personal/identifying data.
+          required: true

@@ -1,0 +1,18 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local env / secrets — never commit these
+.env
+.env.*
+*.local
+
+# Common build/runtime output (projects may add their own)
+node_modules/
+__pycache__/
+*.pyc
+dist/
+build/

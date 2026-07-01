@@ -1,0 +1,61 @@
+# Adversarial review agent for pull requests.
+#
+# This runs Claude as a fresh-context reviewer whose job is to *refute* the
+# claims in a PR against the project method (see docs/METHOD.md) — checking that
+# every claim is cited, surprising claims have two sources, confidence marks
+# aren't overstated, and cited sources actually say what they're cited for.
+#
+# DORMANT BY DEFAULT. It only runs when a maintainer opts in, so PRs don't get a
+# failing/empty check before it's configured. To turn it on:
+#   1. Add a repo secret ANTHROPIC_API_KEY (or CLAUDE_CODE_OAUTH_TOKEN).
+#   2. Add a repo variable CLAUDE_REVIEW_ENABLED = true.
+#   3. Confirm the action version below against
+#      https://github.com/anthropics/claude-code-action (pin to the current release).
+# It's a helper, never a merge gate — a human maintainer still approves.
+
+name: Adversarial review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    # Runs only when explicitly enabled, and for PRs or an @claude mention.
+    if: >
+      vars.CLAUDE_REVIEW_ENABLED == 'true' &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Adversarial review against the method
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are a fresh-context adversarial reviewer for The For Good Project.
+            Read CONTRIBUTING.md and docs/METHOD.md, then review this pull request's
+            changes with the goal of REFUTING them, not approving them.
+
+            Check specifically:
+            - Every factual claim has an inline citation. Flag any that don't.
+            - Surprising or load-bearing claims have TWO independent sources.
+            - Confidence marks (High/Med/Low) are justified by the evidence, not inflated.
+            - Cited sources actually support the claim (spot-check the important ones).
+            - No personal/identifying data, no overstated or fabricated claims.
+            - Files are in the right place and follow the templates.
+
+            Post a review that lists concrete problems (file + line + why), then a
+            verdict: PASS (method met) or NEEDS_WORK (with the specific fixes needed).
+            Be fair but hard to convince — a person will make real decisions based on
+            this work. Do not merge; a human maintainer decides.
