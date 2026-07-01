@@ -116,13 +116,13 @@ review_one() {  # $1 = PR number
   fi
 
   git_reset_to_main
-  info "Checking out PR #$pr…"
+  info "Checking out PR #$pr..."
   git -C "$REPO_DIR" fetch origin --quiet "pull/$pr/head:pr-$pr" 2>/dev/null || true
   git -C "$REPO_DIR" checkout --quiet "pr-$pr" 2>/dev/null || GH_TOKEN="${GH_TOKEN:-}" gh pr checkout "$pr" --repo "$REPO" --force 2>/dev/null || true
 
   rm -f "$REVIEW_FILE"
   local tmp; tmp="$(mktemp)"
-  info "Handing PR #$pr to $AGENT for adversarial review…"
+  info "Handing PR #$pr to $AGENT for adversarial review..."
   run_agent "$(review_prompt "$pr")" 2>&1 | tee "$tmp" || true
 
   local verdict; verdict="$(grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' "$tmp" | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
@@ -138,7 +138,7 @@ review_one() {  # $1 = PR number
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" success "Adversarial review passed" "$url"
     if [ "$AUTO_MERGE" = 1 ]; then
-      info "AUTO_MERGE=1 — merging #$pr…"
+      info "AUTO_MERGE=1 — merging #$pr..."
       if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
         ok "Merged #$pr"
         local iss; iss="$(issue_for_pr "$pr" || true)"
@@ -158,7 +158,7 @@ review_one() {  # $1 = PR number
 main() {
   preflight
   REVIEW_FILE="$REPO_DIR/.fg-review.md"
-  info "review_work.sh · repo=$REPO · agent=$AGENT · reviewer=@$ME${AUTO_MERGE:+ · AUTO_MERGE}${DRY_RUN:+ · DRY_RUN}"
+  info "review_work.sh · repo=$REPO · agent=$AGENT · reviewer=@$ME$([ "$AUTO_MERGE" = 1 ] && printf " · AUTO_MERGE")$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
     warn "No REVIEW_GITHUB_TOKEN set — reviewing as @$ME. PRs you authored will be skipped (reviewer must differ from author)."
   fi
@@ -168,7 +168,7 @@ main() {
     if [ -n "$ONLY_PR" ]; then prs="$ONLY_PR"; else prs="$(open_prs_needing_review || true)"; fi
     if [ -z "$prs" ]; then
       if [ -z "$ONLY_PR" ] && [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
-        log "No open PRs. Sleeping ${POLL_SECONDS}s…"; sleep "$POLL_SECONDS"; continue
+        log "No open PRs. Sleeping ${POLL_SECONDS}s..."; sleep "$POLL_SECONDS"; continue
       fi
       rule; ok "No open PRs needing review."; break
     fi
