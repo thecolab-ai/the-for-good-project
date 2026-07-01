@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* thecolab.ai warm-enterprise theme, mapped to shadcn tokens */
+    --background: 40 33% 97%;            /* cream #FBF9F6 */
+    --foreground: 24 10% 10%;            /* navy/stone-900 #1C1917 */
+    --card: 0 0% 100%;
+    --card-foreground: 24 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 24 10% 10%;              /* navy — primary buttons */
+    --primary-foreground: 40 33% 97%;
+    --secondary: 30 20% 94%;
+    --secondary-foreground: 24 10% 12%;
+    --muted: 30 14% 92%;
+    --muted-foreground: 25 6% 42%;      /* stone-500 */
+    --accent: 199 89% 94%;
+    --accent-foreground: 202 90% 26%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 12% 88%;
+    --input: 30 12% 86%;
+    --ring: 199 89% 48%;                /* cyan focus ring */
+    --radius: 0.65rem;
+  }
+
+  .dark {
+    --background: 24 10% 8%;            /* deep navy */
+    --foreground: 40 33% 95%;
+    --card: 24 9% 11%;
+    --card-foreground: 40 33% 95%;
+    --popover: 24 9% 11%;
+    --popover-foreground: 40 33% 95%;
+    --primary: 40 33% 95%;
+    --primary-foreground: 24 10% 10%;
+    --secondary: 24 8% 18%;
+    --secondary-foreground: 40 33% 95%;
+    --muted: 24 8% 16%;
+    --muted-foreground: 30 10% 65%;
+    --accent: 202 60% 20%;
+    --accent-foreground: 199 89% 85%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 8% 20%;
+    --input: 24 8% 22%;
+    --ring: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4 { @apply font-serif tracking-tight; }
+}
+
+@layer utilities {
+  .brand-gradient { @apply bg-gradient-to-r from-brand-indigo to-brand-cyan; }
+  .brand-gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-brand-indigo to-brand-cyan;
+  }
+  .glass {
+    @apply bg-card/70 backdrop-blur-md border border-border/60;
+  }
+}

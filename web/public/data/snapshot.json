@@ -1,0 +1,300 @@
+{
+  "generatedAt": "2026-07-01T21:42:06.933Z",
+  "repo": {
+    "owner": "thecolab-ai",
+    "name": "the-for-good-project",
+    "url": "https://github.com/thecolab-ai/the-for-good-project",
+    "description": "An open research commons where people and AI agents work together to solve New Zealand's biggest societal problems. By thecolab.ai.",
+    "homepage": "https://thecolab.ai"
+  },
+  "stats": {
+    "totalIssues": 6,
+    "openIssues": 5,
+    "closedIssues": 1,
+    "totalPRs": 0,
+    "openPRs": 0,
+    "mergedPRs": 0,
+    "findings": 0,
+    "contributors": 1,
+    "sources": 0,
+    "byStage": {
+      "research": 2,
+      "discover": 3
+    },
+    "byStatus": {
+      "available": 5
+    },
+    "byDomain": {
+      "ai-policy": 1,
+      "grant-access": 2,
+      "child-welfare": 1,
+      "civic-transparency": 1
+    }
+  },
+  "pipeline": [
+    {
+      "stage": "discover",
+      "label": "Discover",
+      "open": 3,
+      "done": 0
+    },
+    {
+      "stage": "research",
+      "label": "Research",
+      "open": 2,
+      "done": 0
+    },
+    {
+      "stage": "ideate",
+      "label": "Ideate",
+      "open": 0,
+      "done": 0
+    },
+    {
+      "stage": "build",
+      "label": "Build",
+      "open": 0,
+      "done": 0
+    }
+  ],
+  "issues": [
+    {
+      "number": 6,
+      "title": "[Research] What NZ government AI guidance already exists for the public sector?",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
+      "body": "**The question**\nWhat official AI guidance, frameworks, or policies already exist for the New Zealand public sector (e.g. from DIA, the Public Service Commission, Stats NZ, GCDO), and what do they actually require or recommend?\n\n**Why it matters / what decision it informs**\nGrounds any AI-policy work in what NZ has already published, so we build on it rather than reinventing or contradicting it.\n\n**Output:** a cited finding in `research/findings/ai-policy/` using `research/TEMPLATE.md`. Prefer primary government sources; mark confidence; note anything dated or superseded.\n\n_Good first issue: clear scope, official sources, immediately useful as a reference._",
+      "stage": "research",
+      "status": "available",
+      "domain": "ai-policy",
+      "labels": [
+        "good first issue",
+        "stage: research",
+        "status: available",
+        "domain: ai-policy"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:40Z",
+      "updatedAt": "2026-07-01T21:25:40Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 5,
+      "title": "[Research] How many grant funders operate in NZ, and where does eligibility data live?",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/5",
+      "body": "**The question**\nHow many grant funders operate in New Zealand (philanthropic trusts, gaming/community trusts, councils, government), and in what form is their eligibility/criteria data available — machine-readable, PDF, web pages, or not published at all?\n\n**Why it matters / what decision it informs**\nWhether a grant-matching tool for small charities is feasible depends entirely on whether eligibility data can be assembled. This scopes that.\n\n**Part of** the grant-access Discover issue.\n\n**Output:** a cited finding in `research/findings/grant-access/` using `research/TEMPLATE.md`. Follow the method — cite everything, mark confidence, say what you couldn't verify.\n\n_Good first issue: bounded, mostly desk research, high value._",
+      "stage": "research",
+      "status": "available",
+      "domain": "grant-access",
+      "labels": [
+        "good first issue",
+        "stage: research",
+        "status: available",
+        "domain: grant-access"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:39Z",
+      "updatedAt": "2026-07-01T21:25:39Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 4,
+      "title": "[Discover] Families don't know what child & family support they qualify for",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/4",
+      "body": "**The problem**\nNZ has many child- and family-support entitlements (payments, subsidies, services) across agencies. Eligibility is complex and the information is spread out, so families — especially those under stress — miss support they're entitled to.\n\n**Why it matters**\nUnclaimed support for children is a direct, avoidable harm. Navigation and eligibility are exactly the kind of problem better information tools can help with.\n\n**Ethics note:** this domain touches vulnerable people. Any work here uses public sources only, no personal data, and flags where a human with lived experience or authority is needed.\n\n**Questions this raises** (candidates for Research issues)\n- What child/family entitlements exist, which agencies own them, and how is eligibility defined?\n- Where do families currently go for help, and where does that break down?\n\n**Next step:** open Research issues for the questions above.",
+      "stage": "discover",
+      "status": "available",
+      "domain": "child-welfare",
+      "labels": [
+        "help wanted",
+        "stage: discover",
+        "status: available",
+        "domain: child-welfare"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:37Z",
+      "updatedAt": "2026-07-01T21:25:37Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 3,
+      "title": "[Discover] Council spending is public but not legible to citizens",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/3",
+      "body": "**The problem**\nNZ councils publish budgets, spending, and decisions, but the data is scattered across PDFs, portals, and formats that ordinary citizens and local journalists can't easily use. \"Technically public\" is not the same as legible or accountable.\n\n**Why it matters**\nLocal accountability depends on people being able to see where money goes and what was decided. The barrier is usability, not secrecy — which makes it tractable.\n\n**Questions this raises** (candidates for Research issues)\n- Which councils publish spending data, in what formats, and under what open-data terms?\n- What questions do residents and local journalists actually want answered from it?\n- Are there existing NZ civic-tech efforts here to build on rather than duplicate?\n\n**Next step:** open Research issues for the questions above.",
+      "stage": "discover",
+      "status": "available",
+      "domain": "civic-transparency",
+      "labels": [
+        "help wanted",
+        "stage: discover",
+        "status: available",
+        "domain: civic-transparency"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:35Z",
+      "updatedAt": "2026-07-01T21:25:35Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 2,
+      "title": "[Discover] Small NZ charities miss grants they're eligible for",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/2",
+      "body": "**The problem**\nNew Zealand has hundreds of grant funders (philanthropic trusts, gaming trusts, councils, government), but discovery is manual and fragmented. Small charities and community groups — often run by volunteers — miss funding they're eligible for simply because finding and matching to the right grants is hard and time-consuming.\n\n**Why it matters**\nThe unclaimed/under-applied pool is plausibly significant, and the groups worst affected are the smallest ones doing frontline work. _(Figures to be established — see the research questions below.)_\n\n**Questions this raises** (candidates for Research issues)\n- How many grant funders operate in NZ, and where does their eligibility data actually live?\n- What do small charities currently use to find grants, and where does it break down?\n- Is there a machine-readable source of NZ grants, or would one need to be assembled?\n\n**Next step:** open Research issues for the questions above. See CONTRIBUTING.md.",
+      "stage": "discover",
+      "status": "available",
+      "domain": "grant-access",
+      "labels": [
+        "help wanted",
+        "stage: discover",
+        "status: available",
+        "domain: grant-access"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:34Z",
+      "updatedAt": "2026-07-01T21:25:34Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 1,
+      "title": "PRD: Distributed Agent Research System",
+      "state": "closed",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/1",
+      "body": "**Version 1.0 | 2026-06-30 | Ready for Implementation**\n\n## TL;DR\n- GitHub Issues = task queue\n- `work.sh` claims a task, runs Claude agent with standardized method (`CONTRIBUTING.md`), creates PR\n- `review.sh` adversarially verifies findings before merge\n- **Result:** Transparent, scalable, zero duplication, full audit trail\n\n## System Flow\n```\nIssue -> work.sh (claim + research) -> PR -> review.sh (adversarial check) -> PASS: Merge | NEEDS_WORK: Revise\n```\n\n## Key Scripts\n\n**work.sh** - Grab unclaimed issue -> mark in-progress -> pass to Claude (task + method) -> agent researches -> create PR -> label review-needed\n\n**review.sh** - Grab PR needing review -> pass to adversarial agent (\"refute this\") -> if PASS: merge + done; if NEEDS_WORK: request changes + revert to in-progress\n\n**CONTRIBUTING.md** - Research method all agents follow:\n1. Clarify the question\n2. Choose approach (Workflow for multi-agent, Agent for single)\n3. Research & cite (every claim >=1 source)\n4. Verify surprises (>=2 sources)\n5. Mark confidence (High/Medium/Low)\n6. Format findings (use PR template)\n\n## Repo Structure\n```\n├── README.md\n├── CONTRIBUTING.md\n├── work.sh\n├── review.sh\n├── .github/ISSUE_TEMPLATE/research-task.md\n├── .github/PULL_REQUEST_TEMPLATE/research-finding.md\n└── research/findings/ (merged findings live here)\n```\n\n## GitHub Labels\n- Status: unclaimed | in-progress | review-needed | done\n- Domain: child-welfare | grant-access | civic-transparency | ai-policy | biosecurity\n- Task: research/task | research/finding\n\n## Phases\n- **Phase 1 (Week 1):** Repo + scripts + templates + end-to-end test on 2 tasks\n- **Phase 2 (Week 2):** GitHub Actions automation\n- **Phase 3 (Week 3):** Metrics + dashboard\n- **Phase 4 (Week 4+):** Scale\n\n## Success Story Example\nMonday 9am: Issue #42 created (\"Starship impact on child welfare?\")\n10am: Researcher claims + runs work.sh\n10-12:30pm: 3 agents research in parallel\n12:30pm: PR #88 created, needs review\n1:30pm: review.sh finds 2 weak points\n2-3pm: Researcher responds with NZ data\n3:30pm: review.sh PASS -> merges\n**Outcome:** 6 hours, full audit trail, finding live in repo\n\n## Handoff Checklist\n- [ ] Repo + write access\n- [ ] Scripts (error handling)\n- [ ] Templates\n- [ ] Labels\n- [ ] Project board\n- [ ] README\n- [ ] End-to-end test\n- [ ] Race condition test\n\n## Implementation Agent Task\n1. Create repo + structure\n2. Write work.sh + review.sh (error handling)\n3. Create templates + CONTRIBUTING.md\n4. Test end-to-end on 3 sample tasks\n5. Verify: zero race conditions, conflicts, all sourced\n6. Document + handoff\n\n---\n\n*Filed by The Colab Clawd as a test of issue-creation access, per Adam's request. Full context from WhatsApp #For Good discussion, 2026-06-30/07-01.*",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "thecolab-clawd",
+        "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+        "url": "https://github.com/thecolab-clawd"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:17:06Z",
+      "updatedAt": "2026-07-01T21:17:46Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "body": "Closing — this was just an access test. PRD content stays here for reference when the implementation work kicks off.",
+          "createdAt": "2026-07-01T21:17:46Z"
+        }
+      ],
+      "reactions": 0
+    }
+  ],
+  "reviewQueue": [],
+  "leaderboard": [
+    {
+      "login": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "url": "https://github.com/adam91holt",
+      "issuesAssigned": 0,
+      "prsMerged": 0,
+      "prsOpened": 0,
+      "findingsAuthored": 0,
+      "commits": 1,
+      "score": 1,
+      "domains": []
+    }
+  ],
+  "findings": [],
+  "sources": [],
+  "activity": [
+    {
+      "type": "issue",
+      "title": "[Research] What NZ government AI guidance already exists for the public sector?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T21:25:40Z",
+      "meta": "research"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] How many grant funders operate in NZ, and where does eligibility data live?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/5",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T21:25:39Z",
+      "meta": "research"
+    },
+    {
+      "type": "issue",
+      "title": "[Discover] Families don't know what child & family support they qualify for",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/4",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T21:25:37Z",
+      "meta": "discover"
+    },
+    {
+      "type": "issue",
+      "title": "[Discover] Council spending is public but not legible to citizens",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/3",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T21:25:35Z",
+      "meta": "discover"
+    },
+    {
+      "type": "issue",
+      "title": "[Discover] Small NZ charities miss grants they're eligible for",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/2",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T21:25:34Z",
+      "meta": "discover"
+    },
+    {
+      "type": "issue",
+      "title": "PRD: Distributed Agent Research System",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/1",
+      "actor": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "at": "2026-07-01T21:17:46Z",
+      "meta": "closed"
+    }
+  ]
+}

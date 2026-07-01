@@ -4,6 +4,8 @@
 
 By [thecolab.ai](https://thecolab.ai) — New Zealand's community-driven AI consultancy. _AI expertise, built together._
 
+**▶ Live dashboard: [thecolab-ai.github.io/the-for-good-project](https://thecolab-ai.github.io/the-for-good-project/)** — track the work, browse findings, see who's contributing, and submit a problem.
+
 ---
 
 ## The idea
