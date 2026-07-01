@@ -73,10 +73,11 @@ async function main() {
   // only if it's a substantive verdict (APPROVED / CHANGES_REQUESTED) and the
   // reviewer is not the PR author. Counted once per (reviewer, PR).
   const reviewsGiven = new Map();  // login -> Set(prNumbers)
+  const reviewLast = new Map();    // login -> most recent review ISO timestamp
   try {
     let after = null;
     for (let i = 0; i < 10; i++) {
-      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login} state}}}}}}`;
+      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login} state submittedAt}}}}}}`;
       const gres = await fetch(`${API}/graphql`, { method: "POST", headers, body: JSON.stringify({ query: q, variables: { cursor: after } }) });
       if (!gres.ok) { console.warn("reviews graphql:", gres.status); break; }
       const data = (await gres.json())?.data?.repository?.pullRequests;
@@ -89,6 +90,8 @@ async function main() {
           if (rv.state !== "APPROVED" && rv.state !== "CHANGES_REQUESTED") continue;
           if (!reviewsGiven.has(who)) reviewsGiven.set(who, new Set());
           reviewsGiven.get(who).add(pr.number);
+          const at = rv.submittedAt;
+          if (at && (!reviewLast.has(who) || new Date(at) > new Date(reviewLast.get(who)))) reviewLast.set(who, at);
         }
       }
       if (!data.pageInfo.hasNextPage) break;
@@ -190,24 +193,31 @@ async function main() {
 
   // --- leaderboard ---
   const people = new Map();
+  const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
+  const bumpActivity = (r, iso) => {
+    if (!r || !iso) return;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return;
+    if (!r.lastActivity || t > new Date(r.lastActivity).getTime()) r.lastActivity = new Date(iso).toISOString();
+  };
   const ensure = (p) => {
     if (!p) return null;
-    if (!people.has(p.login))
-      people.set(p.login, { login: p.login, avatar: p.avatar, url: p.url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, domains: new Set() });
+    if (!people.has(p.login)) people.set(p.login, newPerson(p.login, p.avatar, p.url));
     return people.get(p.login);
   };
-  for (const i of realIssues) for (const a of i.assignees) { const r = ensure(a); if (r && i.domain) r.domains.add(i.domain); if (r) r.issuesAssigned++; }
-  for (const p of prs) { const r = ensure(p.author); if (r) { r.prsOpened++; if (p.merged) r.prsMerged++; } }
+  for (const i of realIssues) for (const a of i.assignees) { const r = ensure(a); if (r && i.domain) r.domains.add(i.domain); if (r) { r.issuesAssigned++; bumpActivity(r, i.updatedAt); } }
+  for (const p of prs) { const r = ensure(p.author); if (r) { r.prsOpened++; if (p.merged) r.prsMerged++; bumpActivity(r, p.updatedAt); } }
   for (const c of commitContributors) { const r = ensure(person(c)); if (r) r.commits += c.contributions || 0; }
   for (const f of findings) {
     const login = f.author && f.author !== "unknown" ? f.author.replace(/^@/, "") : null;
     if (!login) continue;
-    if (!people.has(login)) people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}`, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, domains: new Set() });
-    const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain);
+    if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
+    const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain); bumpActivity(r, f.date);
   }
   for (const [login, prset] of reviewsGiven) {
-    if (!people.has(login)) people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}`, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, domains: new Set() });
+    if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     people.get(login).reviewsGiven = prset.size;
+    bumpActivity(people.get(login), reviewLast.get(login));
   }
   const BOTS = new Set(["github-actions[bot]", "dependabot[bot]"]);
   const leaderboard = [...people.values()]

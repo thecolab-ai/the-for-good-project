@@ -48,6 +48,7 @@ export interface Contributor {
   researchScore: number;
   reviewScore: number;
   score: number;
+  lastActivity: string | null;
   domains: string[];
 }
 
