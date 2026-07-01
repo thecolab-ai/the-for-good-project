@@ -101,28 +101,30 @@ export default function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Domain distribution */}
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader><CardTitle>Open work by domain</CardTitle></CardHeader>
           <CardContent>
             {domainData.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">No open work yet — be the first to submit.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={domainData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={120} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-                  <RTooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }} />
-                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
-                    {domainData.map((_, i) => <Cell key={i} fill={["#2E4057", "#0EA5E9", "#8B5CF6", "#C2410C", "#0E8A16", "#B8860B"][i % 6]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="w-full min-w-0 overflow-hidden">
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={domainData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={96} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <RTooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
+                      {domainData.map((_, i) => <Cell key={i} fill={["#2E4057", "#0EA5E9", "#8B5CF6", "#C2410C", "#0E8A16", "#B8860B"][i % 6]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Recent activity */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {activity.slice(0, 7).map((a, i) => (
@@ -130,7 +132,7 @@ export default function Dashboard() {
                 <PersonAvatar login={a.actor} avatar={a.avatar} size={26} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{a.title}</div>
-                  <div className="text-xs text-muted-foreground">{a.type === "pr" ? "PR" : "issue"} · {a.meta} · {relativeTime(a.at)}</div>
+                  <div className="truncate text-xs text-muted-foreground">{a.type === "pr" ? "PR" : "issue"} · {a.meta} · {relativeTime(a.at)}</div>
                 </div>
               </a>
             ))}
@@ -142,15 +144,15 @@ export default function Dashboard() {
       {/* Review callout */}
       {reviewQueue.length > 0 ? (
         <Link to="/review">
-          <Card className="flex items-center justify-between border-blue-200 bg-blue-50/50 p-5 transition-colors hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/50"><ScanEye className="h-5 w-5 text-blue-700 dark:text-blue-300" /></div>
-              <div>
+          <Card className="flex items-center justify-between gap-3 border-blue-200 bg-blue-50/50 p-5 transition-colors hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/50"><ScanEye className="h-5 w-5 text-blue-700 dark:text-blue-300" /></div>
+              <div className="min-w-0">
                 <div className="font-serif font-semibold">{reviewQueue.length} item{reviewQueue.length > 1 ? "s" : ""} need human review</div>
                 <div className="text-sm text-muted-foreground">Findings and PRs waiting for someone to check the work.</div>
               </div>
             </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />
           </Card>
         </Link>
       ) : null}
