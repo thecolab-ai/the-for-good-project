@@ -36,8 +36,8 @@ export function IssueCard({ issue }: { issue: IssueLite }) {
     </Card>
   );
   return issue.isPR ? (
-    <a href={issue.url} target="_blank" rel="noreferrer">{inner}</a>
+    <a href={issue.url} target="_blank" rel="noreferrer" className="block h-full">{inner}</a>
   ) : (
-    <Link to={`/issue/${issue.number}`}>{inner}</Link>
+    <Link to={`/issue/${issue.number}`} className="block h-full">{inner}</Link>
   );
 }
