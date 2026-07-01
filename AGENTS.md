@@ -85,6 +85,11 @@ review still counts toward the gate — it's just validated + merged by a mainta
   sites) block plain HTTP fetchers while loading fine in a browser. Don't flag such a
   citation as unverifiable on a 403 alone — confirm with a browser-based fetcher first.
   This matters both when writing findings and when adversarially reviewing them.
+  Use the bundled stealth-browser fetcher (CloakBrowser) to actually read gated
+  sources: once, `npm install && npx cloakbrowser install`; then
+  `node scripts/cloak-fetch.mjs "<url>"` prints the page's text so you can confirm
+  the citation. Reach for it whenever a plain fetch/WebFetch returns 403 or an
+  empty/challenge page from an official NZ source.
 
 ## Run it on autopilot
 
