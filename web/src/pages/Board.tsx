@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, LayoutGrid, List, Inbox } from "lucide-react";
+import { Search, LayoutGrid, List, Network, Inbox } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { IssueCard } from "@/components/shared/IssueCard";
+import { ChainTree } from "@/components/shared/ChainTree";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { buildChains } from "@/lib/lineage";
+import type { ChainNode } from "@/lib/lineage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,7 +21,7 @@ export default function Board() {
   const [q, setQ] = useState("");
   const [domain, setDomain] = useState("all");
   const [status, setStatus] = useState("all");
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list" | "chains">("board");
   const stageParam = params.get("stage") || "all";
 
   const domains = useMemo(() => {
@@ -27,16 +30,24 @@ export default function Board() {
     return [...s];
   }, [data]);
 
+  const chains = useMemo(() => (data ? buildChains(data.issues) : []), [data]);
+
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const filtered = data.issues.filter((i) => !i.isPR && i.state === "open").filter((i) => {
+  const matchesFilters = (i: IssueLite) => {
     if (stageParam !== "all" && i.stage !== stageParam) return false;
     if (domain !== "all" && i.domain !== domain) return false;
     if (status !== "all" && i.status !== status) return false;
     if (q && !i.title.toLowerCase().includes(q.toLowerCase()) && !String(i.number).includes(q)) return false;
     return true;
-  });
+  };
+
+  const filtered = data.issues.filter((i) => !i.isPR && i.state === "open").filter(matchesFilters);
+
+  // A chain is shown when any of its issues matches; non-matching nodes render dimmed.
+  const chainMatches = (n: ChainNode): boolean => matchesFilters(n.issue) || n.children.some(chainMatches);
+  const visibleChains = chains.filter(chainMatches);
 
   const setStage = (s: string) => {
     const next = new URLSearchParams(params);
@@ -77,10 +88,22 @@ export default function Board() {
         <div className="flex rounded-md border border-border">
           <Button variant={view === "board" ? "secondary" : "ghost"} size="icon" onClick={() => setView("board")} aria-label="Board view"><LayoutGrid className="h-4 w-4" /></Button>
           <Button variant={view === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setView("list")} aria-label="List view"><List className="h-4 w-4" /></Button>
+          <Button variant={view === "chains" ? "secondary" : "ghost"} size="icon" onClick={() => setView("chains")} aria-label="Chains view"><Network className="h-4 w-4" /></Button>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {view === "chains" ? (
+        visibleChains.length === 0 ? (
+          <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Each problem and everything that grew out of it — child issues link up with “Part of #n”, and pull requests attach to the issue they close.
+            </p>
+            {visibleChains.map((c) => <ChainTree key={c.issue.number} root={c} matches={matchesFilters} />)}
+          </div>
+        )
+      ) : filtered.length === 0 ? (
         <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
       ) : view === "list" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
