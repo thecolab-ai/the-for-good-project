@@ -2,10 +2,10 @@
 
 _Where this project is going, and how we keep it honest on the way._
 
-This is our compass, not our constitution. The [method](CONTRIBUTING.md), the
-[streams and gates](docs/STREAMS.md), and the [governance](docs/GOVERNANCE.md)
-are how we work. This is *why*, and what "good" has to mean for us to have
-earned the name.
+This is our compass. The [Constitution](CONSTITUTION.md) is the binding law; the
+[method](CONTRIBUTING.md), the [streams and gates](docs/STREAMS.md), and the
+[governance](docs/GOVERNANCE.md) are how we work. This is *why*, and what "good"
+has to mean for us to have earned the name.
 
 ---
 

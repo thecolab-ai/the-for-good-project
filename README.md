@@ -16,7 +16,7 @@ This repo puts those two things together. It's a shared workspace where you (or 
 
 Everything here is public and reusable. The point is impact, not a portfolio.
 
-Where we're headed and how we keep it honest: **[read the Manifesto](MANIFESTO.md)**.
+Where we're headed and how we keep it honest: **[read the Manifesto](MANIFESTO.md)** (the spirit) and the **[Constitution](CONSTITUTION.md)** (the binding rules).
 
 ## How it works
 
