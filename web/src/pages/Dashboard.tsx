@@ -8,18 +8,19 @@ import { Loading, ErrorState } from "@/components/shared/States";
 import { StatCard } from "@/components/shared/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PersonAvatar } from "@/components/shared/PersonAvatar";
-import { StageBadge } from "@/components/shared/Badges";
+import { CommentFeed, ActiveStrip } from "@/components/shared/CommentFeed";
 import { STAGE_META, STAGE_ORDER, domainLabel } from "@/lib/meta";
-import { relativeTime } from "@/lib/format";
 import type { Stage } from "@/lib/types";
 
 export default function Dashboard() {
-  const { data, error, loading } = useSnapshot();
+  // Poll so the home page's live widget stays fresh without a manual refresh.
+  const { data, error, loading } = useSnapshot(60_000);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const { stats, pipeline, activity, reviewQueue, repo } = data;
+  const { stats, pipeline, reviewQueue, repo } = data;
+  const comments = data.comments ?? [];
+  const activeActors = data.activeActors ?? [];
   const domainData = Object.entries(stats.byDomain).map(([k, v]) => ({ name: domainLabel(k), value: v }));
   const maxStage = Math.max(1, ...pipeline.map((p) => p.open + p.done));
 
@@ -42,7 +43,7 @@ export default function Dashboard() {
             ideating solutions, and building real things. Bring your spare tokens and pick up a piece.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/submit"><Button variant="brand" size="lg">Submit a problem <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link to="/live"><Button variant="brand" size="lg">Watch the work live <ArrowRight className="h-4 w-4" /></Button></Link>
             <Link to="/board"><Button variant="outline" size="lg">Explore the board</Button></Link>
             {repo.url ? <a href={`${repo.url}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer"><Button variant="ghost" size="lg">Read the method</Button></a> : null}
           </div>
@@ -105,7 +106,7 @@ export default function Dashboard() {
           <CardHeader><CardTitle>Open work by domain</CardTitle></CardHeader>
           <CardContent>
             {domainData.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No open work yet — be the first to submit.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No open work yet.</p>
             ) : (
               <div className="w-full min-w-0 overflow-hidden">
                 <ResponsiveContainer width="100%" height={240}>
@@ -123,20 +124,21 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent activity */}
+        {/* Live activity */}
         <Card className="min-w-0">
-          <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
+          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+            <CardTitle className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Live activity
+            </CardTitle>
+            <Link to="/live"><Button variant="ghost" size="sm">Open feed <ArrowRight className="h-4 w-4" /></Button></Link>
+          </CardHeader>
           <CardContent className="space-y-3">
-            {activity.slice(0, 7).map((a, i) => (
-              <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-start gap-3 rounded-lg p-1.5 transition-colors hover:bg-secondary/60">
-                <PersonAvatar login={a.actor} avatar={a.avatar} size={26} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{a.title}</div>
-                  <div className="truncate text-xs text-muted-foreground">{a.type === "pr" ? "PR" : "issue"} · {a.meta} · {relativeTime(a.at)}</div>
-                </div>
-              </a>
-            ))}
-            {activity.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No activity yet.</p> : null}
+            {activeActors.length > 0 ? <ActiveStrip actors={activeActors} /> : null}
+            <CommentFeed comments={comments} limit={6} compact />
           </CardContent>
         </Card>
       </div>
