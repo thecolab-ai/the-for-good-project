@@ -21,7 +21,7 @@ function excerpt(body: string, max = 320): string {
   const text = (body || "")
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^\s*(?:part of|stream|closes|fixes|resolves)\s*#\d+.*$/gim, "")
+    .replace(/^\s*(?:part of|stream|closes|fixes|resolves)\s*#\d+\s*$/gim, "")
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[*_>`]/g, "")
     .replace(/\s+/g, " ")
@@ -77,7 +77,15 @@ export default function StreamDetail() {
   }
 
   const roots: ChainNode[] = group?.roots ?? [];
-  const rootIssue = (roots.find((r) => r.issue.stage === "discover") ?? roots[0])?.issue;
+  // The originating issue is the Discover root; a stream's number IS its Discover
+  // issue number. Roots are sorted by recency, so fall back to the root matching
+  // the stream number, then the lowest-numbered root — never "most recent".
+  const rootIssue = (
+    roots.find((r) => r.issue.stage === "discover") ??
+    roots.find((r) => r.issue.number === streamNum) ??
+    [...roots].sort((a, b) => a.issue.number - b.issue.number)[0]
+  )?.issue;
+  const rootExcerpt = rootIssue ? excerpt(rootIssue.body) : "";
   const title = doc?.title || summary?.title || rootIssue?.title.replace(/^\[[^\]]+\]\s*/, "") || `Stream #${streamNum}`;
   const state = doc?.state || summary?.state || "";
   const domain = summary?.domain || doc?.domain || rootIssue?.domain || null;
@@ -112,7 +120,7 @@ export default function StreamDetail() {
                 <Link to={`/issue/${rootIssue.number}`} className="font-serif text-lg font-semibold leading-snug hover:text-brand-cyan-dark">
                   {rootIssue.title.replace(/^\[[^\]]+\]\s*/, "")}
                 </Link>
-                {excerpt(rootIssue.body) ? <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{excerpt(rootIssue.body)}</p> : null}
+                {rootExcerpt ? <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{rootExcerpt}</p> : null}
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-xs">
                   <Link to={`/issue/${rootIssue.number}`} className="inline-flex items-center gap-1 font-medium text-brand-cyan-dark hover:underline">Open the original issue <ArrowRight className="h-3 w-3" /></Link>
                   <a href={rootIssue.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">#{rootIssue.number} on GitHub <ExternalLink className="h-3 w-3" /></a>

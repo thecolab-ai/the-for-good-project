@@ -16,8 +16,8 @@ export function StreamProgress({ state, compact = false, className }: { state: s
         {STREAM_STAGES.map((_, i) => (
           <span
             key={i}
-            className="h-1.5 flex-1 rounded-full"
-            style={{ backgroundColor: i <= current ? accent : undefined }}
+            className="h-1.5 flex-1 rounded-full bg-border"
+            style={i <= current ? { backgroundColor: accent } : undefined}
             data-done={i <= current}
           />
         ))}
@@ -32,7 +32,7 @@ export function StreamProgress({ state, compact = false, className }: { state: s
         const active = i === current;
         return (
           <Fragment key={label}>
-            {i > 0 ? <div className="h-px flex-1" style={{ backgroundColor: i <= current ? accent : undefined }} data-done={i <= current} /> : null}
+            {i > 0 ? <div className="h-px flex-1 bg-border" style={i <= current ? { backgroundColor: accent } : undefined} data-done={i <= current} /> : null}
             <div className="flex flex-col items-center gap-1.5">
               <span
                 className={cn(

@@ -34,14 +34,18 @@ export const STREAM_STAGES = ["Framing", "Research", "Synthesis", "Ideate", "Bui
 export type StreamStage = (typeof STREAM_STAGES)[number];
 
 // Map a stream's free-text `state` onto a stage index (0..5). Unknown → Framing.
+// `state` is the stream doc's lifecycle state when a doc exists (framing →
+// shipped), otherwise the originating Discover issue's status label
+// (available / claimed / needs-synthesis / awaiting-direction / in-review / …,
+// see build-data.mjs) — so this handles both vocabularies.
 export function streamStageIndex(state: string): number {
   const s = (state || "").toLowerCase();
   if (s.includes("ship")) return 5;
   if (s.includes("build")) return 4;
   if (s.includes("ideat")) return 3;
-  if (s.includes("synth") || s.includes("direction")) return 2;
-  if (s.includes("research")) return 1;
-  return 0; // framing / discover / unknown
+  if (s.includes("synth") || s.includes("direction")) return 2; // (needs-)synthesis, awaiting-direction
+  if (s.includes("research") || s.includes("review")) return 1; // researching, in-review, changes-requested
+  return 0; // framing / discover / available / claimed / unknown
 }
 
 // A stream is "finished" only once it has shipped; everything else is in progress.
