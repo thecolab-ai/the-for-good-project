@@ -25,9 +25,14 @@ permissions:
   pull-requests: write
   contents: read
 
-# Serialize runs: the drain count and the un-flag logic race otherwise.
+# Serialize runs PER ISSUE/PR: same-item events must not race each other.
+# A single global group is wrong here — GitHub keeps only one PENDING run per
+# group and cancels older pending ones, so burst events (several issues edited
+# at once) would silently drop label syncs. Per-item groups let different
+# items run in parallel; the drain gate recounts open children live, so
+# cross-item ordering doesn't matter.
 concurrency:
-  group: stream-sync
+  group: stream-sync-${{ github.event.issue.number || github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
