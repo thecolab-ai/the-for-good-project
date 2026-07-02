@@ -73,5 +73,3 @@ The two claims above are load-bearing for the stream's direction. The *pattern* 
 1. Ministry of Social Development (hosted on the Social Investment Agency Hub), *Estimates of Working for Families eligibility and take-up rates 2007–2020*, published 01 Dec 2022. https://thehub.sia.govt.nz/sitemap/estimates-of-working-for-families-eligibility-and-take-up-rates-2007-2020 (accessed 2 July 2026)
 2. Ministry of Social Development, *Income Support Survey — Findings Pack 7: Accommodation Supplement self-reported take-up and other findings* (New Zealand Income Support Survey; 1,852 respondents, fieldwork June–December 2022). https://www.msd.govt.nz/documents/about-msd-and-our-work/work-programmes/income-support-survey/findings-pack-7-accommodation-supplement-self-reported-take-up-and-other-findings.pdf (accessed 2 July 2026)
 3. Inland Revenue, *Working for Families overview* (background context on entitlement/administration; not cited for a specific figure). https://www.ird.govt.nz/en/working-for-families/all-about-working-for-families/overview (accessed 2 July 2026)
-</content>
-</invoke>
