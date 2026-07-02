@@ -12,18 +12,21 @@
 # runs or how it behaves.
 #
 # Usage:
-#   ./start_work.sh                 # work issues until the queue is empty
-#   AGENT=codex ./start_work.sh     # use `codex exec` instead of the default `claude`
+#   ./start_work.sh                 # work the queue with the default agent (claude)
+#   ./start_work.sh codex           # use `codex exec` instead
+#   ./start_work.sh claude          # explicit claude (the default)
+#   ./start_work.sh --model <name>  # override the agent model
+#   ./start_work.sh codex --model gpt-5.5
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
-#   MODEL=gpt-5.5 ./start_work.sh   # override the agent model
 #
-# Env: AGENT(claude|codex, default claude) MAX STAGE POLL_SECONDS DRY_RUN MODEL AGENT_TIMEOUT
-#      FOR_GOOD_REPO REPO_DIR
+# Args: [claude|codex] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
+# Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
+parse_agent_args "$@"
 
 MAX="${MAX:-0}"                       # 0 = no limit
 POLL_SECONDS="${POLL_SECONDS:-0}"     # >0 = keep polling when queue empty
