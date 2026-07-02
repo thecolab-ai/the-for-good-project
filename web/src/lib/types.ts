@@ -117,4 +117,15 @@ export interface Snapshot {
   findings: Finding[];
   sources: SourceRef[];
   activity: ActivityItem[];
+  adrs?: Adr[];
+}
+
+export interface Adr {
+  number: string;
+  slug: string;
+  title: string;
+  status: string;
+  date: string;
+  body: string;
+  url: string;
 }
