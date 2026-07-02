@@ -41,5 +41,6 @@ routine fixes, copy changes, or web styling.
 | [0002](0002-vendor-thecolab-skills-submodule.md) | Vendor `thecolab-ai/.skills` as a git submodule | Accepted |
 | [0003](0003-agent-drafted-synthesis.md) | Agents draft the G1 synthesis; humans keep the decision | Accepted |
 | [0004](0004-analysis-documents-and-rendered-companions.md) | Project analysis lives in `analysis/` | Proposed |
+| [0005](0005-agent-execution-environment.md) | How & where we run the agents (containerise + sandboxed auto modes) | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
