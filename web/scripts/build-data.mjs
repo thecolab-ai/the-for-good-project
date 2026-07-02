@@ -197,6 +197,26 @@ async function main() {
   };
   walk(findingsDir);
 
+  // --- ADRs (architecture decision records) from disk ---
+  const adrDir = path.join(REPO_ROOT, "docs", "adr");
+  const adrs = [];
+  if (existsSync(adrDir)) {
+    for (const entry of readdirSync(adrDir).sort()) {
+      if (!entry.endsWith(".md") || ["README.md", "TEMPLATE.md"].includes(entry)) continue;
+      const raw = readFileSync(path.join(adrDir, entry), "utf8");
+      adrs.push({
+        number: (raw.match(/#\s*ADR-(\d+)/) || [])[1] || (entry.match(/^(\d+)/) || [])[1] || "",
+        slug: entry.replace(/\.md$/, ""),
+        title: (raw.match(/^#\s*ADR-\d+:\s*(.+)$/m) || [])[1]?.trim() || entry.replace(/\.md$/, ""),
+        status: (raw.match(/\*\*Status:\*\*\s*(.+)$/m) || [])[1]?.trim() || "",
+        date: (raw.match(/\*\*Date:\*\*\s*(.+)$/m) || [])[1]?.trim() || "",
+        body: raw,
+        url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/docs/adr/${entry}`,
+      });
+    }
+    adrs.sort((a, b) => a.number.localeCompare(b.number));
+  }
+
   // --- leaderboard ---
   const people = new Map();
   const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
@@ -294,6 +314,7 @@ async function main() {
     findings,
     sources,
     activity,
+    adrs,
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
