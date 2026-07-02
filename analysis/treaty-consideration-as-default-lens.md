@@ -102,6 +102,7 @@ of these concepts, and if so, has it actually been designed around them — not 
   transactions. ([digital.govt.nz — Data Protection and Use Policy: Manaakitanga Principle](https://www.digital.govt.nz/standards-and-guidance/privacy-security-and-risk/privacy/data-protection-and-use-policy-dpup/read-the-dpup-principles/manaakitanga-principle/))
 - **Whanaungatanga** — relationships and group-first thinking: does this respect whānau/hapū/iwi
   structures rather than treating people as isolated data points?
+  ([Te Aka Māori Dictionary — whanaungatanga](https://maoridictionary.co.nz/word/10068))
 - **Kaitiakitanga** — guardianship, describable as a deep kinship between people and the natural
   world expressed through a way of managing and protecting it. Ask: who is the appropriate kaitiaki
   (steward) of whatever resource, data, or taonga is involved — and have they actually been asked, not
@@ -149,10 +150,14 @@ this document is scoped as a process argument, not a sourced research piece in i
   Tamariki on 28 May 2025, following an April 2024 independent review confirming "systemic failures in
   protecting sensitive personal information," with improvement deadlines running October 2025 through
   31 March 2026. ([Privacy Commissioner](https://www.privacy.org.nz/news/statements-media-releases/privacy-commissioner-issues-compliance-notice-to-oranga-tamariki/))
-- **Frameworks any stream could draw from**: Ngā Tikanga Paihere (Stats NZ's 10-tikanga
-  self-questioning framework for data practice); Te Mana Raraunga, the independent Māori-led Data
-  Sovereignty Network (est. 2015, tied to UNDRIP). These are starting points, not a complete map — see
-  §5 for what's unverified.
+- **Frameworks any stream could draw from**: Ngā Tikanga Paihere, Stats NZ's 10-tikanga
+  self-questioning framework for data practice
+  ([data.govt.nz — Ngā Tikanga Paihere](https://data.govt.nz/toolkit/data-ethics/nga-tikanga-paihere));
+  Te Mana Raraunga, the independent Māori-led Data Sovereignty Network, formed from a July 2015
+  workshop on Indigenous Data Sovereignty considering the UN Declaration on the Rights of Indigenous
+  Peoples (UNDRIP), with its inaugural meeting on 19 October 2015
+  ([Te Mana Raraunga — Formation](https://www.temanararaunga.maori.nz)). These are starting points,
+  not a complete map — see §5 for what's unverified.
 
 This section is illustrative context for why the reframing in §1 matters in practice, not a claim that
 this document has done the research a real stream on this topic would need.
