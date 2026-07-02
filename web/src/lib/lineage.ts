@@ -95,6 +95,31 @@ export function chainUpdatedAt(node: ChainNode, seen = new Set<number>()): strin
   return latest;
 }
 
+type Actor = { login: string; avatar: string; url: string };
+
+// Everyone who touched a chain — issue authors + assignees + PR authors — for
+// the "who did what" audit trail. Deduped by login, order of first appearance.
+export function collectActors(node: ChainNode, acc = new Map<string, Actor>(), seen = new Set<number>()): Actor[] {
+  if (!seen.has(node.issue.number)) {
+    seen.add(node.issue.number);
+    const add = (p: Actor | null | undefined) => { if (p && p.login && !acc.has(p.login)) acc.set(p.login, p); };
+    add(node.issue.author);
+    node.issue.assignees.forEach(add);
+    node.prs.forEach((pr) => add(pr.author));
+    node.children.forEach((child) => collectActors(child, acc, seen));
+  }
+  return [...acc.values()];
+}
+
+// Count of MERGED PRs across a chain — a stream's shipped outputs.
+export function chainMergedPrCount(node: ChainNode, seenI = new Set<number>(), seenP = new Set<number>()): number {
+  if (seenI.has(node.issue.number)) return seenP.size;
+  seenI.add(node.issue.number);
+  for (const pr of node.prs) if (pr.merged) seenP.add(pr.number);
+  for (const child of node.children) chainMergedPrCount(child, seenI, seenP);
+  return seenP.size;
+}
+
 export function chainSize(node: ChainNode, seen = new Set<number>()): number {
   if (seen.has(node.issue.number)) return 0;
   seen.add(node.issue.number);

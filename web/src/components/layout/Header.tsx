@@ -14,6 +14,7 @@ const LINKS: NavItem[] = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/live", label: "Live" },
   { to: "/board", label: "Board" },
+  { to: "/streams", label: "Streams" },
   { to: "/partners", label: "For partners" },
 ];
 
