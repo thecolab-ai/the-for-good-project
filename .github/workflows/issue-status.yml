@@ -1,0 +1,51 @@
+# Keep issue status labels in sync with their linked PR — label bookkeeping only.
+# This uses ZERO model tokens (no AI); it's just `gh` label calls on free
+# GitHub Actions minutes. It does NOT do the adversarial review (that's the
+# collective's job via review_work.sh, paid with their own tokens).
+name: Issue status sync
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync linked issue status to PR state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          owner="${REPO%%/*}"; name="${REPO##*/}"
+          # Issues this PR closes (via "Closes #n" links).
+          issues=$(gh api graphql -f query="{repository(owner:\"$owner\",name:\"$name\"){pullRequest(number:$PR){closingIssuesReferences(first:10){nodes{number}}}}}" \
+            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number')
+          [ -z "$issues" ] && { echo "No linked issues."; exit 0; }
+          for n in $issues; do
+            if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
+              echo "PR #$PR merged → issue #$n → done"
+              gh issue edit "$n" --repo "$REPO" \
+                --add-label "status: done" \
+                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: available" || true
+            elif [ "$ACTION" = "closed" ]; then
+              echo "PR #$PR closed unmerged → issue #$n → available"
+              gh issue edit "$n" --repo "$REPO" \
+                --add-label "status: available" \
+                --remove-label "status: in-review" --remove-label "status: claimed" || true
+            else
+              echo "PR #$PR open → issue #$n → in-review"
+              gh issue edit "$n" --repo "$REPO" \
+                --add-label "status: in-review" \
+                --remove-label "status: claimed" --remove-label "status: available" || true
+            fi
+          done

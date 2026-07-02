@@ -1,7 +1,7 @@
 # Working the project with agents
 
-Two scripts let people put spare AI subscription tokens to work — one to *do*
-the work, one to *review* it. Both are thin, deterministic wrappers around your
+Three scripts let people put spare AI subscription tokens to work — one to *do*
+the work, one to *review* it, and one for maintainers to *merge* what's passed. Both are thin, deterministic wrappers around your
 own `codex` or `claude` CLI: **the scripts own every status change and the merge
 gate; the agent only does the actual work.** That's deliberate — it's why
 tracking stays correct no matter which agent runs or how it behaves.
@@ -14,9 +14,9 @@ status: available  ──claim──▶  status: claimed  ──PR opened──�
         └───────────────── agent opened no PR (released) ◀────────────┘
 ```
 
-`start_work.sh` moves `available → claimed → in-review`. `review_work.sh` (plus
-branch protection) governs `in-review → merged/done`. No agent is trusted to set
-these itself.
+`start_work.sh` moves `available → claimed → in-review`. `review_work.sh` records
+reviews; `merge_ready.sh` (maintainer) merges what qualifies → `done`. No agent is
+trusted to set these itself.
 
 ## `start_work.sh` — do the work
 
@@ -62,22 +62,86 @@ to be a *distinct GitHub identity*. Pick one:
   in `REVIEW_GITHUB_TOKEN`; the script posts the review and approval as that
   account. This is the simplest local setup.
 - **A GitHub App** installation token (App reviews count as a distinct actor).
-- **CI** (`.github/workflows/review.yml`): a workflow reviews as
-  `github-actions[bot]`, which is inherently not the author. Opt-in; needs a
-  model-auth secret (`CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`).
+
+> Note: running the reviewer in **CI** would work identity-wise (it'd review as
+> `github-actions[bot]`, not the author), but the model tokens would then come
+> from **one** secret on the repo — i.e. the owner pays for every review. That
+> breaks the whole "collective's spare tokens" model, so review runs locally on
+> contributors' own machines instead.
 
 If you run `review_work.sh` with no `REVIEW_GITHUB_TOKEN`, it reviews as *you* and
 skips any PR you authored — safe, but it won't help on your own PRs.
 
-## The merge gate (branch protection on `main`)
+## How a PR merges
 
-`main` is protected so nothing merges without a clean, independent review:
+The problem: GitHub only counts a review toward its native merge gate if the
+reviewer has **write access** — which would mean non-admin contributors could
+never get merged, and would push all the review cost onto admins. So the merge
+decision doesn't live in GitHub's approval gate. It lives in **`merge_ready.sh`**,
+a maintainer tool that reads the real review records plus a trust model.
 
-- ✅ a passing `for-good/adversarial-review` status check (an agent actually reviewed), and
-- ✅ at least one approving review **from someone other than the author**, and
-- ✅ all conversations resolved.
+The flow:
 
-The author can't satisfy these alone — which is the point.
+1. **Anyone** (any GitHub identity that isn't the author) runs `review_work.sh`
+   on a PR → it submits a formal **APPROVED / CHANGES_REQUESTED** review with their
+   own tokens. A read-only forker's review is *recorded* even though it doesn't
+   count toward GitHub's native gate.
+2. A **maintainer runs `merge_ready.sh`** — it scans open PRs and merges the ones
+   that have enough *qualifying* reviews. No per-PR babysitting; it just merges the
+   ready ones and reports the rest.
+
+### `merge_ready.sh` — the merge gate
+
+```bash
+./merge_ready.sh            # dry run: report every PR's status, merge nothing
+MERGE=1 ./merge_ready.sh    # merge the ones that qualify
+PR=12 MERGE=1 ./merge_ready.sh
+```
+
+A PR qualifies when it has **≥ N** reviews where each review is:
+- state **APPROVED**, and
+- from someone who is **not** the author, and
+- from a **trusted** reviewer — on the whitelist **OR** whose leaderboard credit
+  (research + review points) is ≥ `min_reviewer_credit`.
+
+Any CHANGES_REQUESTED from a trusted reviewer blocks it. `N` is `required_approvals`
+(default 1), raised for sensitive domains. All of this is configured in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json) — edit it via PR:
+
+```json
+{
+  "whitelist": ["alice", "the-review-bot"],
+  "min_reviewer_credit": 15,
+  "required_approvals": 1,
+  "extra_approvals_for_domains": { "child-welfare": 2, "biosecurity": 2 }
+}
+```
+
+This is the **whitelist-or-credit** model: a small trusted core plus anyone who's
+earned enough credit can gate merges — so the reviewer pool grows with the
+community, using the collective's own tokens, at no central cost. Nobody needs
+write access to *review*; only maintainers (who run `merge_ready.sh`) need it to
+*merge*, and the script makes that a one-command sweep, not a manual vetting job.
+
+### Branch protection (the backstop)
+
+`main` requires the `for-good/adversarial-review` status check and blocks direct
+pushes. A write-access reviewer's `review_work.sh` sets that check on PASS (so
+their PRs can auto-merge immediately); for everyone else, `merge_ready.sh` sets it
+when it validates the trusted reviews and merges. Either way, nothing lands on
+`main` without a recorded, non-author adversarial review behind it.
+
+### Research credit vs review credit
+
+The leaderboard scores two distinct things, so reviewing (the chore) is rewarded,
+not just researching (the fun part):
+
+- **Research** — findings authored, PRs merged, issues claimed, commits.
+- **Review** — adversarial reviews given on PRs you did **not** author.
+
+Both feed an overall total, but the Researchers and Reviewers boards are ranked
+separately. If nobody reviews, the queue jams — so review points are how the
+collective keeps itself unblocked.
 
 ## Cost & safety notes
 

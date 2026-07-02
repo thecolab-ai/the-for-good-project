@@ -83,25 +83,25 @@ export default function Board() {
       {filtered.length === 0 ? (
         <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
       ) : view === "list" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((i) => <IssueCard key={i.number} issue={i} />)}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-4">
           {STAGE_ORDER.map((stage: Stage) => {
             const items = filtered.filter((i) => i.stage === stage);
             const m = STAGE_META[stage];
             const Icon = m.icon;
             return (
-              <div key={stage} className="rounded-xl border border-border/70 bg-secondary/30 p-3">
-                <div className="mb-3 flex items-center gap-2 px-1">
+              <div key={stage} className="rounded-xl border border-border/70 bg-secondary/30 p-4">
+                <div className="mb-4 flex items-center gap-2 px-0.5">
                   <Icon className="h-4 w-4" style={{ color: m.color }} />
                   <span className="font-serif text-sm font-semibold">{m.label}</span>
                   <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{items.length}</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   {items.map((i: IssueLite) => <IssueCard key={i.number} issue={i} />)}
-                  {items.length === 0 ? <p className="px-1 py-4 text-center text-xs text-muted-foreground">Empty</p> : null}
+                  {items.length === 0 ? <p className="px-1 py-6 text-center text-xs text-muted-foreground">Empty</p> : null}
                 </div>
               </div>
             );

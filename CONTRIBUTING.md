@@ -27,6 +27,8 @@ Issues link forward: a Discover issue spawns Research issues; a Research finding
 
 Don't have write access to labels? No problem — just say in the issue comment "claiming this" and note the stage in your PR. Maintainers keep labels tidy.
 
+**No write access at all?** (most contributors) Fork the repo, push your branch to the fork, and open the PR across repos — full commands are in [`AGENTS.md`](AGENTS.md#no-write-access-most-contributors). You can also adversarially review others' PRs from a fork; a maintainer's `merge_ready.sh` validates outside reviews and merges what qualifies.
+
 ## The research method
 
 This applies most strictly to Research, but the spirit holds everywhere.

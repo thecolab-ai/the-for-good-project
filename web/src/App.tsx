@@ -8,6 +8,8 @@ import Sources from "@/pages/Sources";
 import Leaderboard from "@/pages/Leaderboard";
 import Review from "@/pages/Review";
 import Submit from "@/pages/Submit";
+import Methodology from "@/pages/Methodology";
+import Contribute from "@/pages/Contribute";
 import NotFound from "@/pages/NotFound";
 
 export const router = createHashRouter([
@@ -22,6 +24,8 @@ export const router = createHashRouter([
       { path: "/leaderboard", element: <Leaderboard /> },
       { path: "/review", element: <Review /> },
       { path: "/submit", element: <Submit /> },
+      { path: "/methodology", element: <Methodology /> },
+      { path: "/contribute", element: <Contribute /> },
       { path: "*", element: <NotFound /> },
     ],
   },

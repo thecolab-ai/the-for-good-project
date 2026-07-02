@@ -8,18 +8,18 @@ import { relativeTime } from "@/lib/format";
 
 export function IssueCard({ issue }: { issue: IssueLite }) {
   const inner = (
-    <Card className="group h-full p-4 transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <Card className="group h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className="font-mono">#{issue.number}</span>
         {issue.isPR ? <GitPullRequest className="h-3.5 w-3.5 text-violet-600" /> : null}
         <span className="ml-auto">{relativeTime(issue.updatedAt)}</span>
       </div>
-      <div className="mt-1.5 line-clamp-2 font-medium leading-snug group-hover:text-brand-cyan-dark">{issue.title}</div>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <div className="mt-2 line-clamp-2 font-medium leading-snug group-hover:text-brand-cyan-dark">{issue.title}</div>
+      <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
         <StatusBadge status={issue.status} />
         <DomainBadge domain={issue.domain} />
       </div>
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between">
         {issue.assignees.length ? (
           <div className="flex -space-x-2">
             {issue.assignees.slice(0, 3).map((p) => (
@@ -36,8 +36,8 @@ export function IssueCard({ issue }: { issue: IssueLite }) {
     </Card>
   );
   return issue.isPR ? (
-    <a href={issue.url} target="_blank" rel="noreferrer">{inner}</a>
+    <a href={issue.url} target="_blank" rel="noreferrer" className="block h-full">{inner}</a>
   ) : (
-    <Link to={`/issue/${issue.number}`}>{inner}</Link>
+    <Link to={`/issue/${issue.number}`} className="block h-full">{inner}</Link>
   );
 }

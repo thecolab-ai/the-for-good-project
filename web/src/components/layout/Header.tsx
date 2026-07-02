@@ -9,17 +9,19 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/board", label: "Board" },
+  { to: "/contribute", label: "Get started" },
   { to: "/findings", label: "Findings" },
   { to: "/sources", label: "Sources" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/review", label: "Review" },
+  { to: "/methodology", label: "Method" },
 ];
 
 export function Header({ repoUrl }: { repoUrl?: string }) {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-border bg-background/80 shadow-[0_1px_3px_0_rgb(0_0_0_/_0.06)] backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />

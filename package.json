@@ -1,0 +1,15 @@
+{
+  "name": "the-for-good-project-tools",
+  "private": true,
+  "type": "module",
+  "description": "Contributor tooling for The For Good Project (the website lives in web/). Provides cloak-fetch: a stealth-browser fetcher for verifying citations behind bot protection.",
+  "scripts": {
+    "read": "agent-browser read",
+    "fetch": "node scripts/cloak-fetch.mjs"
+  },
+  "dependencies": {
+    "agent-browser": "^0.31.1",
+    "cloakbrowser": "^0.4.3",
+    "playwright-core": "^1.61.0"
+  }
+}

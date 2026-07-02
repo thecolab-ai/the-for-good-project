@@ -21,6 +21,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
+RESETS_TREE=1  # this script hard-resets the clone per task; guard against dirty trees
 
 MAX="${MAX:-0}"                       # 0 = no limit
 POLL_SECONDS="${POLL_SECONDS:-0}"     # >0 = keep polling when queue empty
@@ -43,6 +44,8 @@ work_prompt() {  # $1 = issue number
   labels="$(issue_labels "$n")"
   domain="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^domain: //p' | head -1)"
   stage="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stage: //p' | head -1)"
+  local prov_model
+  if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
   cat <<EOF
 You are an autonomous contributor to The For Good Project
 (github.com/$REPO). You are working inside a clone of the repo, on a fresh,
@@ -70,6 +73,11 @@ Where the output goes (match the issue's stage):
 - ideate   → solutions/<slug>.md                   using solutions/TEMPLATE.md
 - build    → projects/<slug>/                       (see projects/README.md)
 Use a short kebab-case <slug>.
+
+Provenance (required): in the output file's frontmatter, set these fields exactly so
+we can track what produced it:
+- agent: '$AGENT'
+- model: '$prov_model'
 
 Then, using git and the gh CLI (both are already authenticated):
 1. Create a branch named "$stage/<slug>".
@@ -102,7 +110,12 @@ finish_issue() {  # $1 = issue number
   if [ -n "$pr" ]; then
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would move #$n → in-review (PR #$pr)"; CLAIMED_ISSUE=""; return 0; fi
     set_status_label "$n" "in-review" "claimed" "available"
-    gh issue comment "$n" --repo "$REPO" --body "🔍 Work submitted in #$pr — moving to **in review**. It needs an adversarial review before it can merge (see \`review_work.sh\`)." >/dev/null
+    # Ask GitHub to merge this PR automatically once the gate is met (a non-author
+    # adversarial review passes). Best-effort — needs write access.
+    gh pr merge "$pr" --repo "$REPO" --auto --squash >/dev/null 2>&1 \
+      && log "  auto-merge enabled on #$pr (merges once a non-author review passes)" \
+      || warn "  could not enable auto-merge on #$pr (needs write access) — a reviewer/maintainer can enable it"
+    gh issue comment "$n" --repo "$REPO" --body "🔍 Work submitted in #$pr — moving to **in review**. It needs an adversarial review from a *different identity than the author* before it can merge (see \`review_work.sh\`)." >/dev/null
     ok "#$n → in-review (PR #$pr)"
   else
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] no PR found for #$n — would release back to available"; CLAIMED_ISSUE=""; return 0; fi
@@ -123,20 +136,20 @@ work_one() {  # $1 = issue number
     finish_issue "$n"; return 0
   fi
   git_reset_to_main
-  info "Handing #$n to $AGENT…"
+  info "Handing #$n to $AGENT..."
   if run_agent "$(work_prompt "$n")"; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n"; fi
   finish_issue "$n"
 }
 
 main() {
   preflight
-  info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}${DRY_RUN:+ · DRY_RUN}"
+  info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   while :; do
     local next; next="$(available_issues | head -1 || true)"
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
-        log "No available issues. Sleeping ${POLL_SECONDS}s… (Ctrl-C to stop)"; sleep "$POLL_SECONDS"; continue
+        log "No available issues. Sleeping ${POLL_SECONDS}s... (Ctrl-C to stop)"; sleep "$POLL_SECONDS"; continue
       fi
       rule; ok "Queue empty — nothing available to work.${STAGE:+ (stage=$STAGE)}"; break
     fi

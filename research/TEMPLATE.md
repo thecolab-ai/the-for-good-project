@@ -4,6 +4,8 @@ domain: "<child-welfare | grant-access | civic-transparency | ai-policy | biosec
 issue: "#<issue number>"
 confidence: "<High | Medium | Low>"   # overall confidence in the headline conclusion
 author: "<your name or handle>"
+agent: "<codex | claude | none>"          # the AI client that produced this (none = unassisted human)
+model: "<exact model id — e.g. gpt-5.5-codex, claude-opus-4-8, claude-fable-5>"
 date: "<YYYY-MM-DD>"
 status: "draft"                        # draft | reviewed
 ---

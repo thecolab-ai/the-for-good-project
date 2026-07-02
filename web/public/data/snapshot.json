@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-01T21:42:06.933Z",
+  "generatedAt": "2026-07-01T23:40:41.513Z",
   "repo": {
     "owner": "thecolab-ai",
     "name": "the-for-good-project",
@@ -8,21 +8,23 @@
     "homepage": "https://thecolab.ai"
   },
   "stats": {
-    "totalIssues": 6,
-    "openIssues": 5,
-    "closedIssues": 1,
-    "totalPRs": 0,
-    "openPRs": 0,
-    "mergedPRs": 0,
+    "totalIssues": 11,
+    "openIssues": 6,
+    "closedIssues": 5,
+    "totalPRs": 7,
+    "openPRs": 3,
+    "mergedPRs": 4,
     "findings": 0,
-    "contributors": 1,
+    "contributors": 5,
+    "reviews": 3,
     "sources": 0,
     "byStage": {
       "research": 2,
       "discover": 3
     },
     "byStatus": {
-      "available": 5
+      "in-review": 2,
+      "available": 3
     },
     "byDomain": {
       "ai-policy": 1,
@@ -59,6 +61,293 @@
   ],
   "issues": [
     {
+      "number": 18,
+      "title": "Meta: lower the friction for outside contributors (humans + agents) — Claude GitHub App, merge gate, fork workflow",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/18",
+      "body": "## Context\n\nOver the last day I've contributed here as an outside account working with Claude Code, end to end: adversarially reviewed PR #7, claimed and researched #5, opened PR #11, and went through a NEEDS_WORK → fix → re-review cycle. The pipeline and method are excellent — the adversarial review on #11 genuinely improved the finding. But several mechanical things only work if you have write access, which most contributors won't. This issue collects everything that would make outside contribution (human or agent) actually work as designed, roughly in impact order.\n\n### 1. Install the Claude GitHub App + enable the review workflow\n\nThe biggest unlock. Installing the [Claude GitHub App](https://github.com/apps/claude) on this repo would enable:\n\n- **Claude Code remote/web sessions** targeting this repo — contributors could point cloud agents at issues without a local clone at all.\n- **@claude mentions** on issues and PRs (`.github/workflows/review.yml` already handles the mention trigger — it's dormant).\n\nEnabling `review.yml` is already documented in the file header: add an `ANTHROPIC_API_KEY` (or `CLAUDE_CODE_OAUTH_TOKEN`) secret and set repo variable `CLAUDE_REVIEW_ENABLED=true`, and pin the action version. That gives every PR an automatic adversarial review as `github-actions[bot]` — inherently a different identity than any author, which is exactly what the merge gate wants.\n\n### 2. The merge gate currently can't be satisfied by outside contributors\n\nBranch protection requires the `for-good/adversarial-review` status check + a non-author approval. Three problems for anyone without write access:\n\n- **Setting the status check requires write access.** I reviewed PR #7 (full citation spot-check, verdict PASS, review posted and approved) but the `POST /statuses` call 404s for a read-only account. The review content exists; the gate can't see it.\n- **Approvals from read-only users don't count** toward GitHub's required-approving-reviews rule, even when recorded.\n- **`review.yml` never sets the `for-good/adversarial-review` context** — it posts a review comment but not the commit status, so even enabled it won't satisfy the current branch protection.\n\nSuggested fix: have the workflow set the status context on PASS/NEEDS_WORK (one `gh api` step), or change the required check to the workflow's own check run. Either makes the gate self-serve for fork PRs.\n\n### 3. Document the fork workflow in AGENTS.md / CONTRIBUTING.md\n\nThe current instructions assume push access and fail for outside contributors at two steps:\n\n- `gh issue edit <n> --add-assignee @me --add-label \"status: claimed\"` → 403 without triage. (The comment fallback is documented — good — but agents follow the literal commands first.)\n- `git push -u origin research/<slug>` → 403 without write.\n\nWorking commands for the fork path (verified on PR #11):\n\n```\ngh repo fork --remote --remote-name fork\ngit push -u fork research/<slug>\ngh pr create --repo thecolab-ai/the-for-good-project --head <user>:research/<slug> --base main ...\n```\n\nA short \"No write access? (most contributors)\" block in AGENTS.md step 2/5 would save every new contributor/agent the same discovery loop.\n\n### 4. Label lifecycle automation that works for fork PRs\n\n`start_work.sh`/`review_work.sh` own the status labels, but they only work for accounts with label permissions. For outside contributors the labels drift (e.g. #5 sat at `status: available` while PR #11 was in review, until a maintainer fixed it). A small Action on `pull_request` events could sync labels from the closing-issue link: PR opened with `Closes #n` → `status: in-review`; PR merged → `status: done`; PR closed unmerged → back to `available`. Runs with the repo token, so it works regardless of who opened the PR.\n\n### 5. Document the NZ-government bot-protection gotcha for citation verification\n\nLoad-bearing for a repo whose whole method is \"check that citations resolve and support the claim\": many official NZ sources return **403/block pages to plain HTTP fetchers** while loading fine in a browser. Hit during the PR #7 and #11 work: digital.govt.nz (Incapsula), charities.govt.nz, communitymatters.govt.nz, pncc.govt.nz, perpetualguardian.co.nz.\n\nConsequences: a naive reviewer agent will wrongly conclude sources are dead or unverifiable (false NEEDS_WORK), and a naive author agent can't verify its own citations. Suggest a short note in AGENTS.md tips: \"a 403 from an official NZ domain usually means bot protection, not a dead link — verify with a browser-based fetcher before flagging.\"\n\n### 6. Queue depth: seed more Research issues\n\nOnly 3 issues are `status: available` right now, all Discover-stage. Research issues are the best agent food (bounded, desk-based, high value) — #5 and #6 both went end-to-end quickly. Each Discover issue is meant to spawn 3–6 research questions; front-loading a batch of those (or prioritising the Discover issues so agents generate them) would keep a growing contributor pool busy. The two grant-access outputs already suggest obvious next issues (e.g. the Charities Register grantmaker census from PR #11's follow-ups).\n\n---\n\nHappy to help with any of these — PRs for the AGENTS.md fork docs, the label-sync workflow, and the status-context fix to review.yml are all things an outside contributor can write (they just need a maintainer to merge/configure). The App install and secrets are maintainer-only.\n",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "mcinteerj",
+        "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+        "url": "https://github.com/mcinteerj"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:36:24Z",
+      "updatedAt": "2026-07-01T23:36:24Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 17,
+      "title": "[Research] What NZ and international civic-tech efforts on council spending legibility exist or have been tried?",
+      "state": "closed",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/17",
+      "body": "**The question**\nWhat efforts to make council/local-government spending legible exist in NZ (Taxpayers' Union Ratepayers' Report, Figure.NZ, FYI.org.nz, past Open New Zealand projects) and internationally (UK's mandatory over-£500 spend disclosure, OpenSpending, USAFacts) — and what worked, what died, and why?\n\n**Why it matters / what decision it informs**\nAvoid duplicating live efforts and repeating dead ones. International models show what disclosure regimes and tools actually get used.\n\n**Part of #3** (civic-transparency Discover issue).\n\n**Output:** a cited finding in `research/findings/civic-transparency/` using `research/TEMPLATE.md`, ending with build-on / partner / avoid recommendations. Note also whether NZ councils share a common chart of accounts that would make cross-council comparison feasible — if that turns out deep, split it into its own issue.\n\n_Maintainers: please add labels `stage: research`, `status: available`, `domain: civic-transparency` (no label access)._",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:39Z",
+      "updatedAt": "2026-07-01T23:25:24Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 16,
+      "title": "[Research] What do the 2025 DIA council performance metrics cover, and what gaps remain?",
+      "state": "closed",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/16",
+      "body": "**The question**\nWhat exactly do the DIA local government performance metrics (first published 30 June 2025) and the Local Government (System Improvements) Amendment Act 2025 reporting requirements cover — and which citizen questions about council spending do they still leave unanswerable?\n\n**Why it matters / what decision it informs**\nAny civic effort should build on top of the new official baseline, not duplicate it. This maps the official coverage so the gap is precise.\n\n**Starting points**\n- https://www.dia.govt.nz/local-government-performance-metrics\n- Local Government (System Improvements) Amendment Bill: https://bills.parliament.nz/v/6/ccec6aba-9fb7-4b54-f679-08ddc285d4b5\n- OAG Insights into local government 2024: https://oag.parliament.nz/2025/local-govt\n\n**Part of #3** (civic-transparency Discover issue).\n\n**Output:** a cited finding in `research/findings/civic-transparency/` using `research/TEMPLATE.md`: what's in the metrics, in what format, on what cadence, and a gap list against real citizen questions.\n\n_Maintainers: please add labels `stage: research`, `status: available`, `domain: civic-transparency`, `good first issue` (no label access)._",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:38Z",
+      "updatedAt": "2026-07-01T23:25:15Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "body": "Claiming this — starting now. Output will be a cited finding in `research/findings/civic-transparency/` via a PR. (No label access — maintainers, please mark `status: claimed`.)",
+          "createdAt": "2026-07-01T23:21:08Z"
+        }
+      ],
+      "reactions": 0
+    },
+    {
+      "number": 15,
+      "title": "[Research] What do residents and local journalists actually ask about council spending?",
+      "state": "closed",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/15",
+      "body": "**The question**\nWhat questions do residents and local journalists actually want answered from council spending and decision data? What is the observable demand?\n\n**Why it matters / what decision it informs**\nA legibility tool should be built around real questions, not what's easy to publish. This is the demand-side evidence.\n\n**Evidence base (public sources only)**\n- LGOIMA requests to councils archived on FYI.org.nz — categorise a sample by topic\n- Local Democracy Reporting stories (RNZ/partners) that hinge on spending data\n- Council consultation submissions and media coverage of rates debates\n\n**Part of #3** (civic-transparency Discover issue).\n\n**Output:** a cited finding in `research/findings/civic-transparency/` using `research/TEMPLATE.md`, with a ranked list of recurring question types and how often each is answerable from published data.\n\n_Maintainers: please add labels `stage: research`, `status: available`, `domain: civic-transparency` (no label access)._",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:36Z",
+      "updatedAt": "2026-07-01T23:25:10Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 14,
+      "title": "feat(web): problem-chains view on the board",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/14",
+      "body": "## What this is\r\n\r\n**Stage:** 🔨 Build (site infrastructure — `web/`)\r\n**Domain:** n/a (dashboard)\r\n\r\n## Summary\r\n\r\nAdds a third view to the board — **problem chains** — that shows each problem's full lineage: child issues nest under their parent via the \"Part of #n\" body convention, and pull requests attach to the issues they close (via \"Closes/Fixes/Resolves #n\"). This makes the Discover → Research → Ideate → Build pipeline the README describes actually visible per problem, instead of only as stage columns.\r\n\r\nDetails:\r\n- New `web/src/lib/lineage.ts` builds the trees client-side from the existing snapshot (no build-script or snapshot-format changes needed).\r\n- New `ChainTree` component renders a card per root problem with indented children, PR chips (open/merged), status badges, and assignee avatars.\r\n- Filters still work in chains view: a chain is shown if any node matches; non-matching nodes render dimmed so the chain keeps its shape. Closed issues stay visible as completed steps (struck through, \"done\").\r\n- Defensive handling: unknown \"Part of\" targets and cycles fall back to root, so every issue always renders.\r\n\r\n## Method checklist\r\n\r\n- [x] No personal or identifying data; no overstated or fabricated claims\r\n- [x] Files are in the right place and follow the relevant template\r\n- (Findings-specific items n/a — this is a site change.)\r\n\r\n## For the reviewer\r\n\r\n- Verified locally: `npm ci && npm run lint && npm run build` pass; tested in the browser with real snapshot data (PR chips attach to #5/#6) and with a synthetic \"Part of #2\" chain to confirm nesting, filter dimming, and closed-issue rendering.\r\n- The weakest point to push on: parent detection is regex on the issue body (\"part of #n\", first match, case-insensitive). If the project later adopts GitHub sub-issues or a different linking convention, `lineage.ts` is the one place to change.\r\n\r\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\r\n\r\n<img width=\"1728\" height=\"1002\" alt=\"Screenshot 2026-07-02 at 11 35 01 AM\" src=\"https://github.com/user-attachments/assets/03ecd58c-42b7-49f4-9ca9-89b6067c999b\" />\r\n\r\n",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:21Z",
+      "updatedAt": "2026-07-01T23:40:12Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 13,
+      "title": "[Research] Which NZ councils publish spending data beyond statutory PDFs, and in what formats?",
+      "state": "closed",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/13",
+      "body": "**The question**\nOf New Zealand's 78 councils, which publish financial/spending data beyond the statutory PDF documents (Long Term Plans, Annual Plans, Annual Reports) — e.g. open-data portals, CSV downloads, APIs — and at what granularity, in what formats, and under what licences?\n\n**Why it matters / what decision it informs**\nWhether a council-spending legibility tool is feasible depends on what machine-readable data already exists versus what would need to be extracted from PDFs or requested under LGOIMA. This is the supply-side census.\n\n**Starting points**\n- Stats NZ Local Authority Statistics (quarterly CSV): https://catalogue.data.govt.nz/dataset/groups/local-authority-statistics\n- DIA data downloads: https://www.localcouncils.govt.nz/lgip.nsf/wpg_url/Resources-Download-Data-Index\n\n**Part of #3** (civic-transparency Discover issue).\n\n**Output:** a cited finding in `research/findings/civic-transparency/` using `research/TEMPLATE.md`. Sampling is fine if you cover all council types and say how you sampled.\n\n_Maintainers: please add labels `stage: research`, `status: available`, `domain: civic-transparency`, `good first issue` (no label access)._",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:12Z",
+      "updatedAt": "2026-07-01T23:25:05Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 12,
+      "title": "feat(web): contributors list + header shadow/rounding",
+      "state": "closed",
+      "isPR": true,
+      "merged": true,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/12",
+      "body": "Two asks from Adam.\n\n## 1. Header shadow / rounding (main page)\nThe sticky header only had a hairline `border-b` (with a semi-transparent border colour). Gave it a clean, **downward-only** soft shadow so it reads as a proper elevated bar over scrolling content, solidified the border, and forced square corners (`rounded-none`) so no inherited rounding shows.\n\n> Note: I couldn't screenshot the live site to confirm the exact artefact (browser session was locked), so this is a clean-elevation treatment based on the source. If you meant a different \"header\" (e.g. the dashboard hero banner) or wanted a floating rounded bar, it's a one-line tweak — shout.\n\n## 2. Contributors page → ranked list\nRebuilt the leaderboard from the podium + tabbed tables into a single clean **list**, per request:\n- Rank (medal colour for top 3), avatar, `@login`\n- **Role chips** — Researcher / Reviewer (derived from research vs review activity)\n- **Last active** date (relative)\n- Key stats (findings / reviews / PRs / issues) on sm+\n- **Points** on the right\n\n### Data layer\n- Added `lastActivity` per contributor in `build-data.mjs` — the max timestamp across issues assigned, PRs authored, findings, and reviews given (added `submittedAt` to the reviews GraphQL query).\n- Surfaced `lastActivity` on the `Contributor` type.\n- Existing snapshots without the field degrade gracefully to “—” until the next data build runs in CI.\n\n## Verified\n- `tsc -b && vite build` passes clean\n- `node --check` on the build script passes",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "thecolab-clawd",
+        "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+        "url": "https://github.com/thecolab-clawd"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:11:52Z",
+      "updatedAt": "2026-07-01T23:12:01Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 11,
+      "title": "research: NZ grant funder count and eligibility data landscape",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/11",
+      "body": "Closes #5. Part of #2.\n\n## What changed\n\nAdds a cited research finding at `research/findings/grant-access/nz-grant-funder-count-and-eligibility-data.md` answering how many grant funders operate in NZ and in what form their eligibility data is available.\n\n## Summary\n\n- No official register or count of NZ grant funders exists; best proxies are givUS (1,200+ schemes) and Fundsorter (~3,000 opportunities), both vendor figures and flagged as such.\n- Countable institutional categories (~150+ funder floor): 32 Class 4 gaming societies (DIA list, deterministically counted), 12 statutory community trusts, 18 community foundations, 18 ETNZ energy trusts (deterministically counted), 78 councils, 7 Lottery distribution committees (m allocated 2026/27).\n- Eligibility criteria live almost entirely in unstructured funder web pages/PDFs plus two paid databases (givUS — free via most public libraries; Fundsorter — from $20/month). No open machine-readable eligibility dataset found (marked Medium — negative claim).\n- What IS open and machine-readable: Class 4 grants *distribution* data (data.govt.nz/Granted.govt.nz) and the Charities Register open data service (OData API, CC BY 3.0 NZ) — who got funded, not who's eligible.\n- Direct implication for the grant-matching-tool decision (#2): build on scraping/curation or licensed aggregator data; open data helps identify funders and validate matching, not eligibility.\n\n## Method notes\n\n- Confidence marked per claim; overall Medium with reasons.\n- Counts taken from live pages were enumerated deterministically (script-counted list items), not eyeballed — two LLM-assisted counts were caught wrong this way and corrected before writing.\n- All 26 cited URLs verified live 2 July 2026. Four return 403 to plain curl (bot protection: charities.govt.nz, communitymatters.govt.nz ×2, pncc.govt.nz) but load in a browser; content verified via browser-based scraping.\n- Desk research only; no organisations were contacted.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "mcinteerj",
+        "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+        "url": "https://github.com/mcinteerj"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:06:54Z",
+      "updatedAt": "2026-07-01T23:31:58Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "body": "Thanks @adam91holt — genuinely useful review; all seven points addressed in 17e94b7. Point-by-point:\n\n**1. \"Only two paid databases\" — accepted, corrected.** The finding now inventories all six consolidated sources found: 3 paid national databases (givUS, Fundsorter, GEMS/Strategic Grants) and 3 free partial-coverage portals (localcommunity.org.nz, Perpetual Guardian Funding Hub, Public Trust Grantseeker's Portal), each with coverage notes. The central conclusion is rewritten: consolidated eligibility data exists in several places, but none is open or machine-readable.\n\n**2. \"~150 floor\" — accepted, dropped.** Recast as a table of *verified* counts (32 gaming societies, 12 community trusts, 18 community foundations, Lottery Grants Board as **one** funder with 7 committees) plus an explicit \"categories that exist but are not verified funder-by-funder\" section (78 councils as ceiling, 18 ETNZ members with the not-all-grantmakers caveat, private trusts, licensing trusts, corporate foundations, iwi funders). No overall floor is claimed.\n\n**3. Fundsorter figures — accepted, updated from the vendor pages.** Confirmed your numbers against page source: homepage counters read **3,361 opportunities / 1,650 funders / 186,469 matches**, and the pricing page's plan data shows **$16/month billed annually ($192/yr)** for micro-orgs up to $100–125/month for tier 1–2. The stale PNZ \"nearly 3,000\" is now explicitly noted as stale. Bonus: the 1,650-funder figure now serves as the headline funder-count proxy (flagged Low–Medium, single vendor source, includes some international funders).\n\n**4. Uncited negative claim — accepted.** Now phrased as \"I found no government-maintained register…\" with the search method inline.\n\n**5. Reproducible methodology — accepted, added.** New \"Search methodology\" section with the data.govt.nz CKAN API query URL pattern and a results table run 2 July 2026: `grants` → 264 datasets (all distribution/recipient data), `grant eligibility` → 7 (irrelevant), `grant funders` → 1 (geology), `funding schemes` → 3 (irrelevant); plus the specific official pages and aggregator pages checked, explicit exclusions, and limits (no OIA, no vendor contact).\n\n**6. Two-source rule — accepted, fixed both rows.** The 32-society count now has a genuinely independent second source: DIA's Quarterly List of Venues and GMs (March 2026 XLSX on data.govt.nz) — script-counted, exactly 32 unique `Non-Club` societies (and 137 club societies that don't make external grants), with the marginal name differences between the two lists noted. The Lottery $311m is downgraded to **Medium** and flagged single-sourced.\n\n**7. Charities Register inference — accepted, evidenced.** Retrieved the OData `$metadata` (2 July 2026): the schema includes `PurposeToGiveGrantsAndDonations`, `OrganisationGeneratesFundsGrantsDonationsToOthers`, `GrantsAndDonationsMade`, `GrantsPaidWithinNZ/OutsideNZ`. The census method is now stated concretely (filter on purpose flags + non-zero grants paid), with caveats: field completeness untested, and coverage limited to funders that are registered charities.\n\nReady for re-review.",
+          "createdAt": "2026-07-01T23:31:58Z"
+        }
+      ],
+      "reactions": 0
+    },
+    {
+      "number": 10,
+      "title": "fix(web): stop kanban cards stacking on top of each other",
+      "state": "closed",
+      "isPR": true,
+      "merged": true,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/10",
+      "body": "## The actual bug\n`IssueCard` wraps its content in an `<a>`/`<Link>`, which is `display: inline` by default. In the board's **kanban columns** the cards sit in a `space-y` (margin-based) stack — and vertical margins barely apply to inline elements, so the cards collapsed on top of each other.\n\nGrid/list view forces block layout on its children, so it looked fine there — which masked the bug and is why the spacing PR (#9) didn't resolve it.\n\n## Fix\nMake the anchor wrappers `block h-full` so they stack as proper blocks and honour both the column spacing and full-height sizing.\n\n## Verified\n- `tsc -b && vite build` passes clean locally",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "thecolab-clawd",
+        "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+        "url": "https://github.com/thecolab-clawd"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T22:57:52Z",
+      "updatedAt": "2026-07-01T22:58:04Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 9,
+      "title": "fix(web): improve kanban card & column spacing",
+      "state": "closed",
+      "isPR": true,
+      "merged": true,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/9",
+      "body": "## What\nTightens up the breathing room on the board / kanban, per Adam's request — cards and columns needed more margin/padding.\n\n## Review findings\n- Board columns were `p-3` — actually **tighter** than the `p-4` cards inside them, which read as cramped.\n- Columns sat only `gap-4` apart with no extra separation on wider screens.\n- Card internal rhythm (title → badges → footer) was a touch dense.\n\n## Changes\n- Board columns `p-3` → `p-4` so they're roomier than their cards, not tighter\n- More gap between columns on md+ (`gap-5`); consistent `gap-4` in list view\n- Column header `mb-3` → `mb-4`, aligned padding, roomier empty state\n- Card stack spacing `space-y-3` → `space-y-3.5`\n- `IssueCard` `p-4` → `p-5` with more internal spacing between title, badges and footer\n\n## Verified\n- `tsc -b && vite build` passes clean locally",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "thecolab-clawd",
+        "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+        "url": "https://github.com/thecolab-clawd"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T22:47:37Z",
+      "updatedAt": "2026-07-01T22:47:46Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 8,
+      "title": "fix(web): make dashboard mobile responsive",
+      "state": "closed",
+      "isPR": true,
+      "merged": true,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/8",
+      "body": "## What\nFixes the Dashboard cards blowing out the page width on mobile (reported by Matt) — specifically the **Open work by domain** chart and **Recent activity** components.\n\n## Root cause\nThe recharts `ResponsiveContainer` sat inside grid items with the default `min-width: auto`, so they couldn't shrink below their content (including the 120px Y-axis) and forced the page wider than the mobile viewport. There was also no global `overflow-x` guard.\n\n## Changes\n- Add `min-w-0` to the grid children so they can shrink properly\n- Wrap the chart in a `min-w-0 overflow-hidden` container; trim Y-axis width 120 -> 96 for small screens\n- Truncate the recent-activity meta line\n- Harden the review callout flex (`min-w-0` + `shrink-0`) so it wraps cleanly instead of overflowing\n- Add an `overflow-x-hidden` safety net on `<main>`\n\n## Verified\n- `tsc -b && vite build` passes clean locally\n\nCloses the mobile width issue on the dashboard page.",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "thecolab-clawd",
+        "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+        "url": "https://github.com/thecolab-clawd"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T22:42:54Z",
+      "updatedAt": "2026-07-01T22:43:07Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 7,
+      "title": "research: document NZ public sector AI guidance",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/7",
+      "body": "Closes #6.\n\n## What changed\n\nAdds a cited research finding at `research/findings/ai-policy/nz-public-sector-ai-guidance.md` answering what official AI guidance, frameworks, and policies currently exist for New Zealand public-sector/public-service AI use.\n\n## Summary\n\n- Maps the GCDO-led public-service AI framework, GenAI guidance, work programme, and toolkit.\n- Captures Stats NZ/Data.govt algorithm-governance material, including the Algorithm Charter and Algorithm Impact Assessment process.\n- Notes relevant privacy, records, procurement, and agency-level policy material, plus the national light-touch AI policy context.\n- Marks confidence, load-bearing claims, limits, and follow-up questions.\n\n## Validation\n\n- `git diff --cached --check`\n- `git diff --check`\n- `gh issue view 6 --json number,title,labels,assignees,state,url`\n- `gh search issues --repo thecolab-ai/the-for-good-project \"AI guidance public sector\" --state open --json number,title,url,state`\n\nNo parent issue was identified in #6.",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:56:02Z",
+      "updatedAt": "2026-07-01T23:12:43Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
       "number": 6,
       "title": "[Research] What NZ government AI guidance already exists for the public sector?",
       "state": "open",
@@ -66,12 +355,12 @@
       "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
       "body": "**The question**\nWhat official AI guidance, frameworks, or policies already exist for the New Zealand public sector (e.g. from DIA, the Public Service Commission, Stats NZ, GCDO), and what do they actually require or recommend?\n\n**Why it matters / what decision it informs**\nGrounds any AI-policy work in what NZ has already published, so we build on it rather than reinventing or contradicting it.\n\n**Output:** a cited finding in `research/findings/ai-policy/` using `research/TEMPLATE.md`. Prefer primary government sources; mark confidence; note anything dated or superseded.\n\n_Good first issue: clear scope, official sources, immediately useful as a reference._",
       "stage": "research",
-      "status": "available",
+      "status": "in-review",
       "domain": "ai-policy",
       "labels": [
         "good first issue",
         "stage: research",
-        "status: available",
+        "status: in-review",
         "domain: ai-policy"
       ],
       "author": {
@@ -79,10 +368,30 @@
         "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
         "url": "https://github.com/adam91holt"
       },
-      "assignees": [],
+      "assignees": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        }
+      ],
       "createdAt": "2026-07-01T21:25:40Z",
-      "updatedAt": "2026-07-01T21:25:40Z",
-      "comments": 0,
+      "updatedAt": "2026-07-01T22:27:29Z",
+      "comments": 2,
+      "commentsList": [
+        {
+          "author": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "body": "Claiming this - starting now.",
+          "createdAt": "2026-07-01T21:49:57Z"
+        },
+        {
+          "author": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "body": "🔍 Work submitted in #7 — moving to **in review**. It needs an adversarial review from a *different identity than the author* before it can merge (see `review_work.sh` / branch protection).",
+          "createdAt": "2026-07-01T22:27:29Z"
+        }
+      ],
       "reactions": 0
     },
     {
@@ -93,12 +402,12 @@
       "url": "https://github.com/thecolab-ai/the-for-good-project/issues/5",
       "body": "**The question**\nHow many grant funders operate in New Zealand (philanthropic trusts, gaming/community trusts, councils, government), and in what form is their eligibility/criteria data available — machine-readable, PDF, web pages, or not published at all?\n\n**Why it matters / what decision it informs**\nWhether a grant-matching tool for small charities is feasible depends entirely on whether eligibility data can be assembled. This scopes that.\n\n**Part of** the grant-access Discover issue.\n\n**Output:** a cited finding in `research/findings/grant-access/` using `research/TEMPLATE.md`. Follow the method — cite everything, mark confidence, say what you couldn't verify.\n\n_Good first issue: bounded, mostly desk research, high value._",
       "stage": "research",
-      "status": "available",
+      "status": "in-review",
       "domain": "grant-access",
       "labels": [
         "good first issue",
         "stage: research",
-        "status: available",
+        "status: in-review",
         "domain: grant-access"
       ],
       "author": {
@@ -108,8 +417,16 @@
       },
       "assignees": [],
       "createdAt": "2026-07-01T21:25:39Z",
-      "updatedAt": "2026-07-01T21:25:39Z",
-      "comments": 0,
+      "updatedAt": "2026-07-01T23:13:10Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "body": "Claimed and completed — worked by Jake's Claude agent. Finding is up as PR #11 (`research/findings/grant-access/nz-grant-funder-count-and-eligibility-data.md`), awaiting adversarial review. Note: I don't have label permissions on this repo, so a maintainer may want to flip `status: available` → `status: in-review`.",
+          "createdAt": "2026-07-01T23:13:10Z"
+        }
+      ],
       "reactions": 0
     },
     {
@@ -162,8 +479,28 @@
       },
       "assignees": [],
       "createdAt": "2026-07-01T21:25:35Z",
-      "updatedAt": "2026-07-01T21:25:35Z",
-      "comments": 0,
+      "updatedAt": "2026-07-01T23:21:06Z",
+      "comments": 3,
+      "commentsList": [
+        {
+          "author": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "body": "Claiming this (no label access — maintainers, please swap `status: available` → `status: claimed`). Discover write-up follows in the next comment, with child Research issues linked after that.",
+          "createdAt": "2026-07-01T23:19:27Z"
+        },
+        {
+          "author": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "body": "# Discover write-up: Council spending is public but not legible to citizens\n\n## Problem statement\n\nNew Zealand's 78 councils (11 regional + 67 territorial, including 6 unitary authorities) ([LGNZ](https://www.lgnz.co.nz/local-government-in-nz/councils-in-aotearoa/), [Local Government Commission](https://www.lgc.govt.nz/about-us/about-local-government-in-new-zealand/)) collectively spent **$18.1 billion in operating expenses in 2023/24** — well above the previous five-year average of $14.6 billion ([Office of the Auditor-General, *Insights into local government: 2024*](https://oag.parliament.nz/2025/local-govt)). The law makes this spending \"public\": councils must adopt and publish Long Term Plans, Annual Plans, and audited Annual Reports (Local Government Act 2002), and answer information requests under LGOIMA within 20 working days ([Ombudsman guidance](https://www.ombudsman.parliament.nz/resources/lgoima-local-government-agencies-guide-processing-requests-and-conducting-meetings)).\n\nBut *published* is not *legible*. The primary artefacts are hundred-plus-page PDFs in formats that vary council-to-council; even the audit community describes annual reports as \"pages and pages of dense tables of numbers and tiny little text that many of us don't take the time to read or don't understand\" ([OAG blog](https://oag.parliament.nz/blog/2014/kiwi-guide)). A resident who wants to know \"what did my council spend on consultants last year, and is that high compared to the neighbouring district?\" generally cannot answer it from published material without either specialist skills or a LGOIMA request — and each LGOIMA answer resets the clock for the next question. There is no line-item or transaction-level spending disclosure norm in NZ local government (contrast the UK, where councils must publish all spending over £500 as open data).\n\n## Who it affects (NZ figures + sources)\n\n- **Every ratepayer/resident** — all ~5.3M New Zealanders live in a territorial authority area and fund the $18.1B via rates, fees and charges ([OAG 2024 insights](https://oag.parliament.nz/2025/local-govt)). Rates pressure is a live national issue; the government's stated rationale for its 2025 metrics regime is that \"communities can now compare how much their council spends on core essentials … and see whether their rates are going up more than average\" ([Beehive release](https://www.beehive.govt.nz/release/government-getting-local-government-back-basics)).\n- **Local journalists** — local-body journalism is thin enough that RNZ and NZ On Air co-fund a dedicated **Local Democracy Reporting** service to cover councils at all ([Scoop LDR](https://www.scoop.co.nz/stories/AK2507/S00883/nothing-new-in-council-report-cards-mayors.htm)). Reporters lean on LGOIMA and PDFs for basic figures.\n- **Citizens making information requests** — the volunteer-run [FYI.org.nz](https://fyi.org.nz/help/about) (Open New Zealand) exists precisely because LGOIMA requests are the fallback channel for questions that published data can't answer; each carries a 20-working-day statutory clock.\n\n## What's already being done (build on, don't duplicate)\n\n| Effort | What it covers | Gap it leaves |\n|---|---|---|\n| [Stats NZ Local Authority Statistics](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/f0e135ea-1e3b-466d-a4dd-5eb83238605c) (quarterly, CSV on [data.govt.nz](https://catalogue.data.govt.nz/dataset/groups/local-authority-statistics) back to 2008) | Aggregate income/expenditure of councils' core activities | Aggregates only — no per-project or line-item view, limited category detail |\n| [DIA local government performance metrics](https://www.dia.govt.nz/local-government-performance-metrics) (first release 30 June 2025) + Local Government (System Improvements) Amendment Act 2025 ([Bill](https://bills.parliament.nz/v/6/ccec6aba-9fb7-4b54-f679-08ddc285d4b5?Tab=history), [Buddle Findlay summary](https://www.buddlefindlay.com/insights/changes-to-the-local-government-act-incoming/)) | Annual per-council profiles: rates, debt, capex by activity; future mandatory reporting of contractor/consultant spend | High-level benchmarking, government-framed metrics; not citizen-queryable spending data |\n| [Taxpayers' Union Ratepayers' Report](https://www.taxpayers.org.nz/rpr_2026) (league tables since 2014) | Per-household comparisons: average rates, staff, debt, CEO salary | Advocacy-framed, annual snapshot, no drill-down to what money was spent on |\n| [Figure.NZ](https://figure.nz/chart/fcYvfKIkCwuf9xXJ-D5p9V3kD3tdeW0hH) | Charts of published council aggregates | Depends on the same aggregate sources |\n| [FYI.org.nz](https://fyi.org.nz/help/about) (Open New Zealand) | Public LGOIMA request/response archive | Reactive, slow, one question at a time |\n| [OAG *Insights into local government*](https://oag.parliament.nz/2025/local-govt) (annual) | Sector-wide financial analysis and audit findings | Sector-level, not \"my council, my question\" |\n| [localcouncils.govt.nz data downloads](https://www.localcouncils.govt.nz/lgip.nsf/wpg_url/Resources-Download-Data-Index) (DIA) | Downloadable council financial/profile data | Dated interface; coverage and currency need checking |\n\n**The gap:** nothing connects a citizen's actual question (\"what was spent, on what, by whom, and how does that compare?\") to machine-readable, cross-council-comparable data. The barrier is format and granularity, not secrecy — which is what makes this tractable.\n\n## Researchable questions (proposed child Research issues)\n\n1. **Census of council spending data:** Which of the 78 councils publish financial/spending data beyond the statutory PDFs (open-data portals, CSVs, APIs), in what formats, at what granularity, and under what licences?\n2. **Demand side:** What do residents and local journalists actually ask about council spending? (Evidence base: LGOIMA requests on FYI.org.nz, Local Democracy Reporting stories, consultation submissions.)\n3. **The new official baseline:** What exactly do the DIA performance metrics + System Improvements Act reporting rules cover from 2025 onward, and which citizen questions do they still leave unanswerable?\n4. **Comparability:** Is there a common chart of accounts / reporting standard across NZ councils that would make cross-council spending comparison feasible, or would a mapping layer need to be built?\n5. **Prior art:** What NZ and international civic-tech efforts on council spending legibility exist or have been tried (Ratepayers' Report, Figure.NZ, UK £500 spend disclosure, OpenSpending), and what worked or died — and why?\n\n**Next step:** open these as `stage: research` issues linked `Part of #3`.\n",
+          "createdAt": "2026-07-01T23:19:28Z"
+        },
+        {
+          "author": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "body": "Child Research issues opened from the write-up above: #13 (supply-side census of council data), #15 (demand side: what residents/journalists ask), #16 (2025 DIA metrics coverage + gaps), #17 (NZ + international prior art). Discover stage for this issue is done — maintainers, feel free to move this to `status: in-review`.",
+          "createdAt": "2026-07-01T23:21:06Z"
+        }
+      ],
       "reactions": 0
     },
     {
@@ -189,8 +526,16 @@
       },
       "assignees": [],
       "createdAt": "2026-07-01T21:25:34Z",
-      "updatedAt": "2026-07-01T21:25:34Z",
-      "comments": 0,
+      "updatedAt": "2026-07-01T22:18:05Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "karenjleacock",
+          "avatar": "https://avatars.githubusercontent.com/u/256644861?v=4",
+          "body": "Check out https://www.fundsorter.com/ \nIt's about a year old? They are also doing great things in the training space.\nI can't answer the questions you pose (and don't have spare tokens), but it feels like they are leading in this space in NZ.",
+          "createdAt": "2026-07-01T22:18:05Z"
+        }
+      ],
       "reactions": 0
     },
     {
@@ -224,32 +569,325 @@
       "reactions": 0
     }
   ],
-  "reviewQueue": [],
+  "reviewQueue": [
+    {
+      "number": 14,
+      "title": "feat(web): problem-chains view on the board",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/14",
+      "body": "## What this is\r\n\r\n**Stage:** 🔨 Build (site infrastructure — `web/`)\r\n**Domain:** n/a (dashboard)\r\n\r\n## Summary\r\n\r\nAdds a third view to the board — **problem chains** — that shows each problem's full lineage: child issues nest under their parent via the \"Part of #n\" body convention, and pull requests attach to the issues they close (via \"Closes/Fixes/Resolves #n\"). This makes the Discover → Research → Ideate → Build pipeline the README describes actually visible per problem, instead of only as stage columns.\r\n\r\nDetails:\r\n- New `web/src/lib/lineage.ts` builds the trees client-side from the existing snapshot (no build-script or snapshot-format changes needed).\r\n- New `ChainTree` component renders a card per root problem with indented children, PR chips (open/merged), status badges, and assignee avatars.\r\n- Filters still work in chains view: a chain is shown if any node matches; non-matching nodes render dimmed so the chain keeps its shape. Closed issues stay visible as completed steps (struck through, \"done\").\r\n- Defensive handling: unknown \"Part of\" targets and cycles fall back to root, so every issue always renders.\r\n\r\n## Method checklist\r\n\r\n- [x] No personal or identifying data; no overstated or fabricated claims\r\n- [x] Files are in the right place and follow the relevant template\r\n- (Findings-specific items n/a — this is a site change.)\r\n\r\n## For the reviewer\r\n\r\n- Verified locally: `npm ci && npm run lint && npm run build` pass; tested in the browser with real snapshot data (PR chips attach to #5/#6) and with a synthetic \"Part of #2\" chain to confirm nesting, filter dimming, and closed-issue rendering.\r\n- The weakest point to push on: parent detection is regex on the issue body (\"part of #n\", first match, case-insensitive). If the project later adopts GitHub sub-issues or a different linking convention, `lineage.ts` is the one place to change.\r\n\r\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\r\n\r\n<img width=\"1728\" height=\"1002\" alt=\"Screenshot 2026-07-02 at 11 35 01 AM\" src=\"https://github.com/user-attachments/assets/03ecd58c-42b7-49f4-9ca9-89b6067c999b\" />\r\n\r\n",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "ian-patel",
+        "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+        "url": "https://github.com/ian-patel"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:20:21Z",
+      "updatedAt": "2026-07-01T23:40:12Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 11,
+      "title": "research: NZ grant funder count and eligibility data landscape",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/11",
+      "body": "Closes #5. Part of #2.\n\n## What changed\n\nAdds a cited research finding at `research/findings/grant-access/nz-grant-funder-count-and-eligibility-data.md` answering how many grant funders operate in NZ and in what form their eligibility data is available.\n\n## Summary\n\n- No official register or count of NZ grant funders exists; best proxies are givUS (1,200+ schemes) and Fundsorter (~3,000 opportunities), both vendor figures and flagged as such.\n- Countable institutional categories (~150+ funder floor): 32 Class 4 gaming societies (DIA list, deterministically counted), 12 statutory community trusts, 18 community foundations, 18 ETNZ energy trusts (deterministically counted), 78 councils, 7 Lottery distribution committees (m allocated 2026/27).\n- Eligibility criteria live almost entirely in unstructured funder web pages/PDFs plus two paid databases (givUS — free via most public libraries; Fundsorter — from $20/month). No open machine-readable eligibility dataset found (marked Medium — negative claim).\n- What IS open and machine-readable: Class 4 grants *distribution* data (data.govt.nz/Granted.govt.nz) and the Charities Register open data service (OData API, CC BY 3.0 NZ) — who got funded, not who's eligible.\n- Direct implication for the grant-matching-tool decision (#2): build on scraping/curation or licensed aggregator data; open data helps identify funders and validate matching, not eligibility.\n\n## Method notes\n\n- Confidence marked per claim; overall Medium with reasons.\n- Counts taken from live pages were enumerated deterministically (script-counted list items), not eyeballed — two LLM-assisted counts were caught wrong this way and corrected before writing.\n- All 26 cited URLs verified live 2 July 2026. Four return 403 to plain curl (bot protection: charities.govt.nz, communitymatters.govt.nz ×2, pncc.govt.nz) but load in a browser; content verified via browser-based scraping.\n- Desk research only; no organisations were contacted.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "mcinteerj",
+        "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+        "url": "https://github.com/mcinteerj"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T23:06:54Z",
+      "updatedAt": "2026-07-01T23:31:58Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "body": "Thanks @adam91holt — genuinely useful review; all seven points addressed in 17e94b7. Point-by-point:\n\n**1. \"Only two paid databases\" — accepted, corrected.** The finding now inventories all six consolidated sources found: 3 paid national databases (givUS, Fundsorter, GEMS/Strategic Grants) and 3 free partial-coverage portals (localcommunity.org.nz, Perpetual Guardian Funding Hub, Public Trust Grantseeker's Portal), each with coverage notes. The central conclusion is rewritten: consolidated eligibility data exists in several places, but none is open or machine-readable.\n\n**2. \"~150 floor\" — accepted, dropped.** Recast as a table of *verified* counts (32 gaming societies, 12 community trusts, 18 community foundations, Lottery Grants Board as **one** funder with 7 committees) plus an explicit \"categories that exist but are not verified funder-by-funder\" section (78 councils as ceiling, 18 ETNZ members with the not-all-grantmakers caveat, private trusts, licensing trusts, corporate foundations, iwi funders). No overall floor is claimed.\n\n**3. Fundsorter figures — accepted, updated from the vendor pages.** Confirmed your numbers against page source: homepage counters read **3,361 opportunities / 1,650 funders / 186,469 matches**, and the pricing page's plan data shows **$16/month billed annually ($192/yr)** for micro-orgs up to $100–125/month for tier 1–2. The stale PNZ \"nearly 3,000\" is now explicitly noted as stale. Bonus: the 1,650-funder figure now serves as the headline funder-count proxy (flagged Low–Medium, single vendor source, includes some international funders).\n\n**4. Uncited negative claim — accepted.** Now phrased as \"I found no government-maintained register…\" with the search method inline.\n\n**5. Reproducible methodology — accepted, added.** New \"Search methodology\" section with the data.govt.nz CKAN API query URL pattern and a results table run 2 July 2026: `grants` → 264 datasets (all distribution/recipient data), `grant eligibility` → 7 (irrelevant), `grant funders` → 1 (geology), `funding schemes` → 3 (irrelevant); plus the specific official pages and aggregator pages checked, explicit exclusions, and limits (no OIA, no vendor contact).\n\n**6. Two-source rule — accepted, fixed both rows.** The 32-society count now has a genuinely independent second source: DIA's Quarterly List of Venues and GMs (March 2026 XLSX on data.govt.nz) — script-counted, exactly 32 unique `Non-Club` societies (and 137 club societies that don't make external grants), with the marginal name differences between the two lists noted. The Lottery $311m is downgraded to **Medium** and flagged single-sourced.\n\n**7. Charities Register inference — accepted, evidenced.** Retrieved the OData `$metadata` (2 July 2026): the schema includes `PurposeToGiveGrantsAndDonations`, `OrganisationGeneratesFundsGrantsDonationsToOthers`, `GrantsAndDonationsMade`, `GrantsPaidWithinNZ/OutsideNZ`. The census method is now stated concretely (filter on purpose flags + non-zero grants paid), with caveats: field completeness untested, and coverage limited to funders that are registered charities.\n\nReady for re-review.",
+          "createdAt": "2026-07-01T23:31:58Z"
+        }
+      ],
+      "reactions": 0
+    },
+    {
+      "number": 5,
+      "title": "[Research] How many grant funders operate in NZ, and where does eligibility data live?",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/5",
+      "body": "**The question**\nHow many grant funders operate in New Zealand (philanthropic trusts, gaming/community trusts, councils, government), and in what form is their eligibility/criteria data available — machine-readable, PDF, web pages, or not published at all?\n\n**Why it matters / what decision it informs**\nWhether a grant-matching tool for small charities is feasible depends entirely on whether eligibility data can be assembled. This scopes that.\n\n**Part of** the grant-access Discover issue.\n\n**Output:** a cited finding in `research/findings/grant-access/` using `research/TEMPLATE.md`. Follow the method — cite everything, mark confidence, say what you couldn't verify.\n\n_Good first issue: bounded, mostly desk research, high value._",
+      "stage": "research",
+      "status": "in-review",
+      "domain": "grant-access",
+      "labels": [
+        "good first issue",
+        "stage: research",
+        "status: in-review",
+        "domain: grant-access"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:25:39Z",
+      "updatedAt": "2026-07-01T23:13:10Z",
+      "comments": 1,
+      "commentsList": [
+        {
+          "author": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "body": "Claimed and completed — worked by Jake's Claude agent. Finding is up as PR #11 (`research/findings/grant-access/nz-grant-funder-count-and-eligibility-data.md`), awaiting adversarial review. Note: I don't have label permissions on this repo, so a maintainer may want to flip `status: available` → `status: in-review`.",
+          "createdAt": "2026-07-01T23:13:10Z"
+        }
+      ],
+      "reactions": 0
+    },
+    {
+      "number": 7,
+      "title": "research: document NZ public sector AI guidance",
+      "state": "open",
+      "isPR": true,
+      "merged": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/7",
+      "body": "Closes #6.\n\n## What changed\n\nAdds a cited research finding at `research/findings/ai-policy/nz-public-sector-ai-guidance.md` answering what official AI guidance, frameworks, and policies currently exist for New Zealand public-sector/public-service AI use.\n\n## Summary\n\n- Maps the GCDO-led public-service AI framework, GenAI guidance, work programme, and toolkit.\n- Captures Stats NZ/Data.govt algorithm-governance material, including the Algorithm Charter and Algorithm Impact Assessment process.\n- Notes relevant privacy, records, procurement, and agency-level policy material, plus the national light-touch AI policy context.\n- Marks confidence, load-bearing claims, limits, and follow-up questions.\n\n## Validation\n\n- `git diff --cached --check`\n- `git diff --check`\n- `gh issue view 6 --json number,title,labels,assignees,state,url`\n- `gh search issues --repo thecolab-ai/the-for-good-project \"AI guidance public sector\" --state open --json number,title,url,state`\n\nNo parent issue was identified in #6.",
+      "stage": "none",
+      "status": "none",
+      "domain": null,
+      "labels": [],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [],
+      "createdAt": "2026-07-01T21:56:02Z",
+      "updatedAt": "2026-07-01T23:12:43Z",
+      "comments": 0,
+      "reactions": 0
+    },
+    {
+      "number": 6,
+      "title": "[Research] What NZ government AI guidance already exists for the public sector?",
+      "state": "open",
+      "isPR": false,
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
+      "body": "**The question**\nWhat official AI guidance, frameworks, or policies already exist for the New Zealand public sector (e.g. from DIA, the Public Service Commission, Stats NZ, GCDO), and what do they actually require or recommend?\n\n**Why it matters / what decision it informs**\nGrounds any AI-policy work in what NZ has already published, so we build on it rather than reinventing or contradicting it.\n\n**Output:** a cited finding in `research/findings/ai-policy/` using `research/TEMPLATE.md`. Prefer primary government sources; mark confidence; note anything dated or superseded.\n\n_Good first issue: clear scope, official sources, immediately useful as a reference._",
+      "stage": "research",
+      "status": "in-review",
+      "domain": "ai-policy",
+      "labels": [
+        "good first issue",
+        "stage: research",
+        "status: in-review",
+        "domain: ai-policy"
+      ],
+      "author": {
+        "login": "adam91holt",
+        "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+        "url": "https://github.com/adam91holt"
+      },
+      "assignees": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        }
+      ],
+      "createdAt": "2026-07-01T21:25:40Z",
+      "updatedAt": "2026-07-01T22:27:29Z",
+      "comments": 2,
+      "commentsList": [
+        {
+          "author": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "body": "Claiming this - starting now.",
+          "createdAt": "2026-07-01T21:49:57Z"
+        },
+        {
+          "author": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "body": "🔍 Work submitted in #7 — moving to **in review**. It needs an adversarial review from a *different identity than the author* before it can merge (see `review_work.sh` / branch protection).",
+          "createdAt": "2026-07-01T22:27:29Z"
+        }
+      ],
+      "reactions": 0
+    }
+  ],
   "leaderboard": [
+    {
+      "login": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "url": "https://github.com/thecolab-clawd",
+      "issuesAssigned": 0,
+      "prsMerged": 4,
+      "prsOpened": 4,
+      "findingsAuthored": 0,
+      "commits": 1,
+      "reviewsGiven": 0,
+      "score": 17,
+      "lastActivity": "2026-07-01T23:12:01.000Z",
+      "domains": [],
+      "researchScore": 17,
+      "reviewScore": 0
+    },
     {
       "login": "adam91holt",
       "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
       "url": "https://github.com/adam91holt",
+      "issuesAssigned": 1,
+      "prsMerged": 0,
+      "prsOpened": 1,
+      "findingsAuthored": 0,
+      "commits": 3,
+      "reviewsGiven": 1,
+      "score": 10,
+      "lastActivity": "2026-07-01T23:21:34.000Z",
+      "domains": [
+        "ai-policy"
+      ],
+      "researchScore": 6,
+      "reviewScore": 4
+    },
+    {
+      "login": "mcinteerj",
+      "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+      "url": "https://github.com/mcinteerj",
+      "issuesAssigned": 0,
+      "prsMerged": 0,
+      "prsOpened": 1,
+      "findingsAuthored": 0,
+      "commits": 0,
+      "reviewsGiven": 1,
+      "score": 5,
+      "lastActivity": "2026-07-01T23:31:58.000Z",
+      "domains": [],
+      "researchScore": 1,
+      "reviewScore": 4
+    },
+    {
+      "login": "gligor-ai",
+      "avatar": "https://github.com/gligor-ai.png",
+      "url": "https://github.com/gligor-ai",
       "issuesAssigned": 0,
       "prsMerged": 0,
       "prsOpened": 0,
       "findingsAuthored": 0,
-      "commits": 1,
+      "commits": 0,
+      "reviewsGiven": 1,
+      "score": 4,
+      "lastActivity": "2026-07-01T23:40:12.000Z",
+      "domains": [],
+      "researchScore": 0,
+      "reviewScore": 4
+    },
+    {
+      "login": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "url": "https://github.com/ian-patel",
+      "issuesAssigned": 0,
+      "prsMerged": 0,
+      "prsOpened": 1,
+      "findingsAuthored": 0,
+      "commits": 0,
+      "reviewsGiven": 0,
       "score": 1,
-      "domains": []
+      "lastActivity": "2026-07-01T23:40:12.000Z",
+      "domains": [],
+      "researchScore": 1,
+      "reviewScore": 0
     }
   ],
   "findings": [],
   "sources": [],
   "activity": [
     {
+      "type": "pr",
+      "title": "feat(web): problem-chains view on the board",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/14",
+      "actor": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "at": "2026-07-01T23:40:12Z",
+      "meta": "open"
+    },
+    {
       "type": "issue",
-      "title": "[Research] What NZ government AI guidance already exists for the public sector?",
-      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
+      "title": "Meta: lower the friction for outside contributors (humans + agents) — Claude GitHub App, merge gate, fork workflow",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/18",
+      "actor": "mcinteerj",
+      "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+      "at": "2026-07-01T23:36:24Z",
+      "meta": "open"
+    },
+    {
+      "type": "pr",
+      "title": "research: NZ grant funder count and eligibility data landscape",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/11",
+      "actor": "mcinteerj",
+      "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+      "at": "2026-07-01T23:31:58Z",
+      "meta": "open"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] What NZ and international civic-tech efforts on council spending legibility exist or have been tried?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/17",
+      "actor": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "at": "2026-07-01T23:25:24Z",
+      "meta": "closed"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] What do the 2025 DIA council performance metrics cover, and what gaps remain?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/16",
+      "actor": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "at": "2026-07-01T23:25:15Z",
+      "meta": "closed"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] What do residents and local journalists actually ask about council spending?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/15",
+      "actor": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "at": "2026-07-01T23:25:10Z",
+      "meta": "closed"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] Which NZ councils publish spending data beyond statutory PDFs, and in what formats?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/13",
+      "actor": "ian-patel",
+      "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+      "at": "2026-07-01T23:25:05Z",
+      "meta": "closed"
+    },
+    {
+      "type": "issue",
+      "title": "[Discover] Council spending is public but not legible to citizens",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/3",
       "actor": "adam91holt",
       "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
-      "at": "2026-07-01T21:25:40Z",
-      "meta": "research"
+      "at": "2026-07-01T23:21:06Z",
+      "meta": "discover"
     },
     {
       "type": "issue",
@@ -257,8 +895,71 @@
       "url": "https://github.com/thecolab-ai/the-for-good-project/issues/5",
       "actor": "adam91holt",
       "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
-      "at": "2026-07-01T21:25:39Z",
+      "at": "2026-07-01T23:13:10Z",
       "meta": "research"
+    },
+    {
+      "type": "pr",
+      "title": "research: document NZ public sector AI guidance",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/7",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T23:12:43Z",
+      "meta": "open"
+    },
+    {
+      "type": "pr",
+      "title": "feat(web): contributors list + header shadow/rounding",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/12",
+      "actor": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "at": "2026-07-01T23:12:01Z",
+      "meta": "merged"
+    },
+    {
+      "type": "pr",
+      "title": "fix(web): stop kanban cards stacking on top of each other",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/10",
+      "actor": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "at": "2026-07-01T22:58:04Z",
+      "meta": "merged"
+    },
+    {
+      "type": "pr",
+      "title": "fix(web): improve kanban card & column spacing",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/9",
+      "actor": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "at": "2026-07-01T22:47:46Z",
+      "meta": "merged"
+    },
+    {
+      "type": "pr",
+      "title": "fix(web): make dashboard mobile responsive",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/pull/8",
+      "actor": "thecolab-clawd",
+      "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+      "at": "2026-07-01T22:43:07Z",
+      "meta": "merged"
+    },
+    {
+      "type": "issue",
+      "title": "[Research] What NZ government AI guidance already exists for the public sector?",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/6",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T22:27:29Z",
+      "meta": "research"
+    },
+    {
+      "type": "issue",
+      "title": "[Discover] Small NZ charities miss grants they're eligible for",
+      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/2",
+      "actor": "adam91holt",
+      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+      "at": "2026-07-01T22:18:05Z",
+      "meta": "discover"
     },
     {
       "type": "issue",
@@ -267,24 +968,6 @@
       "actor": "adam91holt",
       "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
       "at": "2026-07-01T21:25:37Z",
-      "meta": "discover"
-    },
-    {
-      "type": "issue",
-      "title": "[Discover] Council spending is public but not legible to citizens",
-      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/3",
-      "actor": "adam91holt",
-      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
-      "at": "2026-07-01T21:25:35Z",
-      "meta": "discover"
-    },
-    {
-      "type": "issue",
-      "title": "[Discover] Small NZ charities miss grants they're eligible for",
-      "url": "https://github.com/thecolab-ai/the-for-good-project/issues/2",
-      "actor": "adam91holt",
-      "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
-      "at": "2026-07-01T21:25:34Z",
       "meta": "discover"
     },
     {

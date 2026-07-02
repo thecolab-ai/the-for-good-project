@@ -35,12 +35,32 @@ preflight() {
     err "Run this from inside a clone of $REPO (or set REPO_DIR to one)."
     exit 1
   fi
+  # Guard: these scripts run `git reset --hard` per task, which discards
+  # uncommitted changes to TRACKED files. Refuse to run on a dirty clone so we
+  # can never silently destroy someone's work (untracked files like node_modules
+  # / build output are ignored). Override with ALLOW_DIRTY=1 (git_reset_to_main
+  # then stashes rather than discards).
+  if [ "${RESETS_TREE:-0}" = 1 ] && [ "${DRY_RUN:-0}" != 1 ] && [ "${ALLOW_DIRTY:-0}" != 1 ] \
+     && [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
+    err "The clone at $REPO_DIR has uncommitted changes to tracked files."
+    err "Commit or stash them first — these scripts run 'git reset --hard' and would discard them."
+    err "(To proceed anyway, set ALLOW_DIRTY=1; the changes will be stashed, not lost.)"
+    exit 1
+  fi
   ME="$(gh api user --jq .login)"
 }
 
 # ---- git helpers ----
 git_reset_to_main() {
   git -C "$REPO_DIR" fetch origin --quiet
+  # Safety net: never silently discard uncommitted tracked changes — stash them
+  # first (recoverable via `git stash list`) before hard-resetting.
+  if [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
+    local ts; ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo now)"
+    if git -C "$REPO_DIR" stash push --quiet -m "fg-auto-stash before reset ($ts)" >/dev/null 2>&1; then
+      warn "Stashed uncommitted changes before reset — recover with: git -C "$REPO_DIR" stash list"
+    fi
+  fi
   git -C "$REPO_DIR" checkout --quiet main 2>/dev/null || git -C "$REPO_DIR" checkout --quiet -b main origin/main
   git -C "$REPO_DIR" reset --hard --quiet origin/main
   git -C "$REPO_DIR" clean -fdq -e node_modules

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, ExternalLink, Link2, Search } from "lucide-react";
+import { BookOpen, ExternalLink, Link2, Search, Cpu } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -60,9 +60,14 @@ export default function Findings() {
                   </CardHeader>
                   <CardContent>
                     <p className="line-clamp-3 text-sm text-muted-foreground">{f.summary}</p>
-                    <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span>{f.author && f.author !== "unknown" ? `by ${f.author}` : ""}{f.date ? ` · ${f.date}` : ""}</span>
-                      <span className="inline-flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {f.sources.length} source{f.sources.length === 1 ? "" : "s"} <ExternalLink className="ml-1 h-3.5 w-3.5" /></span>
+                      {f.agent ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/70 px-2 py-0.5 font-medium">
+                          <Cpu className="h-3 w-3" /> {f.agent}{f.model ? ` · ${f.model}` : ""}
+                        </span>
+                      ) : null}
+                      <span className="ml-auto inline-flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {f.sources.length} source{f.sources.length === 1 ? "" : "s"} <ExternalLink className="ml-1 h-3.5 w-3.5" /></span>
                     </div>
                   </CardContent>
                 </Card>

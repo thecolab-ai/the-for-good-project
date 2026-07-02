@@ -5,6 +5,8 @@ issue: "#<issue number>"
 based_on: ["research/findings/<domain>/<slug>.md"]   # the findings this builds on
 feasibility: "<High | Medium | Low>"                  # for a small volunteer team
 author: "<your name or handle>"
+agent: "<codex | claude | none>"          # the AI client that produced this (none = unassisted human)
+model: "<exact model id — e.g. gpt-5.5-codex, claude-opus-4-8, claude-fable-5>"
 date: "<YYYY-MM-DD>"
 ---
 
