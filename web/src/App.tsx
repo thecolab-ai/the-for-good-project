@@ -1,14 +1,16 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
+import Live from "@/pages/Live";
 import Board from "@/pages/Board";
+// Submit page kept on disk but unrouted — on-site submission is disabled for
+// now; /submit redirects to the live feed (see below).
 import IssueDetail from "@/pages/IssueDetail";
 import Findings from "@/pages/Findings";
 import FindingDetail from "@/pages/FindingDetail";
 import Sources from "@/pages/Sources";
 import Leaderboard from "@/pages/Leaderboard";
 import Review from "@/pages/Review";
-import Submit from "@/pages/Submit";
 import Methodology from "@/pages/Methodology";
 import Contribute from "@/pages/Contribute";
 import Partners from "@/pages/Partners";
@@ -20,6 +22,7 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: "/", element: <Dashboard /> },
+      { path: "/live", element: <Live /> },
       { path: "/board", element: <Board /> },
       { path: "/issue/:number", element: <IssueDetail /> },
       { path: "/findings", element: <Findings /> },
@@ -27,7 +30,7 @@ export const router = createBrowserRouter([
       { path: "/sources", element: <Sources /> },
       { path: "/leaderboard", element: <Leaderboard /> },
       { path: "/review", element: <Review /> },
-      { path: "/submit", element: <Submit /> },
+      { path: "/submit", element: <Navigate to="/live" replace /> },
       { path: "/methodology", element: <Methodology /> },
       { path: "/contribute", element: <Contribute /> },
       { path: "/partners", element: <Partners /> },

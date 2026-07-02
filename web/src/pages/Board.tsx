@@ -81,7 +81,7 @@ export default function Board() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
+        <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter.</EmptyState>
       ) : view === "list" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((i) => <IssueCard key={i.number} issue={i} />)}

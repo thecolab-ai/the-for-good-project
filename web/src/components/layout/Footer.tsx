@@ -9,7 +9,7 @@ export function Footer({ repoUrl, generatedAt }: { repoUrl?: string; generatedAt
           <div>Built together, in Aotearoa. 🇳🇿 · <a href="https://thecolab.ai" className="text-brand-cyan-dark hover:underline">thecolab.ai</a></div>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/submit" className="hover:text-foreground">Submit</Link>
+          <Link to="/live" className="hover:text-foreground">Live</Link>
           <Link to="/methodology" className="hover:text-foreground">Method</Link>
           {repoUrl ? <a href={repoUrl} className="hover:text-foreground">GitHub</a> : null}
         </div>
