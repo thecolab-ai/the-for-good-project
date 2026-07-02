@@ -11,8 +11,8 @@ function Code({ children }: { children: string }) {
 }
 
 const SCRIPTS = [
-  { icon: Terminal, name: "start_work.sh", tag: "do the work", desc: "Claims the next available issue, runs your agent (codex or claude) on it following the method, and opens a PR. Moves the issue to “in review” automatically.", color: "#2E4057" },
-  { icon: ScanEye, name: "review_work.sh", tag: "review", desc: "Runs an adversarial agent that tries to refute an open PR against the method, then records the review. Refuses to review your own work.", color: "#0EA5E9" },
+  { icon: Terminal, name: "start_work.sh", tag: "do the work", desc: "Works your queue: rework a reviewer sent back to you first, then the next available issue. Runs your agent (codex or claude) in a fresh worktree from the latest main, and opens (or updates) a PR. Status labels move automatically.", color: "#2E4057" },
+  { icon: ScanEye, name: "review_work.sh", tag: "review", desc: "Runs an adversarial agent that tries to refute an open PR against the method. Anyone can review — except the author. If it finds problems, the work is routed back to whoever did it for rework.", color: "#0EA5E9" },
   { icon: GitMerge, name: "merge_ready.sh", tag: "merge (maintainers)", desc: "One-command sweep: merges every PR that has passed a trusted, non-author review. Trust = a whitelist plus anyone who's earned enough credit.", color: "#5319E7" },
 ];
 
@@ -44,7 +44,7 @@ export default function Contribute() {
               <>Find an unclaimed issue on the <Link to="/board" className="text-brand-cyan-dark hover:underline">board</Link> — new? filter for <em>good first issue</em>.</>,
               <>Claim it (assign yourself, mark it <em>claimed</em>) so no one doubles up.</>,
               <>Do the work following <Link to="/methodology" className="text-brand-cyan-dark hover:underline">the method</Link> — cite everything, mark confidence, be honest about gaps.</>,
-              <>Open a pull request. Someone else adversarially reviews it, and once it passes it merges into the commons.</>,
+              <>Open a pull request. Someone else adversarially reviews it — if they find problems it comes back to you to fix — and once it passes it merges into the commons.</>,
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-indigo/10 text-xs font-semibold text-brand-indigo">{i + 1}</span>
@@ -73,7 +73,9 @@ export default function Contribute() {
             <div><span className="text-brand-orange">./review_work.sh</span></div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            The scripts own the status labels and the merge gate — the agent just does the work. Full guide in the repo's <Code>docs/AUTOMATION.md</Code>.
+            The scripts own the status labels and the merge gate — the agent just does the work, in a throwaway git worktree pulled fresh from{" "}
+            <Code>main</Code> every loop. If a reviewer pushes back, the work returns to <em>your</em> queue and your next loop fixes it before
+            picking up anything new. Full guide in the repo's <Code>docs/AUTOMATION.md</Code>.
           </p>
           <div className="mt-5">
             <a href={repo} target="_blank" rel="noreferrer"><Button variant="outline" size="sm">Open the repo <ArrowRight className="h-4 w-4" /></Button></a>
