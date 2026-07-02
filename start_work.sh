@@ -245,7 +245,9 @@ work_one() {  # $1 = issue number
   fi
   make_worktree origin/main
   info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
-  if run_agent "$(work_prompt "$n")" "$WORKTREE"; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n"; fi
+  set +e; run_agent "$(work_prompt "$n")" "$WORKTREE"; local rc=$?; set -e
+  was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run, don't roll to the next issue
+  if [ "$rc" -eq 0 ]; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n (exit $rc)"; fi
   remove_worktree
   finish_issue "$n"
 }
@@ -271,7 +273,9 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   make_worktree "origin/$branch"
   info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
-  if run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE"; then ok "Rework agent run complete for #$n"; else err "Rework agent run failed/aborted for #$n"; fi
+  set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE"; local rc=$?; set -e
+  was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run
+  if [ "$rc" -eq 0 ]; then ok "Rework agent run complete for #$n"; else err "Rework agent run failed/aborted for #$n (exit $rc)"; fi
   remove_worktree
   after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   if [ "$after" != "$before" ]; then
@@ -283,11 +287,44 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   fi
 }
 
+# Self-heal the rework queue: any open PR I authored that a reviewer sent back
+# but whose linked issue is still sitting "in-review" gets flipped to
+# "changes-requested" so the queue below actually picks it up. This closes the
+# gaps where the normal hand-off never fired: a reviewer crash, a discover PR
+# with no closing ref, or a review posted OUTSIDE review_work.sh (a human, or
+# another bot). We only act when the change-request is CURRENT — no commits were
+# pushed after it — so a freshly reworked PR awaiting re-review is left alone.
+reconcile_rework() {
+  [ "$DRY_RUN" = 1 ] && return 0
+  local prs pr iss labels lastcr headcommit
+  prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
+          --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"
+  for pr in $prs; do
+    lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
+    [ -z "$lastcr" ] && continue
+    headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
+    # ISO-8601 timestamps compare lexically: a commit newer than the review means
+    # it's already been reworked and is awaiting RE-review, not rework — skip it.
+    [ -n "$headcommit" ] && [[ "$headcommit" > "$lastcr" ]] && continue
+    iss="$(issue_addressed_by_pr "$pr" || true)"
+    [ -z "$iss" ] && continue
+    labels="$(issue_labels "$iss" 2>/dev/null || true)"
+    case ",$labels," in
+      *",status: changes-requested,"*) continue ;;   # already routed
+      *",status: in-review,"*)
+        gh issue edit "$iss" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
+        set_status_label "$iss" "changes-requested" "in-review" 2>/dev/null \
+          && ok "Reconciled #$iss → changes-requested (unrouted review on PR #$pr)" || true ;;
+    esac
+  done
+}
+
 main() {
   preflight
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   while :; do
+    reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
     # Rework a reviewer sent back to ME takes priority over fresh issues.
     local next kind=new
     next="$(rework_issues | head -1 || true)"
