@@ -152,6 +152,25 @@ pr_for_issue() {
   return 0
 }
 
+# What KIND of review a PR needs, decided by the paths it changes:
+#  - "method"   → touches research/findings/** or solutions/**: the full
+#                 adversarial research method (cite everything, two sources, etc.)
+#  - "standard" → everything else (docs, tooling, web, analysis, .github,
+#                 streams overviews): review like a normal careful maintainer,
+#                 NOT against the research citation gate. This stops working
+#                 docs and scripts being held to a research-grade bar.
+# Fails to "standard" if the file list can't be read (never over-applies the
+# heavy gate to something we couldn't classify).
+pr_review_kind() {  # $1 = pr number
+  local files
+  files="$(gh pr view "$1" --repo "$REPO" --json files --jq '.files[].path' 2>/dev/null || true)"
+  if printf '%s\n' "$files" | grep -Eq '^(research/findings/|solutions/)'; then
+    echo method
+  else
+    echo standard
+  fi
+}
+
 # Issue closed by a PR (first closing ref).
 issue_for_pr() {
   gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$1){closingIssuesReferences(first:5){nodes{number}}}}}" \

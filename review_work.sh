@@ -3,8 +3,14 @@
 # review_work.sh — adversarially review open PRs before they can merge.
 #
 # For each open PR that hasn't passed review yet, run an AI agent (codex,
-# claude, or hermes) whose job is to REFUTE the work against the project method,
-# then post the review and set the required "for-good/adversarial-review" status check.
+# claude, or hermes) to review it, then post the review and set the required
+# "for-good/adversarial-review" status check. The review is scoped to the PR:
+#   - research findings / solutions  → full adversarial RESEARCH METHOD
+#   - docs / tooling / site / analysis → a STANDARD maintainer review (no
+#     citation gate); structural/governance changes are flagged for a human.
+# Concurrent runners CLAIM a PR (a "status: reviewing" label) before working it,
+# so parallel reviewers don't double-review one PR or stampede the front of the
+# list. Claims older than REVIEW_CLAIM_TTL are treated as stale and taken over.
 # Each review runs in a FRESH GIT WORKTREE of the PR head (freshly fetched), so
 # your clone is never touched. On PASS it approves (and can auto-merge); on
 # NEEDS_WORK it requests changes AND flips the linked issue to
@@ -31,13 +37,13 @@
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  REVIEW_GITHUB_TOKEN AGENT MODEL AUTO_MERGE PR MAX POLL_SECONDS DRY_RUN
-#       AGENT_TIMEOUT PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
+#       REVIEW_CLAIM_TTL AGENT_TIMEOUT PROVIDER HERMES_PROFILE HERMES_FLAGS
+#       FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"
-trap 'remove_worktree || true' EXIT INT TERM
 
 DRY_RUN="${DRY_RUN:-0}"
 AUTO_MERGE="${AUTO_MERGE:-0}"
@@ -45,9 +51,53 @@ POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit
 MAX="${MAX:-0}"
 ONLY_PR="${PR:-}"
 REVIEW_FILE=""
+CLAIMED_PR=""
+REVIEW_CLAIMING_LABEL="status: reviewing"
+REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
+
+# Release any claim we hold, then clean up the worktree — on normal exit or interrupt.
+cleanup() { [ -n "${CLAIMED_PR:-}" ] && release_pr "$CLAIMED_PR" || true; remove_worktree || true; }
+trap cleanup EXIT INT TERM
 
 # Use a distinct reviewer identity if provided (recommended).
 if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then export GH_TOKEN="$REVIEW_GITHUB_TOKEN"; fi
+
+# ---- concurrency: claim a PR before reviewing so parallel runners don't
+# collide on the same PR (or all pile onto the front of the list). A claim is a
+# "status: reviewing" label; it's honoured for REVIEW_CLAIM_TTL then treated as
+# stale (crashed runner) and taken over. Small residual race, but it removes the
+# front-of-list stampede that had one PR getting 5 reviews while 20 got none.
+review_claim_age() {  # $1 pr -> seconds since the reviewing label was applied, or empty if unknown
+  local t
+  t="$(gh api "repos/$OWNER/$NAME/issues/$1/timeline" --paginate \
+        --jq "[.[]|select(.event==\"labeled\" and .label.name==\"$REVIEW_CLAIMING_LABEL\")]|last|.created_at // empty" 2>/dev/null || true)"
+  [ -z "$t" ] && { echo ""; return; }
+  local epoch now
+  epoch="$(date -u -d "$t" +%s 2>/dev/null || date -u -jf "%Y-%m-%dT%H:%M:%SZ" "$t" +%s 2>/dev/null || true)"
+  [ -z "$epoch" ] && { echo ""; return; }
+  now="$(date -u +%s)"
+  echo $((now - epoch))
+}
+
+claim_pr() {  # $1 pr -> 0 if we now hold the claim, 1 if another runner holds a fresh claim
+  local pr="$1" labels
+  labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
+  case ",$labels," in
+    *",$REVIEW_CLAIMING_LABEL,"*)
+      local age; age="$(review_claim_age "$pr")"
+      if [ -n "$age" ] && [ "$age" -lt "$REVIEW_CLAIM_TTL" ]; then
+        log "#$pr is already being reviewed (claim ${age}s old) — skipping."; return 1
+      fi
+      warn "#$pr had a stale review claim (${age:-unknown age}) — taking it over." ;;
+  esac
+  gh pr edit "$pr" --repo "$REPO" --add-label "$REVIEW_CLAIMING_LABEL" >/dev/null 2>&1 || true
+  return 0
+}
+
+release_pr() { gh pr edit "$1" --repo "$REPO" --remove-label "$REVIEW_CLAIMING_LABEL" >/dev/null 2>&1 || true; }
+
+# Shuffle a newline list so concurrent runners don't all start at the front.
+shuffle_lines() { shuf 2>/dev/null || sort -R 2>/dev/null || cat; }
 
 review_prompt() {  # $1 = PR number, $2 = absolute review file path
   local pr="$1" review_file="$2" title body
@@ -85,6 +135,53 @@ OUTPUT (do exactly this):
 1. Write your full review as Markdown to the exact absolute file path shown
    above: a short summary, then specific problems (file + line + why), then a
    one-line verdict. Do NOT commit it.
+2. As the very LAST line of your response, print exactly one of:
+   VERDICT: PASS
+   VERDICT: NEEDS_WORK
+Do not edit the PR's files, change labels, or merge anything.
+EOF
+}
+
+standard_review_prompt() {  # $1 = PR number, $2 = absolute review file path
+  local pr="$1" review_file="$2" title body
+  title="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title)"
+  body="$(gh pr view "$pr" --repo "$REPO" --json body --jq .body)"
+  cat <<EOF
+You are a FRESH-CONTEXT reviewer for The For Good Project (github.com/$REPO).
+PR #$pr changes project docs / tooling / site / analysis — it is NOT a research
+finding. Review it like a normal, careful open-source maintainer. DO NOT apply
+the research method (two independent sources per claim, per-claim confidence
+marks) — that gate is only for research findings under research/findings/ and
+solutions/.
+
+IMPORTANT: write your full Markdown review to this exact absolute path:
+$review_file
+
+
+PR #$pr — $title
+$body
+
+Inspect the change with: git diff origin/main...HEAD  (and read the changed files).
+Judge it on:
+- Correctness: does it do what the PR says? Any bugs, broken links, broken
+  build/scripts, or errors? (read CONTRIBUTING.md / docs/ for conventions.)
+- Fit: does it follow the repo's existing structure and conventions?
+- Honesty of framing: proposals and recommendations must be clearly marked as
+  proposals — NOT presented as already-decided, "adopted", or ratified. Record
+  provenance where the repo asks for it.
+- Safety: no secrets, no personal/identifying data, nothing misleading or harmful.
+- Scope: self-contained and sensible.
+
+GOVERNANCE GUARD: if this PR changes how the project itself works — governance,
+an ADR's status, the pipeline/gates, CONTRIBUTING, the review/merge rules, or
+label taxonomy — that needs a HUMAN MAINTAINER decision, not an agent approval.
+In that case say so plainly and lean to VERDICT: NEEDS_WORK ("needs human
+ratification"), UNLESS it is already correctly framed as a proposal awaiting
+maintainer sign-off (then it may PASS as a proposal).
+
+OUTPUT (do exactly this):
+1. Write your full review as Markdown to the exact absolute path above: a short
+   summary, specific problems (file + line + why), then a one-line verdict.
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
@@ -134,14 +231,21 @@ review_one() {  # $1 = PR number
     fi
   fi
 
+  local kind; kind="$(pr_review_kind "$pr")"
+  info "Review kind: ${c_bold}$kind${c_reset} $([ "$kind" = method ] && printf '(research method)' || printf '(standard maintainer review)')"
+
   if [ "$DRY_RUN" = 1 ]; then
-    info "[dry-run] would checkout PR #$pr in a fresh worktree, run $AGENT reviewer, post review as @$ME, set check + approve/request-changes"
+    info "[dry-run] would claim #$pr, checkout in a fresh worktree, run $AGENT ($kind review), post as @$ME, set check + approve/request-changes"
     return 0
   fi
 
+  # Claim it so concurrent runners don't double-review the same PR.
+  claim_pr "$pr" || return 0
+  CLAIMED_PR="$pr"
+
   info "Checking out PR #$pr into a fresh worktree..."
   if ! git -C "$REPO_DIR" fetch origin --quiet "+pull/$pr/head:refs/fg/pr-$pr"; then
-    err "Could not fetch PR #$pr head — skipping."; return 1
+    err "Could not fetch PR #$pr head — skipping."; release_pr "$pr"; CLAIMED_PR=""; return 1
   fi
   make_worktree "refs/fg/pr-$pr"
   REVIEW_FILE="$WORKTREE/.fg-review.md"
@@ -149,15 +253,18 @@ review_one() {  # $1 = PR number
   rm -f "$REVIEW_FILE" "$fallback_review_file"
 
   local tmp; tmp="$(mktemp)"
-  info "Handing PR #$pr to $AGENT for adversarial review (worktree: $WORKTREE)..."
+  local prompt
+  if [ "$kind" = method ]; then prompt="$(review_prompt "$pr" "$REVIEW_FILE")"; else prompt="$(standard_review_prompt "$pr" "$REVIEW_FILE")"; fi
+  info "Handing PR #$pr to $AGENT for $kind review (worktree: $WORKTREE)..."
   set +e
-  run_agent "$(review_prompt "$pr" "$REVIEW_FILE")" "$WORKTREE" 2>&1 | tee "$tmp"
+  run_agent "$prompt" "$WORKTREE" 2>&1 | tee "$tmp"
   local agent_status=${PIPESTATUS[0]}
   set -e
 
   if [ "$agent_status" -eq 124 ] || [ "$agent_status" -eq 130 ] || [ "$agent_status" -eq 143 ] || [ "$agent_status" -ge 128 ]; then
     warn "Agent run for PR #$pr was interrupted or timed out (exit $agent_status); not posting a review or changing the review check."
     rm -f "$tmp"
+    release_pr "$pr"; CLAIMED_PR=""
     remove_worktree
     git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
     return "$agent_status"
@@ -197,6 +304,7 @@ review_one() {  # $1 = PR number
     gh pr comment "$pr" --repo "$REPO" --body-file "$diag" >/dev/null || true
     set_check "$sha" failure "Adversarial review failed before writing feedback" "$url"
     rm -f "$tmp" "$diag" "$fallback_review_file"
+    release_pr "$pr"; CLAIMED_PR=""
     remove_worktree
     git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
     return 1
@@ -237,6 +345,7 @@ review_one() {  # $1 = PR number
     fi
   fi
   rm -f "$fallback_review_file"
+  release_pr "$pr"; CLAIMED_PR=""
   remove_worktree
   git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
 }
@@ -250,7 +359,7 @@ main() {
   local done=0
   while :; do
     local prs
-    if [ -n "$ONLY_PR" ]; then prs="$ONLY_PR"; else prs="$(open_prs_needing_review || true)"; fi
+    if [ -n "$ONLY_PR" ]; then prs="$ONLY_PR"; else prs="$(open_prs_needing_review 2>/dev/null | shuffle_lines || true)"; fi
     if [ -z "$prs" ]; then
       if [ -z "$ONLY_PR" ] && [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
         log "No open PRs. Sleeping ${POLL_SECONDS}s..."; sleep "$POLL_SECONDS"; continue
