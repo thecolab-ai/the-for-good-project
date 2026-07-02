@@ -102,7 +102,7 @@ per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 **Still open (tracked separately):**
 - **Proxy / egress management (§4, Decision 4)** — datacentre-IP blocking is
   unaddressed; needs a residential-egress decision (cost/ethics/operator). See
-  the tracking issue.
+  the tracking issue (#118).
 - **Caching layer** for repeated fetches, and a convention for how archive
   snapshots are stored/linked in a finding's frontmatter (today it's a URL
   beside the live link).
@@ -110,7 +110,7 @@ per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 ## Follow-ups (not fixed here)
 
 - Proxy architecture: residential proxy provider, run-on-residential-machine, or
-  per-site policy? Cost, ethics, and who operates it. **(open — see tracking issue)**
+  per-site policy? Cost, ethics, and who operates it. **(open — #118)**
 - Caching layer for repeated fetches, and how archive snapshots are stored and
   linked from findings. **(open)**
 - ~~Which rendering tool / browser-fetch, and whether it's a shared `fetch` helper CLI.~~ **(done — `scripts/fetch.mjs`)**
