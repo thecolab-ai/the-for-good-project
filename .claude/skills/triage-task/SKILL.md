@@ -9,6 +9,8 @@ Help a human or an agent decide **what's worth doing next** in The For Good Proj
 
 **This skill is advisory and ephemeral.** It produces a *read*, nothing more. It MUST NOT claim issues, add/remove labels, reorder the queue, edit the issue, or write any file. Those are out of scope by design (see "Non-goals"). A human or agent looks at the scorecard and decides.
 
+**Ratification guard.** Adding or materially changing this rubric is project workflow guidance, so an agent review alone does not adopt it. Treat the rubric as proposed until the PR introducing or changing it has explicit human maintainer approval. Even after ratification, it remains optional advice; it does not change the queue contract, labels, runner scripts, or human gates.
+
 ## When to use
 
 - An agent (or the `start_work.sh` autopilot operator) is choosing which issue to work.
@@ -23,7 +25,7 @@ You'll be pointed at one of three things:
 | Input | Do this |
 |---|---|
 | **An issue number** (e.g. `#123`) | Score that one task → one scorecard. |
-| **`queue`** | Score every open `status: available` issue, then print a ranked table. |
+| **`queue`** | Score pickup-able work: your assigned `status: changes-requested` reworks, then every open `status: available` issue; print one ranked table. |
 | **A free-text task** (a sentence or paragraph) | Score the idea as if it were an issue; note what's unknown because it isn't written up yet. |
 
 If the input is ambiguous, ask once which of the three is meant, then proceed.
@@ -43,16 +45,17 @@ Never score from the title alone. Read enough to justify each number:
 3. **Check data accessibility.** Is there a `.skills/` CLI for the data this needs (Stats NZ, councils, charities, etc.)? `ls .skills/skills` (the submodule is uninitialised on a fresh clone — run `git submodule update --init` first if it's empty; see AGENTS.md). If a matching skill exists, cost drops; if it needs heavy browser-fetching of blocked govt sites, cost rises.
 4. **Note the stage** (`stage: discover|research|ideate|build`) and whether `priority: high` is set.
 
-For `queue` mode, gather the pickup-able work the same way `start_work.sh` does — **reworks first, then the available queue** — so the ranking can't miss the very items the autopilot works ahead of everything else (a `status: changes-requested` rework is the Priority anchor-5 case below). Then do a lighter pass per issue (title + body + labels + a quick dedupe grep) — you don't need to open every parent chain, but say so in the confidence line:
+For `queue` mode, gather pickup-able work the same way `start_work.sh` does — **your assigned reworks first, then the available queue** — so the ranking can't miss the items the autopilot works ahead of everything else (a `status: changes-requested` rework assigned to `@me` is the Priority anchor-5 case below). Then do a lighter pass per issue (title + body + labels + a quick dedupe grep) — you don't need to open every parent chain, but say so in the confidence line:
 ```
-# reworks a reviewer sent back — start_work.sh picks these up before anything else
+# your reworks a reviewer sent back — start_work.sh picks these up before available work
 gh issue list --repo thecolab-ai/the-for-good-project --state open \
-  --label "status: changes-requested" --json number,title,labels,assignees,createdAt --limit 100
+  --label "status: changes-requested" --assignee "@me" \
+  --json number,title,labels,assignees,createdAt --limit 100
 # then the available queue
 gh issue list --repo thecolab-ai/the-for-good-project --state open \
   --label "status: available" --json number,title,labels,createdAt --limit 100
 ```
-Score both lists together into one ranked table; reworks naturally sort to the top via their anchor-5 priority. (Leave out `status: claimed` / `status: reviewing` / `status: in-review` — that work is already in flight.)
+Score both lists together into one ranked table; your assigned reworks naturally sort to the top via their anchor-5 priority. Do not include other contributors' `status: changes-requested` issues in queue mode; those are routed back to their authors. (Leave out `status: claimed` / `status: reviewing` / `status: in-review` — that work is already in flight.)
 
 ## Step 2 — Score the three axes
 
@@ -62,7 +65,7 @@ Score each sub-dimension **1–5 with a one-line justification**. The justificat
 
 | Score | Anchor |
 |---|---|
-| 5 | Rework a reviewer sent back (`status: changes-requested`, blocking a merge), **or** unblocks a human gate (G1/G2) a steward is waiting on. |
+| 5 | Your assigned rework a reviewer sent back (`status: changes-requested`, blocking a merge), **or** unblocks a human gate (G1/G2) a steward is waiting on. |
 | 4 | Something else in the queue is blocked until this lands; a stream can't progress without it. |
 | 3 | Normal queue item — no `priority: high`, nothing downstream blocked. |
 | 2 | Useful but no time pressure; safe to sit. |
@@ -118,7 +121,7 @@ Return-on-tokens is **value relative to cost, gated by priority and hard-blocked
 
 Checking 🔴 first is deliberate: a duplicate or an unanswerable question is not worth *any* tokens, however well it scores elsewhere.
 
-**A verdict is a recommendation, not permission.** A 🟢 does not authorise skipping the claiming protocol, the `status: available` requirement, or the human gates — the normal [`AGENTS.md`](../../../AGENTS.md) flow still applies. A well-scored free-text idea still enters as a Discover/problem issue; an agent must **never** self-open an ideate or build issue (those are human gates G1/G2 — AGENTS.md forbids it).
+**A verdict is a recommendation, not permission.** A 🟢 does not authorise skipping the claiming protocol, pickup eligibility (`status: available` or your assigned `status: changes-requested` rework), or the human gates — the normal [`AGENTS.md`](../../../AGENTS.md) flow still applies. A well-scored free-text idea still enters as a Discover/problem issue; an agent must **never** self-open an ideate or build issue (those are human gates G1/G2 — AGENTS.md forbids it).
 
 ## Step 4 — Output
 
@@ -150,11 +153,11 @@ Confidence & limits: scored from the issue body + a dedupe grep; token cost is a
 Score each issue, then a table sorted by verdict (🟢→🔵→🟡→🔴), then by value desc, then cost asc:
 
 ```
-| Issue | Verdict | Priority | Value | Cost | One-liner |
-|-------|---------|----------|-------|------|-----------|
-| #124  | 🟢 Do now   | 5 | 4 | M | rework a reviewer sent back — unblocks a merge |
-| #123  | 🔵 Good ROI | 3 | 4 | M | additive council open-data finding |
-| ...   | ...     | ... | ... | ... | ... |
+| Issue | Status | Verdict | Priority | Value | Cost | One-liner |
+|-------|--------|---------|----------|-------|------|-----------|
+| #124  | changes-requested (@me) | 🟢 Do now   | 5 | 4 | M | assigned rework — unblocks a merge |
+| #123  | available | 🔵 Good ROI | 3 | 4 | M | additive council open-data finding |
+| ...   | ... | ...     | ... | ... | ... | ... |
 ```
 Follow the table with a single confidence line covering the whole pass (e.g. "light pass — titles/bodies/labels + dedupe grep, parent chains not fully opened").
 
