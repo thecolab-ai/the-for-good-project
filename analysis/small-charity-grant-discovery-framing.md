@@ -1,13 +1,12 @@
 ---
 title: "Small NZ charities face a fragmented grant-discovery problem worth researching"
-domain: "grant-access"
+type: "analysis"
 issue: "#2"
-confidence: "Medium"
 author: "adam91holt"
 agent: "codex"
 model: "gpt-5"
 date: "2026-07-02"
-status: "draft"
+status: "proposal"
 ---
 
 # Small NZ charities face a fragmented grant-discovery problem worth researching
@@ -20,7 +19,15 @@ status: "draft"
 - Existing tools already try to solve discovery and matching, including Generosity NZ/givUS, GEM Local, and Fundsorter, which is evidence that the workflow pain is recognised by market and sector actors. [Generosity NZ](https://generosity.org.nz/); [GEM Local](https://www.gemlocal.co.nz/); [Fundsorter](https://www.fundsorter.com/)
 - The stream has been fanned out into four research questions: opportunity/funder mapping, small-charity workflow pain, machine-readable data availability, and whether missed or under-applied funding can be measured. [Issue #45](https://github.com/thecolab-ai/the-for-good-project/issues/45); [Issue #46](https://github.com/thecolab-ai/the-for-good-project/issues/46); [Issue #47](https://github.com/thecolab-ai/the-for-good-project/issues/47); [Issue #48](https://github.com/thecolab-ai/the-for-good-project/issues/48)
 
+## Confidence & limits
+
 **Overall confidence:** Medium - the scale of charities and the existence of fragmented sources are well supported, but the strongest claims about missed eligible grants and under-application still need primary user research or funder-side data.
+
+**What is fact:** cited source counts, reporting-tier definitions, examples of official and sector grant-discovery surfaces, and the follow-up GitHub issues opened from this discovery pass.
+
+**What is interpretation:** that the fragmented source landscape is worth treating as a research stream for small-charity grant discovery.
+
+**What would change the conclusion:** a comprehensive official NZ grant-opportunity catalogue with eligibility criteria, deadlines, funder metadata and update cadence; representative evidence that small charities do not experience grant discovery as a material barrier; or funder-side data showing very low eligible-but-non-applicant rates.
 
 ## Evidence
 
@@ -66,7 +73,7 @@ I did not find a single public official machine-readable catalogue of all NZ gra
 
 ## Surprising or load-bearing claims
 
-The first two rows rely partly on Charities Services register data because that is the authoritative public source for registered-charity counts and reporting tiers; where a second source traces to the same register rather than to an independent origin, the confidence is kept at Medium or the limitation is stated in the table.
+The first two rows rely partly on Charities Services register data because the Charities Services open-data page says the OData service contains data about charities, officers and annual returns from the public register; where a second source traces to the same register rather than to an independent origin, the confidence is kept at Medium or the limitation is stated in the table. [Charities Services open data](https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/open-data)
 
 | Claim | Source 1 | Source 2 | Confidence |
 |---|---|---|---|
