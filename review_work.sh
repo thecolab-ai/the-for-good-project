@@ -50,7 +50,7 @@ RUNS_AGENT=1
 parse_agent_args "$@"
 
 DRY_RUN="${DRY_RUN:-0}"
-AUTO_MERGE="${AUTO_MERGE:-0}"
+AUTO_MERGE="${AUTO_MERGE:-1}"          # merge on PASS by default (a non-author review is the gate); AUTO_MERGE=0 to just review
 POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
 MAX="${MAX:-0}"
 ONLY_PR="${PR:-}"
