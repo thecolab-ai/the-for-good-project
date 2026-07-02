@@ -40,5 +40,6 @@ routine fixes, copy changes, or web styling.
 | [0001](0001-streams-and-human-gates.md) | Streams + human gates: agents grind, humans steer | Accepted |
 | [0002](0002-vendor-thecolab-skills-submodule.md) | Vendor `thecolab-ai/.skills` as a git submodule | Accepted |
 | [0003](0003-agent-drafted-synthesis.md) | Agents draft the G1 synthesis; humans keep the decision | Accepted |
+| [0004](0004-analysis-documents-and-rendered-companions.md) | Project analysis lives in `analysis/` | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
