@@ -83,12 +83,15 @@ remove_worktree() {
 issue_labels()  { gh issue view "$1" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")'; }
 issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 
-# Numbers of open issues with a given status label, oldest first, optional STAGE filter.
+# Numbers of open issues with a given status label, optional STAGE filter.
+# Order: issues labelled "priority: high" first, then oldest-created first.
+# This is the whole priority system — label an issue "priority: high" to have
+# the workers pick it up before the rest of the queue.
 issues_with_status() {  # $1 = bare status (e.g. available), $2.. extra gh flags
   local status="$1"; shift
   gh issue list --repo "$REPO" --state open --label "status: $status" "$@" \
     --json number,createdAt,labels --limit 100 \
-    --jq "[.[] $( [ -n "${STAGE:-}" ] && printf '| select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by(.createdAt) | .[].number"
+    --jq "[.[] $( [ -n "${STAGE:-}" ] && printf '| select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
 }
 
 available_issues() { issues_with_status "available"; }
