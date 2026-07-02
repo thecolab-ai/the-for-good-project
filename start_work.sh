@@ -344,8 +344,11 @@ main() {
     reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
     # ONE GraphQL query snapshots the whole open-issue queue; every check below
     # (my rework → TTL-freed rework → fresh issue) filters it locally instead of
-    # firing its own REST list call.
-    local snap; snap="$(fetch_open_issues)"
+    # firing its own REST list call. A transient failure (rate-limit, 502,
+    # network blip) yields an empty snapshot so this cycle just looks empty and
+    # we sleep and retry — exactly what the old per-call `|| true` reads did,
+    # rather than letting set -e kill the whole runner.
+    local snap; snap="$(fetch_open_issues)" || snap='[]'
     # Priority: my own rework → a TTL-freed rework I can push → a fresh issue.
     local next kind=new
     next="$(rework_issues "$snap" | head -1 || true)"

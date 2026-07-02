@@ -92,10 +92,15 @@ issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 # shape `gh issue list --json number,createdAt,labels,assignees` returns so the
 # jq filters below are unchanged. A single poll cycle can fetch this once and
 # feed EVERY queue check (available / my rework / unassigned rework) from it,
-# instead of firing a separate REST list call per status. Capped at 100 to
-# match the previous --limit 100 behaviour.
+# instead of firing a separate REST list call per status. Capped at 100 (the
+# GraphQL page max) to match the previous --limit 100 behaviour; ordered NEWEST
+# first so that if the repo ever exceeds 100 open issues the truncation drops
+# the oldest, not the freshly-created available/rework work we most want to see.
+# (The jq filters re-sort deterministically, so fetch order doesn't affect the
+# result while the queue is under 100 — it only decides which slice survives the
+# cap.) labels(first:50) is ample headroom over the ~5 labels an issue carries.
 fetch_open_issues() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){issues(states:OPEN,first:100,orderBy:{field:CREATED_AT,direction:ASC}){nodes{number createdAt labels(first:20){nodes{name}} assignees(first:10){nodes{login}}}}}}" \
+  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){issues(states:OPEN,first:100,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt labels(first:50){nodes{name}} assignees(first:10){nodes{login}}}}}}" \
     --jq '[.data.repository.issues.nodes[] | {number, createdAt, labels: [.labels.nodes[] | {name}], assignees: [.assignees.nodes[] | {login}]}]'
 }
 
