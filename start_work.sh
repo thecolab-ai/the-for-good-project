@@ -45,18 +45,19 @@ work_prompt() {  # $1 = issue number
   title="$(gh issue view "$n" --repo "$REPO" --json title --jq .title)"
   body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body)"
   labels="$(issue_labels "$n")"
-  domain="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^domain: //p' | head -1)"
-  stage="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stage: //p' | head -1)"
-  local stream; stream="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stream://p' | head -1)"
+  domain="$(label_field "$labels" "domain: ")"
+  stage="$(label_field "$labels" "stage: ")"
+  local stream; stream="$(label_field "$labels" "stream:")"
   local prov_model
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
   # Bounded fan-out (docs/STREAMS.md): the agent on a root issue (depth 0) may
   # open sub-issues, an agent on a sub-issue (depth 1) may open one more level,
-  # and depth >= 2 may not fan out at all. Ideate/build never fan out (gates).
+  # and depth >= 2 may not fan out at all. WHITELIST discover/research only —
+  # a missing or nonstandard stage label must fail closed, not open.
   local depth fanout; depth="$(issue_depth "$n")"
-  if [ "$stage" = "ideate" ] || [ "$stage" = "build" ]; then
-    fanout="Do NOT open any sub-issues from this issue — ideate and build work is
-human-gated (docs/STREAMS.md); only a human decides what gets built next."
+  if [ "$stage" != "discover" ] && [ "$stage" != "research" ]; then
+    fanout="Do NOT open any sub-issues from this issue — only discover/research work
+may fan out; everything else is human-gated (docs/STREAMS.md)."
   elif [ "$depth" -lt 2 ]; then
     fanout="Fan-out is ALLOWED here (this issue is at depth $depth of max 2 in its stream).
 If the scope is genuinely too big for ONE high-quality output, split off the
@@ -117,13 +118,15 @@ Then, using git and the gh CLI (both are already authenticated):
 3. Push the branch to origin.
 4. Open a pull request whose body contains "Closes #$n" so it links to the
    issue. Use: gh pr create --fill --body "Closes #$n. <one-line summary>".
-${stream:+   Also include "Stream: #$stream" in the PR body so it stays tracked to its stream.
+${stream:+   The PR body must also contain the exact text  Stream: #$stream  on the same
+   line, so the PR stays tracked to its stream.
 }
-IMPORTANT: do NOT touch issue labels or assignees — the runner manages issue
-status. Do exactly one issue (#$n). Respect the human gates (docs/STREAMS.md):
-never open ideate/build follow-up issues, and never write or edit streams/
-overview docs — those are human steward decisions. When finished, print the
-PR URL.
+IMPORTANT: do NOT change labels or assignees on EXISTING issues — the runner
+manages issue status. (The one exception: labels on NEW sub-issues you create
+via the fan-out instruction above.) Do exactly one issue (#$n). Respect the
+human gates (docs/STREAMS.md): never open ideate/build follow-up issues, and
+never write or edit streams/ overview docs — those are human steward
+decisions. When finished, print the PR URL.
 EOF
 }
 

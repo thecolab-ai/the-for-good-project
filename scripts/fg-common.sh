@@ -76,13 +76,22 @@ available_issues() { issues_with_status "available"; }
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
 rework_issues() { issues_with_status "changes-requested" --assignee "@me"; }
 
-# Depth of an issue in its stream: 0 for a root (no "Part of #p" in the body),
-# else 1 + parent's depth, capped at 3 hops. Bounds agent fan-out (docs/STREAMS.md).
+# First value of a "<prefix>..." entry in a comma-joined label list.
+label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
+  printf '%s' "$1" | tr ',' '\n' | sed -n "s/^$2//p" | head -1
+}
+
+# Depth of an issue in its stream: 0 for a root (no line-anchored "Part of #p"
+# in the body), else 1 + parent's depth, capped at 3 hops. Bounds agent
+# fan-out (docs/STREAMS.md). FAILS CLOSED: if gh errors mid-walk (rate limit,
+# network), reports the cap so fan-out is denied rather than unbounded.
 issue_depth() {  # $1 = issue number
   local n="$1" d=0 body parent
   while [ "$d" -lt 3 ]; do
-    body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body 2>/dev/null || true)"
-    parent="$(printf '%s' "$body" | grep -oiE 'part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+    if ! body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body 2>/dev/null)"; then
+      echo 3; return
+    fi
+    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
     [ -z "$parent" ] && break
     d=$((d+1)); n="$parent"
   done

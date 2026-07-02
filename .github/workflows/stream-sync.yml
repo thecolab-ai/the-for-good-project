@@ -2,15 +2,16 @@
 # See docs/STREAMS.md for the Stream concept.
 #
 # Rules:
-#  - A new "stage: discover" issue is the ROOT of a new stream → create and
-#    apply "stream:<n>" where n is its own number.
-#  - Any issue/PR whose body declares "Stream: #n" gets "stream:<n>".
-#  - Any issue/PR whose body declares "Part of #p" inherits the parent's
-#    stream:<n> label (one hop — parents get theirs the same way, so the
-#    label walks down the tree as children open).
+#  - A "stage: discover" issue is always the ROOT of its own stream → create
+#    and apply "stream:<n>" where n is its own number (this rule wins).
+#  - Any other issue/PR whose body declares "Stream: #n" gets "stream:<n>",
+#    PROVIDED #n is a real stream root (an existing "stage: discover" issue).
+#  - Any issue/PR whose body starts a line with "Part of #p" (or a closing
+#    ref) inherits the parent's stream:<n> label — line-anchored so prose
+#    like "as part of #30's discussion" doesn't mis-parent it.
 #  - When the LAST open child issue in a stream closes, the root issue gets
-#    "status: needs-synthesis" — the human G1 queue. New child work in an
-#    already-flagged stream removes it again (synthesis waits for the drain).
+#    "status: needs-synthesis" — the human G1 queue. A genuinely NEW child
+#    (or a reopened one) removes it again: synthesis waits for the drain.
 name: Stream sync
 
 on:
@@ -24,6 +25,11 @@ permissions:
   pull-requests: write
   contents: read
 
+# Serialize runs: the drain count and the un-flag logic race otherwise.
+concurrency:
+  group: stream-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     if: github.event.action != 'closed' && github.event.action != 'reopened'
@@ -36,29 +42,45 @@ jobs:
           NUM: ${{ github.event.issue.number || github.event.pull_request.number }}
           BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
           IS_PR: ${{ github.event.pull_request != null }}
+          ACTION: ${{ github.event.action }}
           LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
           set -euo pipefail
           stream=""
 
-          # 1) Explicit "Stream: #n" in the body wins.
-          stream=$(printf '%s' "$BODY" | grep -oiE 'stream:[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+          # 1) A Discover issue always roots its own stream — nothing overrides this.
+          if [ "$IS_PR" != "true" ]; then
+            case ",$LABELS," in *",stage: discover,"*) stream="$NUM" ;; esac
+          fi
 
-          # 2) Else inherit from the parent named by "Part of #p" / "Closes #p".
+          # 2) Explicit "Stream: #n" in the body.
           if [ -z "$stream" ]; then
-            parent=$(printf '%s' "$BODY" | grep -oiE '(part of|closes|fixes|resolves)[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            stream=$(printf '%s' "$BODY" | grep -oiE 'stream:[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+          fi
+
+          # 3) Else inherit from the parent named by a LINE-ANCHORED "Part of #p" /
+          #    closing ref (prose like "as part of #30" must not mis-parent).
+          if [ -z "$stream" ]; then
+            parent=$(printf '%s' "$BODY" | grep -oiE '^[[:space:]]*(part of|closes|fixes|resolves)[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
             if [ -n "$parent" ]; then
               stream=$(gh issue view "$parent" --repo "$REPO" --json labels \
                 --jq '[.labels[].name | select(startswith("stream:"))][0] // empty' 2>/dev/null | grep -oE '[0-9]+' || true)
             fi
           fi
 
-          # 3) Else a Discover issue roots its own stream.
-          if [ -z "$stream" ] && [ "$IS_PR" != "true" ]; then
-            case ",$LABELS," in *",stage: discover,"*) stream="$NUM" ;; esac
-          fi
-
           [ -z "$stream" ] && { echo "No stream to apply."; exit 0; }
+          case "$stream" in ''|*[!0-9]*) echo "Non-numeric stream ref '$stream' — ignoring."; exit 0 ;; esac
+
+          # VALIDATE: unless this issue is its own root, #stream must be a real
+          # stream root — an existing "stage: discover" issue. Rejects junk like
+          # "Stream: #999999" from drive-by bodies before it can mint labels.
+          if [ "$stream" != "$NUM" ]; then
+            root_labels=$(gh issue view "$stream" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || echo "__MISSING__")
+            case ",$root_labels," in
+              *",stage: discover,"*) : ;;
+              *) echo "#$stream is not a valid stream root — refusing to apply."; exit 0 ;;
+            esac
+          fi
           label="stream:$stream"
 
           # Ensure the label exists (title of the root issue as description).
@@ -72,9 +94,11 @@ jobs:
             gh pr edit "$NUM" --repo "$REPO" --add-label "$label" || true
           else
             gh issue edit "$NUM" --repo "$REPO" --add-label "$label" || true
-            # New child work in a stream already flagged for synthesis → the
+            # A genuinely NEW child in a stream flagged for synthesis → the
             # drain isn't done after all; pull the root out of the G1 queue.
-            if [ "$NUM" != "$stream" ]; then
+            # Only on 'opened' (edits/labels of old — possibly closed — children
+            # must never strip the flag).
+            if [ "$ACTION" = "opened" ] && [ "$NUM" != "$stream" ]; then
               if gh issue view "$stream" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null | grep -q "status: needs-synthesis"; then
                 gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" || true
                 gh issue comment "$stream" --repo "$REPO" --body "🔄 New work opened in this stream (#$NUM) — pulling it back out of the synthesis queue until the stream drains again." || true
@@ -96,28 +120,38 @@ jobs:
           LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
           set -euo pipefail
-          stream=$(printf '%s' "$LABELS" | tr ',' '\n' | sed -n 's/^stream://p' | head -1)
-          [ -z "$stream" ] && { echo "Not part of a stream."; exit 0; }
-          [ "$NUM" = "$stream" ] && { echo "Root itself closed/reopened — nothing to gate."; exit 0; }
+          streams=$(printf '%s' "$LABELS" | tr ',' '\n' | sed -n 's/^stream://p')
+          [ -z "$streams" ] && { echo "Not part of a stream."; exit 0; }
 
-          root_state=$(gh issue view "$stream" --repo "$REPO" --json state --jq .state 2>/dev/null || echo "")
-          [ "$root_state" != "OPEN" ] && { echo "Stream root #$stream is not open — stream has ended."; exit 0; }
+          # An issue can (transiently) carry several stream labels — evaluate
+          # every one so no stream's drain event is lost.
+          for stream in $streams; do
+            case "$stream" in ''|*[!0-9]*) echo "Skipping non-numeric stream label 'stream:$stream'."; continue ;; esac
+            [ "$NUM" = "$stream" ] && { echo "Root #$stream itself closed/reopened — nothing to gate."; continue; }
 
-          # Open children = open issues carrying stream:<n>, minus the root.
-          open_children=$(gh issue list --repo "$REPO" --state open --label "stream:$stream" \
-            --json number --jq "[.[] | select(.number != $stream)] | length")
+            root_state=$(gh issue view "$stream" --repo "$REPO" --json state --jq .state 2>/dev/null || echo "")
+            [ "$root_state" != "OPEN" ] && { echo "Stream root #$stream is not open — stream has ended."; continue; }
 
-          if [ "$ACTION" = "reopened" ]; then
-            # Work came back — make sure the root isn't sitting in the G1 queue.
-            gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" 2>/dev/null || true
-            echo "Child #$NUM reopened; root un-flagged if it was flagged."
-            exit 0
-          fi
+            if [ "$ACTION" = "reopened" ]; then
+              # Work came back — make sure the root isn't sitting in the G1 queue.
+              gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" 2>/dev/null || true
+              echo "Child #$NUM reopened; root #$stream un-flagged if it was flagged."
+              continue
+            fi
 
-          if [ "$open_children" = "0" ]; then
-            gh issue edit "$stream" --repo "$REPO" --add-label "status: needs-synthesis" || true
-            gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**: a human steward now reads the merged findings, writes/updates the plain-language overview in \`streams/\`, and decides — go deeper, pivot, or proceed to ideation. See \`docs/STREAMS.md\`. Nothing moves to solutions until then." || true
-            echo "Stream #$stream drained → root flagged needs-synthesis."
-          else
-            echo "Stream #$stream still has $open_children open child issue(s)."
-          fi
+            # Open children: labelled ones, plus a search for line-convention
+            # children whose label sync may have failed (best-effort).
+            open_children=$(gh issue list --repo "$REPO" --state open --label "stream:$stream" \
+              --json number --jq "[.[] | select(.number != $stream)] | length")
+            unlabelled=$(gh issue list --repo "$REPO" --state open --search "\"Part of #$stream\" in:body" \
+              --json number,labels \
+              --jq "[.[] | select(.number != $stream) | select([.labels[].name] | index(\"stream:$stream\") | not)] | length" 2>/dev/null || echo 0)
+
+            if [ "$open_children" = "0" ] && [ "$unlabelled" = "0" ]; then
+              gh issue edit "$stream" --repo "$REPO" --add-label "status: needs-synthesis" || true
+              gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**: a human steward now reads the merged findings, writes/updates the plain-language overview in \`streams/\`, and decides — go deeper, pivot, or proceed to ideation. See \`docs/STREAMS.md\`. Nothing moves to solutions until then. (Automation counts labelled children — worth a quick scan for stragglers before synthesising.)" || true
+              echo "Stream #$stream drained → root flagged needs-synthesis."
+            else
+              echo "Stream #$stream still has $open_children labelled + $unlabelled unlabelled open child issue(s)."
+            fi
+          done

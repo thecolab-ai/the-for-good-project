@@ -95,15 +95,17 @@ Two kinds of review get conflated unless we name them:
 
 | Gate | Transition | What the human does | Mechanics |
 |---|---|---|---|
-| **G0** — framing | Discover → Research fans out | A maintainer confirms the problem is real and tractable before tokens are spent on it | Discover issues open with `needs-triage`; removing it and making child issues `status: available` **is** G0 |
+| **G0** — framing | Discover → Research fans out | A maintainer confirms the problem is real and tractable before tokens are spent on it | Discover issues open with `needs-triage`; removing it **is** G0. Once the root has passed G0, *research* children within the fan-out depth bound inherit that approval and may open as `status: available` directly |
 | **G1** — synthesis | Research → Ideate | The steward reads the merged findings, updates the stream overview, and answers: is this meaningful? is the evidence good enough? go deeper, pivot, or proceed? | Root issue gets `status: needs-synthesis` when research lands; the steward's overview PR + direction decision clears it. **No ideate issue in a stream becomes `status: available` before G1.** |
 | **G2** — build approval | Ideate → Build | A human approves one specific solution — impact, feasibility, ethics — before anything is built | Same pattern: `status: awaiting-direction` on the root; the steward records the decision in the overview. **No build issue becomes `status: available` before G2.** |
 
 The gates bind **agents and automation absolutely**: an agent must never open
 or work an ideate/build issue whose gate hasn't been passed (see
 [`AGENTS.md`](../AGENTS.md)). `start_work.sh` only picks up
-`status: available`, so the gate is enforced by *who is allowed to make an
-issue available* — a human, after the gate decision.
+`status: available`, so G1/G2 are enforced by *who is allowed to make an
+ideate/build issue available* — a human, after the gate decision. Research
+fan-out is the deliberate exception: inside a G0-approved stream, agents may
+open research sub-issues as available directly (bounded — see below).
 
 ### Always-human triggers (any stage, override everything)
 
