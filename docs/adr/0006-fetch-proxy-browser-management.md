@@ -83,13 +83,42 @@ per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 - **Proxy only, no browser.** Fixes IP blocks, but not JS/redirect/challenge
   pages. Both are needed; they solve different failure modes.
 
+## Implementation status (updated 2026-07-03)
+
+*Ratified by the maintainer (Adam Holt), 2026-07-03 — these tooling/workflow
+changes are adopted, not an agent self-adoption.*
+
+**Shipped:**
+- **Shared fetch ladder as one CLI** — [`scripts/fetch.mjs`](../../scripts/fetch.mjs)
+  runs curl → agent-browser (real Chrome) → CloakBrowser (stealth Chromium) in
+  order, returns the first real page, and prints *how* it fetched. It refuses to
+  pass a rendered bot-challenge as a successful read.
+- **Failure classification (§2)** — `fetch.mjs` exits `4` for genuinely DEAD
+  (404 even in a browser) and `3` for BLOCKED (403 / bot-challenge / timeout →
+  tooling/IP, not a defect). The researcher and reviewer prompts in
+  `start_work.sh` / `review_work.sh` and [`AGENTS.md`](../../AGENTS.md) now point
+  at this command and require stating how a source was fetched.
+- **Ladder order** — curl → the harness's built-in WebFetch/WebSearch tool →
+  `scripts/fetch.mjs` (real Chrome → stealth Chromium) → archive snapshot. The
+  WebFetch rung is called by the agent, not by `fetch.mjs` (a subprocess can't
+  invoke a harness tool), so it lives in the prompt guidance.
+- **Archive on cite (§3)** — [`scripts/archive-cite.mjs`](../../scripts/archive-cite.mjs)
+  finds a recent Wayback snapshot (CDX API) or captures a fresh one and prints
+  the snapshot URL; `fetch.mjs --archive` snapshots on success.
+
+**Still open (tracked separately):**
+- **Proxy / egress management (§4, Decision 4)** — datacentre-IP blocking is
+  unaddressed; needs a residential-egress decision (cost/ethics/operator). See
+  the tracking issue (#118).
+- **Caching layer** for repeated fetches, and a convention for how archive
+  snapshots are stored/linked in a finding's frontmatter (today it's a URL
+  beside the live link).
+
 ## Follow-ups (not fixed here)
 
-- Which rendering tool / browser-fetch, and whether it's a shared `fetch`
-  helper CLI in-repo.
 - Proxy architecture: residential proxy provider, run-on-residential-machine, or
-  per-site policy? Cost, ethics, and who operates it.
+  per-site policy? Cost, ethics, and who operates it. **(open — #118)**
 - Caching layer for repeated fetches, and how archive snapshots are stored and
-  linked from findings.
-- Update the reviewer prompt to require "fetched via browser render / archive"
-  evidence before a link is flagged dead.
+  linked from findings. **(open)**
+- ~~Which rendering tool / browser-fetch, and whether it's a shared `fetch` helper CLI.~~ **(done — `scripts/fetch.mjs`)**
+- ~~Update the reviewer prompt to require "fetched via browser render / archive" evidence before a link is flagged dead.~~ **(done)**

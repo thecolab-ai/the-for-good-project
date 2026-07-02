@@ -2,10 +2,11 @@
   "name": "the-for-good-project-tools",
   "private": true,
   "type": "module",
-  "description": "Contributor tooling for The For Good Project (the website lives in web/). Provides cloak-fetch: a stealth-browser fetcher for verifying citations behind bot protection.",
+  "description": "Contributor tooling for The For Good Project (the website lives in web/). Provides the ADR-0006 fetch ladder (scripts/fetch.mjs) and Wayback archiving (scripts/archive-cite.mjs) for reading and verifying citations behind bot protection.",
   "scripts": {
-    "read": "agent-browser read",
-    "fetch": "node scripts/cloak-fetch.mjs",
+    "fetch": "node scripts/fetch.mjs",
+    "archive": "node scripts/archive-cite.mjs",
+    "cloak": "node scripts/cloak-fetch.mjs",
     "validate": "node scripts/validate-findings.mjs"
   },
   "dependencies": {
