@@ -1,0 +1,104 @@
+---
+title: "A small Papakura shelf-price basket moved differently from the national food price index"
+domain: "other"
+issue: "#76"
+confidence: "Medium"
+author: "adam91holt"
+agent: "codex"
+model: "gpt-5-codex"
+date: "2026-07-02"
+status: "draft"
+---
+
+# A small Papakura shelf-price basket moved differently from the national food price index
+
+## Executive answer
+
+- For a deliberately small basket of three exact supermarket SKUs at Woolworths Papakura and New World Papakura, the observed monthly mean shelf-price basket fell about 2.5 percent between May 2025 and May 2026, while Stats NZ's national food index rose 3.2 percent over the same months. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+- The divergence is not evidence that Stats NZ is wrong; it shows why a national weighted index should not be presented as what a shopper will see for a specific basket, store, brand, pack size, or promotion cycle. Stats NZ says the Food Price Index measures price change, not price levels or average prices, and that one index number by itself does not mean anything without another period for comparison. [Stats NZ DataInfo+, Food Price Index](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/749d8c27-1bed-45fb-b941-a1905aee632f)
+- At product level, the shelf prices mostly moved in the same direction as relevant Stats NZ section indexes: milk and bread rose and eggs fell. The size of the movement differed: the two Papakura milk SKU/store series rose 3.0-4.2 percent while Stats NZ's fresh milk section rose 10.3 percent; the two bread SKU/store series rose 6.8-7.1 percent while the bread section rose 11.4 percent; the two egg SKU/store series fell 8.6-9.6 percent while the eggs section fell 6.6 percent. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+- Stats NZ's May 2026 selected price indexes release is the right official baseline for this comparison because the older Food Price Index series is now replaced by Selected Price Indexes, which combines the Food Price Index and other selected monthly price series. [Stats NZ DataInfo+, Food Price Index](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/749d8c27-1bed-45fb-b941-a1905aee632f); [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65)
+
+**Overall confidence:** Medium - the arithmetic is reproducible from exact public data files, but the basket is intentionally tiny, brand-specific, and limited to two Papakura stores.
+
+## Evidence
+
+### Basket and method
+
+The shelf-price basket is one unit each of Anchor Milk Blue Top 2L, Tip Top Supersoft White Toast 700g, and Henergy Cage Free Barn Grade 7 Eggs 12pk, observed at Woolworths Papakura and New World Papakura. The Grocer product catalogue identifies these as product IDs 5452, 4085, and 7755, and the public history files expose `updated_at`, `store_id`, and `price_cent` rows for each product. [Grocer base catalogue](https://assets-prod.grocer.nz/public/base_v3.duckdb.br); [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+I used May 2025 and May 2026 because Stats NZ's May 2026 selected price indexes release was published on 16 June 2026 and its CSV contains both index series and selected weighted-average-price series through May 2026. [Stats NZ selected price indexes release, May 2026](https://www.stats.govt.nz/information-releases/selected-price-indexes-may-2026/); [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv)
+
+For each product/store/month, I averaged all observed Grocer `price_cent` rows in that calendar month; for each store basket, I summed the three product monthly means; and for the two-store basket result, I averaged the two store basket totals. [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+The Stats NZ comparison uses unadjusted May 2025 to May 2026 movements for food (`CPIM.SE901`), fresh milk (`CPIM.SE9013021`), bread (`CPIM.SE9013011`), eggs (`CPIM.SE9013026`), and the selected weighted average prices for standard homogenised milk 2 litres (`CPIM.SAP0127`), white sliced bread 600g (`CPIM.SAP0149`), and eggs dozen (`CPIM.SAP0130`). [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv)
+
+Stats NZ says Selected Price Indexes covers the entire food group and its subgroups, uses expenditure and outlet weights, collects about 19,000 prices from 560 retail outlets, and incorporates supermarket checkout scanner data for some supermarket food prices. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65)
+
+Stats NZ also warns that selected weighted average retail prices are not statistically accurate measures of average transaction price levels, though they are reliable indicators of percentage price change. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65)
+
+### Results
+
+| Measure, May 2025 to May 2026 | May 2025 | May 2026 | Change |
+|---|---:|---:|---:|
+| Stats NZ food index (`CPIM.SE901`) | 1330 | 1372 | +3.2% |
+| Papakura two-store basket, monthly mean shelf prices | $20.41 | $19.90 | -2.5% |
+| Woolworths Papakura basket | $20.40 | $19.92 | -2.4% |
+| New World Papakura basket | $20.42 | $19.88 | -2.7% |
+
+The table above uses the May 2026 Stats NZ selected price indexes CSV for the index values and Grocer history files for the product/store monthly mean prices. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+| Product/store series | May 2025 monthly mean | May 2026 monthly mean | Shelf-price change | Closest Stats NZ comparison | Stats NZ change |
+|---|---:|---:|---:|---|---:|
+| Anchor Milk Blue Top 2L, Woolworths Papakura | $5.44 | $5.60 | +3.0% | Fresh milk section index | +10.3% |
+| Anchor Milk Blue Top 2L, New World Papakura | $5.44 | $5.67 | +4.2% | Fresh milk section index | +10.3% |
+| Tip Top Supersoft White Toast 700g, Woolworths Papakura | $4.09 | $4.38 | +7.1% | Bread section index | +11.4% |
+| Tip Top Supersoft White Toast 700g, New World Papakura | $4.09 | $4.37 | +6.8% | Bread section index | +11.4% |
+| Henergy Cage Free Barn Grade 7 Eggs 12pk, Woolworths Papakura | $10.87 | $9.93 | -8.6% | Eggs section index | -6.6% |
+| Henergy Cage Free Barn Grade 7 Eggs 12pk, New World Papakura | $10.89 | $9.84 | -9.6% | Eggs section index | -6.6% |
+
+The product/store table uses the same Grocer product history files and Stats NZ section-index series as the preceding method paragraph. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+Stats NZ's selected weighted-average-price series moved by +10.7 percent for standard homogenised milk 2 litres, +39.9 percent for white sliced bread 600g, and -7.1 percent for eggs dozen between May 2025 and May 2026; the bread weighted-average-price comparison is especially loose because the Grocer basket uses a branded 700g toast loaf, not Stats NZ's white sliced 600g item. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet)
+
+### Interpretation
+
+The two-store basket fell while the national food index rose because the egg SKU had a large dollar weight in this three-item basket and its observed shelf price fell enough to more than offset milk and bread increases. [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+The same data also shows why shopper-facing transparency should present product/store histories alongside, not instead of, Stats NZ indexes: Stats NZ is a weighted national price-change measure, while the Grocer rows are specific observed shelf prices for particular products and stores. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65); [Grocer base catalogue](https://assets-prod.grocer.nz/public/base_v3.duckdb.br)
+
+The Stats NZ method includes 'on special' prices where observed, and for some supermarkets the scanner-data input is a weighted average for the month, which reduces the ability to separately identify special prices; Grocer's daily product/store history can show short-term shelf-price cycles for exact SKUs, but it does not provide Stats NZ's expenditure weights, outlet weights, or national sample design. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| A small exact-SKU basket can move in the opposite direction from the national food index over the same months. | [Stats NZ selected price indexes CSV, May 2026](https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv) | [Grocer product history files for the three basket SKUs](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet) | Medium |
+| The national FPI/SPI food index should not be used as an average shelf price. | [Stats NZ DataInfo+, Food Price Index](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/749d8c27-1bed-45fb-b941-a1905aee632f) | [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65) | High |
+| Stats NZ and Grocer answer different questions: national weighted price movement versus exact product/store shelf history. | [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65) | [Grocer public base catalogue](https://assets-prod.grocer.nz/public/base_v3.duckdb.br) and [Grocer public history parquet layout](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet) | High |
+
+## What would change this conclusion
+
+- A larger basket with expenditure weights, more stores, more regions, house-brand substitutes, and fresh produce could move closer to, or further away from, the national Stats NZ food index; this finding only supports a narrow statement about the named products, stores, and months. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65); [Grocer base catalogue](https://assets-prod.grocer.nz/public/base_v3.duckdb.br)
+- Direct access to the supermarket scanner data and Stats NZ elementary aggregates would allow a stronger reconciliation between shelf-level observations and official indexes; I did not have access to those non-public inputs. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65)
+- Grocer history files record observed product/store price rows but do not document whether every price is a shelf price, online price, loyalty price, or scanner-weighted transaction price; I treated `price_cent` as the observed product/store price exposed by the public Grocer history parquet. [Grocer price history 5452](https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet); [Grocer price history 4085](https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet); [Grocer price history 7755](https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet)
+- I could not verify Grocer's full data-collection method, update completeness, or redistribution terms from the public parquet files alone; a production transparency tool should resolve those before republishing bulk histories. [Grocer base catalogue](https://assets-prod.grocer.nz/public/base_v3.duckdb.br)
+- A human reviewer with grocery pricing or Stats NZ price-index expertise should review the choice of basket weights before this method is used in a public-facing explainer. [Stats NZ DataInfo+, Selected Price Indexes](https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65)
+
+## Open follow-up questions
+
+- What basket definition would best balance household recognisability, SKU stability, and defensibility against Stats NZ categories?
+- How often do exact product/store prices diverge from their closest Stats NZ section index by more than 5 percentage points over a 12-month window?
+- Can Grocer history be used to identify recurring promotion cycles without implying retailer intent?
+- What public-data and licensing boundaries should apply before a household-facing tool republishes product/store price histories?
+
+## Sources
+
+1. Stats NZ. "Selected price indexes: May 2026." Published 16 June 2026. Accessed 2 July 2026. https://www.stats.govt.nz/information-releases/selected-price-indexes-may-2026/
+2. Stats NZ. "Selected price indexes: May 2026 - CSV." Accessed 2 July 2026. https://www.stats.govt.nz/assets/Uploads/Selected-price-indexes/Selected-price-indexes-May-2026/Download-data/selected-price-indexes-may-2026.csv
+3. Stats NZ DataInfo+. "Selected Price Indexes." Last updated 16 June 2026. Accessed 2 July 2026. https://datainfoplus.stats.govt.nz/Item/nz.govt.stats/9e9f65b8-533f-4e96-8d6e-030d37de1a65
+4. Stats NZ DataInfo+. "Food Price Index." Accessed 2 July 2026. https://datainfoplus.stats.govt.nz/item/nz.govt.stats/749d8c27-1bed-45fb-b941-a1905aee632f
+5. Grocer.nz public assets. "base_v3.duckdb.br." Accessed 2 July 2026. https://assets-prod.grocer.nz/public/base_v3.duckdb.br
+6. Grocer.nz public assets. "price_history_5452.parquet." Accessed 2 July 2026. https://assets-prod.grocer.nz/public/price_history_v3/price_history_5452.parquet
+7. Grocer.nz public assets. "price_history_4085.parquet." Accessed 2 July 2026. https://assets-prod.grocer.nz/public/price_history_v3/price_history_4085.parquet
+8. Grocer.nz public assets. "price_history_7755.parquet." Accessed 2 July 2026. https://assets-prod.grocer.nz/public/price_history_v3/price_history_7755.parquet
