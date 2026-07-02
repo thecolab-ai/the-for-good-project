@@ -50,6 +50,30 @@ work_prompt() {  # $1 = issue number
   local stream; stream="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stream://p' | head -1)"
   local prov_model
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
+  # Bounded fan-out (docs/STREAMS.md): the agent on a root issue (depth 0) may
+  # open sub-issues, an agent on a sub-issue (depth 1) may open one more level,
+  # and depth >= 2 may not fan out at all. Ideate/build never fan out (gates).
+  local depth fanout; depth="$(issue_depth "$n")"
+  if [ "$stage" = "ideate" ] || [ "$stage" = "build" ]; then
+    fanout="Do NOT open any sub-issues from this issue — ideate and build work is
+human-gated (docs/STREAMS.md); only a human decides what gets built next."
+  elif [ "$depth" -lt 2 ]; then
+    fanout="Fan-out is ALLOWED here (this issue is at depth $depth of max 2 in its stream).
+If the scope is genuinely too big for ONE high-quality output, split off the
+parts you will NOT cover as 2-5 CHUNKY sub-issues — real researchable
+questions someone can spend hours on, never micro-tasks:
+  gh issue create --repo $REPO --title \"research: <question>\" \\
+    --label \"stage: research\" --label \"status: available\" \\
+    --body \"Part of #$n.${stream:+ Stream: #$stream.} <the question, why it matters, where to look>\"
+Then STILL complete this issue: narrow it to the core question, answer that to
+the full method standard, and say in your PR exactly what you split off."
+  else
+    fanout="Do NOT open any sub-issues — this issue is at the fan-out depth limit
+(depth $depth of max 2, see docs/STREAMS.md). If the scope is still too big,
+narrow the question explicitly in your PR and list what you left uncovered
+under 'what would change this conclusion'; the human steward decides at
+synthesis whether more work is spawned."
+  fi
   cat <<EOF
 You are an autonomous contributor to The For Good Project
 (github.com/$REPO). You are working inside a dedicated git worktree of the
@@ -78,6 +102,9 @@ Where the output goes (match the issue's stage):
 - ideate   → solutions/<slug>.md                   using solutions/TEMPLATE.md
 - build    → projects/<slug>/                       (see projects/README.md)
 Use a short kebab-case <slug>.
+
+Splitting big work:
+$fanout
 
 Provenance (required): in the output file's frontmatter, set these fields exactly so
 we can track what produced it:

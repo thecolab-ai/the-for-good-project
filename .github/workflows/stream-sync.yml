@@ -8,11 +8,14 @@
 #  - Any issue/PR whose body declares "Part of #p" inherits the parent's
 #    stream:<n> label (one hop — parents get theirs the same way, so the
 #    label walks down the tree as children open).
+#  - When the LAST open child issue in a stream closes, the root issue gets
+#    "status: needs-synthesis" — the human G1 queue. New child work in an
+#    already-flagged stream removes it again (synthesis waits for the drain).
 name: Stream sync
 
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited, labeled, closed, reopened]
   pull_request_target:
     types: [opened, edited]
 
@@ -23,6 +26,7 @@ permissions:
 
 jobs:
   sync:
+    if: github.event.action != 'closed' && github.event.action != 'reopened'
     runs-on: ubuntu-latest
     steps:
       - name: Apply stream label
@@ -68,5 +72,52 @@ jobs:
             gh pr edit "$NUM" --repo "$REPO" --add-label "$label" || true
           else
             gh issue edit "$NUM" --repo "$REPO" --add-label "$label" || true
+            # New child work in a stream already flagged for synthesis → the
+            # drain isn't done after all; pull the root out of the G1 queue.
+            if [ "$NUM" != "$stream" ]; then
+              if gh issue view "$stream" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null | grep -q "status: needs-synthesis"; then
+                gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" || true
+                gh issue comment "$stream" --repo "$REPO" --body "🔄 New work opened in this stream (#$NUM) — pulling it back out of the synthesis queue until the stream drains again." || true
+              fi
+            fi
           fi
           echo "Applied $label to #$NUM"
+
+  synthesis-gate:
+    if: github.event.action == 'closed' || github.event.action == 'reopened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flag the stream root for synthesis when the last child closes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+          ACTION: ${{ github.event.action }}
+          LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          stream=$(printf '%s' "$LABELS" | tr ',' '\n' | sed -n 's/^stream://p' | head -1)
+          [ -z "$stream" ] && { echo "Not part of a stream."; exit 0; }
+          [ "$NUM" = "$stream" ] && { echo "Root itself closed/reopened — nothing to gate."; exit 0; }
+
+          root_state=$(gh issue view "$stream" --repo "$REPO" --json state --jq .state 2>/dev/null || echo "")
+          [ "$root_state" != "OPEN" ] && { echo "Stream root #$stream is not open — stream has ended."; exit 0; }
+
+          # Open children = open issues carrying stream:<n>, minus the root.
+          open_children=$(gh issue list --repo "$REPO" --state open --label "stream:$stream" \
+            --json number --jq "[.[] | select(.number != $stream)] | length")
+
+          if [ "$ACTION" = "reopened" ]; then
+            # Work came back — make sure the root isn't sitting in the G1 queue.
+            gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" 2>/dev/null || true
+            echo "Child #$NUM reopened; root un-flagged if it was flagged."
+            exit 0
+          fi
+
+          if [ "$open_children" = "0" ]; then
+            gh issue edit "$stream" --repo "$REPO" --add-label "status: needs-synthesis" || true
+            gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**: a human steward now reads the merged findings, writes/updates the plain-language overview in \`streams/\`, and decides — go deeper, pivot, or proceed to ideation. See \`docs/STREAMS.md\`. Nothing moves to solutions until then." || true
+            echo "Stream #$stream drained → root flagged needs-synthesis."
+          else
+            echo "Stream #$stream still has $open_children open child issue(s)."
+          fi

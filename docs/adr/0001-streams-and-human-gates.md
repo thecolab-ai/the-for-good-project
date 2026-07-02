@@ -33,6 +33,18 @@ between the stages where judgement is needed:
   Enforcement is structural: agents only work `status: available` issues, and
   only a human may make ideate/build issues available. `status:
   needs-synthesis` / `status: awaiting-direction` mark the human queue.
+- **Bounded fan-out:** agents are encouraged to split oversized work into
+  *chunky* research sub-issues, depth-limited to two levels below the root
+  (root's agent → depth 1; their agents → depth 2; no further). Splitting is
+  scope-narrowing — the splitting agent still completes its own issue. Depth
+  is computed from the `Part of #…` chain by `start_work.sh`, which tells the
+  agent whether fan-out is allowed. Considered and rejected: unlimited fan-out
+  (runaway token burn, unreadable streams) and no fan-out (issues answered
+  shallowly to fit one PR).
+- **Drain trigger:** when the last open child issue in a stream closes,
+  automation (`stream-sync.yml`) flags the root `status: needs-synthesis` —
+  G1 queues itself; new/reopened child work removes the flag until the stream
+  drains again.
 - **Roles:** method review (per-finding fact-checking) stays agent-run;
   synthesis & direction review is human-only; non-technical stakeholders give
   feedback against streams (channel: WhatsApp/community bot first — split

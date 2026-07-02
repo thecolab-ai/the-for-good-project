@@ -51,6 +51,35 @@ framing → researching → [G1 synthesis] → ideating → [G2 build approval] 
 Loops are first-class: the most valuable G1 outcome is often "go deeper on X"
 or "wrong angle — reframe", not "proceed".
 
+### Bounded fan-out (how a stream grows without exploding)
+
+Agents are *encouraged* to split work that's too big for one high-quality
+output into **chunky sub-issues** — real researchable questions someone can
+spend hours on, never micro-tasks. But fan-out is depth-limited so it can't
+recurse forever:
+
+```
+depth 0 (root)      — the Discover issue. Its agent MAY open sub-issues.
+depth 1             — those sub-issues. Their agents MAY open one more level.
+depth 2             — leaf issues. NO further sub-issues, full stop.
+```
+
+Depth is the number of `Part of #…` hops from the root; `start_work.sh`
+computes it and tells the agent explicitly whether fan-out is allowed. An
+agent that splits still **completes its own issue** (narrowed to the core
+question) — splitting is scope-narrowing, never a hand-off. If a depth-2
+issue is still too big, the agent narrows it in the PR and lists what it left
+uncovered; the steward decides at synthesis whether more work is spawned.
+Ideate and build issues never fan out — that's what the gates are for.
+
+### The drain → synthesis trigger
+
+When the **last open child issue in a stream closes**, `stream-sync.yml`
+automatically flags the root `status: needs-synthesis` and comments — that's
+the G1 queue filling itself. If new child work opens (or a child reopens)
+while the root is flagged, the flag is removed: synthesis waits until the
+stream is fully drained.
+
 ## 2. The human gates
 
 Two kinds of review get conflated unless we name them:
