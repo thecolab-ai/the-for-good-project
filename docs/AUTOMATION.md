@@ -9,19 +9,37 @@ tracking stays correct no matter which agent runs or how it behaves.
 ## The status lifecycle
 
 ```
-status: available  ──claim──▶  status: claimed  ──PR opened──▶  status: in-review  ──review passes + merge──▶  status: done
-        ▲                                                              │
-        └───────────────── agent opened no PR (released) ◀────────────┘
+status: available ──claim──▶ status: claimed ──PR opened──▶ status: in-review ──review passes + merge──▶ status: done
+        ▲                                                       │        ▲
+        │                                                review says     │ author's next loop
+        │                                                NEEDS_WORK      │ pushes the rework
+        │                                                       ▼        │
+        │                                              status: changes-requested
+        └───────────── agent opened no PR (released) ◀─────────┘ (PR closed / gone)
 ```
 
-`start_work.sh` moves `available → claimed → in-review`. `review_work.sh` records
-reviews; `merge_ready.sh` (maintainer) merges what qualifies → `done`. No agent is
-trusted to set these itself.
+`start_work.sh` moves `available → claimed → in-review` (and
+`changes-requested → in-review` after rework). `review_work.sh` records reviews
+and flips `in-review → changes-requested` on a NEEDS_WORK verdict, which routes
+the work back to its **author**: the issue stays assigned to them, and their
+next `start_work.sh` loop picks it up before any new issue. `merge_ready.sh`
+(maintainer) merges what qualifies → `done`. No agent is trusted to set these
+itself.
+
+### Worktrees & fresh main
+
+Every task — new work, rework, and review — runs in a **throwaway git worktree**
+created at that moment from a fresh `git fetch` (from `origin/main` for new
+work, from the PR head for rework/review). Your clone is never checked out,
+reset, or dirtied, and every loop starts from up-to-date `main` by
+construction. Worktrees are removed when the task finishes.
 
 ## `start_work.sh` — do the work
 
-Claims the next available issue, runs your agent on it following the project
-method, and moves it to **in review** once the agent opens a PR.
+Works your queue in priority order: **first any of your own PRs a reviewer sent
+back** (`status: changes-requested`, assigned to you), then the next available
+issue. Runs your agent on it following the project method, and moves it to
+**in review** once the agent opens (or updates) a PR.
 
 ```bash
 ./start_work.sh                 # work the queue until it's empty
@@ -31,18 +49,31 @@ MAX=1 ./start_work.sh           # one issue, then stop
 DRY_RUN=1 ./start_work.sh       # show what it would do, change nothing
 ```
 
-It claims (assigns you + `status: claimed`), resets to a clean `main`, hands the
-issue to the agent with the method baked into the prompt, then finds the PR the
-agent opened (via GitHub's closing-issue link) and flips the issue to
-`status: in-review`. If the agent opened no PR, the issue is released back to
-`available`.
+For a **new issue** it claims (assigns you + `status: claimed`), creates a fresh
+worktree from `origin/main`, hands the issue to the agent with the method baked
+into the prompt, then finds the PR the agent opened (via GitHub's closing-issue
+link) and flips the issue to `status: in-review`. If the agent opened no PR,
+the issue is released back to `available`.
+
+For **rework** it checks out the PR branch in a fresh worktree, feeds the agent
+the reviewer's feedback (review bodies + inline comments), and — once the agent
+has pushed to the same branch — flips the issue back to `status: in-review` so
+a reviewer picks it up again. If the agent pushed nothing, the issue stays
+`changes-requested` and is retried next loop.
 
 ## `review_work.sh` — review before merge
 
 **Every PR must pass an adversarial review, and the review may NOT be done by the
-PR's author.** This script runs an agent whose job is to *refute* the work
-against the method, then posts the review and sets the required
+PR's author** — anyone else can pick it up. This script runs an agent (in a
+fresh worktree of the PR head) whose job is to *refute* the work against the
+method, then posts the review and sets the required
 `for-good/adversarial-review` status check.
+
+On **NEEDS_WORK** it requests changes on the PR *and* flips the linked issue to
+`status: changes-requested`, sending it back to the author's own work loop. A
+PR that already failed review at its current revision is skipped until the
+author pushes rework (`FORCE=1` to re-review anyway); once new commits land,
+the next reviewer loop picks it up again.
 
 ```bash
 REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs

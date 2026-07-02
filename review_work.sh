@@ -5,7 +5,12 @@
 # For each open PR that hasn't passed review yet, run an AI agent (codex or
 # claude) whose job is to REFUTE the work against the project method, then post
 # the review and set the required "for-good/adversarial-review" status check.
-# On PASS it approves (and can auto-merge); on NEEDS_WORK it requests changes.
+# Each review runs in a FRESH GIT WORKTREE of the PR head (freshly fetched), so
+# your clone is never touched. On PASS it approves (and can auto-merge); on
+# NEEDS_WORK it requests changes AND flips the linked issue to
+# "status: changes-requested" so the AUTHOR's next start_work.sh loop picks the
+# rework up. A PR already marked NEEDS_WORK at its current revision is skipped
+# until the author pushes rework (FORCE=1 to re-review anyway).
 #
 # INTEGRITY RULE: an adversarial review may NOT be done by the PR's author.
 # This script enforces that — it refuses to review a PR authored by the reviewer
@@ -25,7 +30,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
-RESETS_TREE=1  # this script hard-resets the clone per task; guard against dirty trees
+trap 'remove_worktree || true' EXIT INT TERM
 
 DRY_RUN="${DRY_RUN:-0}"
 AUTO_MERGE="${AUTO_MERGE:-0}"
@@ -43,8 +48,9 @@ review_prompt() {  # $1 = PR number
   body="$(gh pr view "$pr" --repo "$REPO" --json body --jq .body)"
   cat <<EOF
 You are a FRESH-CONTEXT ADVERSARIAL REVIEWER for The For Good Project
-(github.com/$REPO). You are in a clone of the repo with pull request #$pr checked
-out as the current branch. Your job is to REFUTE this work, not to approve it.
+(github.com/$REPO). You are in a dedicated git worktree of the repo with pull
+request #$pr's head checked out (detached HEAD, freshly fetched). Your job is to
+REFUTE this work, not to approve it.
 
 PR #$pr — $title
 $body
@@ -107,31 +113,36 @@ review_one() {  # $1 = PR number
     return 1
   fi
 
-  if [ "${FORCE:-0}" != 1 ] && [ "$(check_state "$sha")" = success ]; then
-    ok "#$pr already passed adversarial review — skipping (FORCE=1 to redo)."; return 0
+  if [ "${FORCE:-0}" != 1 ]; then
+    local st; st="$(check_state "$sha")"
+    if [ "$st" = success ]; then
+      ok "#$pr already passed adversarial review — skipping (FORCE=1 to redo)."; return 0
+    fi
+    if [ "$st" = failure ]; then
+      log "#$pr already reviewed at this revision (NEEDS_WORK) — waiting on the author's rework. Skipping (FORCE=1 to redo)."; return 0
+    fi
   fi
 
   if [ "$DRY_RUN" = 1 ]; then
-    info "[dry-run] would checkout PR #$pr, run $AGENT reviewer, post review as @$ME, set check + approve/request-changes"
+    info "[dry-run] would checkout PR #$pr in a fresh worktree, run $AGENT reviewer, post review as @$ME, set check + approve/request-changes"
     return 0
   fi
 
-  git_reset_to_main
-  info "Checking out PR #$pr..."
-  git -C "$REPO_DIR" fetch origin --quiet "pull/$pr/head:pr-$pr" 2>/dev/null || true
-  git -C "$REPO_DIR" checkout --quiet "pr-$pr" 2>/dev/null || GH_TOKEN="${GH_TOKEN:-}" gh pr checkout "$pr" --repo "$REPO" --force 2>/dev/null || true
+  info "Checking out PR #$pr into a fresh worktree..."
+  if ! git -C "$REPO_DIR" fetch origin --quiet "+pull/$pr/head:refs/fg/pr-$pr"; then
+    err "Could not fetch PR #$pr head — skipping."; return 1
+  fi
+  make_worktree "refs/fg/pr-$pr"
+  REVIEW_FILE="$WORKTREE/.fg-review.md"
 
-  rm -f "$REVIEW_FILE"
   local tmp; tmp="$(mktemp)"
-  info "Handing PR #$pr to $AGENT for adversarial review..."
-  run_agent "$(review_prompt "$pr")" 2>&1 | tee "$tmp" || true
+  info "Handing PR #$pr to $AGENT for adversarial review (worktree: $WORKTREE)..."
+  run_agent "$(review_prompt "$pr")" "$WORKTREE" 2>&1 | tee "$tmp" || true
 
   local verdict; verdict="$(grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' "$tmp" | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
   rm -f "$tmp"
   local body_flag=()
   [ -s "$REVIEW_FILE" ] && body_flag=(--body-file "$REVIEW_FILE") || body_flag=(--body "Adversarial review completed; see check status.")
-
-  git -C "$REPO_DIR" checkout --quiet main || true
 
   if [ "$verdict" = PASS ]; then
     ok "Verdict: PASS"
@@ -143,7 +154,7 @@ review_one() {  # $1 = PR number
       if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
         ok "Merged #$pr"
         local iss; iss="$(issue_for_pr "$pr" || true)"
-        [ -n "$iss" ] && { set_status_label "$iss" "done" "in-review" "claimed"; ok "Issue #$iss → done"; }
+        [ -n "$iss" ] && { set_status_label "$iss" "done" "in-review" "claimed" "changes-requested"; ok "Issue #$iss → done"; }
       else warn "Could not auto-merge #$pr (branch protection / conflicts) — leaving for a maintainer."; fi
     fi
   else
@@ -152,13 +163,24 @@ review_one() {  # $1 = PR number
     gh pr review "$pr" --repo "$REPO" --request-changes "${body_flag[@]}" >/dev/null \
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" failure "Adversarial review found problems" "$url"
+    # Route the rework back to the author: flip the linked issue to
+    # "changes-requested" so THEIR next start_work.sh loop picks it up.
+    local iss; iss="$(issue_for_pr "$pr" || true)"
+    if [ -n "$iss" ]; then
+      if set_status_label "$iss" "changes-requested" "in-review" 2>/dev/null; then
+        gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`start_work.sh\` loop will pick this up." >/dev/null || true
+        ok "Issue #$iss → changes-requested (back to @$author)"
+      else
+        warn "Couldn't flip issue #$iss to changes-requested (needs triage/write access) — the review itself is recorded."
+      fi
+    fi
   fi
-  rm -f "$REVIEW_FILE"
+  remove_worktree
+  git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
 }
 
 main() {
   preflight
-  REVIEW_FILE="$REPO_DIR/.fg-review.md"
   info "review_work.sh · repo=$REPO · agent=$AGENT · reviewer=@$ME$([ "$AUTO_MERGE" = 1 ] && printf " · AUTO_MERGE")$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
     warn "No REVIEW_GITHUB_TOKEN set — reviewing as @$ME. PRs you authored will be skipped (reviewer must differ from author)."

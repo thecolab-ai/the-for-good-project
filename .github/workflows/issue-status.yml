@@ -36,12 +36,12 @@ jobs:
               echo "PR #$PR merged → issue #$n → done"
               gh issue edit "$n" --repo "$REPO" \
                 --add-label "status: done" \
-                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: available" || true
+                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: available" --remove-label "status: changes-requested" || true
             elif [ "$ACTION" = "closed" ]; then
               echo "PR #$PR closed unmerged → issue #$n → available"
               gh issue edit "$n" --repo "$REPO" \
                 --add-label "status: available" \
-                --remove-label "status: in-review" --remove-label "status: claimed" || true
+                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: changes-requested" || true
             else
               echo "PR #$PR open → issue #$n → in-review"
               gh issue edit "$n" --repo "$REPO" \

@@ -2,11 +2,14 @@
 #
 # start_work.sh — autonomously work The For Good Project's queue.
 #
-# Loops: claim the next available issue, run an AI agent (codex or claude) to do
-# the work following the project method, then move the issue to "in review" when
-# the agent opens a PR. The SCRIPT owns every status transition — the agent just
-# does the work and opens the PR — so tracking stays correct no matter which
-# agent runs or how it behaves.
+# Loops: first pick up any of YOUR work a reviewer sent back (issues labelled
+# "status: changes-requested" and assigned to you), otherwise claim the next
+# available issue. Each task runs an AI agent (codex or claude) in a FRESH GIT
+# WORKTREE created from the latest origin/main (or the PR branch, for rework),
+# so your clone is never touched and every loop starts from up-to-date main.
+# The SCRIPT owns every status transition — the agent just does the work and
+# opens (or updates) the PR — so tracking stays correct no matter which agent
+# runs or how it behaves.
 #
 # Usage:
 #   ./start_work.sh                 # work issues until the queue is empty
@@ -21,7 +24,6 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
-RESETS_TREE=1  # this script hard-resets the clone per task; guard against dirty trees
 
 MAX="${MAX:-0}"                       # 0 = no limit
 POLL_SECONDS="${POLL_SECONDS:-0}"     # >0 = keep polling when queue empty
@@ -29,6 +31,7 @@ DRY_RUN="${DRY_RUN:-0}"
 CLAIMED_ISSUE=""
 
 release_on_interrupt() {
+  remove_worktree || true
   if [ -n "$CLAIMED_ISSUE" ] && [ "$DRY_RUN" = 0 ]; then
     warn "Interrupted mid-issue #$CLAIMED_ISSUE — leaving it 'claimed' for you to resume or release."
   fi
@@ -48,8 +51,9 @@ work_prompt() {  # $1 = issue number
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
   cat <<EOF
 You are an autonomous contributor to The For Good Project
-(github.com/$REPO). You are working inside a clone of the repo, on a fresh,
-up-to-date 'main' branch. Complete ONE GitHub issue end to end, then open a PR.
+(github.com/$REPO). You are working inside a dedicated git worktree of the
+repo, checked out at the latest origin/main (detached HEAD) — create your
+branch from here. Complete ONE GitHub issue end to end, then open a PR.
 
 == ISSUE #$n ($stage${domain:+, $domain}) ==
 $title
@@ -88,6 +92,43 @@ Then, using git and the gh CLI (both are already authenticated):
 
 IMPORTANT: do NOT touch issue labels or assignees — the runner manages issue
 status. Do exactly one issue (#$n). When finished, print the PR URL.
+EOF
+}
+
+rework_prompt() {  # $1 = issue number, $2 = PR number, $3 = branch
+  local n="$1" pr="$2" branch="$3" title feedback
+  title="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title)"
+  feedback="$(review_feedback "$pr")"
+  cat <<EOF
+You are an autonomous contributor to The For Good Project (github.com/$REPO).
+You previously opened PR #$pr ("$title") for issue #$n, and an adversarial
+reviewer REQUESTED CHANGES. Your job now is to address that review.
+
+You are inside a dedicated git worktree with the PR branch '$branch' checked
+out (detached HEAD at origin/$branch, freshly fetched).
+
+== REVIEW FEEDBACK ==
+$feedback
+== END REVIEW FEEDBACK ==
+
+Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly: real
+working citations for every factual claim, TWO independent sources for
+surprising or load-bearing claims, honest confidence marks, and NEVER
+fabricate a source, statistic, org, or result.
+
+Do this:
+1. Address EVERY point in the feedback. Where you believe the reviewer is
+   wrong, leave the work as-is and prepare a short, evidence-backed rebuttal
+   for step 4 instead.
+2. If main has moved since, rebase onto it first:
+   git fetch origin && git rebase origin/main
+3. Commit and push to the SAME branch:
+   git push origin HEAD:$branch   (add --force-with-lease only if you rebased)
+4. Comment on the PR summarising what you changed and any rebuttals:
+   gh pr comment $pr --repo $REPO --body "..."
+
+IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
+labels or assignees — the runner manages status. Work only on PR #$pr.
 EOF
 }
 
@@ -132,13 +173,47 @@ work_one() {  # $1 = issue number
   rule; info "${c_bold}Issue #$n${c_reset} — $(issue_field "$n" title)"
   claim_issue "$n" || return 1
   if [ "$DRY_RUN" = 1 ]; then
-    info "[dry-run] would run: AGENT=$AGENT on the following prompt:"; log "$(work_prompt "$n" | sed 's/^/    /')"
+    info "[dry-run] would run: AGENT=$AGENT in a fresh origin/main worktree on the following prompt:"; log "$(work_prompt "$n" | sed 's/^/    /')"
     finish_issue "$n"; return 0
   fi
-  git_reset_to_main
-  info "Handing #$n to $AGENT..."
-  if run_agent "$(work_prompt "$n")"; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n"; fi
+  make_worktree origin/main
+  info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
+  if run_agent "$(work_prompt "$n")" "$WORKTREE"; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n"; fi
+  remove_worktree
   finish_issue "$n"
+}
+
+rework_one() {  # $1 = issue number with "status: changes-requested", assigned to me
+  local n="$1" pr branch
+  rule; info "${c_bold}Issue #$n${c_reset} (rework) — $(issue_field "$n" title)"
+  pr="$(pr_for_issue "$n" || true)"
+  if [ -z "$pr" ]; then
+    warn "#$n is 'changes-requested' but has no open PR — releasing back to available."
+    if [ "$DRY_RUN" = 0 ]; then
+      set_status_label "$n" "available" "changes-requested" "claimed" "in-review"
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null || true
+    fi
+    return 0
+  fi
+  branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName)"
+  if [ "$DRY_RUN" = 1 ]; then
+    info "[dry-run] would rework PR #$pr (branch $branch) against the review feedback, push, and move #$n → in-review"
+    return 0
+  fi
+  local before after
+  before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
+  make_worktree "origin/$branch"
+  info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
+  if run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE"; then ok "Rework agent run complete for #$n"; else err "Rework agent run failed/aborted for #$n"; fi
+  remove_worktree
+  after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
+  if [ "$after" != "$before" ]; then
+    set_status_label "$n" "in-review" "changes-requested"
+    gh issue comment "$n" --repo "$REPO" --body "🔁 Rework pushed to PR #$pr — moving back to **in review** for a fresh adversarial review." >/dev/null || true
+    ok "#$n → in-review (rework pushed to PR #$pr)"
+  else
+    warn "Agent pushed no new commits to PR #$pr — leaving #$n as 'changes-requested' for a future loop."
+  fi
 }
 
 main() {
@@ -146,14 +221,21 @@ main() {
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   while :; do
-    local next; next="$(available_issues | head -1 || true)"
+    # Rework a reviewer sent back to ME takes priority over fresh issues.
+    local next kind=new
+    next="$(rework_issues | head -1 || true)"
+    if [ -n "$next" ]; then
+      kind=rework
+    else
+      next="$(available_issues | head -1 || true)"
+    fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
-        log "No available issues. Sleeping ${POLL_SECONDS}s... (Ctrl-C to stop)"; sleep "$POLL_SECONDS"; continue
+        log "No rework for @$ME and no available issues. Sleeping ${POLL_SECONDS}s... (Ctrl-C to stop)"; sleep "$POLL_SECONDS"; continue
       fi
-      rule; ok "Queue empty — nothing available to work.${STAGE:+ (stage=$STAGE)}"; break
+      rule; ok "Queue empty — no rework for @$ME and nothing available.${STAGE:+ (stage=$STAGE)}"; break
     fi
-    work_one "$next" || true
+    if [ "$kind" = rework ]; then rework_one "$next" || true; else work_one "$next" || true; fi
     done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX issue(s). Stopping."; break; fi
   done

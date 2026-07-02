@@ -35,35 +35,28 @@ preflight() {
     err "Run this from inside a clone of $REPO (or set REPO_DIR to one)."
     exit 1
   fi
-  # Guard: these scripts run `git reset --hard` per task, which discards
-  # uncommitted changes to TRACKED files. Refuse to run on a dirty clone so we
-  # can never silently destroy someone's work (untracked files like node_modules
-  # / build output are ignored). Override with ALLOW_DIRTY=1 (git_reset_to_main
-  # then stashes rather than discards).
-  if [ "${RESETS_TREE:-0}" = 1 ] && [ "${DRY_RUN:-0}" != 1 ] && [ "${ALLOW_DIRTY:-0}" != 1 ] \
-     && [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
-    err "The clone at $REPO_DIR has uncommitted changes to tracked files."
-    err "Commit or stash them first — these scripts run 'git reset --hard' and would discard them."
-    err "(To proceed anyway, set ALLOW_DIRTY=1; the changes will be stashed, not lost.)"
-    exit 1
-  fi
   ME="$(gh api user --jq .login)"
 }
 
-# ---- git helpers ----
-git_reset_to_main() {
+# ---- git worktree helpers ----
+# Every task (work, rework, review) runs in a fresh, throwaway git worktree so
+# the agent can never dirty the user's clone, and always starts from the ref it
+# was given — freshly fetched from origin. The clone itself is never touched.
+WORKTREE=""
+
+make_worktree() {  # $1 = ref to check out (e.g. origin/main, refs/fg/pr-12); sets $WORKTREE
   git -C "$REPO_DIR" fetch origin --quiet
-  # Safety net: never silently discard uncommitted tracked changes — stash them
-  # first (recoverable via `git stash list`) before hard-resetting.
-  if [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
-    local ts; ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo now)"
-    if git -C "$REPO_DIR" stash push --quiet -m "fg-auto-stash before reset ($ts)" >/dev/null 2>&1; then
-      warn "Stashed uncommitted changes before reset — recover with: git -C "$REPO_DIR" stash list"
-    fi
-  fi
-  git -C "$REPO_DIR" checkout --quiet main 2>/dev/null || git -C "$REPO_DIR" checkout --quiet -b main origin/main
-  git -C "$REPO_DIR" reset --hard --quiet origin/main
-  git -C "$REPO_DIR" clean -fdq -e node_modules
+  local parent; parent="$(mktemp -d "${TMPDIR:-/tmp}/fg-worktree.XXXXXX")"
+  WORKTREE="$parent/repo"
+  git -C "$REPO_DIR" worktree add --quiet --detach "$WORKTREE" "$1"
+}
+
+remove_worktree() {
+  [ -n "${WORKTREE:-}" ] || return 0
+  git -C "$REPO_DIR" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || true
+  rm -rf "$(dirname "$WORKTREE")" 2>/dev/null || true
+  git -C "$REPO_DIR" worktree prune >/dev/null 2>&1 || true
+  WORKTREE=""
 }
 
 # ---- issue/PR helpers ----
@@ -71,10 +64,25 @@ issue_labels()  { gh issue view "$1" --repo "$REPO" --json labels --jq '[.labels
 issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 
 # Numbers of open issues with a given status label, oldest first, optional STAGE filter.
-available_issues() {
-  gh issue list --repo "$REPO" --state open --label "status: available" \
+issues_with_status() {  # $1 = bare status (e.g. available), $2.. extra gh flags
+  local status="$1"; shift
+  gh issue list --repo "$REPO" --state open --label "status: $status" "$@" \
     --json number,createdAt,labels --limit 100 \
-    --jq "[.[] $( [ -n "$STAGE" ] && printf '| select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by(.createdAt) | .[].number"
+    --jq "[.[] $( [ -n "${STAGE:-}" ] && printf '| select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by(.createdAt) | .[].number"
+}
+
+available_issues() { issues_with_status "available"; }
+
+# Issues a reviewer sent back that are assigned to *me* — my rework queue.
+rework_issues() { issues_with_status "changes-requested" --assignee "@me"; }
+
+# The feedback the author needs to act on: the latest change-requesting
+# review bodies plus any inline file comments.
+review_feedback() {  # $1 = pr number
+  gh pr view "$1" --repo "$REPO" --json reviews \
+    --jq '[.reviews[] | select(.state=="CHANGES_REQUESTED")][-3:][] | "--- Review by @\(.author.login) ---\n\(.body)\n"' 2>/dev/null || true
+  gh api "repos/$OWNER/$NAME/pulls/$1/comments" \
+    --jq '.[] | "- \(.path):\(.line // .original_line // 0) @\(.user.login): \(.body)"' 2>/dev/null || true
 }
 
 # The open PR (if any) that closes a given issue number, via GraphQL closing refs.
@@ -97,18 +105,19 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old
 }
 
 # ---- agent runner ----
-# run_agent <prompt>  -> streams agent output to stdout (also to caller via tee if needed)
+# run_agent <prompt> [dir]  -> streams agent output to stdout; runs in [dir]
+# (usually a task worktree), falling back to the clone.
 run_agent() {
-  local prompt="$1" tmo=""
+  local prompt="$1" dir="${2:-$REPO_DIR}" tmo=""
   if [ "$AGENT_TIMEOUT" != 0 ] && command -v timeout >/dev/null 2>&1; then tmo="timeout ${AGENT_TIMEOUT}s"; fi
   case "$AGENT" in
     codex)
-      $tmo codex exec --cd "$REPO_DIR" --skip-git-repo-check \
+      $tmo codex exec --cd "$dir" --skip-git-repo-check \
         ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
         ${MODEL:+-m "$MODEL"} "$prompt"
       ;;
     claude)
-      ( cd "$REPO_DIR" && $tmo claude -p "$prompt" \
+      ( cd "$dir" && $tmo claude -p "$prompt" \
         --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
         ${MODEL:+--model "$MODEL"} )
       ;;
