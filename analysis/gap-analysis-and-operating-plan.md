@@ -7,7 +7,6 @@
 > *Adopted mission statement · 2 July 2026*
 
 Prepared for the working group · thecolab.ai · July 2026
-Companion files: `for-good-project-gap-analysis.md`, `how-we-collaborate.md`
 
 **Contents**
 

@@ -2,6 +2,8 @@
 
 Longer-form analysis of the project itself — gap analyses, operating plans, strategy reviews. Where `research/` holds cited findings about NZ's problems, `analysis/` holds cited thinking about *how the project works and where it falls short*.
 
+> **These documents are advisory, not adopted policy.** Merging a file here records the analysis; it does not enact its recommendations. The substantive calls — e.g. adding a Deliver stage, parking all but one stream, a Te Tiriti constitutional amendment — are decisions for the working group, made through their own PRs, gate decisions, or governance changes. Read the "what to action next" section of any plan as *proposed*, not *done*.
+
 ## File convention — audience is signalled by extension
 
 Each analysis document is stored **once per format, under a single kebab-case slug**. The audience is implied by the file extension — there is no separate `-human` / `-llm` tag:
