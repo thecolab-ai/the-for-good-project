@@ -88,32 +88,56 @@ remove_worktree() {
 issue_labels()  { gh issue view "$1" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")'; }
 issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 
+# ONE GraphQL query for the whole open-issue queue, normalised to the same
+# shape `gh issue list --json number,createdAt,labels,assignees` returns so the
+# jq filters below are unchanged. A single poll cycle can fetch this once and
+# feed EVERY queue check (available / my rework / unassigned rework) from it,
+# instead of firing a separate REST list call per status. Capped at 100 (the
+# GraphQL page max) to match the previous --limit 100 behaviour; ordered NEWEST
+# first so that if the repo ever exceeds 100 open issues the truncation drops
+# the oldest, not the freshly-created available/rework work we most want to see.
+# (The jq filters re-sort deterministically, so fetch order doesn't affect the
+# result while the queue is under 100 — it only decides which slice survives the
+# cap.) labels(first:50) is ample headroom over the ~5 labels an issue carries.
+fetch_open_issues() {
+  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){issues(states:OPEN,first:100,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt labels(first:50){nodes{name}} assignees(first:10){nodes{login}}}}}}" \
+    --jq '[.data.repository.issues.nodes[] | {number, createdAt, labels: [.labels.nodes[] | {name}], assignees: [.assignees.nodes[] | {login}]}]'
+}
+
 # Numbers of open issues with a given status label, optional STAGE filter.
 # Order: issues labelled "priority: high" first, then oldest-created first.
 # This is the whole priority system — label an issue "priority: high" to have
 # the workers pick it up before the rest of the queue.
-issues_with_status() {  # $1 = bare status (e.g. available), $2.. extra gh flags
-  local status="$1"; shift
-  gh issue list --repo "$REPO" --state open --label "status: $status" "$@" \
-    --json number,createdAt,labels --limit 100 \
-    --jq "[.[] $( [ -n "${STAGE:-}" ] && printf '| select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+# $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
+# several statuses from a SINGLE GraphQL query; omit it and one is fetched.
+issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
+  local status="$1" snap="${2:-}"
+  [ -n "$snap" ] || snap="$(fetch_open_issues)"
+  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\"))$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
 }
 
-available_issues() { issues_with_status "available"; }
+available_issues() { issues_with_status "available" "${1:-}"; }
 
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
-rework_issues() { issues_with_status "changes-requested" --assignee "@me"; }
+# $1 = optional queue snapshot (from fetch_open_issues).
+rework_issues() {  # $1 = optional snapshot JSON
+  local snap="${1:-}"
+  [ -n "$snap" ] || snap="$(fetch_open_issues)"
+  printf '%s' "$snap" | jq -r --arg me "$ME" "[.[] | select(.labels|map(.name)|index(\"status: changes-requested\")) | select(.assignees|map(.login)|index(\$me))$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+}
 
 # Reworks with NO assignee — freed by reap.sh after REWORK_TTL, so any worker
 # may take them (oldest first). The author's own reworks stay theirs (above).
-unassigned_reworks() {
-  gh issue list --repo "$REPO" --state open --label "status: changes-requested" \
-    --json number,assignees,createdAt --limit 100 \
-    --jq '[.[] | select((.assignees|length)==0)] | sort_by(.createdAt) | .[].number'
+# $1 = optional queue snapshot (from fetch_open_issues).
+unassigned_reworks() {  # $1 = optional snapshot JSON
+  local snap="${1:-}"
+  [ -n "$snap" ] || snap="$(fetch_open_issues)"
+  printf '%s' "$snap" | jq -r '[.[] | select(.labels|map(.name)|index("status: changes-requested")) | select((.assignees|length)==0)] | sort_by(.createdAt) | .[].number'
 }
 
 # Drained stream roots waiting for a G1 synthesis draft.
-synthesis_issues() { issues_with_status "needs-synthesis"; }
+# $1 = optional queue snapshot (from fetch_open_issues).
+synthesis_issues() { issues_with_status "needs-synthesis" "${1:-}"; }
 
 # First value of a "<prefix>..." entry in a comma-joined label list.
 label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
