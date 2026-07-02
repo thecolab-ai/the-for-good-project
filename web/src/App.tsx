@@ -4,6 +4,7 @@ import Dashboard from "@/pages/Dashboard";
 import Board from "@/pages/Board";
 import IssueDetail from "@/pages/IssueDetail";
 import Findings from "@/pages/Findings";
+import FindingDetail from "@/pages/FindingDetail";
 import Sources from "@/pages/Sources";
 import Leaderboard from "@/pages/Leaderboard";
 import Review from "@/pages/Review";
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: "/board", element: <Board /> },
       { path: "/issue/:number", element: <IssueDetail /> },
       { path: "/findings", element: <Findings /> },
+      { path: "/findings/*", element: <FindingDetail /> },
       { path: "/sources", element: <Sources /> },
       { path: "/leaderboard", element: <Leaderboard /> },
       { path: "/review", element: <Review /> },
