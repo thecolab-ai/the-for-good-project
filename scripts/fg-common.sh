@@ -176,10 +176,26 @@ pr_review_kind() {  # $1 = pr number
   fi
 }
 
-# Issue closed by a PR (first closing ref).
+# Issue closed by a PR (first closing ref). Use this ONLY when you specifically
+# mean "the issue merging this PR will CLOSE" (e.g. marking it done) — discover
+# PRs have no closing ref by design, so this is empty for them.
 issue_for_pr() {
   gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$1){closingIssuesReferences(first:5){nodes{number}}}}}" \
     --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[0].number // empty'
+}
+
+# The issue a PR is WORKING (for routing rework/status back to the author): a
+# closing ref if there is one, else the "Closes/Part of #n" link in the PR body.
+# Unlike issue_for_pr this resolves DISCOVER PRs, which intentionally do NOT
+# close their stream-root issue (it must stay open for the stream's life) and so
+# carry only a "Part of #n" link. Use this for status hand-offs.
+issue_addressed_by_pr() {  # $1 = pr number
+  local n
+  n="$(issue_for_pr "$1")"
+  [ -n "$n" ] && { echo "$n"; return 0; }
+  gh pr view "$1" --repo "$REPO" --json body --jq .body 2>/dev/null \
+    | grep -oiE '(closes|fixes|resolves|part of)[[:space:]]*#[0-9]+' \
+    | grep -oE '[0-9]+' | head -1
 }
 
 set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old statuses to remove
@@ -187,6 +203,16 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old
   local args=(--add-label "status: $new")
   for old in "$@"; do args+=(--remove-label "status: $old"); done
   gh issue edit "$n" --repo "$REPO" "${args[@]}" >/dev/null
+}
+
+# True if an exit status means the agent was INTERRUPTED by the user (Ctrl-C) or
+# killed — the whole runner should stop, not move on to the next item. Note a
+# `timeout` (124) is deliberately NOT here: that fails one item but the loop
+# should carry on to the next. An agent that catches SIGINT itself and exits
+# 130/143 won't trip bash's own INT trap, so callers must check this after every
+# run_agent to stop reliably.
+was_interrupted() {  # $1 = exit status
+  case "$1" in 130|143) return 0 ;; *) return 1 ;; esac
 }
 
 # ---- agent runner ----

@@ -60,9 +60,15 @@ REVIEW_CLAIMING_LABEL="status: reviewing"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
 
-# Release any claim we hold, then clean up the worktree — on normal exit or interrupt.
+# Release any claim we hold, then clean up the worktree. cleanup runs on ANY
+# exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
+# otherwise bash runs the handler and then RESUMES the loop — which is exactly
+# why Ctrl-C used to do nothing here. exit re-triggers the EXIT trap, so cleanup
+# still runs exactly once.
 cleanup() { [ -n "${CLAIMED_PR:-}" ] && release_pr "$CLAIMED_PR" || true; remove_worktree || true; }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Use a distinct reviewer identity if provided (recommended).
 if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then export GH_TOKEN="$REVIEW_GITHUB_TOKEN"; fi
@@ -325,28 +331,42 @@ review_one() {  # $1 = PR number
   verdict="$( { cat "$tmp"; [ -n "$body_file" ] && cat "$body_file"; } | grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
 
   if [ -z "$body_file" ]; then
-    local diag; diag="$(mktemp)"
-    {
-      echo "Adversarial review failed before writing feedback."
-      echo
-      echo "No review body was produced at:"
-      echo
-      echo '```text'
-      echo "$REVIEW_FILE"
-      echo '```'
-      echo
-      echo "Tail of agent output:"
-      echo
-      echo '```text'
-      tail -80 "$tmp"
-      echo '```'
-      echo
-      echo "Re-run with \`FORCE=1 PR=$pr ./review_work.sh\` after fixing the agent/file-output problem."
-    } >"$diag"
-    warn "No review file produced for PR #$pr; posting diagnostic comment instead of a request-changes review."
-    gh pr comment "$pr" --repo "$REPO" --body-file "$diag" >/dev/null || true
-    set_check "$sha" failure "Adversarial review failed before writing feedback" "$url"
-    rm -f "$tmp" "$diag" "$fallback_review_file"
+    # The REVIEWER (not the author) failed to produce a review — a TOOLING
+    # failure, not a defect in the PR. Do NOT set the merge check to `failure`:
+    # this loop reads `failure` as "author's turn to rework" and skips the PR
+    # forever, while the author only ever picks up "changes-requested" — which we
+    # never set. That combination is a deadlock (it's why PR #55 wedged). Leave
+    # the check UNSET so a later loop simply RE-REVIEWS (merge is still blocked
+    # because the check never went green), and post at most ONE diagnostic per
+    # head SHA so a deterministic crash doesn't spam the PR.
+    local marker="<!-- fg-review-crash:$sha -->"
+    if gh pr view "$pr" --repo "$REPO" --json comments --jq '.comments[].body' 2>/dev/null | grep -qF "$marker"; then
+      warn "Review of PR #$pr crashed again at $sha (diagnostic already posted) — will retry next loop."
+    else
+      local diag; diag="$(mktemp)"
+      {
+        echo "$marker"
+        echo "Adversarial review failed before writing feedback (reviewer tooling problem, not a defect in this PR)."
+        echo
+        echo "No review body was produced at:"
+        echo
+        echo '```text'
+        echo "$REVIEW_FILE"
+        echo '```'
+        echo
+        echo "Tail of agent output:"
+        echo
+        echo '```text'
+        tail -80 "$tmp"
+        echo '```'
+        echo
+        echo "The review loop will retry automatically. To force a retry now: \`FORCE=1 PR=$pr ./review_work.sh\`."
+      } >"$diag"
+      warn "No review file produced for PR #$pr; posting a diagnostic (check left unset so a later loop retries)."
+      gh pr comment "$pr" --repo "$REPO" --body-file "$diag" >/dev/null || true
+      rm -f "$diag"
+    fi
+    rm -f "$tmp" "$fallback_review_file"
     release_pr "$pr"; CLAIMED_PR=""
     remove_worktree
     git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
@@ -376,8 +396,11 @@ review_one() {  # $1 = PR number
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" failure "Adversarial review found problems" "$url"
     # Route the rework back to the author: flip the linked issue to
-    # "changes-requested" so THEIR next start_work.sh loop picks it up.
-    local iss; iss="$(issue_for_pr "$pr" || true)"
+    # "changes-requested" so THEIR next start_work.sh loop picks it up. Use
+    # issue_addressed_by_pr (not issue_for_pr) so DISCOVER PRs — which have no
+    # closing ref, only "Part of #n" — are routed too, instead of silently
+    # dropping the hand-off.
+    local iss; iss="$(issue_addressed_by_pr "$pr" || true)"
     if [ -n "$iss" ]; then
       if set_status_label "$iss" "changes-requested" "in-review" 2>/dev/null; then
         gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`start_work.sh\` loop will pick this up." >/dev/null || true
@@ -410,7 +433,8 @@ main() {
       rule; ok "No open PRs needing review."; break
     fi
     for pr in $prs; do
-      review_one "$pr" || true
+      set +e; review_one "$pr"; local rc=$?; set -e
+      was_interrupted "$rc" && { rule; warn "Interrupted — stopping."; exit 130; }
       done=$((done+1))
       [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ] && { rule; ok "Reached MAX=$MAX. Stopping."; exit 0; }
     done

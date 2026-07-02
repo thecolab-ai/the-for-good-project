@@ -72,6 +72,13 @@ has pushed to the same branch — flips the issue back to `status: in-review` so
 a reviewer picks it up again. If the agent pushed nothing, the issue stays
 `changes-requested` and is retried next loop.
 
+Each loop also **reconciles the rework queue** first (ADR-0008): any open PR
+you authored whose *current* latest review is a change-request (no commits
+pushed after it) but whose worked issue still sits `in-review` gets flipped to
+`changes-requested` — so reviews posted outside `review_work.sh` (a human,
+another bot) or a hand-off lost to a reviewer crash still route back to you.
+A freshly reworked PR awaiting re-review is left alone.
+
 ## `review_work.sh` — review before merge
 
 **Every PR must pass an adversarial review, and the review may NOT be done by the
@@ -81,10 +88,17 @@ method, then posts the review and sets the required
 `for-good/adversarial-review` status check.
 
 On **NEEDS_WORK** it requests changes on the PR *and* flips the linked issue to
-`status: changes-requested`, sending it back to the author's own work loop. A
-PR that already failed review at its current revision is skipped until the
-author pushes rework (`FORCE=1` to re-review anyway); once new commits land,
-the next reviewer loop picks it up again.
+`status: changes-requested`, sending it back to the author's own work loop. The
+issue is resolved via the PR's closing ref **or** its `Closes`/`Part of #n`
+body link (ADR-0008), so discover PRs — which deliberately have no closing ref
+— are routed too. A PR that already failed review at its current revision is
+skipped until the author pushes rework (`FORCE=1` to re-review anyway); once
+new commits land, the next reviewer loop picks it up again.
+
+If the review agent **crashes before writing a review**, that's a reviewer
+tooling failure, not a PR verdict: the merge check is left unset (merge is
+still blocked — the check never went green) so a later loop simply retries,
+and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
 ```bash
 REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
@@ -248,6 +262,8 @@ collective keeps itself unblocked.
   trust, not arbitrary input. Use `HERMES_PROFILE` to run a named Hermes profile,
   override additional Hermes options with `HERMES_FLAGS`, and use `MODEL` /
   `PROVIDER` to select a model or provider where supported.
-- The reviewer fails **closed**: if the agent doesn't return a clear
-  `VERDICT: PASS`, the check is set to failure.
+- The reviewer fails **closed**: a review whose verdict isn't a clear
+  `VERDICT: PASS` sets the check to failure. (A reviewer *crash* that produces
+  no review at all leaves the check unset so a later loop retries — merge is
+  still blocked either way; ADR-0008.)
 - Set `AGENT_TIMEOUT` (seconds) to cap a runaway agent; `MODEL` to pick a model.
