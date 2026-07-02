@@ -1,6 +1,10 @@
 {
   "_comment": "Who may gate a merge. A PR merges once it has enough qualifying, non-author adversarial reviews. A reviewer qualifies if they're on the whitelist OR their leaderboard credit is >= min_reviewer_credit. Edit via PR. Read by merge_ready.sh.",
-  "whitelist": ["adam91holt", "thecolab-clawd"],
+  "whitelist": [
+    "adam91holt",
+    "thecolab-clawd",
+    "mcinteerj"
+  ],
   "min_reviewer_credit": 15,
   "required_approvals": 1,
   "extra_approvals_for_domains": {
