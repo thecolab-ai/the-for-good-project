@@ -47,8 +47,8 @@ REVIEW_FILE=""
 # Use a distinct reviewer identity if provided (recommended).
 if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then export GH_TOKEN="$REVIEW_GITHUB_TOKEN"; fi
 
-review_prompt() {  # $1 = PR number
-  local pr="$1" title body
+review_prompt() {  # $1 = PR number, $2 = absolute review file path
+  local pr="$1" review_file="$2" title body
   title="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title)"
   body="$(gh pr view "$pr" --repo "$REPO" --json body --jq .body)"
   cat <<EOF
@@ -56,6 +56,10 @@ You are a FRESH-CONTEXT ADVERSARIAL REVIEWER for The For Good Project
 (github.com/$REPO). You are in a dedicated git worktree of the repo with pull
 request #$pr's head checked out (detached HEAD, freshly fetched). Your job is to
 REFUTE this work, not to approve it.
+
+IMPORTANT: write the full Markdown review to this exact absolute path:
+$review_file
+
 
 PR #$pr — $title
 $body
@@ -76,8 +80,8 @@ Read CONTRIBUTING.md and docs/METHOD.md — judge the PR against that method:
 Be fair but hard to convince — someone will make a real decision based on this.
 
 OUTPUT (do exactly this):
-1. Write your full review as Markdown to the file ".fg-review.md" in the repo
-   root: a short summary, then specific problems (file + line + why), then a
+1. Write your full review as Markdown to the exact absolute file path shown
+   above: a short summary, then specific problems (file + line + why), then a
    one-line verdict. Do NOT commit it.
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
@@ -139,15 +143,65 @@ review_one() {  # $1 = PR number
   fi
   make_worktree "refs/fg/pr-$pr"
   REVIEW_FILE="$WORKTREE/.fg-review.md"
+  local fallback_review_file="$REPO_DIR/.fg-review.md"
+  rm -f "$REVIEW_FILE" "$fallback_review_file"
 
   local tmp; tmp="$(mktemp)"
   info "Handing PR #$pr to $AGENT for adversarial review (worktree: $WORKTREE)..."
-  run_agent "$(review_prompt "$pr")" "$WORKTREE" 2>&1 | tee "$tmp" || true
+  set +e
+  run_agent "$(review_prompt "$pr" "$REVIEW_FILE")" "$WORKTREE" 2>&1 | tee "$tmp"
+  local agent_status=${PIPESTATUS[0]}
+  set -e
 
-  local verdict; verdict="$(grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' "$tmp" | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
+  if [ "$agent_status" -eq 124 ] || [ "$agent_status" -eq 130 ] || [ "$agent_status" -eq 143 ] || [ "$agent_status" -ge 128 ]; then
+    warn "Agent run for PR #$pr was interrupted or timed out (exit $agent_status); not posting a review or changing the review check."
+    rm -f "$tmp"
+    remove_worktree
+    git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
+    return "$agent_status"
+  fi
+
+  local body_file=""
+  if [ -s "$REVIEW_FILE" ]; then
+    body_file="$REVIEW_FILE"
+  elif [ -s "$fallback_review_file" ]; then
+    warn "Agent wrote review to the main clone instead of the worktree; using it as the PR review body."
+    body_file="$fallback_review_file"
+  fi
+
+  local verdict
+  verdict="$( { cat "$tmp"; [ -n "$body_file" ] && cat "$body_file"; } | grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
+
+  if [ -z "$body_file" ]; then
+    local diag; diag="$(mktemp)"
+    {
+      echo "Adversarial review failed before writing feedback."
+      echo
+      echo "No review body was produced at:"
+      echo
+      echo '```text'
+      echo "$REVIEW_FILE"
+      echo '```'
+      echo
+      echo "Tail of agent output:"
+      echo
+      echo '```text'
+      tail -80 "$tmp"
+      echo '```'
+      echo
+      echo "Re-run with \`FORCE=1 PR=$pr ./review_work.sh\` after fixing the agent/file-output problem."
+    } >"$diag"
+    warn "No review file produced for PR #$pr; posting diagnostic comment instead of a request-changes review."
+    gh pr comment "$pr" --repo "$REPO" --body-file "$diag" >/dev/null || true
+    set_check "$sha" failure "Adversarial review failed before writing feedback" "$url"
+    rm -f "$tmp" "$diag" "$fallback_review_file"
+    remove_worktree
+    git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
+    return 1
+  fi
+
   rm -f "$tmp"
-  local body_flag=()
-  [ -s "$REVIEW_FILE" ] && body_flag=(--body-file "$REVIEW_FILE") || body_flag=(--body "Adversarial review completed; see check status.")
+  local body_flag=(--body-file "$body_file")
 
   if [ "$verdict" = PASS ]; then
     ok "Verdict: PASS"
@@ -180,6 +234,7 @@ review_one() {  # $1 = PR number
       fi
     fi
   fi
+  rm -f "$fallback_review_file"
   remove_worktree
   git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
 }
