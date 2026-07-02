@@ -14,9 +14,9 @@ export interface StreamChainGroup {
 }
 
 const STREAM_RE = /^stream:(\d+)$/i;
-const PARENT_RE = /^\s*(?:part of|closes|fixes|resolves)\s+#(\d+)\b/im;
-const CLOSING_RE = /^\s*(?:closes|fixes|resolves)\s+#(\d+)\b/gim;
-const PART_OF_RE = /^\s*part of\s+#(\d+)\b/gim;
+const PARENT_RE = /^\s*(?:part of|closes|fixes|resolves)\s*#(\d+)\b/im;
+const CLOSING_RE = /^\s*(?:closes|fixes|resolves)\s*#(\d+)\b/gim;
+const PART_OF_RE = /^\s*part of\s*#(\d+)\b/gim;
 
 export function streamNumber(issue: IssueLite): number | null {
   for (const label of issue.labels) {
