@@ -27,9 +27,13 @@ permissions:
   pages: write
   id-token: write
 
+# cancel-in-progress must stay FALSE: with it true, every comment during a busy
+# spell cancels the in-progress build before deploy, so the site only updates
+# when the repo goes quiet. False lets the current run finish and coalesces the
+# burst into one queued rebuild — fresher AND cheaper.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:

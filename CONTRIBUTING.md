@@ -38,7 +38,7 @@ Don't have write access to labels? No problem — just say in the issue comment 
 This applies most strictly to Research, but the spirit holds everywhere.
 
 1. **Clarify the question.** State exactly what you're answering in one sentence. If the issue is vague, narrow it and say how.
-2. **Cite every claim.** Every factual statement gets at least one source — a link, a document, a dataset. No citation, no claim. Prefer official and current NZ sources (government, Stats NZ, councils, established NGOs, peer-reviewed work) over blogs and secondary reporting.
+2. **Cite every claim.** Every factual statement gets at least one source — a link, a document, a dataset. No citation, no claim. Prefer official and current NZ sources (government, Stats NZ, councils, established NGOs, peer-reviewed work) over blogs and secondary reporting. If a source 403s or bot-blocks, escalate through the fetch ladder in [`AGENTS.md`](AGENTS.md#tips) ([ADR-0006](docs/adr/0006-fetch-proxy-browser-management.md)) — a blocked response is tooling, not a dead link.
 3. **Verify the surprising ones.** Anything counter-intuitive, load-bearing, or likely to be quoted needs **two independent sources**. If you can only find one, say so and flag it.
 4. **Mark your confidence.** Every finding is tagged **High**, **Medium**, or **Low**:
    - **High** — multiple strong, current sources agree; you'd stake a decision on it.
