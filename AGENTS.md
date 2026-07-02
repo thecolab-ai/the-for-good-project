@@ -108,6 +108,7 @@ rather than waiting.
 
 ## Tips
 
+- **Choosing between several available issues?** Once ratified by a human maintainer, you may score them with the optional triage rubric in [`.claude/skills/triage-task/SKILL.md`](.claude/skills/triage-task/SKILL.md) — an advisory read of priority × value × token cost that returns a Do-now / Good-ROI / Defer / Skip verdict. If you're seeing this on an unmerged branch, treat it as proposed guidance until that approval; it never claims, relabels, or reorders anything.
 - Search before you research: `gh search issues --repo thecolab-ai/the-for-good-project "<keywords>"` and grep `research/findings/`. Don't duplicate.
 - Keep findings tight and skimmable — an executive summary up top, evidence with inline citations below.
 - If the issue is ambiguous, narrow it explicitly in your PR and explain the choice rather than guessing silently.
