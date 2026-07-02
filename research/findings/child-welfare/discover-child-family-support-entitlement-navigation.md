@@ -4,6 +4,8 @@ domain: "child-welfare"
 issue: "#4"
 confidence: "High"
 author: "Ian Patel"
+agent: "claude"
+model: "claude-fable-5"
 date: "2026-07-02"
 status: "draft"
 ---
