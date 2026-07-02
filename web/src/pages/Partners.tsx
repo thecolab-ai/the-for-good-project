@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { SystemDiagram } from "@/components/shared/SystemDiagram";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -33,8 +34,13 @@ export default function Partners() {
         </p>
       </Card>
 
+      {/* How the system works */}
+      <h2 className="mb-2 font-serif text-2xl font-bold">How the system works</h2>
+      <p className="mb-5 text-muted-foreground">From one problem to a real, trustworthy result — with people in charge of every judgement call.</p>
+      <SystemDiagram />
+
       {/* Two audiences */}
-      <h2 className="mb-5 font-serif text-2xl font-bold">Where you fit</h2>
+      <h2 className="mb-5 mt-12 font-serif text-2xl font-bold">Where you fit</h2>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-6">
           <div className="flex items-center gap-3">
