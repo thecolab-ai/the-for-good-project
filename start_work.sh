@@ -319,19 +319,37 @@ reconcile_rework() {
   done
 }
 
+# Take the first UNASSIGNED (TTL-freed) rework whose PR lives on origin — i.e.
+# a branch we can actually push the rework to. Fork-branch PRs are skipped (only
+# their owner can push). Claims it to @me and echoes its number, else nothing.
+take_unassigned_rework() {
+  local n pr owner
+  for n in $(unassigned_reworks); do
+    pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
+    owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
+    [ "$owner" = "$OWNER" ] || continue
+    if [ "$DRY_RUN" = 1 ]; then echo "$n"; return 0; fi
+    gh issue edit "$n" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
+    gh issue comment "$n" --repo "$REPO" --body "🤝 @$ME is picking up abandoned rework #$n (freed by TTL)." >/dev/null 2>&1 || true
+    echo "$n"; return 0
+  done
+  return 0
+}
+
 main() {
   preflight
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   while :; do
     reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
-    # Rework a reviewer sent back to ME takes priority over fresh issues.
+    # Priority: my own rework → a TTL-freed rework I can push → a fresh issue.
     local next kind=new
     next="$(rework_issues | head -1 || true)"
     if [ -n "$next" ]; then
       kind=rework
     else
-      next="$(available_issues | head -1 || true)"
+      next="$(take_unassigned_rework || true)"
+      if [ -n "$next" ]; then kind=rework; else next="$(available_issues | head -1 || true)"; fi
     fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then

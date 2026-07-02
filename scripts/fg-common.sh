@@ -10,6 +10,8 @@ MODEL="${MODEL:-}"                       # optional model override
 PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes only)
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
+CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
+REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
 REVIEW_CHECK_CONTEXT="for-good/adversarial-review"
 RUNS_AGENT="${RUNS_AGENT:-0}"             # scripts that call run_agent set this to 1
 
@@ -101,6 +103,14 @@ available_issues() { issues_with_status "available"; }
 
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
 rework_issues() { issues_with_status "changes-requested" --assignee "@me"; }
+
+# Reworks with NO assignee — freed by reap.sh after REWORK_TTL, so any worker
+# may take them (oldest first). The author's own reworks stay theirs (above).
+unassigned_reworks() {
+  gh issue list --repo "$REPO" --state open --label "status: changes-requested" \
+    --json number,assignees,createdAt --limit 100 \
+    --jq '[.[] | select((.assignees|length)==0)] | sort_by(.createdAt) | .[].number'
+}
 
 # Drained stream roots waiting for a G1 synthesis draft.
 synthesis_issues() { issues_with_status "needs-synthesis"; }
