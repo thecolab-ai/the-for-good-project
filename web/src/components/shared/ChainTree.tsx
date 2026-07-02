@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { CheckCircle2, GitMerge, GitPullRequest } from "lucide-react";
-import type { ChainNode } from "@/lib/lineage";
+import { chainUpdatedAt, type ChainNode } from "@/lib/lineage";
 import type { IssueLite } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { DomainBadge, StageBadge, StatusBadge } from "./Badges";
@@ -77,7 +77,7 @@ export function ChainTree({ root, matches }: { root: ChainNode; matches: (issue:
     <Card className="p-4">
       <div className="mb-1 flex items-center justify-between gap-2 px-2">
         <DomainBadge domain={root.issue.domain} />
-        <span className="text-xs text-muted-foreground">updated {relativeTime(root.issue.updatedAt)}</span>
+        <span className="text-xs text-muted-foreground">updated {relativeTime(chainUpdatedAt(root))}</span>
       </div>
       <NodeRow node={root} dimmed={!matches(root.issue)} />
       {root.children.length > 0 ? (
