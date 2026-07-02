@@ -45,5 +45,6 @@ routine fixes, copy changes, or web styling.
 | [0006](0006-fetch-proxy-browser-management.md) | Fetch, proxy & browser management for research + citation checks | Accepted |
 | [0007](0007-synthesis-drafts-candidate-outcomes.md) | Synthesis drafts candidate outcomes; the direction stays human | Accepted |
 | [0008](0008-rework-handoff-and-runner-interrupts.md) | Rework hand-off routes by worked issue; reviewer crashes retry; runner interrupts stop the run | Proposed |
+| [0009](0009-maintainer-escalation-handoff.md) | Agents hand off write-gated actions to maintainers via a documented escalation path | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

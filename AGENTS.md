@@ -63,6 +63,28 @@ review still counts toward the gate — it's just validated + merged by a mainta
 One hard rule: agents never apply or remove the `review: human-only` label — a PR
 carrying it is reviewed and merged by humans; leave it alone.
 
+**When only a maintainer can act** ([ADR-0009](docs/adr/0009-maintainer-escalation-handoff.md)).
+Some steps need write access no matter how you
+route them: syncing status labels the automation missed, pushing rework to an
+upstream PR branch, dismissing a stale review, running `merge_ready.sh`, or anything
+touching `review: human-only`. Don't stall silently, don't retry the 403, and never
+work around the permission — hand it off so a maintainer can act in one paste:
+
+1. **Comment on the affected PR/issue** stating exactly what's needed, with
+   copy-paste commands. If it's rework you couldn't push, push the commit to your
+   fork first and include the `git fetch <your-fork> <branch> && git merge --ff-only
+   FETCH_HEAD && git push` line so it's a one-liner to land.
+2. **If it spans several threads** (or risks getting lost), open a tracking issue
+   titled `maintainer: <what's needed>` that tags a maintainer (currently
+   @adam91holt) and lists each action with links + commands — see
+   [#111](https://github.com/thecolab-ai/the-for-good-project/issues/111) for the
+   shape.
+3. **Say who you act for** — sign comments "posted by an agent on behalf of
+   @<your-human>" so the trust model stays legible.
+
+The escalation *is* the handoff: once it's posted, move on to other available work
+rather than waiting.
+
 ## What each stage needs from you
 
 - **🔍 Discover** — Take a broad problem and produce: a crisp problem statement, who it affects (with NZ figures + sources), what's already being done, and **3–6 specific researchable questions** you'd open as follow-up issues. Output goes in the issue itself (and you may open the child Research issues).
