@@ -43,11 +43,16 @@ Never score from the title alone. Read enough to justify each number:
 3. **Check data accessibility.** Is there a `.skills/` CLI for the data this needs (Stats NZ, councils, charities, etc.)? `ls .skills/skills` (the submodule is uninitialised on a fresh clone — run `git submodule update --init` first if it's empty; see AGENTS.md). If a matching skill exists, cost drops; if it needs heavy browser-fetching of blocked govt sites, cost rises.
 4. **Note the stage** (`stage: discover|research|ideate|build`) and whether `priority: high` is set.
 
-For `queue` mode, first list the queue, then do a lighter pass per issue (title + body + labels + a quick dedupe grep) — you don't need to open every parent chain, but say so in the confidence line:
+For `queue` mode, gather the pickup-able work the same way `start_work.sh` does — **reworks first, then the available queue** — so the ranking can't miss the very items the autopilot works ahead of everything else (a `status: changes-requested` rework is the Priority anchor-5 case below). Then do a lighter pass per issue (title + body + labels + a quick dedupe grep) — you don't need to open every parent chain, but say so in the confidence line:
 ```
+# reworks a reviewer sent back — start_work.sh picks these up before anything else
+gh issue list --repo thecolab-ai/the-for-good-project --state open \
+  --label "status: changes-requested" --json number,title,labels,assignees,createdAt --limit 100
+# then the available queue
 gh issue list --repo thecolab-ai/the-for-good-project --state open \
   --label "status: available" --json number,title,labels,createdAt --limit 100
 ```
+Score both lists together into one ranked table; reworks naturally sort to the top via their anchor-5 priority. (Leave out `status: claimed` / `status: reviewing` / `status: in-review` — that work is already in flight.)
 
 ## Step 2 — Score the three axes
 
