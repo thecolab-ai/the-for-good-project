@@ -17,9 +17,7 @@ Each analysis document is stored **once per format, under a single kebab-case sl
 
 So a doc's `.md` and `.pdf` are the *same document* — the Markdown is the original, the PDF is generated from it.
 
-**Rule:** if the two ever disagree, the `.md` wins. Regenerate the PDF; never hand-edit it. This keeps the project's "one source of truth" principle (see [`MANIFESTO.md`](../MANIFESTO.md)) intact — the Markdown is the database, the PDF is a view of it.
-
-> **PDF status:** the human-readable PDF for the plan below is **pending re-export** from the current `.md`. An earlier PDF was dropped once the Markdown was substantially revised, rather than ship a companion that contradicts the source — exactly the "`.md` wins, regenerate the export" rule above. Regenerate from the canonical `.md` before circulating a formatted copy.
+**Rule:** if the two ever disagree, the `.md` wins. Regenerate the PDF; never hand-edit it. This keeps the project's "one source of truth" principle (see [`MANIFESTO.md`](../MANIFESTO.md)) intact — the Markdown is the database, the PDF is a view of it. When the `.md` changes substantially, re-export the PDF in the same PR (or drop it until it's re-rendered) rather than ship a companion that contradicts the source.
 
 ## Index
 
