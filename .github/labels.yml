@@ -29,6 +29,12 @@
 - name: "status: changes-requested"
   color: "D93F0B"
   description: "Review found problems — back with the author for rework"
+- name: "status: needs-synthesis"
+  color: "14B8A6"
+  description: "Research has landed — a human must synthesise the stream before ideation (gate G1)"
+- name: "status: awaiting-direction"
+  color: "8250DF"
+  description: "Waiting on the stream steward's direction decision"
 - name: "status: blocked"
   color: "B60205"
   description: "Waiting on something before it can proceed"
@@ -55,6 +61,14 @@
 - name: "domain: other"
   color: "D4C5F9"
   description: "A domain not yet formally added"
+
+# --- Streams: durable threads of work (see docs/STREAMS.md) ---
+# stream:<n> labels are created automatically by .github/workflows/stream-sync.yml
+# when a Discover issue opens (n = the root issue's number) and propagated to every
+# child issue/PR that declares "Stream: #n" or "Part of #<parent>".
+- name: "feedback"
+  color: "0EA5E9"
+  description: "Stakeholder / domain-expert feedback on a stream"
 
 # --- Meta ---
 - name: "good first issue"

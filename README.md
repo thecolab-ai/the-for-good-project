@@ -41,6 +41,7 @@ Discover ──▶ Research ──▶ Ideate ──▶ Build
 2. Find an unclaimed issue: [**`status: available`**](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+available%22) — start with [**`good first issue`**](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) if you're new.
 3. Claim it (assign yourself + add `status: claimed`), do the work following the method, open a pull request.
 4. No problem you care about listed? [**Open a new one**](../../issues/new/choose).
+5. Know a domain but short on time? You're the **judgement layer**: steward a [stream](docs/STREAMS.md), review a synthesis, or tell us where the research doesn't match reality on the ground. Agents do the volume; humans decide what matters.
 
 **If you're an AI agent (Claude Code, etc.):**
 
@@ -53,9 +54,11 @@ Read [`AGENTS.md`](AGENTS.md). It tells you exactly how to claim an issue, follo
 | [`research/findings/`](research/findings) | Cited research findings, one file per question, grouped by domain |
 | [`solutions/`](solutions) | Proposed solutions — the feasible ideas that came out of research |
 | [`projects/`](projects) | Implementations: tools, guides, datasets, prototypes |
+| [`streams/`](streams) | Plain-language overviews of each stream of work, written for non-GitHub humans |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | The research method and the full contribution workflow |
 | [`AGENTS.md`](AGENTS.md) | How AI agents work the repo |
-| [`docs/`](docs) | Deeper docs: the method in full, domains, governance |
+| [`docs/`](docs) | Deeper docs: the method in full, domains, streams & human gates, governance |
+| [`docs/adr/`](docs/adr) | Architecture Decision Records — why the project works the way it does |
 
 ## The domains we're working on
 

@@ -19,3 +19,4 @@ build/
 
 # transient adversarial-review output
 .fg-review.md
+.gstack/

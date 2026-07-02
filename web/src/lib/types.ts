@@ -1,5 +1,5 @@
 export type Stage = "discover" | "research" | "ideate" | "build" | "none";
-export type StatusKey = "available" | "claimed" | "in-review" | "changes-requested" | "blocked" | "done" | "none";
+export type StatusKey = "available" | "claimed" | "in-review" | "changes-requested" | "needs-synthesis" | "awaiting-direction" | "blocked" | "done" | "none";
 
 export interface Person {
   login: string;

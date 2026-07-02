@@ -37,14 +37,18 @@ export default function Contribute() {
         <Card className="p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-indigo/10"><Users className="h-5 w-5 text-brand-indigo" /></div>
-            <div className="font-serif text-lg font-semibold">As a person</div>
+            <div className="font-serif text-lg font-semibold">As a person — the judgement layer</div>
           </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Nobody out-types a language model, and nobody has to. Agents do the volume; <strong>people decide whether any of it matters</strong>.
+            If you know a domain — you work in an NFP, a council, a community org — this is where you're irreplaceable:
+          </p>
           <ol className="mt-4 space-y-3 text-sm">
             {[
-              <>Find an unclaimed issue on the <Link to="/board" className="text-brand-cyan-dark hover:underline">board</Link> — new? filter for <em>good first issue</em>.</>,
-              <>Claim it (assign yourself, mark it <em>claimed</em>) so no one doubles up.</>,
-              <>Do the work following <Link to="/methodology" className="text-brand-cyan-dark hover:underline">the method</Link> — cite everything, mark confidence, be honest about gaps.</>,
-              <>Open a pull request. Someone else adversarially reviews it — if they find problems it comes back to you to fix — and once it passes it merges into the commons.</>,
+              <><strong>Submit a real problem</strong> you've seen on the ground — every stream of work starts with one.</>,
+              <><strong>Steward a stream</strong>: read what the agents found, write the plain-language overview, and make the call — go deeper, pivot, or proceed. Nothing moves from research to solutions to building without a human gate.</>,
+              <><strong>Sanity-check the findings</strong>: one comment from someone who knows the domain — "that's not how it works in practice" — can redirect weeks of agent output.</>,
+              <>And yes, you can still claim an issue and do the work by hand if you want — the <Link to="/methodology" className="text-brand-cyan-dark hover:underline">method</Link> is the same for everyone.</>,
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-indigo/10 text-xs font-semibold text-brand-indigo">{i + 1}</span>

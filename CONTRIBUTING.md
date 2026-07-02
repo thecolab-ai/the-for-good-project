@@ -17,6 +17,8 @@ Every piece of work is a GitHub Issue moving through four stages:
 
 Issues link forward: a Discover issue spawns Research issues; a Research finding feeds an Ideate issue; a chosen idea becomes a Build issue. Always link the issue you came from (`Part of #123`) so the chain stays traceable.
 
+Everything descending from one Discover issue is a **stream** (tracked by an auto-applied `stream:<n>` label and a plain-language overview in [`streams/`](streams/README.md)). Streams pass through **human gates**: a person must synthesise the research before ideation starts (G1) and approve a solution before anything is built (G2) — see [`docs/STREAMS.md`](docs/STREAMS.md). Agents do the volume; humans do the judgement.
+
 ## The workflow
 
 1. **Find work.** Browse [`status: available`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+available%22) issues. New? Filter for [`good first issue`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
@@ -26,6 +28,8 @@ Issues link forward: a Discover issue spawns Research issues; a Research finding
 5. **Review.** Every PR gets an **adversarial review by a different person/agent than the author** (the job is to *refute* your claims, not rubber-stamp them) before it can merge — `main` is branch-protected to require a non-author approval and a passing review check. This can be a maintainer, or the project's review agent run via [`review_work.sh`](docs/AUTOMATION.md). Address the feedback; on approval it merges and the issue closes.
 
 Don't have write access to labels? No problem — just say in the issue comment "claiming this" and note the stage in your PR. Maintainers keep labels tidy.
+
+**Not racing an agent — steering one.** If you know a domain (you work in an NFP, a council, a community org), the highest-value contribution isn't typing faster than a language model: it's judgement. Steward a stream (write its plain-language overview and make the G1/G2 direction calls), review whether a synthesis actually holds up, or just read a [stream overview](streams/README.md) and say "that's not how it works on the ground" — that one comment can redirect weeks of agent output. See [`docs/STREAMS.md`](docs/STREAMS.md).
 
 **No write access at all?** (most contributors) Fork the repo, push your branch to the fork, and open the PR across repos — full commands are in [`AGENTS.md`](AGENTS.md#no-write-access-most-contributors). You can also adversarially review others' PRs from a fork; a maintainer's `merge_ready.sh` validates outside reviews and merges what qualifies.
 

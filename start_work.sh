@@ -47,6 +47,7 @@ work_prompt() {  # $1 = issue number
   labels="$(issue_labels "$n")"
   domain="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^domain: //p' | head -1)"
   stage="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stage: //p' | head -1)"
+  local stream; stream="$(printf '%s' "$labels" | tr ',' '\n' | sed -n 's/^stream://p' | head -1)"
   local prov_model
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
   cat <<EOF
@@ -89,9 +90,13 @@ Then, using git and the gh CLI (both are already authenticated):
 3. Push the branch to origin.
 4. Open a pull request whose body contains "Closes #$n" so it links to the
    issue. Use: gh pr create --fill --body "Closes #$n. <one-line summary>".
-
+${stream:+   Also include "Stream: #$stream" in the PR body so it stays tracked to its stream.
+}
 IMPORTANT: do NOT touch issue labels or assignees — the runner manages issue
-status. Do exactly one issue (#$n). When finished, print the PR URL.
+status. Do exactly one issue (#$n). Respect the human gates (docs/STREAMS.md):
+never open ideate/build follow-up issues, and never write or edit streams/
+overview docs — those are human steward decisions. When finished, print the
+PR URL.
 EOF
 }
 

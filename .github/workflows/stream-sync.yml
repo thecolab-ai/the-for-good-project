@@ -1,0 +1,72 @@
+# Keep stream:<n> labels in sync — label bookkeeping only, zero model tokens.
+# See docs/STREAMS.md for the Stream concept.
+#
+# Rules:
+#  - A new "stage: discover" issue is the ROOT of a new stream → create and
+#    apply "stream:<n>" where n is its own number.
+#  - Any issue/PR whose body declares "Stream: #n" gets "stream:<n>".
+#  - Any issue/PR whose body declares "Part of #p" inherits the parent's
+#    stream:<n> label (one hop — parents get theirs the same way, so the
+#    label walks down the tree as children open).
+name: Stream sync
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  pull_request_target:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply stream label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number || github.event.pull_request.number }}
+          BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
+          IS_PR: ${{ github.event.pull_request != null }}
+          LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          stream=""
+
+          # 1) Explicit "Stream: #n" in the body wins.
+          stream=$(printf '%s' "$BODY" | grep -oiE 'stream:[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+
+          # 2) Else inherit from the parent named by "Part of #p" / "Closes #p".
+          if [ -z "$stream" ]; then
+            parent=$(printf '%s' "$BODY" | grep -oiE '(part of|closes|fixes|resolves)[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            if [ -n "$parent" ]; then
+              stream=$(gh issue view "$parent" --repo "$REPO" --json labels \
+                --jq '[.labels[].name | select(startswith("stream:"))][0] // empty' 2>/dev/null | grep -oE '[0-9]+' || true)
+            fi
+          fi
+
+          # 3) Else a Discover issue roots its own stream.
+          if [ -z "$stream" ] && [ "$IS_PR" != "true" ]; then
+            case ",$LABELS," in *",stage: discover,"*) stream="$NUM" ;; esac
+          fi
+
+          [ -z "$stream" ] && { echo "No stream to apply."; exit 0; }
+          label="stream:$stream"
+
+          # Ensure the label exists (title of the root issue as description).
+          if ! gh label list --repo "$REPO" --search "$label" --json name --jq '.[].name' | grep -qx "$label"; then
+            title=$(gh issue view "$stream" --repo "$REPO" --json title --jq .title 2>/dev/null | cut -c1-80 || echo "")
+            gh label create "$label" --repo "$REPO" --color "BFD4F2" \
+              --description "Stream #$stream${title:+ — $title}" 2>/dev/null || true
+          fi
+
+          if [ "$IS_PR" = "true" ]; then
+            gh pr edit "$NUM" --repo "$REPO" --add-label "$label" || true
+          else
+            gh issue edit "$NUM" --repo "$REPO" --add-label "$label" || true
+          fi
+          echo "Applied $label to #$NUM"
