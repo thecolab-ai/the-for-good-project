@@ -20,6 +20,8 @@
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
+#   POLL_SECONDS=0 ./start_work.sh  # exit instead of polling when queue empty
+#                                    # (default: poll every 60s and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
@@ -31,7 +33,7 @@ RUNS_AGENT=1
 parse_agent_args "$@"
 
 MAX="${MAX:-0}"                       # 0 = no limit
-POLL_SECONDS="${POLL_SECONDS:-0}"     # >0 = keep polling when queue empty
+POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 CLAIMED_ISSUE=""
 

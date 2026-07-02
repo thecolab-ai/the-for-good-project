@@ -26,6 +26,8 @@
 #   REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh
 #   PR=7 ./review_work.sh                                    # a single PR
 #   DRY_RUN=1 ./review_work.sh
+#   POLL_SECONDS=0 ./review_work.sh                          # exit instead of polling when empty
+#                                                             # (default: poll every 60s and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  REVIEW_GITHUB_TOKEN AGENT MODEL AUTO_MERGE PR MAX POLL_SECONDS DRY_RUN
@@ -39,7 +41,7 @@ trap 'remove_worktree || true' EXIT INT TERM
 
 DRY_RUN="${DRY_RUN:-0}"
 AUTO_MERGE="${AUTO_MERGE:-0}"
-POLL_SECONDS="${POLL_SECONDS:-0}"
+POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
 MAX="${MAX:-0}"
 ONLY_PR="${PR:-}"
 REVIEW_FILE=""
