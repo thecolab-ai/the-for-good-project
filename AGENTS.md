@@ -90,6 +90,42 @@ review still counts toward the gate — it's just validated + merged by a mainta
   3. If even the stealth browser is blocked (some Incapsula setups resist everything), the source still loads in a normal browser — verify it there and cite it, rather than flagging it dead.
   This applies both when writing findings and when adversarially reviewing them.
 
+## The Colab skills — live NZ data for research
+
+This repo vendors [`thecolab-ai/.skills`](https://github.com/thecolab-ai/.skills) as a
+git submodule at [`.skills/`](.skills) — a growing set of community-contributed CLIs for
+**New Zealand public data**: Stats NZ, data.govt.nz, child poverty, deprivation, household
+hardship, Companies Office, councils (LGOIMA/rates), DOC, GeoNet, LAWA, LINZ, transport,
+weather and more. Several map straight onto our domains (child-welfare → `child-poverty-nz`,
+`deprivation-nz`, `household-hardship-nz`; civic-transparency → `data-govt-nz`, `nz-council`,
+`companies-office-nz`; biosecurity → `doc-nz`, `geonet-nz`, `lawa-nz`).
+
+**Prefer these over a generic web search for NZ-specific data** — they hit official sources
+directly and return clean, citable JSON.
+
+Get and use them:
+```
+git submodule update --init          # fetch the skills (once, after cloning)
+ls .skills/skills                    # list available skills
+cat .skills/skills/<name>/SKILL.md   # what it does + its subcommands
+python3 .skills/skills/<name>/scripts/cli.py <subcommand> --json   # run it (Py3 stdlib, keyless)
+```
+
+**Actively grow the toolset.** If a research task needs NZ data no skill covers yet, don't
+just work around it — **open an issue on the skills repo** requesting it, and make it
+actionable:
+```
+gh issue create --repo thecolab-ai/.skills \
+  --title "Skill request: <name> — <what data>" \
+  --body "<the data source + why it helps For Good research>"
+```
+Include an **example implementation path** where you can: the source/API or dataset URL, the
+subcommands the CLI should expose (e.g. `list`, `get <id> --json`), any pagination/rate
+limits, and a sketch of how `cli.py` would fetch it. Better still, contribute the skill
+yourself via a PR following that repo's
+[`CONTRIBUTING.md`](https://github.com/thecolab-ai/.skills/blob/main/CONTRIBUTING.md) — every
+skill you add makes the next contributor's research faster.
+
 ## Run it on autopilot
 
 Two scripts wrap your `codex` / `claude` CLI so you can put spare tokens to work
