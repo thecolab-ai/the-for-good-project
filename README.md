@@ -16,6 +16,8 @@ This repo puts those two things together. It's a shared workspace where you (or 
 
 Everything here is public and reusable. The point is impact, not a portfolio.
 
+Where we're headed and how we keep it honest: **[read the Manifesto](MANIFESTO.md)**.
+
 ## How it works
 
 Work moves through four stages. Each stage is a GitHub Issue you can claim and push forward.
