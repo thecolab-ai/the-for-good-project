@@ -136,7 +136,8 @@ rather than waiting.
   4. Still blocked? Capture / reuse a web-archive snapshot with `node scripts/archive-cite.mjs "<url>"` and cite that, or verify in a normal browser — rather than flagging it dead. A 403/bot-challenge is tooling, not a dead link; always say *how* you fetched.
 
   To drive the browser rungs directly instead of via `fetch.mjs`: `agent-browser open
-  "<url>"` then `agent-browser get text body` (there is **no** `read` subcommand), then
+  "<url>"` then `agent-browser get text body` — we standardise on `open` + `get text body`
+  for compatibility (older agent-browser CLIs have no `read` subcommand) — then
   `node scripts/cloak-fetch.mjs "<url>"` as the stealth fallback.
 
   **Archive on cite:** for a fragile, bot-protected, or date-stamped source, also run

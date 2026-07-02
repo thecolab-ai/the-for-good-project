@@ -85,6 +85,9 @@ per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 
 ## Implementation status (updated 2026-07-03)
 
+*Ratified by the maintainer (Adam Holt), 2026-07-03 — these tooling/workflow
+changes are adopted, not an agent self-adoption.*
+
 **Shipped:**
 - **Shared fetch ladder as one CLI** — [`scripts/fetch.mjs`](../../scripts/fetch.mjs)
   runs curl → agent-browser (real Chrome) → CloakBrowser (stealth Chromium) in

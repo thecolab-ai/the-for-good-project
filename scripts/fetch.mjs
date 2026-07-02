@@ -30,10 +30,17 @@
 // dead); 4 = genuinely dead (404). Non-zero is deliberately actionable.
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+// Prefer the locally-installed agent-browser (node_modules/.bin) so `node
+// scripts/fetch.mjs` works after a plain `npm install`, without needing the CLI
+// on the global PATH; fall back to a global install if there's no local one.
+const localAgentBrowser = path.join(here, "..", "node_modules", ".bin", "agent-browser");
+const AGENT_BROWSER = existsSync(localAgentBrowser) ? localAgentBrowser : "agent-browser";
 const MAX = Number(process.env.MAX_CHARS || 20000);
 const args = process.argv.slice(2);
 const archive = args.includes("--archive");
@@ -87,7 +94,7 @@ async function httpRung() {
 
 // ---- Rung 2: agent-browser (real Chrome) -----------------------------------
 function agentBrowserRung() {
-  const run = (a) => spawnSync("agent-browser", a, { encoding: "utf8", timeout: 60000 });
+  const run = (a) => spawnSync(AGENT_BROWSER, a, { encoding: "utf8", timeout: 60000 });
   const probe = run(["--version"]);
   if (probe.error) return { ok: false, unavailable: true, note: "agent-browser not installed" };
   try {
@@ -132,15 +139,20 @@ function snapshot() {
 
 // ---- Drive the ladder ------------------------------------------------------
 const ladder = [
-  ["plain HTTP", httpRung],
-  ["agent-browser (real Chrome)", agentBrowserRung],
-  ["cloak-fetch (stealth Chromium)", cloakRung],
+  ["plain HTTP", httpRung, false],
+  ["agent-browser (real Chrome)", agentBrowserRung, true],
+  ["cloak-fetch (stealth Chromium)", cloakRung, true],
 ];
 
-let sawDead = false;
+// DEAD (exit 4) requires a BROWSER to have rendered a not-found page. A plain-HTTP
+// 404 alone is NOT enough — ADR-0006's whole premise is that curl 404s on pages
+// that resolve in a browser, so an HTTP-only 404 with no browser confirmation is
+// UNVERIFIED (exit 3), never DEAD.
+let browserConfirmedDead = false;
+let httpDead = false;
 const tried = [];
 
-for (const [name, run] of ladder) {
+for (const [name, run, isBrowser] of ladder) {
   const r = await run();
   if (r.ok) {
     let snap = "";
@@ -153,18 +165,30 @@ for (const [name, run] of ladder) {
     console.log(clip(clean(r.text)));
     process.exit(0);
   }
-  if (r.dead) sawDead = true;
-  tried.push(`${name}: ${r.unavailable ? "unavailable" : r.dead ? "404/dead" : "blocked"}${r.status ? ` (HTTP ${r.status})` : ""}${r.note ? ` — ${r.note}` : ""}`);
+  if (r.dead && isBrowser) browserConfirmedDead = true;
+  if (r.dead && !isBrowser) httpDead = true;
+  tried.push(`${name}: ${r.unavailable ? "unavailable" : r.dead ? "404/not-found" : "blocked"}${r.status ? ` (HTTP ${r.status})` : ""}${r.note ? ` — ${r.note}` : ""}`);
 }
 
 // Every rung failed. Classify per ADR-0006 §2.
 console.error(`✗ Could not fetch ${url}`);
 for (const t of tried) console.error(`  - ${t}`);
-if (sawDead) {
+if (browserConfirmedDead) {
   console.error(
-    "\nClassification: DEAD — 404/not-found even in a real browser. This is a genuine dead-link defect."
+    "\nClassification: DEAD — a real browser rendered a 404/not-found page. This is a genuine dead-link defect."
   );
   process.exit(4);
+}
+if (httpDead) {
+  // HTTP said 404 but no browser could confirm it (they were unavailable or
+  // blocked). This is exactly the case ADR-0006 warns about — do NOT call it dead.
+  console.error(
+    "\nClassification: UNVERIFIED — plain HTTP returned 404, but no browser rung could confirm it\n" +
+      "(browser rungs unavailable or blocked). curl 404s on pages that load in a browser, so this is\n" +
+      "NOT a confirmed dead link. Install the browser rungs (npm install && npx cloakbrowser install)\n" +
+      `or open it in a normal browser before concluding. Try a snapshot: node scripts/archive-cite.mjs "${url}"`
+  );
+  process.exit(3);
 }
 console.error(
   "\nClassification: BLOCKED (tooling / IP) — 403 / bot-challenge / timeout, NOT a citation defect.\n" +
