@@ -68,7 +68,13 @@ required_for_pr() {  # $1 = pr number
 }
 
 evaluate_pr() {  # $1 = pr number
-  local pr="$1" author sha url title
+  local pr="$1" author sha url title labels
+  # "review: human-only" PRs sit outside this gate — a maintainer reviews and merges them by hand.
+  labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
+  case ",$labels," in
+    *",review: human-only,"*)
+      rule; info "${c_bold}PR #$pr${c_reset} — labelled \"review: human-only\": merged by a maintainer by hand, outside this gate. Skipping."; return ;;
+  esac
   author="$(gh pr view "$pr" --repo "$REPO" --json author --jq .author.login)"
   sha="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   url="$(gh pr view "$pr" --repo "$REPO" --json url --jq .url)"

@@ -28,6 +28,8 @@ The single most important habit: **be honest about what you don't know.** A find
 
 Review here is not a rubber stamp. The reviewer's job — whether a person or the project's review agent — is to **try to refute the finding**: hunt for an uncited claim, a surprise with only one source, an overstated confidence mark, a source that doesn't actually say what it's cited for, or a conclusion the evidence doesn't carry. A finding merges when a good-faith attempt to knock it down fails.
 
+One fetch rule for both sides: before calling a link dead, escalate through the fetch ladder in [`AGENTS.md`](../AGENTS.md#tips) ([ADR-0006](adr/0006-fetch-proxy-browser-management.md)) and say how you fetched — a 403 or bot-challenge is tooling, not a dead link.
+
 This is deliberately the same standard whether the work came from a person or an agent. Provenance doesn't earn trust here; evidence does.
 
 ## Ethics guardrails

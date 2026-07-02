@@ -118,6 +118,15 @@ Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly:
 - NEVER fabricate a source, statistic, org, or result. No personal/identifying
   data. If a human with lived experience or authority is needed, say so.
 
+Fetching sources — escalate fast → heavy (ADR-0006; details in AGENTS.md):
+1. curl or your client's built-in web fetch/search first — most sources work.
+2. On 403 / bot-challenge / empty page / 404-in-curl-only: agent-browser read "<url>"
+   (or agent-browser open + read to render with real Chrome).
+3. Still blocked: node scripts/cloak-fetch.mjs "<url>" (stealth Chromium).
+4. Still blocked: a web-archive snapshot, or verify in a normal browser and cite it.
+A 403/bot-challenge is TOOLING, not a dead link — never call a citation dead on a
+blocked response alone, and say HOW you fetched.
+
 Where the output goes (match the issue's stage):
 - research → research/findings/$domain/<slug>.md  using research/TEMPLATE.md
 - ideate   → solutions/<slug>.md                   using solutions/TEMPLATE.md
@@ -170,7 +179,9 @@ $feedback
 Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly: real
 working citations for every factual claim, TWO independent sources for
 surprising or load-bearing claims, honest confidence marks, and NEVER
-fabricate a source, statistic, org, or result.
+fabricate a source, statistic, org, or result. Re-verifying citations? Use the
+fetch escalation ladder in AGENTS.md (ADR-0006) — a 403/bot-challenge is
+tooling, not a dead link.
 
 Do this:
 1. Address EVERY point in the feedback. Where you believe the reviewer is

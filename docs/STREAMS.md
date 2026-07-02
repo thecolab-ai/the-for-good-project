@@ -93,11 +93,13 @@ while the root is flagged, the flag is removed: synthesis waits until the
 stream is fully drained.
 
 From there, **`synthesize_work.sh`** (see [AUTOMATION.md](AUTOMATION.md),
-ADR-0003) does the tedious half: an agent reads every merged finding in the
-stream and drafts the overview as a PR, and the root moves to
-`status: awaiting-direction`. The judgement half never leaves the human: the
-draft's direction section is a literal `TODO(steward)`, and only the steward's
-edit + decision + merge passes the gate.
+ADR-0003, ADR-0007) does the tedious half: an agent reads every merged finding
+in the stream and drafts the overview as a PR — takeaways with carried
+confidence, open questions, and 2–4 neutral candidate outcomes the evidence
+could support — and the root moves to `status: awaiting-direction`. The
+judgement half never leaves the human: the options are unranked and
+unrecommended, the draft's direction section is a literal `TODO(steward)`,
+and only the steward's edit + decision + merge passes the gate.
 
 ## 2. The human gates
 
@@ -115,7 +117,7 @@ Two kinds of review get conflated unless we name them:
 | Gate | Transition | What the human does | Mechanics |
 |---|---|---|---|
 | **G0** — framing | Discover → Research fans out | A maintainer confirms the problem is real and tractable before tokens are spent on it | Discover issues open with `needs-triage`; removing it **is** G0. Once the root has passed G0, *research* children within the fan-out depth bound inherit that approval and may open as `status: available` directly |
-| **G1** — synthesis | Research → Ideate | The steward reads (and corrects) the drafted rollup, then answers: is this meaningful? is the evidence good enough? go deeper, pivot, or proceed? | Root gets `status: needs-synthesis` when the stream drains; `synthesize_work.sh` drafts the overview as a PR and moves the root to `status: awaiting-direction`; the steward's edits + **direction decision** + merge clear the gate. **No ideate issue in a stream becomes `status: available` before G1.** |
+| **G1** — synthesis | Research → Ideate | The steward reads (and corrects) the drafted rollup, picks/edits/rejects its candidate outcomes, then answers: is this meaningful? is the evidence good enough? go deeper, pivot, or proceed? | Root gets `status: needs-synthesis` when the stream drains; `synthesize_work.sh` drafts the overview as a PR and moves the root to `status: awaiting-direction`; the steward's edits + **direction decision** + merge clear the gate. **No ideate issue in a stream becomes `status: available` before G1.** |
 | **G2** — build approval | Ideate → Build | A human approves one specific solution — impact, feasibility, ethics — before anything is built | Same pattern: `status: awaiting-direction` on the root; the steward records the decision in the overview. **No build issue becomes `status: available` before G2.** |
 
 The gates bind **agents and automation absolutely**: an agent must never open

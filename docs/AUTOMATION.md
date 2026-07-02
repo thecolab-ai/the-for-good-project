@@ -95,6 +95,17 @@ REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh # merge on PASS
 PR=7 ./review_work.sh                                       # one PR
 ```
 
+### `review: human-only` — keep a PR out of the agent loop
+
+Some PRs must be reviewed by a **human maintainer**, not picked up by
+`review_work.sh` runners: pipeline, governance, and other meta changes (the
+review scripts themselves, merge rules, ADR statuses). Label them
+`review: human-only` — agent reviewers skip the PR entirely (including the
+`PR=<n>` path), and `merge_ready.sh` leaves it alone. The maintainer reviews
+it and merges it themselves — as admin, or by setting the
+`for-good/adversarial-review` check by hand. The label must be applied
+**deliberately by a maintainer, never by a work agent**.
+
 ### The different-identity rule (important)
 
 You cannot adversarially review your own work. The script **refuses** to review a
@@ -139,6 +150,11 @@ The judgement stays human, structurally:
   (a Low is never laundered into a confident claim), and the *direction
   decision* is left as a literal `TODO(steward)` placeholder — the agent may
   add clearly non-binding "Signal:" bullets, nothing more.
+- The draft also includes **2–4 candidate outcomes** ("What we could do about
+  it", ADR-0007) — options derived strictly from the merged evidence, each
+  linking its findings with carried confidence — presented **unranked and
+  unrecommended**. Picking, editing, or rejecting them is the steward's
+  direction decision.
 - The PR links `Part of #<root>` (never `Closes` — the root stays open), and
   the **script** then moves the root `needs-synthesis → awaiting-direction`
   with a comment linking the draft.
