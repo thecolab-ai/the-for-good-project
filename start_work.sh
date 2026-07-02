@@ -21,7 +21,7 @@
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
 #   POLL_SECONDS=0 ./start_work.sh  # exit instead of polling when queue empty
-#                                    # (default: poll every 60s and never exit)
+#                                    # (default: poll every 3 min and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
@@ -33,7 +33,7 @@ RUNS_AGENT=1
 parse_agent_args "$@"
 
 MAX="${MAX:-0}"                       # 0 = no limit
-POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
+POLL_SECONDS="${POLL_SECONDS:-180}"   # keep polling when queue empty every 3 min (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 CLAIMED_ISSUE=""
 
@@ -322,9 +322,9 @@ reconcile_rework() {
 # Take the first UNASSIGNED (TTL-freed) rework whose PR lives on origin — i.e.
 # a branch we can actually push the rework to. Fork-branch PRs are skipped (only
 # their owner can push). Claims it to @me and echoes its number, else nothing.
-take_unassigned_rework() {
+take_unassigned_rework() {  # $1 = optional queue snapshot (from fetch_open_issues)
   local n pr owner
-  for n in $(unassigned_reworks); do
+  for n in $(unassigned_reworks "${1:-}"); do
     pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
     owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
     [ "$owner" = "$OWNER" ] || continue
@@ -342,14 +342,18 @@ main() {
   local done=0
   while :; do
     reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
+    # ONE GraphQL query snapshots the whole open-issue queue; every check below
+    # (my rework → TTL-freed rework → fresh issue) filters it locally instead of
+    # firing its own REST list call.
+    local snap; snap="$(fetch_open_issues)"
     # Priority: my own rework → a TTL-freed rework I can push → a fresh issue.
     local next kind=new
-    next="$(rework_issues | head -1 || true)"
+    next="$(rework_issues "$snap" | head -1 || true)"
     if [ -n "$next" ]; then
       kind=rework
     else
-      next="$(take_unassigned_rework || true)"
-      if [ -n "$next" ]; then kind=rework; else next="$(available_issues | head -1 || true)"; fi
+      next="$(take_unassigned_rework "$snap" || true)"
+      if [ -n "$next" ]; then kind=rework; else next="$(available_issues "$snap" | head -1 || true)"; fi
     fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
