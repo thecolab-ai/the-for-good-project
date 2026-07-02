@@ -62,11 +62,20 @@ const UA =
 // specific enough not to fire on a legitimate page that merely mentions a CDN.
 const CHALLENGE = /just a moment|checking your browser|cf-browser-verification|cf[-_]chl|incapsula|_incapsula_|access denied|enable javascript to|attention required|are you a human|unusual traffic|performing security verification|verify(?:ing)? you are (?:not a bot|human)|verifies you are not a bot|protect against malicious bots|ray id:|ddos protection by|request unsuccessful/i;
 
+// A rendered not-found page: a branded 404 still has readable text, so length
+// alone can't catch it. Used as a backup when a browser rung can't give us the
+// real HTTP status; the short-length guard avoids firing on a long real article
+// that merely quotes "page not found".
+const NOTFOUND = /\b(?:404 (?:error|not found)|page not found|page (?:you (?:requested|were looking for)|isn'?t here|does not exist|doesn'?t exist|cannot be found|can'?t be found)|this page does not exist|no longer exists|error 404)\b/i;
+
 const clip = (s) => (s.length > MAX ? s.slice(0, MAX) + "\n…[truncated — raise MAX_CHARS]" : s);
 const clean = (s) => (s || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim();
 
 // Enough real text to count as a successful fetch (a challenge page is short).
 const looksReal = (text) => clean(text).length >= 200 && !CHALLENGE.test(text);
+
+// A browser-rendered not-found page (used when no real HTTP status is available).
+const looksNotFound = (text) => { const c = clean(text); return NOTFOUND.test(c) && c.length < 1500; };
 
 // ---- Rung 1: plain HTTP ----------------------------------------------------
 async function httpRung() {
@@ -94,22 +103,34 @@ async function httpRung() {
 
 // ---- Rung 2: agent-browser (real Chrome) -----------------------------------
 function agentBrowserRung() {
-  const run = (a) => spawnSync(AGENT_BROWSER, a, { encoding: "utf8", timeout: 60000 });
+  // --no-sandbox is required to launch Chrome in containers/VMs/CI (agent-browser
+  // itself recommends it); harmless on a desktop. Without it the rung silently
+  // fails to launch in the agent environment and we'd fall through to cloak.
+  const env = { ...process.env, AGENT_BROWSER_ARGS: process.env.AGENT_BROWSER_ARGS || "--no-sandbox,--disable-dev-shm-usage" };
+  const run = (a) => spawnSync(AGENT_BROWSER, a, { encoding: "utf8", timeout: 60000, env });
   const probe = run(["--version"]);
   if (probe.error) return { ok: false, unavailable: true, note: "agent-browser not installed" };
   try {
     const opened = run(["open", url]);
     run(["wait", "3500"]); // let a JS/redirect bot-challenge auto-settle before reading
-    // `get text body` returns the rendered body text.
+    // AUTHORITATIVE: the navigation's real HTTP status. A branded 404 renders
+    // readable text, so status — not text length — is what tells dead from alive.
+    const statusRaw = run(["eval", "performance.getEntriesByType('navigation')[0]?.responseStatus ?? 0"]);
+    const status = Number((/(\d{3})/.exec(statusRaw.stdout || "") || [])[1] || 0);
     const got = run(["get", "text", "body"]);
     run(["close", "--all"]);
     const text = (got.stdout || "").trim();
-    if (got.status === 0 && looksReal(text)) return { ok: true, text };
-    // Detect a real "not found" page rendered in the browser.
-    const combined = `${opened.stdout || ""}\n${text}`;
-    if (/404|not found|page (you|isn'?t|cannot be found)/i.test(combined) && text.length < 1200)
-      return { ok: false, dead: true };
-    return { ok: false, blocked: true };
+    // Surface a launch failure (e.g. missing sandbox flag) rather than mislabelling it.
+    const launchErr = `${opened.stderr || ""}\n${got.stderr || ""}`;
+    if (!text && !status && /sandbox|Failed to launch|No usable|chrome/i.test(launchErr))
+      return { ok: false, unavailable: true, note: "agent-browser could not launch Chrome (sandbox?)" };
+    if (status === 404 || status === 410) return { ok: false, status, dead: true };
+    if (status >= 200 && status < 400 && looksReal(text)) return { ok: true, status, text };
+    // Status unknown (0) — fall back to content: a not-found page is dead, otherwise
+    // real-looking non-challenge text passes.
+    if (looksNotFound(`${opened.stdout || ""}\n${text}`)) return { ok: false, dead: true };
+    if (!status && looksReal(text)) return { ok: true, text };
+    return { ok: false, status: status || undefined, blocked: true };
   } catch (e) {
     return { ok: false, blocked: true, note: e?.message || String(e) };
   }
@@ -122,10 +143,18 @@ function cloakRung() {
     timeout: 90000,
     env: { ...process.env, MAX_CHARS: String(MAX) },
   });
-  if (r.status === 0 && looksReal(r.stdout || "")) return { ok: true, text: r.stdout };
+  const out = r.stdout || "";
   if (/cloakbrowser isn't installed/i.test(r.stderr || ""))
     return { ok: false, unavailable: true, note: "cloakbrowser not installed" };
-  return { ok: false, blocked: true, note: (r.stderr || "").trim().split("\n")[0] };
+  // cloak-fetch prints a `# status: <n>` line — the AUTHORITATIVE signal. A branded
+  // 404 renders readable text, so we must trust the real HTTP status over looksReal.
+  const m = /^# status:\s*(\d+)/m.exec(out);
+  const status = m ? Number(m[1]) : 0;
+  if (status === 404 || status === 410) return { ok: false, status, dead: true };
+  if (r.status === 0 && looksReal(out) && !looksNotFound(out)) return { ok: true, text: out };
+  // No status parsed (older cloak) but the page reads as not-found → dead.
+  if (looksNotFound(out)) return { ok: false, dead: true };
+  return { ok: false, status: status || undefined, blocked: true, note: (r.stderr || "").trim().split("\n")[0] };
 }
 
 // ---- Wayback snapshot (shared with archive-cite.mjs) -----------------------

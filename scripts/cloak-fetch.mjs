@@ -47,13 +47,16 @@ try {
   });
   const page = ctx.pages()[0] || (await ctx.newPage());
   page.setDefaultNavigationTimeout(45000);
-  await page.goto(url, { waitUntil: "domcontentloaded" });
+  const response = await page.goto(url, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000); // let any bot-check JS settle / redirect
+  const status = response ? response.status() : 0; // HTTP status of the final navigation
   const title = await page.title().catch(() => "");
   const finalUrl = page.url();
   const text = await page.locator("body").innerText({ timeout: 15000 }).catch(() => "");
   const body = text.replace(/\n{3,}/g, "\n\n").trim();
-  console.log(`# ${title}\n# ${finalUrl}\n`);
+  // The `# status:` line lets callers (fetch.mjs) tell a real 404 from a rendered
+  // page — a branded 404 still has readable text, so text length alone can't.
+  console.log(`# ${title}\n# ${finalUrl}\n# status: ${status}\n`);
   console.log(body.length > MAX ? body.slice(0, MAX) + "\n…[truncated — raise MAX_CHARS]" : body);
 } catch (e) {
   console.error("Fetch failed:", e?.message || e);
