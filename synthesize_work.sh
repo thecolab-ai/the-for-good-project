@@ -29,7 +29,11 @@ cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"
-trap 'remove_worktree || true' EXIT INT TERM
+# cleanup runs on ANY exit; INT/TERM must `exit` themselves or bash resumes the
+# loop after Ctrl-C instead of stopping. exit re-fires the EXIT trap.
+trap 'remove_worktree || true' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 MAX="${MAX:-0}"
 POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
@@ -196,10 +200,12 @@ synthesize_one() {  # $1 = stream root issue number
 
   info "Evidence ($(printf '%s\n' "$evidence" | wc -l | tr -d ' ') file(s)):"; log "$evidence"
   info "Handing stream #$n to $AGENT (worktree: $WORKTREE)..."
-  if run_agent "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth")" "$WORKTREE"; then
+  set +e; run_agent "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth")" "$WORKTREE"; local rc=$?; set -e
+  was_interrupted "$rc" && { remove_worktree; warn "Interrupted — stopping."; exit 130; }
+  if [ "$rc" -eq 0 ]; then
     ok "Synthesis agent run complete for stream #$n"
   else
-    err "Synthesis agent run failed/aborted for stream #$n"
+    err "Synthesis agent run failed/aborted for stream #$n (exit $rc)"
   fi
   remove_worktree
 
