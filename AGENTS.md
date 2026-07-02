@@ -63,7 +63,8 @@ review still counts toward the gate — it's just validated + merged by a mainta
 One hard rule: agents never apply or remove the `review: human-only` label — a PR
 carrying it is reviewed and merged by humans; leave it alone.
 
-**When only a maintainer can act.** Some steps need write access no matter how you
+**When only a maintainer can act** ([ADR-0009](docs/adr/0009-maintainer-escalation-handoff.md)).
+Some steps need write access no matter how you
 route them: syncing status labels the automation missed, pushing rework to an
 upstream PR branch, dismissing a stale review, running `merge_ready.sh`, or anything
 touching `review: human-only`. Don't stall silently, don't retry the 403, and never
