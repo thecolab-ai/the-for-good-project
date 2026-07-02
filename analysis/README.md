@@ -19,10 +19,11 @@ So a doc's `.md` and `.pdf` are the *same document* — the Markdown is the orig
 
 **Rule:** if the two ever disagree, the `.md` wins. Regenerate the PDF; never hand-edit it. This keeps the project's "one source of truth" principle (see [`MANIFESTO.md`](../MANIFESTO.md)) intact — the Markdown is the database, the PDF is a view of it. When the `.md` changes substantially, re-export the PDF in the same PR (or drop it until it's re-rendered) rather than ship a companion that contradicts the source.
 
-This convention is recorded in [`ADR-0004`](../docs/adr/0004-analysis-documents-and-rendered-companions.md). Today `npm run validate` still checks `research/findings/` and `solutions/` only, so analysis standards are enforced by review; ADR-0004 names the tripwire for extending the validator.
+This convention is recorded in [`ADR-0004`](../docs/adr/0004-analysis-documents-and-rendered-companions.md). ADR-0004 named "a second analysis document is added" as the tripwire for extending `npm run validate` to cover `analysis/`; that tripwire has now been hit, and `npm run validate` checks `analysis/` frontmatter, citations, and a `Confidence & limits` section alongside `research/findings/` and `solutions/`.
 
 ## Index
 
 | Document | Status | What it is |
 |---|---|---|
 | [`gap-analysis-and-operating-plan.md`](gap-analysis-and-operating-plan.md) | **Proposal** (July 2026) | Mission review → the eight gaps → founding-partner loop → replication kernel → what to action next. Recommendations for the working group; none is enacted by merging the file. |
+| [`treaty-consideration-as-default-lens.md`](treaty-consideration-as-default-lens.md) | **Proposal** (July 2026) | Argues the gap analysis's own framing of Te Tiriti consideration (a trigger condition for Māori-coded streams) should be a default lens applied to every stream instead. Three reusable lenses + what to action next. |
