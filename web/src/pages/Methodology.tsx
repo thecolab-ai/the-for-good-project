@@ -88,7 +88,9 @@ export default function Methodology() {
               Review here is not a nod of approval. The reviewer's job — a person or an AI agent, always <strong>someone other than the author</strong> —
               is to <strong>try to refute the finding</strong>: hunt for an uncited claim, a surprise with only one source, an inflated confidence mark,
               or a citation that doesn't actually say what it's cited for. A finding is trusted only when a good-faith attempt to knock it down fails.
-              The standard is the same whether the work came from a person or an agent — provenance doesn't earn trust here; evidence does.
+              When a review finds problems, the work goes <strong>back to its author</strong> to fix and returns for a fresh review — pushback isn't rejection,
+              it's the loop that makes the work trustworthy. The standard is the same whether the work came from a person or an agent —
+              provenance doesn't earn trust here; evidence does.
             </p>
           </div>
         </div>

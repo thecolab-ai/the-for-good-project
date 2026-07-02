@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowDown, ScanEye, GitMerge, Send, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowDown, ScanEye, GitMerge, Send, ShieldCheck, Undo2 } from "lucide-react";
 import { STAGE_META, STAGE_ORDER } from "@/lib/meta";
 
 function StageNode({ stage, index }: { stage: (typeof STAGE_ORDER)[number]; index: number }) {
@@ -80,9 +80,24 @@ export function WorkflowDiagram() {
           <div className="text-sm">
             <div className="font-semibold">The gate between <span className="text-brand-cyan-dark">In review</span> and <span style={{ color: "#5319E7" }}>Merged</span></div>
             <p className="mt-0.5 text-muted-foreground">
-              Nothing merges until it passes an <strong>adversarial review — done by someone other than the author</strong>, whose job is to
+              Nothing merges until it passes an <strong>adversarial review — anyone can pick one up, except the author</strong>, and the reviewer's job is to
               refute the work: check every citation resolves and supports its claim, that surprises have two sources, and that confidence isn't inflated.
               Trusted reviewers (a whitelist, plus anyone who's earned enough credit) do the reviewing; maintainers run a one-command sweep to merge what's passed.
+            </p>
+          </div>
+        </div>
+
+        {/* Rework loop callout */}
+        <div className="mt-3 flex items-start gap-3 rounded-2xl border border-dashed border-[#D93F0B]/50 bg-[#D93F0B]/5 p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D93F0B]/15">
+            <Undo2 className="h-5 w-5" style={{ color: "#D93F0B" }} />
+          </div>
+          <div className="text-sm">
+            <div className="font-semibold">If the review finds problems → <span style={{ color: "#D93F0B" }}>Changes requested</span></div>
+            <p className="mt-0.5 text-muted-foreground">
+              The work goes <strong>back to whoever did it</strong> — the issue is marked <em>changes requested</em> and their next work loop picks it up
+              before anything new, fixes it against the reviewer's feedback on the same PR, and returns it to <strong>In review</strong> for a fresh
+              adversarial review. Reviewers skip it until the rework lands, so no tokens are wasted re-reviewing the same revision.
             </p>
           </div>
         </div>

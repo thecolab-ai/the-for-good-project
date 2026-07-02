@@ -13,6 +13,7 @@ export const STATUS_META: Record<StatusKey, { label: string; color: string; text
   available: { label: "Available", color: "#0E8A16", text: "text-emerald-700" },
   claimed: { label: "Claimed", color: "#B8860B", text: "text-amber-700" },
   "in-review": { label: "In review", color: "#1D76DB", text: "text-blue-700" },
+  "changes-requested": { label: "Changes requested", color: "#D93F0B", text: "text-orange-700" },
   blocked: { label: "Blocked", color: "#B60205", text: "text-red-700" },
   done: { label: "Done", color: "#5319E7", text: "text-violet-700" },
   none: { label: "New", color: "#78716C", text: "text-stone-600" },
