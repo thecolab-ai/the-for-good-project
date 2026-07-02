@@ -138,10 +138,12 @@ Amoamo, M. & Ruwhiu, D. — [What Determines the Bottom Line for Māori Tourism 
 Snapshot as of 2 July 2026 — re-verify before citing any of this in an actual research finding, since
 this document is scoped as a process argument, not a sourced research piece in its own right.
 
-- **Section 7AA of the Oranga Tamariki Act was repealed**, effective 3 April 2025 (Royal assent 7
-  April 2025), replacing the 2019 disparity-reduction/whakapapa provision with a narrower Section 7
-  requiring only that OT's CE "develop strategic partnerships with iwi and Māori organisations."
-  ([Wikipedia — Oranga Tamariki (Repeal of Section 7AA) Amendment Act 2025](https://en.wikipedia.org/wiki/Oranga_Tamariki_(Repeal_of_Section_7AA)_Amendment_Act_2025))
+- **Section 7AA of the Oranga Tamariki Act was repealed** by the Oranga Tamariki (Repeal of Section
+  7AA) Amendment Act 2025 (2025 No 20), which passed its third reading on 3 April 2025, received Royal
+  assent on 7 April 2025, and came into force on 8 April 2025 per its own commencement clause. It
+  replaces the 2019 disparity-reduction/whakapapa provision with a narrower Section 7 requiring only
+  that OT's CE "develop strategic partnerships with iwi and Māori organisations."
+  ([New Zealand Legislation — Oranga Tamariki (Repeal of Section 7AA) Amendment Act 2025](https://www.legislation.govt.nz/act/public/2025/0020/latest/whole.html))
 - **A live privacy matter**: the Privacy Commissioner issued a public Compliance Notice to Oranga
   Tamariki on 28 May 2025, following an April 2024 independent review confirming "systemic failures in
   protecting sensitive personal information," with improvement deadlines running October 2025 through
