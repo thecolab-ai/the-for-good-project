@@ -70,6 +70,11 @@
   color: "0EA5E9"
   description: "Stakeholder / domain-expert feedback on a stream"
 
+# --- Priority: workers pick these up before the rest of the queue (see scripts/fg-common.sh) ---
+- name: "priority: high"
+  color: "B60205"
+  description: "Jump the queue — start_work.sh/review picks these up first"
+
 # --- Meta ---
 - name: "good first issue"
   color: "7057FF"
