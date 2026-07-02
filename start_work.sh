@@ -118,14 +118,14 @@ Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly:
 - NEVER fabricate a source, statistic, org, or result. No personal/identifying
   data. If a human with lived experience or authority is needed, say so.
 
-Fetching sources — escalate fast → heavy (ADR-0006; details in AGENTS.md):
-1. curl or your client's built-in web fetch/search first — most sources work.
-2. On 403 / bot-challenge / empty page / 404-in-curl-only: agent-browser read "<url>"
-   (or agent-browser open + read to render with real Chrome).
-3. Still blocked: node scripts/cloak-fetch.mjs "<url>" (stealth Chromium).
-4. Still blocked: a web-archive snapshot, or verify in a normal browser and cite it.
-A 403/bot-challenge is TOOLING, not a dead link — never call a citation dead on a
-blocked response alone, and say HOW you fetched.
+Fetching sources — one command runs the whole ladder (ADR-0006; details in AGENTS.md):
+  node scripts/fetch.mjs "<url>"            # curl → agent-browser → cloak-fetch
+  node scripts/fetch.mjs --archive "<url>"  # also snapshot to Wayback on success
+It tries each rung until one returns the real page and prints HOW it fetched; exit 4
+means genuinely DEAD (404 even in a browser), exit 3 means BLOCKED (403/bot-challenge/
+timeout — TOOLING or IP, NOT a dead link). For a fragile or date-stamped source, also
+run  node scripts/archive-cite.mjs "<url>"  and cite the snapshot beside the live link.
+Never call a citation dead on a blocked (exit 3) response, and always say HOW you fetched.
 
 Where the output goes (match the issue's stage):
 - research → research/findings/$domain/<slug>.md  using research/TEMPLATE.md

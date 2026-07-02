@@ -148,13 +148,13 @@ Read CONTRIBUTING.md and docs/METHOD.md — judge the PR against that method:
   misled by.
 
 FETCH LADDER (ADR-0006) — before flagging ANY citation as dead or unverifiable
-you MUST have escalated fast → heavy:
-1. curl or your client's built-in web fetch/search — most sources work.
-2. On 403 / bot-challenge / empty page / 404-in-curl-only: agent-browser read "<url>".
-3. Still blocked: node scripts/cloak-fetch.mjs "<url>" (stealth Chromium).
-4. Still blocked: a web-archive snapshot, or a normal browser.
-Your review must state HOW you fetched. Classify 403/bot-challenge/timeout as
-likely tooling (NOT a citation defect); 404-in-browser is genuinely dead.
+you MUST have escalated fast → heavy. One command runs the whole ladder:
+  node scripts/fetch.mjs "<url>"     # curl → agent-browser → cloak-fetch
+It prints HOW it fetched and exits 4 = genuinely DEAD (404 even in a real browser),
+exit 3 = BLOCKED (403 / bot-challenge / timeout — likely tooling or IP, NOT a citation
+defect). Only an exit-4 DEAD result justifies flagging a link dead; on exit 3, try
+  node scripts/archive-cite.mjs "<url>"  for a Wayback snapshot before you conclude.
+Your review must state HOW you fetched.
 
 Be fair but hard to convince — someone will make a real decision based on this.
 
@@ -207,11 +207,11 @@ Judge it on:
 - Scope: self-contained and sensible.
 
 FETCH LADDER (ADR-0006) — before flagging ANY link as dead or unverifiable you
-MUST have escalated fast → heavy: 1) curl or built-in web fetch/search;
-2) agent-browser read "<url>"; 3) node scripts/cloak-fetch.mjs "<url>";
-4) a web-archive snapshot or a normal browser. State HOW you fetched. Classify
-403/bot-challenge/timeout as likely tooling (NOT a defect); 404-in-browser is
-genuinely dead.
+MUST have escalated fast → heavy. One command runs the whole ladder:
+  node scripts/fetch.mjs "<url>"   (curl → agent-browser → cloak-fetch)
+It prints HOW it fetched: exit 4 = genuinely DEAD (404 even in a browser), exit 3 =
+BLOCKED (403/bot-challenge/timeout — tooling, NOT a defect). On exit 3, try
+node scripts/archive-cite.mjs "<url>" before concluding. State HOW you fetched.
 
 GOVERNANCE GUARD: if this PR changes how the project itself works — governance,
 an ADR's status, the pipeline/gates, CONTRIBUTING, the review/merge rules, or
