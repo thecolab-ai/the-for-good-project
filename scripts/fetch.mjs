@@ -4,11 +4,16 @@
 // Fetching a source (to read it, or to verify a citation) should never be raw
 // `curl`: a big share of the official NZ sites we cite return 403 to non-browser
 // clients or 404 to curl while resolving fine in a real browser (ADR-0006). This
-// runs the whole ladder and tells you HOW it fetched:
+// runs the browser side of the ladder and tells you HOW it fetched:
 //
 //   1. plain HTTP        (fast; a browser-shaped User-Agent)
 //   2. agent-browser     (real Chrome: JS, redirects, cookies, most WAFs)
 //   3. cloak-fetch.mjs   (stealth Chromium: the gates the others can't clear)
+//
+// If your agent harness has a built-in WebFetch/WebSearch tool, try THAT between
+// plain curl and reaching for this script — it's more capable than curl and needs
+// no browser. This is a subprocess and can't call that tool, so it only runs curl +
+// the browser rungs; the WebFetch rung is yours to run (see AGENTS.md).
 //
 // It also CLASSIFIES a failure the way the review gate must (ADR-0006 §2):
 //   - 404/410 everywhere, browser included  → genuinely DEAD (a real defect)

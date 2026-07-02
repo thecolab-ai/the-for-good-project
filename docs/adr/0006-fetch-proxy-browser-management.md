@@ -95,6 +95,10 @@ per-site rules, and any caching) is a follow-up, not fixed by this ADR.
   tooling/IP, not a defect). The researcher and reviewer prompts in
   `start_work.sh` / `review_work.sh` and [`AGENTS.md`](../../AGENTS.md) now point
   at this command and require stating how a source was fetched.
+- **Ladder order** — curl → the harness's built-in WebFetch/WebSearch tool →
+  `scripts/fetch.mjs` (real Chrome → stealth Chromium) → archive snapshot. The
+  WebFetch rung is called by the agent, not by `fetch.mjs` (a subprocess can't
+  invoke a harness tool), so it lives in the prompt guidance.
 - **Archive on cite (§3)** — [`scripts/archive-cite.mjs`](../../scripts/archive-cite.mjs)
   finds a recent Wayback snapshot (CDX API) or captures a fresh one and prints
   the snapshot URL; `fetch.mjs --archive` snapshots on success.

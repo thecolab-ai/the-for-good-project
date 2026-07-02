@@ -116,24 +116,28 @@ rather than waiting.
   protection, not a dead link.** Many govt sites (digital.govt.nz, charities.govt.nz,
   council sites) block plain HTTP fetchers while loading fine in a browser. Don't mark
   such a citation unverifiable on a blocked response alone — escalate through the fetch
-  ladder (fast → heavy).
-
-  **One command runs the whole ladder — prefer it:**
-  ```
-  node scripts/fetch.mjs "<url>"            # curl → agent-browser → cloak-fetch, in order
-  node scripts/fetch.mjs --archive "<url>"  # also capture a Wayback snapshot on success
-  ```
-  It tries each rung until one returns the real page, prints **how** it fetched, and
-  classifies any failure the way the review gate must: exit `4` = genuinely DEAD (404
-  even in a real browser), exit `3` = BLOCKED (403 / bot-challenge / timeout — tooling or
-  IP, **not** a citation defect). One-time setup for the browser rungs:
-  `npm install && npx cloakbrowser install`.
-
-  The individual rungs, if you want to drive one directly:
-  1. **Fast fetch** — `curl`, or your client's built-in WebFetch/WebSearch. Most sources work.
-  2. **agent-browser** — real-Chrome fetch ([vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser)): `agent-browser open "<url>"` then `agent-browser get text body` (there is **no** `read` subcommand). Handles most blocked pages.
-  3. **CloakBrowser** — stealth fallback: `node scripts/cloak-fetch.mjs "<url>"` — a humanized, anti-detection Chromium that clears many gates the others can't (verified on charities.govt.nz).
+  ladder (fast → heavy):
+  1. **Fast fetch** — `curl`, or your client's quick HTTP. Most sources work.
+  2. **Your harness's built-in WebFetch / WebSearch tool** — more capable than raw
+     `curl` (proper redirects, its own egress, and it renders/extracts for you), and it
+     needs no browser. Try it before reaching for a browser; WebSearch can also surface a
+     cached or alternate copy of a blocked page.
+  3. **Browser rungs — one command:**
+     ```
+     node scripts/fetch.mjs "<url>"            # real Chrome (agent-browser) → stealth Chromium (cloak-fetch)
+     node scripts/fetch.mjs --archive "<url>"  # also capture a Wayback snapshot on success
+     ```
+     It also retries `curl` first, tries each browser rung until one returns the real
+     page, prints **how** it fetched, and classifies any failure the way the review gate
+     must: exit `4` = genuinely DEAD (404 even in a real browser), exit `3` = BLOCKED
+     (403 / bot-challenge / timeout — tooling or IP, **not** a citation defect). One-time
+     setup: `npm install && npx cloakbrowser install`. (`fetch.mjs` is a subprocess, so it
+     can't call your WebFetch tool — that rung is yours to run at step 2.)
   4. Still blocked? Capture / reuse a web-archive snapshot with `node scripts/archive-cite.mjs "<url>"` and cite that, or verify in a normal browser — rather than flagging it dead. A 403/bot-challenge is tooling, not a dead link; always say *how* you fetched.
+
+  To drive the browser rungs directly instead of via `fetch.mjs`: `agent-browser open
+  "<url>"` then `agent-browser get text body` (there is **no** `read` subcommand), then
+  `node scripts/cloak-fetch.mjs "<url>"` as the stealth fallback.
 
   **Archive on cite:** for a fragile, bot-protected, or date-stamped source, also run
   `node scripts/archive-cite.mjs "<url>"` and record the returned snapshot URL beside the

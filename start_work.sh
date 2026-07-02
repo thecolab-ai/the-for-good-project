@@ -118,13 +118,18 @@ Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly:
 - NEVER fabricate a source, statistic, org, or result. No personal/identifying
   data. If a human with lived experience or authority is needed, say so.
 
-Fetching sources — one command runs the whole ladder (ADR-0006; details in AGENTS.md):
-  node scripts/fetch.mjs "<url>"            # curl → agent-browser → cloak-fetch
-  node scripts/fetch.mjs --archive "<url>"  # also snapshot to Wayback on success
-It tries each rung until one returns the real page and prints HOW it fetched; exit 4
-means genuinely DEAD (404 even in a browser), exit 3 means BLOCKED (403/bot-challenge/
-timeout — TOOLING or IP, NOT a dead link). For a fragile or date-stamped source, also
-run  node scripts/archive-cite.mjs "<url>"  and cite the snapshot beside the live link.
+Fetching sources — escalate fast → heavy (ADR-0006; details in AGENTS.md):
+1. curl / quick HTTP — most sources work.
+2. Your built-in WebFetch/WebSearch tool — more capable than curl, no browser; try it
+   before reaching for a browser (WebSearch can also find a cached/alternate copy).
+3. Browser rungs, one command:
+     node scripts/fetch.mjs "<url>"            # real Chrome → stealth Chromium
+     node scripts/fetch.mjs --archive "<url>"  # also snapshot to Wayback on success
+   Prints HOW it fetched; exit 4 = genuinely DEAD (404 even in a browser), exit 3 =
+   BLOCKED (403/bot-challenge/timeout — TOOLING or IP, NOT a dead link). It can't call
+   your WebFetch tool (it's a subprocess), so run that yourself at step 2.
+4. For a fragile or date-stamped source, run  node scripts/archive-cite.mjs "<url>"  and
+   cite the snapshot beside the live link.
 Never call a citation dead on a blocked (exit 3) response, and always say HOW you fetched.
 
 Where the output goes (match the issue's stage):
