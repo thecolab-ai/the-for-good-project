@@ -43,7 +43,7 @@ issue. Runs your agent on it following the project method, and moves it to
 
 ```bash
 ./start_work.sh                 # work the queue until it's empty
-AGENT=claude ./start_work.sh    # use `claude -p` instead of the default `codex`
+AGENT=codex ./start_work.sh     # use `codex exec` instead of the default `claude`
 STAGE=research ./start_work.sh  # only pick up research-stage issues
 MAX=1 ./start_work.sh           # one issue, then stop
 DRY_RUN=1 ./start_work.sh       # show what it would do, change nothing

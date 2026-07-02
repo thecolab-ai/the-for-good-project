@@ -13,13 +13,13 @@
 #
 # Usage:
 #   ./start_work.sh                 # work issues until the queue is empty
-#   AGENT=claude ./start_work.sh    # use `claude -p` instead of `codex`
+#   AGENT=codex ./start_work.sh     # use `codex exec` instead of the default `claude`
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
 #   MODEL=gpt-5.5 ./start_work.sh   # override the agent model
 #
-# Env: AGENT(codex|claude) MAX STAGE POLL_SECONDS DRY_RUN MODEL AGENT_TIMEOUT
+# Env: AGENT(claude|codex, default claude) MAX STAGE POLL_SECONDS DRY_RUN MODEL AGENT_TIMEOUT
 #      FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
