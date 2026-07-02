@@ -84,7 +84,9 @@ synthesis_prompt() {  # $1 root, $2 overview path, $3 evidence list, $4 branch, 
 integrate what the new findings add or change. You MUST preserve, verbatim:
 the existing 'steward:' frontmatter value, the entire 'Feedback log' table,
 and every dated entry under 'Where this is heading' (append; never rewrite
-history). Only the synthesis sections change."
+history). Only the synthesis sections change. You may update the candidate
+outcomes under 'What we could do about it' with what the new evidence adds,
+but NEVER override the steward's prior edits or decisions there."
   else
     update_note="This is the FIRST synthesis for this stream: create $path from
 streams/TEMPLATE.md. Leave 'steward:' blank for a maintainer to claim."
@@ -122,6 +124,13 @@ exactly. Rules:
 - "What we're not sure about yet": surface gaps, contradictions BETWEEN
   findings, and load-bearing single-sourced claims across the stream — this
   section is where your cross-document view earns its keep.
+- "What we could do about it": draft 2-4 CANDIDATE OUTCOMES derived STRICTLY
+  from the merged evidence — no invented facts, no outside solutions imported.
+  Each option links the findings that support it (confidence carried) and
+  marks effort for a small volunteer team honestly (Small/Medium/Large).
+  Present them NEUTRALLY: no ranking, no recommendation, no "we should".
+  These are options for the steward — choosing between them (or rejecting
+  all of them) is the steward's direction decision, never yours.
 - If the evidence is too thin or contradictory for a meaningful synthesis,
   SAY SO plainly in the overview ("needs more research on X") — that is a
   valid and useful draft.

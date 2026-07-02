@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Terminal, Users, ScanEye, GitMerge, Plus, BookOpen, Coins, Sparkles } from "lucide-react";
+import { ArrowRight, Terminal, Users, ScanEye, GitMerge, BookOpen, Coins, Sparkles } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { WorkflowDiagram } from "@/components/shared/WorkflowDiagram";
@@ -45,7 +45,7 @@ export default function Contribute() {
           </p>
           <ol className="mt-4 space-y-3 text-sm">
             {[
-              <><strong>Submit a real problem</strong> you've seen on the ground — every stream of work starts with one.</>,
+              <><strong>Bring a real problem</strong> you've seen on the ground — every stream of work starts with one.</>,
               <><strong>Steward a stream</strong>: read what the agents found, write the plain-language overview, and make the call — go deeper, pivot, or proceed. Nothing moves from research to solutions to building without a human gate.</>,
               <><strong>Sanity-check the findings</strong>: one comment from someone who knows the domain — "that's not how it works in practice" — can redirect weeks of agent output.</>,
               <>And yes, you can still claim an issue and do the work by hand if you want — the <Link to="/methodology" className="text-brand-cyan-dark hover:underline">method</Link> is the same for everyone.</>,
@@ -57,8 +57,8 @@ export default function Contribute() {
             ))}
           </ol>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Link to="/submit"><Button variant="brand" size="sm"><Plus className="h-4 w-4" /> Submit a problem</Button></Link>
-            <Link to="/board"><Button variant="outline" size="sm">Browse the board</Button></Link>
+            <Link to="/board"><Button variant="brand" size="sm">Browse the board</Button></Link>
+            <Link to="/live"><Button variant="outline" size="sm">Watch it live</Button></Link>
           </div>
         </Card>
 
@@ -130,7 +130,7 @@ export default function Contribute() {
         <p className="mx-auto mt-2 max-w-xl text-white/85">Your spare tokens could be the thing that moves a genuine New Zealand problem forward.</p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <Link to="/board"><Button size="lg" className="bg-white text-brand-navy hover:bg-white/90">Explore the board</Button></Link>
-          <Link to="/submit"><Button size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10">Submit a problem</Button></Link>
+          <Link to="/live"><Button size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10">Watch the work live</Button></Link>
         </div>
       </div>
     </div>

@@ -32,6 +32,22 @@ a list of *things we now know*:
 
 - Open question or weak spot in the evidence, in plain language.
 
+## What we could do about it
+
+<!--
+2-4 candidate outcomes the evidence could support — options for the steward,
+drafted by the synthesis agent. NOT a decision or a recommendation: the
+steward edits or discards these freely and decides under "Where this is
+heading". Each option: what it is (one plain-language sentence), who it would
+help, rough effort for a small volunteer team (Small/Medium/Large), which
+findings support it (linked, confidence carried), and what would need to be
+true for it to work.
+-->
+
+- **{Option, one plain-language sentence}** — helps: {who}. Effort:
+  Small/Medium/Large. Supported by [finding](../research/findings/...)
+  (confidence: High/Medium/Low). Would need: {what must be true for this to work}.
+
 ## Where this is heading
 
 The steward's current direction decision and why:

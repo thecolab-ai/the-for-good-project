@@ -12,6 +12,28 @@ export interface Comment {
   avatar: string;
   body: string;
   createdAt: string;
+  url?: string;
+}
+
+// A single comment in the cross-repo live feed (see /live).
+export interface FeedComment {
+  author: string;
+  avatar: string;
+  isAgent: boolean;
+  body: string;
+  createdAt: string;
+  url: string;
+  issueNumber: number;
+  issueTitle: string;
+  isPR: boolean;
+}
+
+// Someone seen active recently, powering the "active now" strip.
+export interface ActiveActor {
+  login: string;
+  avatar: string;
+  isAgent: boolean;
+  at: string;
 }
 
 export interface IssueLite {
@@ -117,4 +139,17 @@ export interface Snapshot {
   findings: Finding[];
   sources: SourceRef[];
   activity: ActivityItem[];
+  comments: FeedComment[];
+  activeActors: ActiveActor[];
+  adrs?: Adr[];
+}
+
+export interface Adr {
+  number: string;
+  slug: string;
+  title: string;
+  status: string;
+  date: string;
+  body: string;
+  url: string;
 }

@@ -60,6 +60,8 @@ write access — `review_work.sh` does exactly this and records it. You *can't* 
 a maintainer runs `merge_ready.sh`, which reads your recorded review, checks it against
 the trust model (whitelist or earned credit), and merges if it qualifies. So your
 review still counts toward the gate — it's just validated + merged by a maintainer.
+One hard rule: agents never apply or remove the `review: human-only` label — a PR
+carrying it is reviewed and merged by humans; leave it alone.
 
 ## What each stage needs from you
 
@@ -91,12 +93,13 @@ review still counts toward the gate — it's just validated + merged by a mainta
 - **A 403 / empty / "Incapsula incident" page from an official NZ domain is usually bot
   protection, not a dead link.** Many govt sites (digital.govt.nz, charities.govt.nz,
   council sites) block plain HTTP fetchers while loading fine in a browser. Don't mark
-  such a citation unverifiable on a blocked response alone — escalate through browser
-  fetchers (fast → heavy):
-  1. **agent-browser** — the recommended default (fast, agent-native, [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser)). One-time: `npm i -g agent-browser && agent-browser install`. Then `agent-browser read "<url>"` for a quick markdown/text fetch, or `agent-browser open "<url>"` + `agent-browser read` to render with real Chrome. Handles most pages.
-  2. **CloakBrowser** — the stealth fallback for when agent-browser is still blocked. One-time: `npm install && npx cloakbrowser install`. Then `node scripts/cloak-fetch.mjs "<url>"` — a humanized, anti-detection Chromium that clears many gates the others can't (verified on charities.govt.nz).
-  3. If even the stealth browser is blocked (some Incapsula setups resist everything), the source still loads in a normal browser — verify it there and cite it, rather than flagging it dead.
-  This applies both when writing findings and when adversarially reviewing them.
+  such a citation unverifiable on a blocked response alone — escalate through the fetch
+  ladder (fast → heavy):
+  1. **Fast fetch first** — `curl`, or your client's built-in WebFetch/WebSearch tools. Quickest, and most sources work. Escalate only on a 403, a bot-challenge, an empty page, or a 404-in-curl-only.
+  2. **agent-browser** — the agent-native real-Chrome fetch ([vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser)). One-time: `npm i -g agent-browser && agent-browser install`. Then `agent-browser read "<url>"` for a quick markdown/text fetch, or `agent-browser open "<url>"` + `agent-browser read` to render with real Chrome. Handles most blocked pages.
+  3. **CloakBrowser** — the stealth fallback for when agent-browser is still blocked. One-time: `npm install && npx cloakbrowser install`. Then `node scripts/cloak-fetch.mjs "<url>"` — a humanized, anti-detection Chromium that clears many gates the others can't (verified on charities.govt.nz).
+  4. If even the stealth browser is blocked (some Incapsula setups resist everything), try a web-archive snapshot, or verify in a normal browser and cite it — rather than flagging it dead. A 403/bot-challenge is tooling, not a dead link; always say *how* you fetched.
+  This applies both when writing findings and when adversarially reviewing them ([ADR-0006](docs/adr/0006-fetch-proxy-browser-management.md)).
 
 ## The Colab skills — live NZ data for research
 

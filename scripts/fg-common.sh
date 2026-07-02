@@ -45,6 +45,9 @@ preflight() {
   done
   if [ "$RUNS_AGENT" = 1 ]; then
     command -v "$AGENT" >/dev/null 2>&1 || { err "agent '$AGENT' not on PATH (set AGENT=codex|claude|hermes)"; missing=1; }
+    if [ "$AGENT_TIMEOUT" != 0 ] && ! command -v timeout >/dev/null 2>&1 && ! command -v gtimeout >/dev/null 2>&1; then
+      warn "neither 'timeout' nor 'gtimeout' on PATH — AGENT_TIMEOUT=$AGENT_TIMEOUT will be IGNORED and a hung agent will wedge this runner (macOS: brew install coreutils)."
+    fi
   fi
   gh auth status >/dev/null 2>&1 || { err "gh is not authenticated — run: gh auth login"; missing=1; }
   [ "$missing" = 0 ] || exit 1
@@ -138,9 +141,11 @@ review_feedback() {  # $1 = pr number
 # their issue (a stream ROOT must stay open for the life of the stream).
 # The fallback skips PRs that close some OTHER issue: child PRs carry
 # "Part of #<root>" too, and must not be mistaken for the root's framing PR.
+# Newest first — default order is oldest-first, which misses the just-opened
+# PR once >50 PRs are open.
 pr_for_issue() {
   local pr
-  pr="$(gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
+  pr="$(gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
     --jq ".data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.nodes|map(.number)|index($1)) | .number" | head -1)"
   [ -n "$pr" ] && { echo "$pr"; return 0; }
   local cands c
@@ -188,8 +193,13 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old
 # run_agent <prompt> [dir]  -> streams agent output to stdout; runs in [dir]
 # (usually a task worktree), falling back to the clone.
 run_agent() {
-  local prompt="$1" dir="${2:-$REPO_DIR}" tmo=""
-  if [ "$AGENT_TIMEOUT" != 0 ] && command -v timeout >/dev/null 2>&1; then tmo="timeout ${AGENT_TIMEOUT}s"; fi
+  local prompt="$1" dir="${2:-$REPO_DIR}" tmo="" t
+  # macOS ships no 'timeout'; coreutils installs it as 'gtimeout'.
+  if [ "$AGENT_TIMEOUT" != 0 ]; then
+    for t in timeout gtimeout; do
+      command -v "$t" >/dev/null 2>&1 && { tmo="$t ${AGENT_TIMEOUT}s"; break; }
+    done
+  fi
   case "$AGENT" in
     codex)
       $tmo codex exec --cd "$dir" --skip-git-repo-check \

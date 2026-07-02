@@ -1,7 +1,8 @@
 # Build the site's data snapshot from the repo's issues/PRs/findings, build the
 # Vite app, and deploy to GitHub Pages. Runs on every push to the site or
-# research, whenever an issue changes, on a 30-minute schedule, and on demand —
-# so the public dashboard stays fresh without any client-side API calls.
+# research, whenever an issue or comment changes, on a 30-minute schedule, and
+# on demand — so the public dashboard (and its live feed) stays fresh without
+# any client-side API calls.
 name: Deploy site
 
 on:
@@ -10,6 +11,13 @@ on:
     paths: ["web/**", "research/**", ".github/workflows/pages.yml"]
   issues:
     types: [opened, edited, deleted, closed, reopened, labeled, unlabeled, assigned, unassigned]
+  # Rebuild when someone comments so the live feed stays near-real-time.
+  issue_comment:
+    types: [created, edited, deleted]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
@@ -19,9 +27,13 @@ permissions:
   pages: write
   id-token: write
 
+# cancel-in-progress must stay FALSE: with it true, every comment during a busy
+# spell cancels the in-progress build before deploy, so the site only updates
+# when the repo goes quiet. False lets the current run finish and coalesces the
+# burst into one queued rebuild — fresher AND cheaper.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:

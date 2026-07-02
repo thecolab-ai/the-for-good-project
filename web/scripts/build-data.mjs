@@ -116,6 +116,7 @@ async function main() {
           avatar: c.user?.avatar_url || "",
           body: c.body || "",
           createdAt: c.created_at,
+          url: c.html_url,
         }));
       } catch { /* ignore */ }
     }
@@ -197,6 +198,26 @@ async function main() {
   };
   walk(findingsDir);
 
+  // --- ADRs (architecture decision records) from disk ---
+  const adrDir = path.join(REPO_ROOT, "docs", "adr");
+  const adrs = [];
+  if (existsSync(adrDir)) {
+    for (const entry of readdirSync(adrDir).sort()) {
+      if (!entry.endsWith(".md") || ["README.md", "TEMPLATE.md"].includes(entry)) continue;
+      const raw = readFileSync(path.join(adrDir, entry), "utf8");
+      adrs.push({
+        number: (raw.match(/#\s*ADR-(\d+)/) || [])[1] || (entry.match(/^(\d+)/) || [])[1] || "",
+        slug: entry.replace(/\.md$/, ""),
+        title: (raw.match(/^#\s*ADR-\d+:\s*(.+)$/m) || [])[1]?.trim() || entry.replace(/\.md$/, ""),
+        status: (raw.match(/\*\*Status:\*\*\s*(.+)$/m) || [])[1]?.trim() || "",
+        date: (raw.match(/\*\*Date:\*\*\s*(.+)$/m) || [])[1]?.trim() || "",
+        body: raw,
+        url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/docs/adr/${entry}`,
+      });
+    }
+    adrs.sort((a, b) => a.number.localeCompare(b.number));
+  }
+
   // --- leaderboard ---
   const people = new Map();
   const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
@@ -269,6 +290,67 @@ async function main() {
       meta: i.isPR ? (i.merged ? "merged" : i.state) : i.stage !== "none" ? i.stage : i.state,
     }));
 
+  // --- live comment feed + active actors ---
+  // A flat, newest-first stream of comments across every issue and PR, plus a
+  // short list of who's been active recently — powering the /live feed and the
+  // dashboard's "Live activity" widget. Fully static: the client polls this
+  // snapshot, and a new comment triggers a rebuild (see pages.yml).
+  //
+  // Every active contributor on this project is currently an agent — humans are
+  // the judgement layer (they review and steward), while the volume of commits,
+  // comments and PRs is produced by agents running on contributors' own tokens.
+  // So we simply treat all non-bookkeeping-bot actors as agents. When humans
+  // start participating directly (commenting/committing as themselves), restore
+  // per-actor detection here (a [bot] check + an AGENT_LOGINS allowlist).
+  const isAgent = (login) => !!login && !BOTS.has(login);
+
+  // Strip markdown/URLs down to a readable one-line snippet for the feed.
+  const snippet = (s) =>
+    (s || "")
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[#>*`_~|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240);
+
+  const comments = [];
+  for (const it of issues) {
+    if (!it.commentsList) continue;
+    for (const c of it.commentsList) {
+      if (BOTS.has(c.author)) continue; // drop label/dependency bookkeeping noise
+      comments.push({
+        author: c.author,
+        avatar: c.avatar,
+        isAgent: isAgent(c.author),
+        body: snippet(c.body),
+        createdAt: c.createdAt,
+        url: c.url || it.url,
+        issueNumber: it.number,
+        issueTitle: it.title,
+        isPR: it.isPR,
+      });
+    }
+  }
+  comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const recentComments = comments.slice(0, 60);
+
+  // Distinct actors seen recently (comments + issue/PR updates), newest first.
+  const actorSeen = new Map();
+  const noteActor = (login, avatar, at) => {
+    if (!login || BOTS.has(login) || !at) return;
+    const t = new Date(at).getTime();
+    if (Number.isNaN(t)) return;
+    const cur = actorSeen.get(login);
+    if (!cur || t > new Date(cur.at).getTime()) {
+      actorSeen.set(login, { login, avatar: avatar || cur?.avatar || "", isAgent: isAgent(login), at: new Date(at).toISOString() });
+    }
+  };
+  for (const c of comments) noteActor(c.author, c.avatar, c.createdAt);
+  for (const it of issues) noteActor(it.author?.login, it.author?.avatar, it.updatedAt);
+  const activeActors = [...actorSeen.values()].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 12);
+
   const snapshot = {
     generatedAt: new Date().toISOString(),
     repo: { owner: OWNER, name: NAME, url: repoMeta.html_url, description: repoMeta.description || "", homepage: repoMeta.homepage || "" },
@@ -294,11 +376,14 @@ async function main() {
     findings,
     sources,
     activity,
+    comments: recentComments,
+    activeActors,
+    adrs,
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(path.join(OUT_DIR, "snapshot.json"), JSON.stringify(snapshot, null, 2));
-  console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources.`);
+  console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources, ${recentComments.length} recent comments, ${activeActors.length} active actors.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

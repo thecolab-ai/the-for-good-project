@@ -1,16 +1,18 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, LayoutGrid, List, Inbox } from "lucide-react";
+import { Search, LayoutGrid, List, Inbox, Network } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { IssueCard } from "@/components/shared/IssueCard";
+import { ChainTree } from "@/components/shared/ChainTree";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STAGE_META, STAGE_ORDER, STATUS_META, domainLabel } from "@/lib/meta";
 import type { IssueLite, Stage } from "@/lib/types";
+import { buildStreamChains, chainPrCount, chainSize, type ChainNode } from "@/lib/lineage";
 
 export default function Board() {
   const { data, error, loading } = useSnapshot();
@@ -18,7 +20,7 @@ export default function Board() {
   const [q, setQ] = useState("");
   const [domain, setDomain] = useState("all");
   const [status, setStatus] = useState("all");
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list" | "chains">("board");
   const stageParam = params.get("stage") || "all";
 
   const domains = useMemo(() => {
@@ -27,16 +29,24 @@ export default function Board() {
     return [...s];
   }, [data]);
 
+  const streamChains = useMemo(() => (data ? buildStreamChains(data.issues) : []), [data]);
+
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const filtered = data.issues.filter((i) => !i.isPR && i.state === "open").filter((i) => {
+  const matchesFilters = (i: IssueLite) => {
     if (stageParam !== "all" && i.stage !== stageParam) return false;
     if (domain !== "all" && i.domain !== domain) return false;
     if (status !== "all" && i.status !== status) return false;
     if (q && !i.title.toLowerCase().includes(q.toLowerCase()) && !String(i.number).includes(q)) return false;
     return true;
-  });
+  };
+
+  const filtered = data.issues.filter((i) => !i.isPR && i.state === "open").filter(matchesFilters);
+  const chainMatches = (node: ChainNode): boolean => matchesFilters(node.issue) || node.children.some(chainMatches);
+  const visibleStreamChains = streamChains
+    .map((group) => ({ ...group, roots: group.roots.filter(chainMatches) }))
+    .filter((group) => group.roots.length > 0);
 
   const setStage = (s: string) => {
     const next = new URLSearchParams(params);
@@ -77,10 +87,36 @@ export default function Board() {
         <div className="flex rounded-md border border-border">
           <Button variant={view === "board" ? "secondary" : "ghost"} size="icon" onClick={() => setView("board")} aria-label="Board view"><LayoutGrid className="h-4 w-4" /></Button>
           <Button variant={view === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setView("list")} aria-label="List view"><List className="h-4 w-4" /></Button>
+          <Button variant={view === "chains" ? "secondary" : "ghost"} size="icon" onClick={() => setView("chains")} aria-label="Problem chains view"><Network className="h-4 w-4" /></Button>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {view === "chains" ? (
+        visibleStreamChains.length === 0 ? (
+          <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
+        ) : (
+          <div className="space-y-5">
+            {visibleStreamChains.map((group) => {
+              const issueCount = group.roots.reduce((total, root) => total + chainSize(root), 0);
+              const prCount = group.roots.reduce((total, root) => total + chainPrCount(root), 0);
+              return (
+                <section key={group.stream} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
+                    <span className="font-serif text-base font-semibold">Stream #{group.stream}</span>
+                    <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{issueCount} issue{issueCount === 1 ? "" : "s"}</span>
+                    {prCount > 0 ? (
+                      <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{prCount} PR{prCount === 1 ? "" : "s"}</span>
+                    ) : null}
+                  </div>
+                  <div className="space-y-3">
+                    {group.roots.map((root) => <ChainTree key={root.issue.number} root={root} matches={matchesFilters} />)}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )
+      ) : filtered.length === 0 ? (
         <EmptyState icon={Inbox} title="Nothing matches">Try clearing a filter, or submit a new problem.</EmptyState>
       ) : view === "list" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
