@@ -89,6 +89,10 @@ export default function Partners() {
           </Card>
         ))}
       </div>
+      <p className="mt-4 text-sm text-muted-foreground">
+        We even track our partnerships in the open — behind a strict consent gate. Until you say otherwise, you appear as a role and sector only, never a name.{" "}
+        <a href={`${repo}/blob/main/partners/README.md`} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 hover:text-foreground">How that works</a>.
+      </p>
 
       {/* The ask */}
       <div className="mt-12 rounded-3xl border border-border bg-card p-6 md:p-8">

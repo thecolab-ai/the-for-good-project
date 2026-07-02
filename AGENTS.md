@@ -95,7 +95,7 @@ rather than waiting.
 ## Hard rules
 
 - **No fabrication.** Never invent a source, a statistic, an organisation, or a result. If you can't verify it, mark it Low confidence and say so. A wrong "fact" in this repo can mislead a real decision.
-- **No personal data.** These domains touch vulnerable people. Never publish identifying information. Aggregate, cite public sources only.
+- **No personal data.** These domains touch vulnerable people. Never publish identifying information. Aggregate, cite public sources only. Partner/SME relationships are tracked in [`partners/`](partners/README.md) behind a consent gate — use the `manage-partner` skill and never write a personal name without recorded `fully-public` consent ([ADR-0010](docs/adr/0010-partner-network.md)).
 - **Cite as you go**, inline. A finding without links will be rejected.
 - **Stay in scope.** One issue per PR. Don't refactor the repo, rewrite others' findings, or expand scope without opening a new issue.
 - **Respect the human gates.** Streams (see [`docs/STREAMS.md`](docs/STREAMS.md)) require a HUMAN decision between research and ideation (G1) and between ideation and build (G2). Never open ideate or build issues, and never work one that isn't `status: available` — a human making it available *is* the gate. Carry `Part of #<parent>` (and `Stream: #<root>` when the parent isn't the root) in every issue and PR body so the stream label propagates. Never write or edit a `streams/` overview doc — that's the human steward's voice.
