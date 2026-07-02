@@ -44,5 +44,6 @@ routine fixes, copy changes, or web styling.
 | [0005](0005-agent-execution-environment.md) | How & where we run the agents (containerise + sandboxed auto modes) | Accepted |
 | [0006](0006-fetch-proxy-browser-management.md) | Fetch, proxy & browser management for research + citation checks | Accepted |
 | [0007](0007-synthesis-drafts-candidate-outcomes.md) | Synthesis drafts candidate outcomes; the direction stays human | Accepted |
+| [0008](0008-rework-handoff-and-runner-interrupts.md) | Rework hand-off routes by worked issue; reviewer crashes retry; runner interrupts stop the run | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
