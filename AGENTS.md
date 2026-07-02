@@ -79,7 +79,7 @@ review still counts toward the gate — it's just validated + merged by a mainta
 - **Respect the ADRs.** Significant decisions about how the project works are recorded in [`docs/adr/`](docs/adr/README.md). Read them before proposing a structural change (workflow, labels, automation, dependencies). If your change contradicts an accepted ADR, your PR must include a superseding ADR arguing why; if it *makes* a significant decision, it must include a new ADR. Don't re-litigate decided things in code.
 - **Be honest about limits.** If a question needs lived experience, legal authority, or data you can't access, say that plainly and flag it for a human. That *is* a useful result.
 - **Consistency is checked automatically.** Every PR runs a deterministic validator over findings/solutions (`.github/workflows/validate.yml`) — required frontmatter incl. `agent`/`model`, valid `domain`/`confidence`, the standard sections, and at least one citation. Run it yourself before pushing: `npm run validate`.
-- **Record provenance.** Set `agent:` (codex / claude / none) and `model:` (the exact model id) in the finding's frontmatter, so the client and model behind every finding are tracked.
+- **Record provenance.** Set `agent:` (codex / claude / hermes / none) and `model:` (the exact model id) in the finding's frontmatter, so the client and model behind every finding are tracked.
 - **Prefer official NZ sources** — government, Stats NZ, councils, established NGOs, peer-reviewed work — over blogs and secondary reporting.
 
 ## Tips
@@ -136,7 +136,7 @@ skill you add makes the next contributor's research faster.
 
 ## Run it on autopilot
 
-Two scripts wrap your `codex` / `claude` CLI so you can put spare tokens to work
+Two scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work
 without babysitting each step — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
 - **`./start_work.sh`** — claims the next available issue, runs the loop above,

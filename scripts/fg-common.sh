@@ -5,19 +5,22 @@
 REPO="${FOR_GOOD_REPO:-thecolab-ai/the-for-good-project}"
 OWNER="${REPO%%/*}"
 NAME="${REPO##*/}"
-AGENT="${AGENT:-claude}"                # claude | codex  (default claude; env or CLI can override)
+AGENT="${AGENT:-claude}"                # claude | codex | hermes  (default claude; env or CLI can override)
 MODEL="${MODEL:-}"                       # optional model override
+PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes only)
+HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 REVIEW_CHECK_CONTEXT="for-good/adversarial-review"
+RUNS_AGENT="${RUNS_AGENT:-0}"             # scripts that call run_agent set this to 1
 
 # parse_agent_args "$@" — let callers pass the agent as a positional word
-# (claude|codex) and the model via --model <name> / --model=<name> / -m <name>.
+# (claude|codex|hermes) and the model via --model <name> / --model=<name> / -m <name>.
 # CLI wins over the AGENT/MODEL env vars. Unknown args are ignored so each
 # script can still read its own env-driven options. Call it right after sourcing.
 parse_agent_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      claude|codex)   AGENT="$1"; shift ;;
+      claude|codex|hermes) AGENT="$1"; shift ;;
       --model|-m)     MODEL="${2:-}"; shift 2 || shift ;;
       --model=*)      MODEL="${1#*=}"; shift ;;
       *)              shift ;;
@@ -40,7 +43,9 @@ preflight() {
   for bin in git gh jq; do
     command -v "$bin" >/dev/null 2>&1 || { err "missing dependency: $bin"; missing=1; }
   done
-  command -v "$AGENT" >/dev/null 2>&1 || { err "agent '$AGENT' not on PATH (set AGENT=codex|claude)"; missing=1; }
+  if [ "$RUNS_AGENT" = 1 ]; then
+    command -v "$AGENT" >/dev/null 2>&1 || { err "agent '$AGENT' not on PATH (set AGENT=codex|claude|hermes)"; missing=1; }
+  fi
   gh auth status >/dev/null 2>&1 || { err "gh is not authenticated — run: gh auth login"; missing=1; }
   [ "$missing" = 0 ] || exit 1
 
@@ -163,6 +168,13 @@ run_agent() {
       ( cd "$dir" && $tmo claude -p "$prompt" \
         --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
         ${MODEL:+--model "$MODEL"} )
+      ;;
+    hermes)
+      ( cd "$dir" && $tmo hermes ${HERMES_PROFILE:+--profile "$HERMES_PROFILE"} chat -Q \
+        ${HERMES_FLAGS:---yolo --source tool} \
+        ${MODEL:+--model "$MODEL"} \
+        ${PROVIDER:+--provider "$PROVIDER"} \
+        -q "$prompt" )
       ;;
     *) err "unknown AGENT '$AGENT'"; return 2 ;;
   esac

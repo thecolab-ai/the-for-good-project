@@ -2,7 +2,7 @@
 
 Three scripts let people put spare AI subscription tokens to work — one to *do*
 the work, one to *review* it, and one for maintainers to *merge* what's passed. Both are thin, deterministic wrappers around your
-own `codex` or `claude` CLI: **the scripts own every status change and the merge
+own `codex`, `claude`, or `hermes` CLI: **the scripts own every status change and the merge
 gate; the agent only does the actual work.** That's deliberate — it's why
 tracking stays correct no matter which agent runs or how it behaves.
 
@@ -44,16 +44,19 @@ issue. Runs your agent on it following the project method, and moves it to
 ```bash
 ./start_work.sh                 # work the queue until it's empty (default agent: claude)
 ./start_work.sh codex           # use `codex exec` instead
+./start_work.sh hermes          # use `hermes chat` instead
 ./start_work.sh --model <name>  # override the agent model
 ./start_work.sh codex --model gpt-5.5
+HERMES_PROFILE=reviewer ./start_work.sh hermes
 STAGE=research ./start_work.sh  # only pick up research-stage issues
 MAX=1 ./start_work.sh           # one issue, then stop
 DRY_RUN=1 ./start_work.sh       # show what it would do, change nothing
 ```
 
-The agent can be given as a positional word (`claude` or `codex`) and the model
-via `--model <name>`; both override the `AGENT` / `MODEL` env vars. `claude` is
-the default.
+The agent can be given as a positional word (`claude`, `codex`, or `hermes`)
+and the model via `--model <name>`; both override the `AGENT` / `MODEL` env
+vars. `claude` is the default. Hermes also honours `PROVIDER`,
+`HERMES_PROFILE`, and `HERMES_FLAGS`.
 
 For a **new issue** it claims (assigns you + `status: claimed`), creates a fresh
 worktree from `origin/main`, hands the issue to the agent with the method baked
@@ -84,6 +87,8 @@ the next reviewer loop picks it up again.
 ```bash
 REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
 REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude ./review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=hermes ./review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> HERMES_PROFILE=reviewer AGENT=hermes ./review_work.sh
 REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh # merge on PASS
 PR=7 ./review_work.sh                                       # one PR
 ```
@@ -183,9 +188,12 @@ collective keeps itself unblocked.
 ## Cost & safety notes
 
 - The agent runs with your local CLI auth (your subscription/tokens). `codex`
-  runs with `--dangerously-bypass-approvals-and-sandbox` and `claude` with
-  `--permission-mode bypassPermissions` so it can use git/gh unattended — run
-  these on a repo clone you trust, not arbitrary input.
+  runs with `--dangerously-bypass-approvals-and-sandbox`, `claude` with
+  `--permission-mode bypassPermissions`, and `hermes` with `--yolo --source tool`
+  by default so it can use git/gh unattended — run these on a repo clone you
+  trust, not arbitrary input. Use `HERMES_PROFILE` to run a named Hermes profile,
+  override additional Hermes options with `HERMES_FLAGS`, and use `MODEL` /
+  `PROVIDER` to select a model or provider where supported.
 - The reviewer fails **closed**: if the agent doesn't return a clear
   `VERDICT: PASS`, the check is set to failure.
 - Set `AGENT_TIMEOUT` (seconds) to cap a runaway agent; `MODEL` to pick a model.

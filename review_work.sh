@@ -2,9 +2,9 @@
 #
 # review_work.sh — adversarially review open PRs before they can merge.
 #
-# For each open PR that hasn't passed review yet, run an AI agent (codex or
-# claude) whose job is to REFUTE the work against the project method, then post
-# the review and set the required "for-good/adversarial-review" status check.
+# For each open PR that hasn't passed review yet, run an AI agent (codex,
+# claude, or hermes) whose job is to REFUTE the work against the project method,
+# then post the review and set the required "for-good/adversarial-review" status check.
 # Each review runs in a FRESH GIT WORKTREE of the PR head (freshly fetched), so
 # your clone is never touched. On PASS it approves (and can auto-merge); on
 # NEEDS_WORK it requests changes AND flips the linked issue to
@@ -21,17 +21,19 @@
 # Usage:
 #   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh           # review all open PRs (claude)
 #   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh codex     # review with codex
+#   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh hermes    # review with hermes
 #   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh --model <name>
 #   REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh
 #   PR=7 ./review_work.sh                                    # a single PR
 #   DRY_RUN=1 ./review_work.sh
 #
-# Args: [claude|codex] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
+# Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  REVIEW_GITHUB_TOKEN AGENT MODEL AUTO_MERGE PR MAX POLL_SECONDS DRY_RUN
-#       AGENT_TIMEOUT FOR_GOOD_REPO REPO_DIR
+#       AGENT_TIMEOUT PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
+RUNS_AGENT=1
 parse_agent_args "$@"
 trap 'remove_worktree || true' EXIT INT TERM
 

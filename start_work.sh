@@ -4,28 +4,30 @@
 #
 # Loops: first pick up any of YOUR work a reviewer sent back (issues labelled
 # "status: changes-requested" and assigned to you), otherwise claim the next
-# available issue. Each task runs an AI agent (codex or claude) in a FRESH GIT
-# WORKTREE created from the latest origin/main (or the PR branch, for rework),
-# so your clone is never touched and every loop starts from up-to-date main.
-# The SCRIPT owns every status transition — the agent just does the work and
-# opens (or updates) the PR — so tracking stays correct no matter which agent
-# runs or how it behaves.
+# available issue. Each task runs an AI agent (codex, claude, or hermes) in a
+# FRESH GIT WORKTREE created from the latest origin/main (or the PR branch, for
+# rework), so your clone is never touched and every loop starts from up-to-date
+# main. The SCRIPT owns every status transition — the agent just does the work
+# and opens (or updates) the PR — so tracking stays correct no matter which
+# agent runs or how it behaves.
 #
 # Usage:
 #   ./start_work.sh                 # work the queue with the default agent (claude)
 #   ./start_work.sh codex           # use `codex exec` instead
-#   ./start_work.sh claude          # explicit claude (the default)
+#   ./start_work.sh hermes          # use `hermes chat` instead
 #   ./start_work.sh --model <name>  # override the agent model
 #   ./start_work.sh codex --model gpt-5.5
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
 #
-# Args: [claude|codex] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
-# Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT FOR_GOOD_REPO REPO_DIR
+# Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
+# Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
+#       PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
+RUNS_AGENT=1
 parse_agent_args "$@"
 
 MAX="${MAX:-0}"                       # 0 = no limit
