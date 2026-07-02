@@ -18,6 +18,8 @@
 #   STREAM=4 ./synthesize_work.sh         # target one stream root
 #   MAX=1 ./synthesize_work.sh            # one stream, then stop
 #   DRY_RUN=1 ./synthesize_work.sh        # print target + evidence + prompt, touch nothing
+#   POLL_SECONDS=0 ./synthesize_work.sh   # exit instead of polling when queue empty
+#                                          # (default: poll every 60s and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  STREAM MAX POLL_SECONDS DRY_RUN AGENT MODEL AGENT_TIMEOUT
@@ -30,7 +32,7 @@ parse_agent_args "$@"
 trap 'remove_worktree || true' EXIT INT TERM
 
 MAX="${MAX:-0}"
-POLL_SECONDS="${POLL_SECONDS:-0}"
+POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 ONLY_STREAM="${STREAM:-}"
 
