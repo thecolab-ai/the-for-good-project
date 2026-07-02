@@ -72,6 +72,18 @@ issue is still too big, the agent narrows it in the PR and lists what it left
 uncovered; the steward decides at synthesis whether more work is spawned.
 Ideate and build issues never fan out — that's what the gates are for.
 
+### Root lifecycle: the root issue never closes via a PR
+
+A stream's root Discover issue **stays open for the life of the stream** — it
+anchors the `stream:<n>` label, the drain trigger, and the human queue. So a
+discover framing PR links with **`Part of #<root>`, never `Closes`** (the
+runner prompts this automatically and can still find the PR). Child issues
+are the opposite: their PRs **must** use `Closes #<n>` — the child closing on
+merge is exactly what fires the drain check. The root is closed by the
+steward, by hand, when the stream ships or is parked. (After a framing PR
+merges, clear the root's `status: in-review` label by hand — the root then
+has no work-status until the drain flags it `needs-synthesis`.)
+
 ### The drain → synthesis trigger
 
 When the **last open child issue in a stream closes**, `stream-sync.yml`

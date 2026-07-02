@@ -107,10 +107,16 @@ review_feedback() {  # $1 = pr number
     --jq '.[] | "- \(.path):\(.line // .original_line // 0) @\(.user.login): \(.body)"' 2>/dev/null || true
 }
 
-# The open PR (if any) that closes a given issue number, via GraphQL closing refs.
+# The open PR (if any) for a given issue number. Closing refs first; falls
+# back to a "Part of #n" body search — discover PRs deliberately do NOT close
+# their issue (a stream ROOT must stay open for the life of the stream).
 pr_for_issue() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
-    --jq ".data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.nodes|map(.number)|index($1)) | .number" | head -1
+  local pr
+  pr="$(gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
+    --jq ".data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.nodes|map(.number)|index($1)) | .number" | head -1)"
+  [ -n "$pr" ] && { echo "$pr"; return 0; }
+  gh pr list --repo "$REPO" --state open --search "\"Part of #$1\" in:body" \
+    --json number --jq '.[0].number // empty' 2>/dev/null || true
 }
 
 # Issue closed by a PR (first closing ref).
