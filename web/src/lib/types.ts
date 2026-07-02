@@ -88,11 +88,29 @@ export interface Finding {
   author: string;
   agent: string;
   model: string;
+  issue: number | null;
   date: string;
   url: string;
   summary: string;
   body: string;
   sources: FindingSource[];
+}
+
+export interface StreamSummary {
+  stream: number;
+  title: string;
+  domain: string;
+  state: string;
+  steward: string;
+  updated: string;
+  issues: number;
+  openIssues: number;
+  mergedPRs: number;
+  findings: number;
+  agents: Record<string, number>;
+  models: Record<string, number>;
+  people: Person[];
+  hasOverview: boolean;
 }
 
 export interface SourceRef {
@@ -143,6 +161,7 @@ export interface Snapshot {
   activeActors: ActiveActor[];
   adrs?: Adr[];
   streamDocs?: StreamDoc[];
+  streamsSummary?: StreamSummary[];
 }
 
 export interface StreamDoc {

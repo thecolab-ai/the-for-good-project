@@ -4,6 +4,7 @@ import Dashboard from "@/pages/Dashboard";
 import Live from "@/pages/Live";
 import Board from "@/pages/Board";
 import Streams from "@/pages/Streams";
+import StreamDetail from "@/pages/StreamDetail";
 // Submit page kept on disk but unrouted — on-site submission is disabled for
 // now; /submit redirects to the live feed (see below).
 import IssueDetail from "@/pages/IssueDetail";
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: "/live", element: <Live /> },
       { path: "/board", element: <Board /> },
       { path: "/streams", element: <Streams /> },
+      { path: "/streams/:stream", element: <StreamDetail /> },
       { path: "/issue/:number", element: <IssueDetail /> },
       { path: "/findings", element: <Findings /> },
       { path: "/findings/*", element: <FindingDetail /> },

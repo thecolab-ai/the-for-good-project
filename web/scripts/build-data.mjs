@@ -188,6 +188,7 @@ async function main() {
         author: data.author || "unknown",
         agent: data.agent && data.agent !== "none" ? String(data.agent) : "",
         model: data.model ? String(data.model) : "",
+        issue: Number(String(data.issue ?? "").replace(/[^0-9]/g, "")) || null,
         date: data.date ? String(data.date) : "",
         url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/${rel}`,
         summary,
@@ -237,6 +238,57 @@ async function main() {
       });
     }
   }
+
+  // --- per-stream summary (light index layer) + provenance rollup ---
+  // Provenance comes from the .md frontmatter (agent = harness, model, author),
+  // plus GitHub actors (issue authors/assignees, PR authors). stream:<n> labels
+  // (applied to issues AND PRs by stream-sync) are the grouping key.
+  const streamLabelOf = (item) => {
+    const l = (item.labels || []).find((x) => /^stream:\d+$/i.test(x));
+    return l ? Number(l.replace(/stream:/i, "")) : null;
+  };
+  const issueStream = new Map();
+  for (const it of issues) { const s = streamLabelOf(it); if (s) issueStream.set(it.number, s); }
+  const streamAgg = new Map();
+  const ensureStream = (s) => {
+    if (!streamAgg.has(s)) streamAgg.set(s, { stream: s, title: "", domain: "", state: "", steward: "", updated: "",
+      issues: 0, openIssues: 0, mergedPRs: 0, findings: 0, agents: {}, models: {}, people: new Map() });
+    return streamAgg.get(s);
+  };
+  const addStreamPerson = (agg, p) => { if (p && p.login && !agg.people.has(p.login)) agg.people.set(p.login, { login: p.login, avatar: p.avatar, url: p.url }); };
+  for (const it of realIssues) {
+    const s = streamLabelOf(it); if (!s) continue;
+    const a = ensureStream(s);
+    a.issues++; if (it.state === "open") a.openIssues++;
+    if (it.updatedAt > a.updated) a.updated = it.updatedAt;
+    if (it.stage === "discover") { if (!a.title) a.title = it.title.replace(/^\[[^\]]+\]\s*/, ""); if (!a.state) a.state = it.status; }
+    if (!a.domain && it.domain) a.domain = it.domain;
+    addStreamPerson(a, it.author); (it.assignees || []).forEach((p) => addStreamPerson(a, p));
+  }
+  for (const p of prs) {
+    const s = streamLabelOf(p); if (!s) continue;
+    const a = ensureStream(s);
+    if (p.merged) a.mergedPRs++;
+    if (p.updatedAt > a.updated) a.updated = p.updatedAt;
+    addStreamPerson(a, p.author);
+  }
+  for (const f of findings) {
+    const s = f.issue ? issueStream.get(f.issue) : null; if (!s) continue;
+    const a = ensureStream(s);
+    a.findings++;
+    const harness = f.agent || "human";
+    a.agents[harness] = (a.agents[harness] || 0) + 1;
+    if (f.model) a.models[f.model] = (a.models[f.model] || 0) + 1;
+    const login = String(f.author || "").replace(/^@/, "");
+    if (login && login !== "unknown" && !a.people.has(login)) a.people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
+  }
+  for (const d of streamDocs) { const a = ensureStream(d.stream); if (d.title) a.title = d.title; if (d.state) a.state = d.state; if (d.steward) a.steward = d.steward; if (!a.domain && d.domain) a.domain = d.domain; }
+  const streamsSummary = [...streamAgg.values()].map((a) => ({
+    stream: a.stream, title: a.title || `Stream #${a.stream}`, domain: a.domain, state: a.state, steward: a.steward, updated: a.updated,
+    issues: a.issues, openIssues: a.openIssues, mergedPRs: a.mergedPRs, findings: a.findings,
+    agents: a.agents, models: a.models, people: [...a.people.values()],
+    hasOverview: streamDocs.some((d) => d.stream === a.stream && (d.body || "").trim().length > 0),
+  })).sort((x, y) => (y.updated || "").localeCompare(x.updated || "") || x.stream - y.stream);
 
   // --- leaderboard ---
   const people = new Map();
@@ -400,10 +452,14 @@ async function main() {
     activeActors,
     adrs,
     streamDocs,
+    streamsSummary,
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(path.join(OUT_DIR, "snapshot.json"), JSON.stringify(snapshot, null, 2));
+  // Light, standalone streams index — the overview page can fetch this instead
+  // of the full snapshot as the number of streams grows.
+  writeFileSync(path.join(OUT_DIR, "streams-summary.json"), JSON.stringify({ generatedAt: snapshot.generatedAt, streams: streamsSummary }, null, 2));
   console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources, ${recentComments.length} recent comments, ${activeActors.length} active actors.`);
 }
 
