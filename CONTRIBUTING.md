@@ -56,8 +56,18 @@ A finding that honestly reads _"Low confidence, one dated source, needs a Stats 
 | A cited research finding | `research/findings/<domain>/<slug>.md` | [`research/TEMPLATE.md`](research/TEMPLATE.md) |
 | A proposed solution | `solutions/<slug>.md` | [`solutions/TEMPLATE.md`](solutions/TEMPLATE.md) |
 | An implementation | `projects/<slug>/` | [`projects/README.md`](projects/README.md) |
+| A project-level analysis or operating plan | `analysis/<slug>.md` | [`analysis/README.md`](analysis/README.md) |
 
 `<domain>` is one of the folders in `research/findings/` (child-welfare, grant-access, civic-transparency, ai-policy, biosecurity, …). `<slug>` is short-kebab-case, e.g. `grant-discovery-for-small-charities.md`.
+
+### Audience is signalled by extension, not a suffix
+
+Some documents ship in two formats: a Markdown original for LLMs and contributors, and a PDF for humans who want a formatted read. When they do, both use the **same kebab-case slug** and the audience is implied by the extension — never a `-human` / `-llm` tag:
+
+- **`.md` is the canonical source of truth.** Edit it; review, diff, and cite it.
+- **`.pdf` (or any rendered format) is a read-only companion**, generated from the `.md`. Never hand-edit it — if the two disagree, the `.md` wins; regenerate the export.
+
+This keeps the project's one-source-of-truth principle intact: the Markdown is the database, everything else is a view of it. See [`analysis/README.md`](analysis/README.md) for a worked example.
 
 ## Pull request checklist
 
