@@ -14,10 +14,11 @@ on:
   # Rebuild when someone comments so the live feed stays near-real-time.
   issue_comment:
     types: [created, edited, deleted]
-  pull_request_review_comment:
-    types: [created, edited, deleted]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
+  # NOTE: deliberately NOT triggering on pull_request_review /
+  # pull_request_review_comment — those run in the PR branch's context, and the
+  # deploy job targets the branch-protected `github-pages` environment (main
+  # only), so it's rejected instantly and shows a spurious red X. Reviews don't
+  # change the board data anyway; issues/comments + the schedule keep it fresh.
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
