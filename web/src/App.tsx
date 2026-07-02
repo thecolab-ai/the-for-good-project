@@ -1,4 +1,4 @@
-import { createHashRouter } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Board from "@/pages/Board";
@@ -12,7 +12,7 @@ import Methodology from "@/pages/Methodology";
 import Contribute from "@/pages/Contribute";
 import NotFound from "@/pages/NotFound";
 
-export const router = createHashRouter([
+export const router = createBrowserRouter([
   {
     element: <AppLayout />,
     children: [
@@ -29,4 +29,7 @@ export const router = createHashRouter([
       { path: "*", element: <NotFound /> },
     ],
   },
-]);
+], {
+  // Served from a GitHub Pages project subpath (see vite `base`).
+  basename: import.meta.env.BASE_URL.replace(/\/$/, ""),
+});

@@ -10,8 +10,8 @@ export function Footer({ repoUrl, generatedAt }: { repoUrl?: string; generatedAt
         </div>
         <div className="flex items-center gap-4">
           <Link to="/submit" className="hover:text-foreground">Submit</Link>
+          <Link to="/methodology" className="hover:text-foreground">Method</Link>
           {repoUrl ? <a href={repoUrl} className="hover:text-foreground">GitHub</a> : null}
-          {repoUrl ? <a href={`${repoUrl}/blob/main/CONTRIBUTING.md`} className="hover:text-foreground">Method</a> : null}
         </div>
       </div>
       {generatedAt ? (
