@@ -1,6 +1,6 @@
 # ADR-0001: Streams + human gates — agents grind, humans steer
 
-- **Status:** accepted
+- **Status:** accepted (decision №5 — deferral of agent-drafted synthesis — superseded by ADR-0003)
 - **Date:** 2026-07-02
 - **Deciders:** Adam (maintainer), from the For Good WhatsApp discussion
 - **Discussion:** [#30](https://github.com/thecolab-ai/the-for-good-project/issues/30)

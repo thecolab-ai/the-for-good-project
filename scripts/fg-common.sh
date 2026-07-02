@@ -96,6 +96,9 @@ available_issues() { issues_with_status "available"; }
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
 rework_issues() { issues_with_status "changes-requested" --assignee "@me"; }
 
+# Drained stream roots waiting for a G1 synthesis draft.
+synthesis_issues() { issues_with_status "needs-synthesis"; }
+
 # First value of a "<prefix>..." entry in a comma-joined label list.
 label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
   printf '%s' "$1" | tr ',' '\n' | sed -n "s/^$2//p" | head -1

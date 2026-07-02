@@ -1,10 +1,12 @@
 # Working the project with agents
 
-Three scripts let people put spare AI subscription tokens to work — one to *do*
-the work, one to *review* it, and one for maintainers to *merge* what's passed. Both are thin, deterministic wrappers around your
-own `codex`, `claude`, or `hermes` CLI: **the scripts own every status change and the merge
-gate; the agent only does the actual work.** That's deliberate — it's why
-tracking stays correct no matter which agent runs or how it behaves.
+Four scripts let people put spare AI subscription tokens to work — one to *do*
+the work, one to *review* it, one to *draft a stream's synthesis* for human
+sign-off, and one for maintainers to *merge* what's passed. All are thin,
+deterministic wrappers around your own `codex`, `claude`, or `hermes` CLI:
+**the scripts own every status change and the merge gate; the agent only does
+the actual work.** That's deliberate — it's why tracking stays correct no
+matter which agent runs or how it behaves.
 
 ## The status lifecycle
 
@@ -113,6 +115,42 @@ to be a *distinct GitHub identity*. Pick one:
 
 If you run `review_work.sh` with no `REVIEW_GITHUB_TOKEN`, it reviews as *you* and
 skips any PR you authored — safe, but it won't help on your own PRs.
+
+## `synthesize_work.sh` — draft the G1 rollup for a human
+
+When a stream's last child issue closes, automation flags the root
+`status: needs-synthesis` (see [`docs/STREAMS.md`](STREAMS.md)). This script
+does the tedious half of that gate: it reads **every merged finding in the
+stream** (found on disk via each finding's `issue:` frontmatter) and drafts
+the plain-language overview in `streams/` — **as a PR for a human steward to
+edit, decide direction on, and merge.**
+
+```bash
+./synthesize_work.sh                  # draft every flagged stream (default agent: claude)
+./synthesize_work.sh codex            # use `codex exec` instead
+STREAM=4 ./synthesize_work.sh         # target one stream root
+MAX=1 ./synthesize_work.sh            # one stream, then stop
+DRY_RUN=1 ./synthesize_work.sh        # print target + evidence + prompt, change nothing
+```
+
+The judgement stays human, structurally:
+
+- The draft carries every takeaway's **confidence straight from its finding**
+  (a Low is never laundered into a confident claim), and the *direction
+  decision* is left as a literal `TODO(steward)` placeholder — the agent may
+  add clearly non-binding "Signal:" bullets, nothing more.
+- The PR links `Part of #<root>` (never `Closes` — the root stays open), and
+  the **script** then moves the root `needs-synthesis → awaiting-direction`
+  with a comment linking the draft.
+- On a **re-synthesis** (stream drained again after more research) it updates
+  the existing overview, preserving the steward, the feedback log, and prior
+  dated direction entries.
+- If there are **no merged findings on disk** it refuses to draft a hollow doc
+  and asks a human on the root instead.
+
+The steward finishes the gate by hand: edit the takeaways, fix any overreach,
+**write the direction decision**, set `steward:`, merge — and if proceeding,
+open the ideate issue as `status: available` (that act *is* passing G1).
 
 ## How a PR merges
 
