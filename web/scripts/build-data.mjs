@@ -178,6 +178,9 @@ async function main() {
         .replace(/[#>*`-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 280);
       findings.push({
         path: rel,
+        // Stable, URL-safe id for the in-app detail route (/findings/<slug>),
+        // e.g. research/findings/ai-policy/foo.md -> ai-policy/foo
+        slug: rel.replace(/^research\/findings\//, "").replace(/\.md$/, ""),
         title: data.title || entry.replace(/\.md$/, ""),
         domain,
         confidence: data.confidence || "Unknown",
@@ -187,6 +190,7 @@ async function main() {
         date: data.date ? String(data.date) : "",
         url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/${rel}`,
         summary,
+        body: content,
         sources: fSources,
       });
     }

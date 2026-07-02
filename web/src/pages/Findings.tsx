@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { BookOpen, ExternalLink, Link2, Search, Cpu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BookOpen, Link2, Search, Cpu } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -47,7 +48,7 @@ export default function Findings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {findings.map((f) => (
-              <a key={f.path} href={f.url} target="_blank" rel="noreferrer">
+              <Link key={f.path} to={`/findings/${f.slug}`}>
                 <Card className="group h-full transition-all hover:-translate-y-0.5 hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-center justify-between gap-2">
@@ -67,11 +68,11 @@ export default function Findings() {
                           <Cpu className="h-3 w-3" /> {f.agent}{f.model ? ` · ${f.model}` : ""}
                         </span>
                       ) : null}
-                      <span className="ml-auto inline-flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {f.sources.length} source{f.sources.length === 1 ? "" : "s"} <ExternalLink className="ml-1 h-3.5 w-3.5" /></span>
+                      <span className="ml-auto inline-flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {f.sources.length} source{f.sources.length === 1 ? "" : "s"}</span>
                     </div>
                   </CardContent>
                 </Card>
-              </a>
+              </Link>
             ))}
           </div>
         </>

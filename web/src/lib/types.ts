@@ -59,6 +59,7 @@ export interface FindingSource {
 
 export interface Finding {
   path: string;
+  slug: string;
   title: string;
   domain: string;
   confidence: "High" | "Medium" | "Low" | "Unknown";
@@ -68,6 +69,7 @@ export interface Finding {
   date: string;
   url: string;
   summary: string;
+  body: string;
   sources: FindingSource[];
 }
 
