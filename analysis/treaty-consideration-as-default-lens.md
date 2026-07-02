@@ -38,7 +38,8 @@ is something that switches on once a stream happens to touch child welfare or M�
 otherwise silent for everything else. Checked directly against the repo on 2 July 2026: no open issue
 mentions Te Tiriti, Māori, iwi, or data sovereignty in any form, and the one open child-welfare stream
 (#4 — family/child entitlement navigation) doesn't touch this ground either. That's consistent with a
-gap that only gets noticed when a stream is already Māori-coded.
+gap that only gets noticed when a stream is already Māori-coded. _(Update, later the same day: issue
+#104 was opened as the proposal arising directly from this analysis — see §4.)_
 
 **This document argues the trigger-condition framing itself is the deeper gap.** The project operates
 in Aotearoa. Every stream — grant access, consumer credit, council spending, supermarket pricing, all
@@ -181,7 +182,8 @@ None of this is enacted by merging this file — each needs its own PR, issue, o
 
 **What's verified.** The absence of any open issue mentioning Te Tiriti, Māori, iwi, or data
 sovereignty was checked directly via `gh search issues` against the live repo on 2 July 2026 — high
-confidence at that snapshot, but this will drift as new issues are opened. The Treaty principles in
+confidence at that snapshot, but this will drift as new issues are opened. It already has: issue #104
+was opened later the same day as the direct result of this analysis (see §1, §4). The Treaty principles in
 Lens A and the value definitions in Lens B are drawn from public, government-run sources (Te Ara,
 Auckland Council, digital.govt.nz) with no reproduction restriction — high confidence in the sourcing,
 medium confidence that this is a *complete* list of principles, since no single canonical list exists
