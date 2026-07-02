@@ -4,7 +4,7 @@ title: "The true cost of small loans is hard for New Zealanders to see or compar
 state: needs-synthesis
 steward: ""
 domain: other
-updated: 2026-07-03
+updated: 2026-07-02
 ---
 
 <!--
