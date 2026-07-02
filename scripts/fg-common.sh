@@ -190,15 +190,21 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old
 run_agent() {
   local prompt="$1" dir="${2:-$REPO_DIR}" tmo=""
   if [ "$AGENT_TIMEOUT" != 0 ] && command -v timeout >/dev/null 2>&1; then tmo="timeout ${AGENT_TIMEOUT}s"; fi
+  # Default to SANDBOXED AUTO modes, not full permission bypass:
+  #  - codex  → --full-auto  (workspace-write sandbox, auto-approve, no prompts)
+  #  - claude → --permission-mode acceptEdits (auto-accept edits; also runs as
+  #             root, unlike bypassPermissions/--dangerously-skip-permissions)
+  # Override per-run with CODEX_FLAGS / CLAUDE_PERMISSION_MODE / HERMES_FLAGS if
+  # a run genuinely needs looser (or tighter) permissions.
   case "$AGENT" in
     codex)
       $tmo codex exec --cd "$dir" --skip-git-repo-check \
-        ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+        ${CODEX_FLAGS:---full-auto} \
         ${MODEL:+-m "$MODEL"} "$prompt"
       ;;
     claude)
       ( cd "$dir" && $tmo claude -p "$prompt" \
-        --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+        --permission-mode "${CLAUDE_PERMISSION_MODE:-acceptEdits}" \
         ${MODEL:+--model "$MODEL"} )
       ;;
     hermes)
