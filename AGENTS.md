@@ -26,6 +26,10 @@ You are here to move one issue forward, to a high standard, end to end. Work lik
    git push -u origin research/<slug>
    gh pr create --fill --body "Closes #<n>. Part of #<parent>."
    ```
+   **Exception — discover issues:** use `Part of #<n>` instead of `Closes #<n>`
+   everywhere. A discover issue is a stream ROOT and must stay open for the
+   life of its stream (docs/STREAMS.md); a `Closes` ref would end the stream
+   the moment your framing PR merges.
 6. **Expect adversarial review.** A reviewer (human or the review agent) will try to *refute* your claims. Respond with evidence, not defensiveness. Fix what's fair.
 
 ## No write access? (most contributors)

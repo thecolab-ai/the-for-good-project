@@ -50,6 +50,19 @@ work_prompt() {  # $1 = issue number
   local stream; stream="$(label_field "$labels" "stream:")"
   local prov_model
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
+  # Discover issues are stream ROOTS: their PR must NOT close them (the root
+  # anchors the stream's lifecycle until the steward ends it). Children close
+  # via their PRs as normal — that's what fires the drain→synthesis trigger.
+  local link_ref link_why
+  if [ "$stage" = "discover" ]; then
+    link_ref="Part of"
+    link_why="(Use \"Part of\", NOT \"Closes\" — this issue is a stream root and must stay
+   open while its stream is worked; see docs/STREAMS.md.)"
+  else
+    link_ref="Closes"
+    link_why="(\"Closes\" is required — the issue closing on merge is what tells the
+   stream automation this piece of work is done.)"
+  fi
   # Bounded fan-out (docs/STREAMS.md): the agent on a root issue (depth 0) may
   # open sub-issues, an agent on a sub-issue (depth 1) may open one more level,
   # and depth >= 2 may not fan out at all. WHITELIST discover/research only —
@@ -114,10 +127,11 @@ we can track what produced it:
 
 Then, using git and the gh CLI (both are already authenticated):
 1. Create a branch named "$stage/<slug>".
-2. Commit your work with a message ending "(Closes #$n)".
+2. Commit your work with a message ending "($link_ref #$n)".
 3. Push the branch to origin.
-4. Open a pull request whose body contains "Closes #$n" so it links to the
-   issue. Use: gh pr create --fill --body "Closes #$n. <one-line summary>".
+4. Open a pull request whose body contains "$link_ref #$n" so it links to the
+   issue. Use: gh pr create --fill --body "$link_ref #$n. <one-line summary>".
+   $link_why
 ${stream:+   The PR body must also contain the exact text  Stream: #$stream  on the same
    line, so the PR stays tracked to its stream.
 }
