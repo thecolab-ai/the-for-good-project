@@ -5,7 +5,7 @@
 REPO="${FOR_GOOD_REPO:-thecolab-ai/the-for-good-project}"
 OWNER="${REPO%%/*}"
 NAME="${REPO##*/}"
-AGENT="${AGENT:-codex}"                 # codex | claude
+AGENT="${AGENT:-claude}"                # claude | codex
 MODEL="${MODEL:-}"                       # optional model override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 REVIEW_CHECK_CONTEXT="for-good/adversarial-review"
