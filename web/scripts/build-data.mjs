@@ -218,6 +218,26 @@ async function main() {
     adrs.sort((a, b) => a.number.localeCompare(b.number));
   }
 
+  // --- stream overview docs (the plain-language "output" of a stream) ---
+  const streamsDir = path.join(REPO_ROOT, "streams");
+  const streamDocs = [];
+  if (existsSync(streamsDir)) {
+    for (const entry of readdirSync(streamsDir).sort()) {
+      if (!entry.endsWith(".md") || ["README.md", "TEMPLATE.md"].includes(entry)) continue;
+      const { data, content } = matter(readFileSync(path.join(streamsDir, entry), "utf8"));
+      streamDocs.push({
+        stream: Number(data.stream ?? (entry.match(/^(\d+)/) || [])[1] ?? 0),
+        title: data.title || "",
+        state: data.state || "",
+        steward: data.steward || "",
+        domain: data.domain || "",
+        updated: data.updated ? String(data.updated) : "",
+        body: content,
+        url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/streams/${entry}`,
+      });
+    }
+  }
+
   // --- leaderboard ---
   const people = new Map();
   const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
@@ -379,6 +399,7 @@ async function main() {
     comments: recentComments,
     activeActors,
     adrs,
+    streamDocs,
   };
 
   mkdirSync(OUT_DIR, { recursive: true });

@@ -142,6 +142,18 @@ export interface Snapshot {
   comments: FeedComment[];
   activeActors: ActiveActor[];
   adrs?: Adr[];
+  streamDocs?: StreamDoc[];
+}
+
+export interface StreamDoc {
+  stream: number;
+  title: string;
+  state: string;
+  steward: string;
+  domain: string;
+  updated: string;
+  body: string;
+  url: string;
 }
 
 export interface Adr {
