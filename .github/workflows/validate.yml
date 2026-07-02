@@ -25,7 +25,7 @@ jobs:
           git fetch origin "pull/${PR}/head" --depth=1
           # Check out ONLY the content dirs from the PR head — not scripts/ — so
           # we validate the PR's markdown with the base branch's validator.
-          git checkout FETCH_HEAD -- research/findings solutions 2>/dev/null || true
+          git checkout FETCH_HEAD -- research/findings solutions analysis 2>/dev/null || true
       - uses: actions/setup-node@v4
         with:
           node-version: 20

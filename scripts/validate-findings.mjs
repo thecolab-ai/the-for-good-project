@@ -36,7 +36,9 @@ function parseFrontmatter(text) {
 }
 
 const isPlaceholder = (v) => !v || /[<>]/.test(v) || /YYYY-MM-DD|exact model id|your name or handle|the question you answered/i.test(v);
-const hasSection = (body, name) => new RegExp(`^#{2,3}\\s*${name}`, "mi").test(body);
+// Numbered headings (e.g. "## 5. Confidence & limits") are common in analysis/ docs —
+// allow an optional leading "N. " before the section name.
+const hasSection = (body, name) => new RegExp(`^#{2,3}\\s*(?:\\d+\\.\\s*)?${name}`, "mi").test(body);
 const hasCitation = (body) => /\[[^\]]+\]\(https?:\/\/[^)\s]+\)/.test(body);
 
 function checkCommon(fm, errs) {
@@ -79,10 +81,34 @@ function validateSolution(file) {
   return errs;
 }
 
+// analysis/ docs (ADR-0004): project-level analysis, distinct from research
+// findings/solutions. No `domain` or `confidence` frontmatter (those are
+// finding-specific) — instead: title, type: analysis, status, author, agent,
+// model, date; at least one inline citation; and a "Confidence & limits"
+// section (numbered headings like "## 5. Confidence & limits" are allowed).
+function validateAnalysis(file) {
+  const errs = [];
+  const parsed = parseFrontmatter(readFileSync(file, "utf8"));
+  if (!parsed) return ["no YAML frontmatter (--- block) at the top of the file"];
+  const { fm, body } = parsed;
+  for (const f of ["title", "author", "agent", "date"]) {
+    if (isPlaceholder(fm[f])) errs.push(`frontmatter '${f}' is missing or still a placeholder`);
+  }
+  if (fm.type !== "analysis") errs.push(`frontmatter 'type' must be 'analysis' (got '${fm.type ?? ""}')`);
+  if (isPlaceholder(fm.status)) errs.push("frontmatter 'status' is missing or still a placeholder");
+  if (fm.date && !/^\d{4}-\d{2}-\d{2}$/.test(fm.date)) errs.push(`frontmatter 'date' must be YYYY-MM-DD (got '${fm.date}')`);
+  if (fm.agent && fm.agent.toLowerCase() !== "none" && isPlaceholder(fm.model))
+    errs.push(`frontmatter 'model' is required unless agent is 'none'`);
+  if (!hasSection(body, "Confidence\\s*&\\s*limits")) errs.push("missing '## Confidence & limits' section (required by ADR-0004)");
+  if (!hasCitation(body)) errs.push("no citations found — analysis docs need at least one inline source link for factual claims (ADR-0004)");
+  return errs;
+}
+
 const findings = walk(path.join(ROOT, "research", "findings"));
 const solutions = walk(path.join(ROOT, "solutions"));
+const analyses = walk(path.join(ROOT, "analysis"));
 let failed = 0, checked = 0;
-for (const [files, fn, kind] of [[findings, validateFinding, "finding"], [solutions, validateSolution, "solution"]]) {
+for (const [files, fn, kind] of [[findings, validateFinding, "finding"], [solutions, validateSolution, "solution"], [analyses, validateAnalysis, "analysis"]]) {
   for (const file of files) {
     checked++;
     const rel = path.relative(ROOT, file);
@@ -90,6 +116,6 @@ for (const [files, fn, kind] of [[findings, validateFinding, "finding"], [soluti
     if (errs.length) { failed++; console.log(`\n✗ ${rel}`); for (const e of errs) console.log(`    - ${e}`); }
   }
 }
-if (checked === 0) { console.log("No findings or solutions to validate."); process.exit(0); }
+if (checked === 0) { console.log("No findings, solutions, or analysis docs to validate."); process.exit(0); }
 if (failed) { console.log(`\n${failed}/${checked} file(s) failed validation. Fix the items above.`); process.exit(1); }
-console.log(`✓ All ${checked} finding/solution file(s) valid.`);
+console.log(`✓ All ${checked} finding/solution/analysis file(s) valid.`);
