@@ -11,6 +11,7 @@ import Review from "@/pages/Review";
 import Submit from "@/pages/Submit";
 import Methodology from "@/pages/Methodology";
 import Contribute from "@/pages/Contribute";
+import Partners from "@/pages/Partners";
 import NotFound from "@/pages/NotFound";
 
 export const router = createBrowserRouter([
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "/submit", element: <Submit /> },
       { path: "/methodology", element: <Methodology /> },
       { path: "/contribute", element: <Contribute /> },
+      { path: "/partners", element: <Partners /> },
       { path: "*", element: <NotFound /> },
     ],
   },

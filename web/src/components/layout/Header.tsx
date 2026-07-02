@@ -13,6 +13,7 @@ type NavGroup = { label: string; items: NavItem[] };
 const LINKS: NavItem[] = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/board", label: "Board" },
+  { to: "/partners", label: "For partners" },
 ];
 
 const GROUPS: NavGroup[] = [
