@@ -28,3 +28,6 @@ build/
 # transient synthesis follow-ups side-file (ADR-0012)
 .fg-followups.json
 .gstack/
+
+# local vexp index/cache
+.vexp/
