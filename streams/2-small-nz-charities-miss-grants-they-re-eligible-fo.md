@@ -4,7 +4,7 @@ title: "Small charities miss grants they're eligible for"
 state: awaiting-direction
 steward: ""
 domain: grant-access
-updated: 2026-07-02
+updated: 2026-07-03
 ---
 
 # Small charities miss grants they're eligible for
@@ -49,14 +49,30 @@ is credible but not yet proven.
   a single analysis, not independently replicated) —
   [how small charities find grants](../research/findings/grant-access/how-small-nz-charities-find-grants.md)
 - **Public records could seed an open list of funders.** The Charities
-  Register can identify roughly 5,600 likely charitable grantmakers, though
-  the exact count is unverified and it misses councils, government, and pokie
-  money (confidence: Medium overall; the specific count is Low) —
+  Register can identify roughly 5,600 likely charitable grantmakers, who
+  together reported about $1.2 billion in grants and donations paid in their
+  latest returns — though the exact count and dollar figure are a single
+  unverified data pull, and the register misses councils, government, and
+  pokie money (confidence: Medium overall; the specific figures are Low) —
   [grantmaker census](../research/findings/grant-access/charities-register-grantmaker-census.md)
+- **Among groups that do apply, demand already outstrips the money.** The
+  Lottery Grants Board received 5,648 applications requesting $572 million in
+  2024/25 against roughly $398 million allocated, and one six-month pokie
+  dataset shows about $70 million requested in declined applications plus
+  over 5,000 grants paid out at less than the amount asked for
+  (confidence: High that this oversubscription among applicants is measurable
+  from public data) —
+  [what missed funding can be measured](../research/findings/grant-access/charity-grant-underapplication-measures.md)
 - **We cannot yet put a dollar figure on what small charities miss.** Public
-  data only measures groups that *applied* — for example, one six-month pokie
-  dataset shows about $70 million requested in declined applications — and
-  says nothing about eligible groups that never applied (confidence: Medium) —
+  data only measures groups that *applied*; it says nothing about eligible
+  groups that never applied, and any "eligible charities missed $X" headline
+  would be invalid from public data alone (confidence: Medium) —
+  [what missed funding can be measured](../research/findings/grant-access/charity-grant-underapplication-measures.md)
+- **Funders themselves see the friction.** One large funder (Foundation
+  North) ran an applicant-experience project in 2025 in which more than sixty
+  organisations reported barriers and confusion across discovery, documents,
+  forms, and decision letters — evidence that the problem is observable, but
+  not a national measurement (confidence: Medium) —
   [what missed funding can be measured](../research/findings/grant-access/charity-grant-underapplication-measures.md)
 
 ## What we're not sure about yet
@@ -74,8 +90,13 @@ is credible but not yet proven.
 - "Most council libraries offer free database access" is the vendor's own
   claim; no public list of which councils actually subscribe was found.
 - The Charities Register funder counts and dollar totals come from a single
-  data pull with no independent check, and the register cannot say whether a
-  grantmaker actually accepts applications.
+  data pull with no independent check, the register cannot say whether a
+  grantmaker actually accepts applications, and its dollar figures cannot
+  separate open, contestable grants from internal transfers, scholarships, or
+  donations to related organisations.
+- The database sizes largely trace back to one vendor: the "1,650 funders"
+  count and most opportunity counts all originate with Fundsorter, quoted and
+  re-quoted by sector bodies rather than independently measured.
 - Some load-bearing numbers are dated: the 89% no-paid-staff figure is from
   2018, and the 9%/91% concentration figure uses 2020 data.
 
@@ -88,8 +109,9 @@ is credible but not yet proven.
   [where the workflow breaks down](../research/findings/grant-access/small-charity-grant-workflow-failures.md)
   (confidence: Medium),
   [what missed funding can be measured](../research/findings/grant-access/charity-grant-underapplication-measures.md)
-  (confidence: Medium). Would need: access to a sample of small charities and
-  a way to reach them (e.g. through sector bodies).
+  (confidence: Medium — a funder's own applicant-experience research shows
+  the barriers are observable this way). Would need: access to a sample of
+  small charities and a way to reach them (e.g. through sector bodies).
 - **Map who actually has free access** — check each of the ~67 councils for
   library database subscriptions and sponsored grant-finder portals, and
   publish the map. Helps: groups who don't know free access exists; anyone
