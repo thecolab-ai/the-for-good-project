@@ -455,6 +455,10 @@ async function main() {
       sources: new Set(sources.map((s) => s.url)).size,
       byStage: count(openIssues, "stage"),
       byStatus: count(openIssues, "status"),
+      // Synthesis-gate visibility (#292): drained streams queued for (or
+      // parked at) the human G1 gate — the site surfaces backlog depth.
+      synthesisQueue: openIssues.filter((i) => i.status === "needs-synthesis").length,
+      awaitingDirection: openIssues.filter((i) => i.status === "awaiting-direction").length,
       byDomain: count(openIssues, "domain"),
     },
     pipeline,

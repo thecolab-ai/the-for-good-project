@@ -402,6 +402,33 @@ reconcile_rework() {
   done
 }
 
+# Pick the next available issue, holding back NEW stream roots when the
+# active-streams cap is reached (#292): a discover root may only be claimed
+# while fewer than MAX_ACTIVE_STREAMS streams are active — unless its own
+# stream is already among them (e.g. a re-triaged root with open children).
+# Children of active streams, rework, and non-stream work are never held
+# back; held roots stay `status: available` and simply wait for a slot, so
+# the human G0 decision is sequenced, not overridden.
+pick_available() {  # $1 = queue snapshot
+  local snap="$1" n labels active count=""
+  for n in $(available_issues "$snap"); do
+    labels="$(printf '%s' "$snap" | jq -r --argjson n "$n" '.[] | select(.number==$n) | [.labels[].name] | join(",")')"
+    case ",$labels," in
+      *",stage: discover,"*)
+        if [ -z "$count" ]; then
+          active="$(active_streams "$snap")"
+          count="$(printf '%s\n' "$active" | grep -c . || true)"
+        fi
+        if [ "$count" -ge "$MAX_ACTIVE_STREAMS" ] && ! printf '%s\n' "$active" | grep -qx "$n"; then
+          log "#$n is a new stream root but $count stream(s) are already active (MAX_ACTIVE_STREAMS=$MAX_ACTIVE_STREAMS) — leaving it in the backlog."
+          continue
+        fi ;;
+    esac
+    echo "$n"; return 0
+  done
+  return 0
+}
+
 # Take the first UNASSIGNED (TTL-freed) rework whose PR lives on origin — i.e.
 # a branch we can actually push the rework to. Fork-branch PRs are skipped (only
 # their owner can push). Claims it to @me and echoes its number, else nothing.
@@ -446,7 +473,7 @@ main() {
       kind=rework
     else
       next="$(take_unassigned_rework "$snap" || true)"
-      if [ -n "$next" ]; then kind=rework; else next="$(available_issues "$snap" | head -1 || true)"; fi
+      if [ -n "$next" ]; then kind=rework; else next="$(pick_available "$snap" || true)"; fi
     fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then

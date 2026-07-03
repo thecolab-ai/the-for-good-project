@@ -11,6 +11,8 @@ PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes on
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
+MAX_ACTIVE_STREAMS="${MAX_ACTIVE_STREAMS:-5}"  # streams worked concurrently before new roots wait in the backlog (#292)
+HIGH_PRIORITY_CAP="${HIGH_PRIORITY_CAP:-5}"    # max STREAMS whose 'priority: high' items jump the queue (#293)
 CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
 USAGE_LIMIT_SLEEP="${USAGE_LIMIT_SLEEP:-3600}"  # secs to back off when an agent hits an API usage/rate limit (60 min)
@@ -126,6 +128,17 @@ fetch_open_issues() {
 # Order: issues labelled "priority: high" first, then oldest-created first.
 # This is the whole priority system — label an issue "priority: high" to have
 # the workers pick it up before the rest of the queue.
+#
+# BOUNDED (#293 / ADR-0013): "high" only means something while it is scarce.
+# The jump-queue honours priority: high for at most HIGH_PRIORITY_CAP
+# STREAMS at a time (grouped by stream:<n> label — or the issue's own number
+# when it has none — oldest high item first, computed over the whole open
+# queue so every runner agrees). High items beyond the cap sort by age like
+# everything else. Counting STREAMS (not issues) is deliberate so that
+# stream-level priority propagation (#164) can mark a whole stream high
+# without eating the entire cap, while blanket-labelling ten streams high
+# still cannot make "high" mean "everything".
+#
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
 # "do-not-automate" is a human's parking brake: an issue carrying it is
@@ -134,7 +147,18 @@ fetch_open_issues() {
 issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
   local status="$1" snap="${2:-}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\")) | select(.labels|map(.name)|index(\"do-not-automate\")|not)$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+  printf '%s' "$snap" | jq -r --arg status "status: $status" --arg stage "${STAGE:-}" --argjson cap "$HIGH_PRIORITY_CAP" '
+    def names: [.labels[].name];
+    def is_high: names | index("priority: high");
+    def stream_key: (names | map(select(startswith("stream:")) | ltrimstr("stream:")) | first) // (.number|tostring);
+    ([ .[] | select(is_high) | select(names | index("do-not-automate") | not) ]
+     | group_by(stream_key) | sort_by(map(.createdAt) | min) | .[:$cap] | [ .[][].number ]) as $jump
+    | [ .[]
+        | select(names | index($status))
+        | select(names | index("do-not-automate") | not)
+        | select($stage == "" or (names | index("stage: " + $stage))) ]
+    | sort_by(((.number as $n | $jump | index($n)) | not), .createdAt)
+    | .[].number'
 }
 
 available_issues() { issues_with_status "available" "${1:-}"; }
@@ -159,6 +183,28 @@ unassigned_reworks() {  # $1 = optional snapshot JSON
 # Drained stream roots waiting for a G1 synthesis draft.
 # $1 = optional queue snapshot (from fetch_open_issues).
 synthesis_issues() { issues_with_status "needs-synthesis" "${1:-}"; }
+
+# ACTIVE streams (#292): the producer side scales with agents, the human
+# synthesis gate does not — so the number of streams being worked at once is
+# bounded by MAX_ACTIVE_STREAMS. A stream counts as active while it is
+# consuming producer capacity: it has OPEN CHILD issues, or its root is
+# actually being worked (claimed / in-review / changes-requested). A root
+# that is merely `status: available` is a G0-approved stream waiting for a
+# slot — start_work.sh holds it in the backlog until one frees up. Emits the
+# active stream root numbers, one per line, from a fetch_open_issues snapshot.
+active_streams() {  # $1 = queue snapshot JSON
+  printf '%s' "$1" | jq -r '
+    ( [ .[] as $i
+        | $i.labels[].name
+        | select(startswith("stream:"))
+        | ltrimstr("stream:")
+        | select(. != ($i.number|tostring)) ]        # open child work → its stream is active
+    + [ .[]
+        | select([.labels[].name] | index("stage: discover"))
+        | select([.labels[].name] | (index("status: claimed") or index("status: in-review") or index("status: changes-requested")))
+        | (.number|tostring) ] )                     # a root being worked → active even before children exist
+    | unique | .[]'
+}
 
 # First value of a "<prefix>..." entry in a comma-joined label list.
 label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")

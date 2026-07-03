@@ -115,6 +115,34 @@ direction section is a literal `TODO(steward)`, and only the steward's edit
 + decision + merge passes the gate. To send a parked stream back through
 synthesis at any time, relabel the root `status: needs-synthesis`.
 
+### Concurrency: how many streams run at once
+
+Streams all drain onto a **single human synthesis gate**: producer capacity
+scales with agents, the steward's judgement does not. So concurrency is
+bounded (#292 / ADR-0013):
+
+- **At most `MAX_ACTIVE_STREAMS` (default 5) streams are worked at a time.**
+  A stream is *active* while it has open child issues or its root is being
+  worked (`claimed` / `in-review` / `changes-requested`). A G0-approved root
+  that is merely `status: available` is a stream **waiting in the backlog**:
+  `start_work.sh` holds new discover roots while the cap is reached and picks
+  them up as slots free — a stream releases its slot when it drains to
+  `needs-synthesis` / `awaiting-direction` or ends. The human G0 decision is
+  sequenced, never overridden.
+- **Drained streams always arrive at G1 pre-drafted.** `synthesize_work.sh`
+  drafts every `needs-synthesis` root (ADR-0003/0007/0012) — run it on a
+  loop or cron alongside the workers so the steward always starts from a
+  draft, never a blank page.
+- **Stewards parallelise the human side.** Any trusted reviewer can steward
+  a stream (see Roles below), so G1 isn't one person; the synthesis queue
+  depth is published in the site's data snapshot (`stats.synthesisQueue`)
+  so the backlog stays visible.
+
+Priority follows the same discipline: `priority: high` is a small,
+steward-curated shortlist, honoured by the runners for at most
+`HIGH_PRIORITY_CAP` (default 5) streams at a time (#293 —
+see [AUTOMATION.md](AUTOMATION.md)).
+
 ## 2. The human gates
 
 Two kinds of review get conflated unless we name them:
