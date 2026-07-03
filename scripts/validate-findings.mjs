@@ -36,6 +36,29 @@ function parseFrontmatter(text) {
 }
 
 const isPlaceholder = (v) => !v || /[<>]/.test(v) || /YYYY-MM-DD|exact model id|your name or handle|the question you answered/i.test(v);
+
+// Harness artifacts and placeholder citations (#290). Agent harnesses sometimes
+// leak tool-wrapper tags (XML-ish call/result envelopes) or unfilled citation
+// stubs into the markdown they publish. Neither has any legitimate place in a
+// finding/solution/analysis doc, so any match is a hard failure. Checked
+// against the WHOLE file (frontmatter included) — leaks land anywhere.
+const ARTIFACT_PATTERNS = [
+  [/<\/?antml[:_][a-z]/i, "tool-wrapper artifact tag (antml:*)"],
+  [/<\/?(?:function_calls?|function_results?|fnr|invoke|tool_use|tool_result|search_results?|system-reminder|automated_reminder)\b/i, "tool-wrapper artifact tag"],
+  [/\[\s*(?:WebSearch|WebFetch|web search|TODO|TBD|FIXME|CITATION NEEDED)\b[^\]]*\]/i, "placeholder citation stub"],
+  [/\[(?:source|citation|ref|link|url)\](?!\s*[([])/i, "bare placeholder citation stub (no href)"],
+  [/\[(?:\.\.\.|…)\]/, "unfilled '[...]' placeholder"],
+  [/\]\(\s*\)/, "markdown link with an EMPTY href"],
+  [/\]\(\s*<?(?:url|link|href|source)>?\s*\)/i, "markdown link with a placeholder href"],
+  [/\]\(\s*(?:https?:\/\/)?(?:www\.)?example\.(?:com|org|net)\b[^)]*\)/i, "markdown link pointing at example.com (placeholder)"],
+];
+
+function checkArtifacts(text, errs) {
+  for (const [re, why] of ARTIFACT_PATTERNS) {
+    const m = text.match(re);
+    if (m) errs.push(`${why}: '${m[0].slice(0, 60)}' — harness/placeholder output must not be published (see #290)`);
+  }
+}
 // Numbered headings (e.g. "## 5. Confidence & limits") are common in analysis/ docs —
 // allow an optional leading "N. " before the section name.
 const hasSection = (body, name) => new RegExp(`^#{2,3}\\s*(?:\\d+\\.\\s*)?${name}`, "mi").test(body);
@@ -55,10 +78,12 @@ function checkCommon(fm, errs) {
 
 function validateFinding(file) {
   const errs = [];
-  const parsed = parseFrontmatter(readFileSync(file, "utf8"));
+  const text = readFileSync(file, "utf8");
+  const parsed = parseFrontmatter(text);
   if (!parsed) return ["no YAML frontmatter (--- block) at the top of the file"];
   const { fm, body } = parsed;
   checkCommon(fm, errs);
+  checkArtifacts(text, errs);
   if (!LEVELS.includes(fm.confidence)) errs.push(`frontmatter 'confidence' must be High/Medium/Low (got '${fm.confidence ?? ""}')`);
   const folder = path.basename(path.dirname(file));
   if (DOMAINS.includes(folder) && fm.domain && fm.domain !== folder)
@@ -72,10 +97,12 @@ function validateFinding(file) {
 
 function validateSolution(file) {
   const errs = [];
-  const parsed = parseFrontmatter(readFileSync(file, "utf8"));
+  const text = readFileSync(file, "utf8");
+  const parsed = parseFrontmatter(text);
   if (!parsed) return ["no YAML frontmatter (--- block) at the top of the file"];
   const { fm } = parsed;
   checkCommon(fm, errs);
+  checkArtifacts(text, errs);
   if (!LEVELS.includes(fm.feasibility)) errs.push(`frontmatter 'feasibility' must be High/Medium/Low (got '${fm.feasibility ?? ""}')`);
   if (isPlaceholder(fm.based_on) || fm.based_on === "[]") errs.push("frontmatter 'based_on' must link the finding(s) this builds on");
   return errs;
@@ -88,9 +115,11 @@ function validateSolution(file) {
 // section (numbered headings like "## 5. Confidence & limits" are allowed).
 function validateAnalysis(file) {
   const errs = [];
-  const parsed = parseFrontmatter(readFileSync(file, "utf8"));
+  const text = readFileSync(file, "utf8");
+  const parsed = parseFrontmatter(text);
   if (!parsed) return ["no YAML frontmatter (--- block) at the top of the file"];
   const { fm, body } = parsed;
+  checkArtifacts(text, errs);
   for (const f of ["title", "author", "agent", "date"]) {
     if (isPlaceholder(fm[f])) errs.push(`frontmatter '${f}' is missing or still a placeholder`);
   }
