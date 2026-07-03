@@ -159,6 +159,124 @@ When finished, print the PR URL.
 EOF
 }
 
+synthesis_rework_prompt() {  # $1 root, $2 pr, $3 overview path, $4 branch
+  local n="$1" pr="$2" path="$3" branch="$4" title feedback
+  title="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title)"
+  feedback="$(review_feedback "$pr")"
+  cat <<EOF
+You are the SYNTHESIS agent for The For Good Project (github.com/$REPO). Your
+draft PR #$pr ("$title") — the G1 stream overview for stream #$n — was sent
+back by an adversarial reviewer. Your job now is to address that review.
+
+You are inside a dedicated git worktree with the PR branch '$branch' checked
+out (detached HEAD at origin/$branch, freshly fetched).
+
+== REVIEW FEEDBACK ==
+$feedback
+== END REVIEW FEEDBACK ==
+
+The synthesis rules still bind you (docs/STREAMS.md, ADR-0003, ADR-0007):
+- Edit ONLY $path. Plain language, evidence-only — every takeaway keeps its
+  finding's confidence; never launder a Low into a confident claim; never
+  import outside facts.
+- Candidate outcomes stay NEUTRAL: no ranking, no recommendation, no "we
+  should". The direction decision is the steward's, never yours.
+- PRESERVE, verbatim: any 'steward:' frontmatter value, the 'Feedback log'
+  table, every dated entry under 'Where this is heading', and any text a
+  human steward has written. The TODO(steward) placeholder stays unless a
+  steward already replaced it.
+
+Do this:
+1. Address EVERY point in the feedback. Where you believe the reviewer is
+   wrong, leave the draft as-is and prepare a short, evidence-backed rebuttal
+   for step 3 instead.
+2. Commit ONLY $path and push to the SAME branch:
+   git push origin HEAD:$branch
+3. Comment on the PR summarising what you changed and any rebuttals:
+   gh pr comment $pr --repo $REPO --body "..."
+
+IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
+labels or assignees — the runner manages status. Work only on PR #$pr.
+EOF
+}
+
+# Self-heal the synthesis rework queue (mirror of start_work.sh's reconciler,
+# scoped to synthesis drafts — ADR-0011): any open synthesis/* PR whose CURRENT
+# latest review is a change-request (no commits pushed after it) but whose
+# stream root still sits "awaiting-direction" gets flipped to
+# "changes-requested" so the rework pass below picks it up. This catches
+# reviews posted outside review_work.sh and hand-offs from older runners.
+reconcile_synthesis_rework() {
+  [ "$DRY_RUN" = 1 ] && return 0
+  local prs pr iss labels lastcr headcommit
+  prs="$(gh pr list --repo "$REPO" --state open --json number,headRefName,reviewDecision \
+          --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|select(.headRefName|startswith("synthesis/"))|.number' 2>/dev/null || true)"
+  for pr in $prs; do
+    lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
+    [ -z "$lastcr" ] && continue
+    headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
+    # ISO-8601 compares lexically: a commit newer than the review means the
+    # draft was already reworked and awaits RE-review — leave it alone.
+    [ -n "$headcommit" ] && [[ "$headcommit" > "$lastcr" ]] && continue
+    iss="$(issue_addressed_by_pr "$pr" || true)"
+    [ -z "$iss" ] && continue
+    labels="$(issue_labels "$iss" 2>/dev/null || true)"
+    case ",$labels," in
+      *",status: changes-requested,"*) continue ;;   # already routed
+      *",status: awaiting-direction,"*)
+        set_status_label "$iss" "changes-requested" "awaiting-direction" "in-review" 2>/dev/null \
+          && ok "Reconciled stream #$iss → changes-requested (unrouted review on synthesis PR #$pr)" || true ;;
+    esac
+  done
+}
+
+# Stream roots whose synthesis draft was sent back: "status: changes-requested"
+# plus an open synthesis/* PR. Echoes "<issue> <pr>" pairs, oldest root first.
+synthesis_rework_targets() {
+  local snap n pr
+  snap="$(fetch_open_issues)" || snap='[]'
+  printf '%s' "$snap" \
+    | jq -r '[.[] | select(.labels|map(.name)|index("status: changes-requested"))] | sort_by(.createdAt) | .[].number' \
+    | while IFS= read -r n; do
+        [ -z "$n" ] && continue
+        pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
+        pr_is_synthesis "$pr" && printf '%s %s\n' "$n" "$pr"
+      done
+}
+
+resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
+  local n="$1" pr="$2" branch
+  rule; info "${c_bold}Stream #$n${c_reset} (synthesis rework, PR #$pr) — $(issue_field "$n" title)"
+  branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName)"
+  if [ "$DRY_RUN" = 1 ]; then
+    info "[dry-run] would rework synthesis PR #$pr (branch $branch) against the review feedback, push, and move #$n → awaiting-direction"
+    return 0
+  fi
+  # Claim: several synthesis runners may race a sent-back draft. Same
+  # assign-settle-tie-break as start_work.sh's claims.
+  gh issue edit "$n" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
+  resolve_claim_race "$n" || return 0
+  local before after
+  before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
+  make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
+  local path; path="$(overview_path "$n" "$WORKTREE" "$(issue_field "$n" title)")"
+  info "Handing synthesis rework for stream #$n to $AGENT (worktree: $WORKTREE)..."
+  set +e; run_agent "$(synthesis_rework_prompt "$n" "$pr" "$path" "$branch")" "$WORKTREE"; local rc=$?; set -e
+  was_interrupted "$rc" && { remove_worktree; warn "Interrupted — stopping."; exit 130; }
+  if [ "$rc" -eq 0 ]; then ok "Synthesis rework run complete for stream #$n"; else err "Synthesis rework run failed/aborted for stream #$n (exit $rc)"; fi
+  remove_worktree
+  after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
+  if [ "$after" != "$before" ]; then
+    # Back to the review gate; the root parks at awaiting-direction (its normal
+    # status while a draft PR exists) — also strips any stray in-review.
+    set_status_label "$n" "awaiting-direction" "changes-requested" "in-review"
+    gh issue comment "$n" --repo "$REPO" --body "🔁 Synthesis rework pushed to PR #$pr — back to **awaiting-direction** pending a fresh adversarial review and the steward's decision." >/dev/null || true
+    ok "Stream #$n → awaiting-direction (rework pushed to PR #$pr)"
+  else
+    warn "Agent pushed no new commits to PR #$pr — leaving #$n as 'changes-requested' for a future loop."
+  fi
+}
+
 synthesize_one() {  # $1 = stream root issue number
   local n="$1"
   rule; info "${c_bold}Stream #$n${c_reset} — $(issue_field "$n" title)"
@@ -228,6 +346,17 @@ main() {
   info "synthesize_work.sh · repo=$REPO · agent=$AGENT${ONLY_STREAM:+ · stream=$ONLY_STREAM}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   while :; do
+    reconcile_synthesis_rework   # pull in sent-back drafts the hand-off missed (ADR-0011)
+    # Rework FIRST: a sent-back draft blocks its stream's G1 gate, so it beats
+    # drafting new overviews. Each pair is "<root> <pr>".
+    local n pr
+    while IFS=' ' read -r n pr; do
+      [ -z "$n" ] && continue
+      [ -n "$ONLY_STREAM" ] && [ "$n" != "$ONLY_STREAM" ] && continue
+      resynthesize_one "$n" "$pr" || true
+      done=$((done+1))
+      [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ] && { rule; ok "Reached MAX=$MAX. Stopping."; exit 0; }
+    done <<< "$(synthesis_rework_targets || true)"
     local roots
     if [ -n "$ONLY_STREAM" ]; then roots="$ONLY_STREAM"; else roots="$(synthesis_issues || true)"; fi
     if [ -z "$roots" ]; then
@@ -236,7 +365,6 @@ main() {
       fi
       rule; ok "No streams waiting for synthesis."; break
     fi
-    local n
     for n in $roots; do
       synthesize_one "$n" || true
       done=$((done+1))

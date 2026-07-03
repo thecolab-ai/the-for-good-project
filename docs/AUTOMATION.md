@@ -70,7 +70,10 @@ For **rework** it checks out the PR branch in a fresh worktree, feeds the agent
 the reviewer's feedback (review bodies + inline comments), and — once the agent
 has pushed to the same branch — flips the issue back to `status: in-review` so
 a reviewer picks it up again. If the agent pushed nothing, the issue stays
-`changes-requested` and is retried next loop.
+`changes-requested` and is retried next loop. **Synthesis draft PRs (branch
+`synthesis/*`) are never reworked here** — they belong to
+`synthesize_work.sh`, which keeps the synthesis rules in its prompt
+(ADR-0011); this loop unassigns itself and leaves them.
 
 Each loop also **reconciles the rework queue** first (ADR-0008): any open PR
 you authored whose *current* latest review is a change-request (no commits
@@ -177,6 +180,14 @@ The judgement stays human, structurally:
   dated direction entries.
 - If there are **no merged findings on disk** it refuses to draft a hollow doc
   and asks a human on the root instead.
+- If a reviewer **sends a draft back**, the rework comes back HERE, not to
+  `start_work.sh` (ADR-0011): each loop first reconciles (any open
+  `synthesis/*` PR with a current change-request whose root still sits
+  `awaiting-direction` is flipped to `changes-requested`), then reworks
+  sent-back drafts — with the synthesis rules still binding (steward text
+  preserved verbatim, neutral candidate outcomes, edit only the overview) —
+  before drafting new overviews. On push the root returns to
+  `awaiting-direction`.
 
 The steward finishes the gate by hand: edit the takeaways, fix any overreach,
 **write the direction decision**, set `steward:`, merge — and if proceeding,

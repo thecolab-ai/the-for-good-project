@@ -276,6 +276,18 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
     fi
     return 0
   fi
+  # A SYNTHESIS draft (branch synthesis/*) is reworked by synthesize_work.sh
+  # ONLY (ADR-0011): this generic loop would feed it the research rework prompt
+  # (no steward-preservation rules) and then park the stream root at
+  # "in-review" — a status a root must never hold. Unassign so the synthesis
+  # runner can claim it; drop it from MY queue.
+  if pr_is_synthesis "$pr"; then
+    log "#$n's PR #$pr is a synthesis draft — its rework belongs to synthesize_work.sh. Unassigning @me."
+    if [ "$DRY_RUN" = 0 ]; then
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    fi
+    return 0
+  fi
   # A fork PR's branch lives on the contributor's fork, not origin — we can
   # neither check it out as origin/$branch nor push a rework to it (only its
   # author can). Drop it from MY rework queue so the loop doesn't spin on it
@@ -325,6 +337,7 @@ reconcile_rework() {
   prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
           --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"
   for pr in $prs; do
+    pr_is_synthesis "$pr" && continue   # routed by synthesize_work.sh's own reconciler (ADR-0011)
     lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
     [ -z "$lastcr" ] && continue
     headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
@@ -351,6 +364,7 @@ take_unassigned_rework() {  # $1 = optional queue snapshot (from fetch_open_issu
   local n pr owner
   for n in $(unassigned_reworks "${1:-}"); do
     pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
+    pr_is_synthesis "$pr" && continue   # synthesis reworks belong to synthesize_work.sh (ADR-0011)
     owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
     [ "$owner" = "$OWNER" ] || continue
     if [ "$DRY_RUN" = 1 ]; then echo "$n"; return 0; fi
