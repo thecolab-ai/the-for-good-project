@@ -33,7 +33,7 @@ when — they have consented.
 
 | id (slot) | Role | Consent given (date) | How consent was recorded | Consent to public name + photo |
 |---|---|---|---|---|
-| _(none yet — placeholders only)_ | — | — | — | — |
+| `gligorkot` | Contributor | 2026-07-03 | PR #191 requested changes from @gligorkot: "we should add real people's photos and names" and "I'd be happy to put my name towards this project"; name and avatar source checked against the public GitHub profile for @gligorkot. | Name: Gligor Kotushevski. Photo: public GitHub avatar copied to `web/public/team/gligorkot.jpg` in direct response to the review request for real photos and names. |
 
 ## To remove someone
 

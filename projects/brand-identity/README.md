@@ -138,8 +138,10 @@ What the agent did (allowed) vs. what a human must do (gated):
 
 Until a person consents, their slot in `team.ts` keeps `name: null` /
 `photo: null` and the page renders a dignified "added with consent" placeholder
-— so the site is always **honest about who has actually signed off**. The
-process to add a real person is in
+— so the site is always **honest about who has actually signed off**. One
+contributor has now been added from PR #191 review consent; the remaining role
+slots stay gated until each person signs off. The process to add a real person
+is in
 [`CONSENT.md`](CONSENT.md) and in the header comment of `team.ts`.
 
 ## How to run
@@ -155,11 +157,12 @@ npm run build   # type-check + production build (passes)
 
 ## Status
 
-**Prototype.** The brand kit and the page are built and building green. What's
-**deliberately missing pending a human**:
+**Prototype.** The brand kit and the page are built and building green. It now
+includes one real consented contributor. What's **deliberately still missing
+pending a human**:
 
-- Real names and photos for the team (human-gated — the whole point of the
-  consent rule). Until then the page shows placeholder slots.
+- Real names and photos for the rest of the team (human-gated — the whole point
+  of the consent rule). Until then those slots show placeholders.
 - A human steward to confirm the positioning line / tagline choice and whether
   the five role slots match the real team shape.
 - Optional: a favicon/OG image refresh if the steward wants beyond the current

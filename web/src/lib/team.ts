@@ -37,6 +37,13 @@ export type TeamMember = {
 // people replace these one signed-off consent at a time (see header above).
 export const TEAM: TeamMember[] = [
   {
+    id: "gligorkot",
+    role: "Contributor",
+    focus: "Reviews and contributes to the open project, keeping the public work tied to real people.",
+    name: "Gligor Kotushevski",
+    photo: "team/gligorkot.jpg",
+  },
+  {
     id: "steward",
     role: "Founder & steward",
     focus: "Sets direction, makes the human gate calls, and carries the relationships.",
