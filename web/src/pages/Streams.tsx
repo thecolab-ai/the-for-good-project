@@ -1,18 +1,21 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight } from "lucide-react";
+import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
-import { streamStateStyle, harnessLabel } from "@/lib/streams";
+import { StreamProgress } from "@/components/shared/StreamProgress";
+import { streamStateStyle, harnessLabel, isStreamShipped } from "@/lib/streams";
 import { relativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { StreamSummary } from "@/lib/types";
+
+type Filter = "all" | "progress" | "shipped";
 
 function StatePill({ state }: { state: string }) {
   if (!state) return null;
@@ -33,10 +36,14 @@ function StreamCard({ s }: { s: StreamSummary }) {
         </div>
         <div className="mt-2 line-clamp-2 font-serif text-base font-semibold leading-snug group-hover:text-brand-cyan-dark">{s.title}</div>
 
+        <div className="mt-3">
+          <StreamProgress state={s.state} compact />
+        </div>
+
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" /> {s.issues}</span>
-          <span className="inline-flex items-center gap-1"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
-          <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
+          <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
+          <span className="inline-flex items-center gap-1" title="Merged outputs"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
+          <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
         </div>
 
         {(harnesses.length > 0 || models.length > 0) ? (
@@ -60,52 +67,93 @@ function StreamCard({ s }: { s: StreamSummary }) {
   );
 }
 
+function CardGrid({ streams }: { streams: StreamSummary[] }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {streams.map((s) => <StreamCard key={s.stream} s={s} />)}
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, label, count, tint }: { icon: typeof Loader2; label: string; count: number; tint: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <Icon className="h-4 w-4" style={{ color: tint }} />
+      <h2 className="font-serif text-lg font-semibold">{label}</h2>
+      <span className="rounded-full px-2 py-0.5 text-xs font-medium tabular-nums" style={{ backgroundColor: `${tint}1A`, color: tint }}>{count}</span>
+    </div>
+  );
+}
+
+function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function Streams() {
   const { data, error, loading } = useSnapshot();
   const [q, setQ] = useState("");
-  const [state, setState] = useState("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const streams = useMemo(() => data?.streamsSummary ?? [], [data]);
-  const states = useMemo(() => [...new Set(streams.map((s) => s.state).filter(Boolean))], [streams]);
 
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const filtered = streams.filter((s) => {
-    if (state !== "all" && s.state !== state) return false;
-    if (q && !s.title.toLowerCase().includes(q.toLowerCase()) && !String(s.stream).includes(q)) return false;
-    return true;
-  });
+  const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || String(s.stream).includes(q);
+  const inProgress = streams.filter((s) => !isStreamShipped(s.state) && matchesText(s));
+  const shipped = streams.filter((s) => isStreamShipped(s.state) && matchesText(s));
+  const showProgress = filter !== "shipped" && inProgress.length > 0;
+  const showShipped = filter !== "progress" && shipped.length > 0;
+  const nothing = !showProgress && !showShipped;
 
   return (
     <div>
       <PageHeader title="Streams">
-        Every problem we're working, start to finish. Each stream begins as one Discover issue and fans out into researched, reviewed, merged work. Open one to see its overview, full lineage DAG, and the models, harnesses and people behind it.
+        Every problem we're working, start to finish. Each stream begins as one Discover issue and fans out into researched, reviewed, merged work. Open one to see the original problem, the research behind it, the synthesised answer, and the models, harnesses and people involved.
       </PageHeader>
 
       {streams.length === 0 ? (
         <EmptyState icon={Network} title="No streams yet">Submit a problem to start the first one.</EmptyState>
       ) : (
         <>
-          <div className="mb-6 flex flex-wrap items-center gap-2">
+          <div className="mb-6 flex flex-wrap items-center gap-3">
             <div className="relative min-w-[180px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Search streams…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
             </div>
-            <Select value={state} onValueChange={setState}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="State" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All states</SelectItem>
-                {states.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground">{filtered.length} stream{filtered.length === 1 ? "" : "s"}</span>
+            <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">
+              <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>All <span className="tabular-nums opacity-60">{inProgress.length + shipped.length}</span></FilterButton>
+              <FilterButton active={filter === "progress"} onClick={() => setFilter("progress")}><Loader2 className="h-3.5 w-3.5" /> In progress <span className="tabular-nums opacity-60">{inProgress.length}</span></FilterButton>
+              <FilterButton active={filter === "shipped"} onClick={() => setFilter("shipped")}><CheckCircle2 className="h-3.5 w-3.5" /> Shipped <span className="tabular-nums opacity-60">{shipped.length}</span></FilterButton>
+            </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <EmptyState icon={Network} title="Nothing matches">Clear the filter to see all streams.</EmptyState>
+          {nothing ? (
+            <EmptyState icon={Network} title="Nothing matches">Clear the search or filter to see all streams.</EmptyState>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((s) => <StreamCard key={s.stream} s={s} />)}
+            <div className="space-y-10">
+              {showProgress ? (
+                <section>
+                  <SectionHeader icon={Loader2} label="In progress" count={inProgress.length} tint="#2E4057" />
+                  <CardGrid streams={inProgress} />
+                </section>
+              ) : null}
+              {showShipped ? (
+                <section>
+                  <SectionHeader icon={CheckCircle2} label="Shipped" count={shipped.length} tint="#0E8A16" />
+                  <CardGrid streams={shipped} />
+                </section>
+              ) : null}
             </div>
           )}
         </>
