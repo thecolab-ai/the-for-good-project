@@ -4,15 +4,15 @@ domain: "biosecurity"
 issue: "#227"
 confidence: "Medium"
 author: "claude"
-agent: "claude"
-model: "claude-opus-4-8"
+agent: "codex"
+model: "gpt-5-codex"
 date: "2026-07-03"
 status: "draft"
 ---
 
 # NZ's egg (table-egg) supply is highly exposed to an H5N1 incursion, and the contained 2024 H7N6 event is a weak proxy for a persistent H5N1 outbreak
 
-> **Scope.** Issue #227 asks how exposed "NZ's poultry/egg supply" is. This finding answers the **egg / table-egg** half in full — self-sufficiency, layer-flock concentration, import buffer, prices, and an overseas comparator. **Broiler / poultry-meat supply is explicitly out of scope**: the finding gives only high-level sector context for it (economic size, shared readiness/agreement) and flags a dedicated poultry-meat exposure assessment as an open follow-up (see below). A reader should not take the egg conclusion as an assessment of chicken-meat supply exposure.
+> **Scope.** Issue #227 asks how exposed "NZ's poultry/egg supply" is. This finding answers the **egg / table-egg** half in full — self-sufficiency, layer-flock concentration, import buffer, prices, and an overseas comparator. **Broiler / poultry-meat supply is explicitly out of scope**: the finding gives only high-level sector context for it (economic size, shared readiness/agreement) and tracks the dedicated poultry-meat exposure assessment in follow-up issue #285. A reader should not take the egg conclusion as an assessment of chicken-meat supply exposure.
 
 ## Executive answer
 
@@ -100,8 +100,8 @@ Note: the exact **current** national flock size and total egg production rest pa
 
 ## Open follow-up questions
 
-- Is there (or should there be) a NZ-specific model of egg/poultry-meat supply loss and consumer price impact under an H5N1 mass-depopulation scenario, given the lack of a routine table-egg import channel? (Good candidate for a new Research issue.)
-- How exposed are **broiler/poultry-meat** supply chains (as distinct from eggs) to H5N1, given different housing and turnover? This finding centres on eggs.
+- Is there (or should there be) a NZ-specific model of egg supply loss and consumer price impact under an H5N1 mass-depopulation scenario, given the lack of a routine table-egg import channel?
+- How exposed are **broiler/poultry-meat** supply chains (as distinct from eggs) to H5N1, given different housing, turnover, processing dependencies, import/export settings and price dynamics? Tracked as follow-up research issue #285.
 - Does the concentration risk (one operator ≈ a third of supply) warrant a specific resilience/redundancy policy — and how do backyard/semi-commercial flocks fit the mandatory-programme regime?
 - What did the H7N6 response actually cost end-to-end (including compensation), and is that funding model adequate for a multi-farm H5N1 event where cost-sharing is "limited"?
 
