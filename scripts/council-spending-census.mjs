@@ -19,6 +19,15 @@
 // status + byte size of each fetch so a "NO-HIT" is auditable and distinct from
 // a blocked fetch.
 //
+// It ALSO computes, over the FULL unique scanned URL set (not just the retained
+// samples), how many URLs carry a structured extension (.csv/.xls/.xlsx/.json/
+// .geojson) and how many of those also carry a bounded finance/procurement/
+// spending/grants keyword. That per-council `structured_url_hits` field, and the
+// census-wide "Structured totals" summary line, are the auditable basis for the
+// finding's load-bearing negative that no council-published structured spending
+// file was surfaced at the front door — a reviewer can check it directly rather
+// than trusting a truncated sample list.
+//
 // This is deliberately a FRONT-DOOR census: homepage + root sitemap only. It is
 // not a full crawl, a document-library search, or a JS-rendered fetch, and it
 // cannot see search-only endpoints, ArcGIS services, or files without matching
@@ -78,6 +87,14 @@ const CHALLENGE =
 
 const TIMEOUT_MS = 25000;
 const MAX_SAMPLES = 5;
+
+// Structured, machine-readable data extensions. The finding's load-bearing
+// negative is "no council-published structured supplier-payment/transaction
+// ledger surfaced at the front door", so we compute this over the FULL scanned
+// URL set (every sitemap/homepage URL), NOT just the retained keyword samples —
+// otherwise the negative would only cover the handful of sample URLs kept per
+// council. Matches an extension immediately before end-of-URL or a ?query/#frag.
+const STRUCT_EXT = /\.(?:csv|xlsx?|json|geojson)(?:[?#]|$)/i;
 
 async function httpGet(url, timeout = TIMEOUT_MS) {
   try {
@@ -242,6 +259,28 @@ async function auditCouncil(name, homepage) {
 
   const { groups, samples } = scan(strings);
 
+  // --- Structured-data check over the FULL scanned URL set ---
+  // Deduplicate every absolute URL we scanned, then flag the ones bearing a
+  // structured extension (.csv/.xls/.xlsx/.json/.geojson). `structuredAny` is
+  // any structured file at all; `structuredMatched` is the subset that ALSO
+  // carries a bounded finance/procurement/spending/grants keyword — that subset
+  // is what the "no structured spending file at the front door" claim rests on.
+  // Both are counted census-wide, so a reviewer can check the negative directly
+  // instead of trusting the truncated sample list.
+  const allUrls = [];
+  const seenUrl = new Set();
+  for (const s of strings) {
+    const u = s.split(/\s/)[0];
+    if (/^https?:\/\//.test(u) && !seenUrl.has(u)) {
+      seenUrl.add(u);
+      allUrls.push(u);
+    }
+  }
+  const structuredAny = allUrls.filter((u) => STRUCT_EXT.test(u));
+  const structuredMatched = structuredAny.filter((u) =>
+    TOKEN_GROUP.some(([tok]) => norm(u).includes(tok)),
+  );
+
   // Classification, in decreasing evidential strength:
   //   HIT      — a keyword matched (positive; strong regardless of coverage).
   //   NO-HIT   — the root sitemap was fetched & scanned and no keyword matched
@@ -269,6 +308,10 @@ async function auditCouncil(name, homepage) {
     classification,
     groups,
     urlsScanned: strings.length,
+    uniqueUrls: allUrls.length,
+    structuredAny: structuredAny.length,
+    structuredMatched: structuredMatched.length,
+    structuredSamples: [...new Set([...structuredMatched, ...structuredAny])].slice(0, 6),
     sampleUrls: sampleUrls.slice(0, 6),
     fetchNotes: notes,
   };
@@ -301,7 +344,7 @@ async function worker() {
     try {
       results[i] = await auditCouncil(name.trim(), url.trim());
     } catch (e) {
-      results[i] = { council: name.trim(), homepage: url.trim(), classification: "BLOCKED", groups: [], urlsScanned: 0, sampleUrls: [], fetchNotes: [`error: ${e?.message || e}`] };
+      results[i] = { council: name.trim(), homepage: url.trim(), classification: "BLOCKED", groups: [], urlsScanned: 0, uniqueUrls: 0, structuredAny: 0, structuredMatched: 0, structuredSamples: [], sampleUrls: [], fetchNotes: [`error: ${e?.message || e}`] };
     }
     console.error(`[${i + 1}/${rows.length}] ${results[i].classification}  ${name.trim()}`);
   }
@@ -309,16 +352,27 @@ async function worker() {
 await Promise.all(Array.from({ length: POOL }, worker));
 
 const counts = results.reduce((a, r) => ((a[r.classification] = (a[r.classification] || 0) + 1), a), {});
+// Census-wide structured-data totals: how many councils surfaced ANY structured
+// file, and how many surfaced a structured file that also carries a bounded
+// finance/procurement/spending/grants keyword. This is the auditable basis for
+// the finding's structured-data negative.
+const structuredTotals = {
+  councils_with_any_structured_url: results.filter((r) => r.structuredAny > 0).length,
+  councils_with_keyword_matched_structured_url: results.filter((r) => r.structuredMatched > 0).length,
+  total_unique_urls_scanned: results.reduce((a, r) => a + (r.uniqueUrls || 0), 0),
+};
 
 if (asJson) {
-  console.log(JSON.stringify({ generated: "see git commit date", counts, results }, null, 2));
+  console.log(JSON.stringify({ generated: "see git commit date", counts, structuredTotals, results }, null, 2));
 } else {
   console.log("# Bounded homepage + root-sitemap council spending/procurement keyword census");
   console.log("# Method: scripts/council-spending-census.mjs — homepage anchors + root sitemap.xml (index expanded), bounded keyword list.");
   console.log("# Classification: HIT / NO-HIT (sitemap scanned) / PARTIAL (homepage only) / BLOCKED (WAF/IP per ADR-0006, not evidence of absence).");
+  console.log("# structured_url_hits column: matched=<structured URLs bearing a finance/procurement/spending/grants keyword> any=<all structured URLs> over the FULL unique scanned URL set (not just the sample_urls).");
   console.log(`# Counts: ${JSON.stringify(counts)}`);
+  console.log(`# Structured totals: ${JSON.stringify(structuredTotals)}`);
   console.log("#");
-  console.log(["council", "classification", "matched_groups", "urls_scanned", "sample_urls", "fetch_notes"].join("\t"));
+  console.log(["council", "classification", "matched_groups", "urls_scanned", "unique_urls", "structured_url_hits", "structured_samples", "sample_urls", "fetch_notes"].join("\t"));
   for (const r of results) {
     console.log(
       [
@@ -326,6 +380,9 @@ if (asJson) {
         r.classification,
         r.groups.join("; ") || "-",
         r.urlsScanned,
+        r.uniqueUrls ?? 0,
+        `matched=${r.structuredMatched ?? 0} any=${r.structuredAny ?? 0}`,
+        (r.structuredSamples && r.structuredSamples.length ? r.structuredSamples.join(" ") : "-"),
         r.sampleUrls.join(" ") || "-",
         r.fetchNotes.join(" | "),
       ].join("\t"),
