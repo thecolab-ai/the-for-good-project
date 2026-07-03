@@ -202,6 +202,16 @@ it and merges it themselves — as admin, or by setting the
 `for-good/adversarial-review` check by hand. The label must be applied
 **deliberately by a maintainer, never by a work agent**.
 
+That rule is **enforced, not just convention** (#288 / ADR-0013):
+[`human-only-guard.yml`](../.github/workflows/human-only-guard.yml) reverts
+any add/removal of `review: human-only` performed by a login that isn't on
+the `human_maintainers` allow-list in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json), and
+records the attempt on the thread. Runner prompts additionally forbid agents
+from ever touching the label. An agent that believes a PR needs the label
+says so in a comment and leaves the labelling to a maintainer (ADR-0009) —
+or, in the review loop, parks the PR via the pending merge check (#287).
+
 ### The different-identity rule (important)
 
 You cannot adversarially review your own work. The script **refuses** to review a

@@ -253,7 +253,8 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
-Do not edit the PR's files, change labels, or merge anything.
+Do not edit the PR's files, change labels (above all "review: human-only" —
+that one is a human maintainer's alone), or merge anything.
 EOF
 }
 
@@ -329,7 +330,8 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
-Do not edit the PR's files, change labels, or merge anything.
+Do not edit the PR's files, change labels (above all "review: human-only" —
+that one is a human maintainer's alone), or merge anything.
 EOF
 }
 

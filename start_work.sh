@@ -158,7 +158,9 @@ ${stream:+   The PR body must also contain the exact text  Stream: #$stream  on 
 }
 IMPORTANT: do NOT change labels or assignees on EXISTING issues — the runner
 manages issue status. (The one exception: labels on NEW sub-issues you create
-via the fan-out instruction above.) Do exactly one issue (#$n). Respect the
+via the fan-out instruction above.) In particular you must NEVER add or
+remove the "review: human-only" label on anything — only a human maintainer
+may touch it, and automation reverts anyone else (#288). Do exactly one issue (#$n). Respect the
 human gates (docs/STREAMS.md): never open ideate/build follow-up issues, and
 never write or edit streams/ overview docs — those are human steward
 decisions. When finished, print the PR URL.
@@ -200,7 +202,8 @@ Do this:
    gh pr comment $pr --repo $REPO --body "..."
 
 IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
-labels or assignees — the runner manages status. Work only on PR #$pr.
+labels or assignees — the runner manages status, and the "review: human-only"
+label is a human maintainer's alone to toggle (#288). Work only on PR #$pr.
 EOF
 }
 
