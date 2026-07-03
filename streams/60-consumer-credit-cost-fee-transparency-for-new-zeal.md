@@ -4,7 +4,7 @@ title: "The true cost of small loans is hard for New Zealanders to see or compar
 state: awaiting-direction
 steward: ""
 domain: other
-updated: 2026-07-02
+updated: 2026-07-03
 ---
 
 <!--
@@ -72,6 +72,16 @@ feasible and safe to build.
   co-design, consent, and a privacy review first. (confidence: Medium overall;
   the MoneyTalks referral route itself is High) —
   [front-door requirements](../research/findings/other/credit-help-front-door-requirements.md)
+- **The right shape for any eventual product is a "help front door", not a
+  flat fee table — but that framing rests on two assumptions nobody has
+  tested.** The framing research confirms the products differ too much in law
+  and structure to flatten into one comparison, and that human help should be
+  a first-class outcome. It also names its own weakest points: there is no
+  behavioural evidence that money-tight borrowers would consult any tool
+  *before* borrowing, and existing sites (Sorted, MoneyHub, Canstar and
+  others) may already cover the comparison need — in which case the real gap
+  is trust or distribution, not missing information. (confidence: Medium) —
+  [framing](../research/findings/other/consumer-credit-transparency-framing.md)
 
 ## What we're not sure about yet
 
@@ -79,6 +89,11 @@ feasible and safe to build.
   scenario work is built from product disclosures, not from data on real
   borrower choices — the cost-scenarios research flags this explicitly as a
   data gap. Financial mentors could answer it; none have been contacted yet.
+- **We don't know whether the intended users would use this at all.** The
+  framing research names this its "unvalidated demand assumption": no evidence
+  was found that people in a money-tight moment comparison-shop *before*
+  borrowing rather than seeking help after. If they don't, the whole
+  front-door idea fails no matter how good the data is.
 - **The advice-boundary question is flagged by two findings but not settled.**
   Both the regulatory research and the front-door research conclude that
   personalised recommendations are risky, yet neither found an official ruling
@@ -86,9 +101,11 @@ feasible and safe to build.
   uncertainty for the whole product idea, resolvable only by legal advice or
   the regulator.
 - **Existing comparison sites may already cover part of the need.** MoneyHub,
-  Canstar, Sorted and others publish loan comparisons; two findings note them
-  as context but neither systematically assessed whether the real gap is
-  comparison, provenance, vulnerable-borrower scenarios, or the human hand-off.
+  Canstar, Sorted and others publish loan comparisons; three findings note
+  them as context, and the framing research raises it to a named
+  counter-hypothesis — if those sites already serve this cohort, the gap is
+  trust or distribution, not missing information — but no finding has
+  systematically assessed them against what money-tight borrowers need.
 - **No organisation has been asked anything.** MoneyTalks/FinCap capacity,
   referral preferences, and whether comparison-before-support could even cause
   harm are all unvalidated assumptions until a human talks to the sector.
@@ -135,22 +152,25 @@ feasible and safe to build.
   (confidence: Medium). Would need: validation with MoneyTalks/FinCap, and
   legal review of the reality-check wording before anything personalised ships.
 - **Do a validation round before building anything: talk to financial mentors
-  and MoneyTalks/FinCap, get a legal view on the advice boundary, and assess
-  whether existing comparison sites already fill the gap.** Helps: the project,
-  by de-risking every other option. Effort: Small. Supported by the open
-  questions in all five findings, especially
+  and MoneyTalks/FinCap, get a legal view on the advice boundary, test the
+  assumption that money-tight borrowers would use a pre-borrowing tool, and
+  assess whether existing comparison sites already fill the gap.** Helps: the
+  project, by de-risking every other option. Effort: Small. Supported by the
+  open questions in all six findings, especially
   [front-door requirements](../research/findings/other/credit-help-front-door-requirements.md)
-  (confidence: Medium) and
+  (confidence: Medium),
+  [framing](../research/findings/other/consumer-credit-transparency-framing.md)
+  (confidence: Medium), and
   [cost scenarios](../research/findings/other/small-credit-cost-scenarios.md)
   (confidence: Medium). Would need: a human steward to make the contacts —
-  this can't be done from public documents alone.
+  most of this can't be done from public documents alone.
 
 ## Where this is heading
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
 Signal: every finding independently calls for human validation (mentors, MoneyTalks/FinCap, or legal advice) before any borrower-facing tool is designed.
-Signal: the evidence base is consistent across all five findings — no contradictions found, but almost everything sits at Medium confidence.
+Signal: the evidence base is consistent across all six findings — no contradictions found, but almost everything sits at Medium confidence, and the framing research itself names two untested assumptions (demand, and existing tools) that could sink the product idea.
 Signal: the 1 July 2026 regulator handover means any policy-brief audience and citations should be re-checked as FMA guidance settles.
 
 ## Feedback log
