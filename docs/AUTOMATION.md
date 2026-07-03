@@ -171,6 +171,17 @@ tooling failure, not a PR verdict: the merge check is left unset (merge is
 still blocked — the check never went green) so a later loop simply retries,
 and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
+**Review rounds are capped (#287 / ADR-0013).** A PR gets at most
+`MAX_REVIEW_ROUNDS` (default 3) change-requesting review rounds. Instead of
+an (N+1)th agent re-review, the loop **parks the PR for a human**: the
+merge check is set to `pending` ("Awaiting human maintainer"), a one-time
+summary of the unresolved points is posted, and later loops skip the PR —
+including across new pushes — until a maintainer decides (merge it, send it
+back with concrete asks, apply `review: human-only`, or force one more agent
+round with `FORCE=1 PR=<n>`). Prior review rounds and author replies are
+already injected into every reviewer prompt as untrusted context, so a fresh
+reviewer must bring *new* evidence rather than re-litigate resolved points.
+
 ```bash
 REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
 REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude ./review_work.sh
