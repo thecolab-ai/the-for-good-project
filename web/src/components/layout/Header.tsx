@@ -12,10 +12,10 @@ type NavGroup = { label: string; items: NavItem[] };
 
 const LINKS: NavItem[] = [
   { to: "/", label: "Dashboard", end: true },
+  { to: "/partners", label: "For partners" },
   { to: "/live", label: "Live" },
   { to: "/board", label: "Board" },
   { to: "/streams", label: "Streams" },
-  { to: "/partners", label: "For partners" },
 ];
 
 const GROUPS: NavGroup[] = [
@@ -31,7 +31,7 @@ const GROUPS: NavGroup[] = [
     label: "Community",
     items: [
       { to: "/leaderboard", label: "Leaderboard" },
-      { to: "/contribute", label: "Get started" },
+      { to: "/contribute", label: "Contribute" },
       { to: "/methodology", label: "Method" },
       { to: "/decisions", label: "Decisions" },
     ],

@@ -27,3 +27,24 @@ export function cleanTitle(title: string): string {
 export function pct(n: number, total: number): number {
   return total > 0 ? Math.round((n / total) * 100) : 0;
 }
+
+// Resolve a repo-relative markdown href (e.g. "../research/findings/x.md")
+// against the source doc's GitHub blob URL so it doesn't 404 on-site.
+// Absolute URLs, anchors and root-relative paths pass through untouched.
+export function resolveDocHref(href: string | undefined, base: string): string | undefined {
+  if (!href || !base) return href;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#") || href.startsWith("/")) return href;
+  try {
+    return new URL(href, base).toString();
+  } catch {
+    return href;
+  }
+}
+
+// "3 Jul 2026" — the plain-words date used in forwardable briefs.
+export function shortDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+}
