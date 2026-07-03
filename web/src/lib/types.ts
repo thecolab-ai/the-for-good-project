@@ -59,6 +59,7 @@ export interface IssueLite {
 
 export interface Contributor {
   login: string;
+  name?: string | null;
   avatar: string;
   url: string;
   issuesAssigned: number;
