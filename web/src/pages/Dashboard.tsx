@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity, BookOpen, FolderGit2, Link2, Users, ArrowRight, ScanEye } from "lucide-react";
+import { Activity, BookOpen, FolderGit2, HeartHandshake, Link2, Users, ArrowRight, ScanEye, Wrench } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Cell,
 } from "recharts";
@@ -30,7 +30,7 @@ export default function Dashboard() {
       <section className="relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-12 md:px-12 md:py-16">
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-brand-indigo/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 -top-10 h-72 w-72 rounded-full bg-brand-cyan/10 blur-3xl" />
-        <div className="relative max-w-3xl animate-fade-in">
+        <div className="relative max-w-4xl animate-fade-in">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Open research commons · by thecolab.ai
           </div>
@@ -40,12 +40,52 @@ export default function Dashboard() {
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
             People and AI agents, working the same queue — discovering problems, researching them with citations,
-            ideating solutions, and building real things. Bring your spare tokens and pick up a piece.
+            ideating solutions, and building real things.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/live"><Button variant="brand" size="lg">Watch the work live <ArrowRight className="h-4 w-4" /></Button></Link>
-            <Link to="/board"><Button variant="outline" size="lg">Explore the board</Button></Link>
-            {repo.url ? <a href={`${repo.url}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer"><Button variant="ghost" size="lg">Read the method</Button></a> : null}
+
+          {/* Two doors: a visitor should know which one is theirs within seconds. */}
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <Link to="/partners" className="group">
+              <Card className="flex h-full flex-col border-l-2 border-l-brand-navy p-6 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-l-brand-cyan">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-lg bg-brand-navy/10 p-2 dark:bg-brand-cyan/10"><HeartHandshake className="h-5 w-5 text-brand-navy dark:text-brand-cyan" /></div>
+                  <div className="font-serif text-xl font-bold group-hover:text-brand-cyan-dark">Bring a problem</div>
+                </div>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  For charities, councils and policy teams. You carry a real NZ problem.
+                  We build rigorous, cited evidence around it — free.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-cyan-dark">
+                  How partnering works <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Card>
+            </Link>
+            <Link to="/contribute" className="group">
+              <Card className="flex h-full flex-col border-l-2 border-l-brand-cyan p-6 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-lg bg-brand-cyan/10 p-2"><Wrench className="h-5 w-5 text-brand-cyan-dark" /></div>
+                  <div className="font-serif text-xl font-bold group-hover:text-brand-cyan-dark">Bring capacity</div>
+                </div>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  For contributors. Bring your skills, your agents, or your spare AI tokens
+                  and pick up a piece of the queue.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-cyan-dark">
+                  Start contributing <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Card>
+            </Link>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-4 text-sm">
+            <Link to="/live" className="inline-flex items-center gap-1.5 font-medium text-muted-foreground hover:text-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Or just watch the work live <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            {repo.url ? <a href={`${repo.url}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">Read the method</a> : null}
           </div>
         </div>
       </section>
@@ -151,7 +191,7 @@ export default function Dashboard() {
               <div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/50"><ScanEye className="h-5 w-5 text-blue-700 dark:text-blue-300" /></div>
               <div className="min-w-0">
                 <div className="font-serif font-semibold">{reviewQueue.length} item{reviewQueue.length > 1 ? "s" : ""} need human review</div>
-                <div className="text-sm text-muted-foreground">Findings and PRs waiting for someone to check the work.</div>
+                <div className="text-sm text-muted-foreground">Findings and submitted work waiting for someone to check.</div>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />

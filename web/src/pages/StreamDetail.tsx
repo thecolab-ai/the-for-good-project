@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck } from "lucide-react";
+import { ArrowLeft, Check, Copy, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -11,8 +11,10 @@ import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
-import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection } from "@/lib/streams";
+import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection, stripEditorialDebris, buildStreamBrief } from "@/lib/streams";
+import { statusLabel } from "@/lib/meta";
 import { cleanTitle } from "@/lib/format";
+import type { StreamDoc } from "@/lib/types";
 
 const alwaysMatches = () => true;
 
@@ -28,6 +30,26 @@ function excerpt(body: string, max = 320): string {
     .replace(/\s+/g, " ")
     .trim();
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
+
+// Builds the forwardable plain-text brief and puts it on the clipboard —
+// something a partner can paste straight into an email.
+function CopyBriefButton({ doc }: { doc: StreamDoc }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildStreamBrief(doc));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable (permissions / insecure context) — nothing to do */
+    }
+  };
+  return (
+    <button type="button" onClick={onCopy} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-secondary">
+      {copied ? <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy brief</>}
+    </button>
+  );
 }
 
 function StepHeader({ n, icon: Icon, label }: { n: number; icon: typeof FileText; label: string }) {
@@ -101,7 +123,7 @@ export default function StreamDetail() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-muted-foreground">Stream #{streamNum}</span>
         <h1 className="font-serif text-2xl font-bold text-brand-navy dark:text-foreground md:text-3xl">{title}</h1>
-        {state ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{state}</span> : null}
+        {state ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{statusLabel(state)}</span> : null}
         <DomainBadge domain={domain} />
       </div>
 
@@ -204,10 +226,13 @@ export default function StreamDetail() {
 
           {/* 3 — the synthesis */}
           <section id="synthesis" className="scroll-mt-20">
-            <StepHeader n={3} icon={Lightbulb} label="The synthesised stream" />
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <StepHeader n={3} icon={Lightbulb} label="The synthesised stream" />
+              {hasOverview && doc ? <CopyBriefButton doc={doc} /> : null}
+            </div>
             {hasOverview ? (
               <Card className="border-l-2 border-l-brand-cyan p-6">
-                <Markdown>{doc?.body ?? ""}</Markdown>
+                <Markdown linkBase={doc?.url}>{stripEditorialDebris(doc?.body ?? "")}</Markdown>
                 {doc?.url ? <a href={doc.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs text-brand-cyan-dark hover:underline">Overview source <ExternalLink className="h-3 w-3" /></a> : null}
               </Card>
             ) : (
@@ -223,7 +248,7 @@ export default function StreamDetail() {
 
             <div className="grid grid-cols-3 gap-2 border-b border-border pb-3 text-center">
               <div><div className="text-lg font-bold tabular-nums">{summary?.issues ?? 0}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">issues</div></div>
-              <div><div className="text-lg font-bold tabular-nums">{summary?.mergedPRs ?? 0}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">merged</div></div>
+              <div><div className="text-lg font-bold tabular-nums">{summary?.mergedPRs ?? 0}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">accepted</div></div>
               <div><div className="text-lg font-bold tabular-nums">{summary?.findings ?? findings.length}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">findings</div></div>
             </div>
 

@@ -1,8 +1,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { resolveDocHref } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function Markdown({ children, className }: { children: string; className?: string }) {
+export function Markdown({ children, className, linkBase }: { children: string; className?: string; linkBase?: string }) {
   return (
     <div className={cn(
       "text-sm leading-relaxed text-foreground/90 [&_a]:text-brand-cyan-dark [&_a]:underline [&_a]:underline-offset-2",
@@ -13,7 +14,16 @@ export function Markdown({ children, className }: { children: string; className?
       "[&_blockquote]:border-l-2 [&_blockquote]:border-brand-cyan [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
       className
     )}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={linkBase ? {
+          a: ({ href, children: linkChildren, ...props }) => (
+            <a {...props} href={resolveDocHref(href, linkBase)} target="_blank" rel="noreferrer">{linkChildren}</a>
+          ),
+        } : undefined}
+      >
+        {children}
+      </ReactMarkdown>
     </div>
   );
 }

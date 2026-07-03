@@ -13,6 +13,7 @@ import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge, StageBadge, StatusBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { streamStateStyle, harnessLabel, isStreamShipped, isAwaitingDirection, streamStageIndex, subtasksByStream } from "@/lib/streams";
+import { statusLabel } from "@/lib/meta";
 import { relativeTime, cleanTitle } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary, IssueLite } from "@/lib/types";
@@ -37,9 +38,11 @@ const RANK: Record<SortKey, (s: StreamSummary) => number | string> = {
 const readView = (): View => { try { return (localStorage.getItem(VIEW_KEY) as View) || "table"; } catch { return "table"; } };
 const writeView = (v: View) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
 
+// Raw frontmatter states ("needs-synthesis") never reach a partner's eyes —
+// translate via STATUS_META, falling back to the raw string capitalised.
 function StatePill({ state }: { state: string }) {
   if (!state) return null;
-  return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{state}</span>;
+  return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{statusLabel(state)}</span>;
 }
 
 // The human-gate marker: research is done and synthesised — a person now has
@@ -121,7 +124,7 @@ function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
-          <span className="inline-flex items-center gap-1" title="Merged outputs"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
+          <span className="inline-flex items-center gap-1" title="Accepted work"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
           <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
         </div>
 
@@ -190,7 +193,7 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
             <TableHead>Domain</TableHead>
             <SortHead label="Issues" sortKey="issues" active={active("issues")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
             <SortHead label="Findings" sortKey="findings" active={active("findings")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
-            <SortHead label="Merged" sortKey="merged" active={active("merged")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
+            <SortHead label="Accepted" sortKey="merged" active={active("merged")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
             <TableHead>Team</TableHead>
             <SortHead label="Updated" sortKey="updated" active={active("updated")} dir={sort.dir} onSort={onSort} className="text-right" />
           </TableRow>
@@ -348,7 +351,7 @@ export default function Streams() {
             <StatCard label="In progress" value={totals.inProgress} icon={Loader2} accent="#0EA5E9" />
             <StatCard label="Shipped" value={totals.shipped} icon={CheckCircle2} accent="#0E8A16" />
             <StatCard label="Findings" value={totals.findings} icon={FileText} accent="#8B5CF6" />
-            <StatCard label="Merged outputs" value={totals.merged} icon={GitMerge} accent="#C2410C" />
+            <StatCard label="Accepted work" value={totals.merged} icon={GitMerge} accent="#C2410C" />
             <StatCard label="Contributors" value={totals.people} icon={Users} accent="#1D76DB" />
           </section>
 

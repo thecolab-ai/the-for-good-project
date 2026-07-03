@@ -9,6 +9,7 @@ import { StageBadge, StatusBadge, DomainBadge } from "@/components/shared/Badges
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { Markdown } from "@/components/shared/Markdown";
 import { relativeTime } from "@/lib/format";
+import type { Stage } from "@/lib/types";
 
 export default function IssueDetail() {
   const { number } = useParams();
@@ -110,7 +111,23 @@ export default function IssueDetail() {
           <Card>
             <CardHeader><CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">Labels</CardTitle></CardHeader>
             <CardContent className="flex flex-wrap gap-1.5">
-              {issue.labels.map((l) => <span key={l} className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-xs">{l}</span>)}
+              {/* Raw repo labels get translated for visitors: status:* is hidden
+                  (the StatusBadge above already says it in plain words), stage:*
+                  renders as the stage badge, stream:<n> links to the stream. */}
+              {issue.labels.map((l) => {
+                if (/^status:/i.test(l)) return null;
+                const stage = l.match(/^stage:\s*(\S+)$/i);
+                if (stage) return <StageBadge key={l} stage={stage[1].toLowerCase() as Stage} />;
+                const stream = l.match(/^stream:\s*(\d+)$/i);
+                if (stream) {
+                  return (
+                    <Link key={l} to={`/streams/${stream[1]}`} className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-xs transition-colors hover:bg-secondary hover:text-brand-cyan-dark">
+                      Stream #{stream[1]}
+                    </Link>
+                  );
+                }
+                return <span key={l} className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-xs">{l}</span>;
+              })}
             </CardContent>
           </Card>
 

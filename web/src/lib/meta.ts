@@ -9,17 +9,29 @@ export const STAGE_META: Record<Stage, { label: string; color: string; ring: str
   none: { label: "Unsorted", color: "#78716C", ring: "ring-stone-300", icon: CircleDot, blurb: "Not yet triaged" },
 };
 
+// Labels are plain language on purpose — partners and visitors see these, so
+// no repo jargon ("needs-synthesis", "claimed") leaks through.
 export const STATUS_META: Record<StatusKey, { label: string; color: string; text: string }> = {
-  available: { label: "Available", color: "#0E8A16", text: "text-emerald-700" },
-  claimed: { label: "Claimed", color: "#B8860B", text: "text-amber-700" },
-  "in-review": { label: "In review", color: "#1D76DB", text: "text-blue-700" },
-  "changes-requested": { label: "Changes requested", color: "#D93F0B", text: "text-orange-700" },
-  "needs-synthesis": { label: "Needs synthesis", color: "#14B8A6", text: "text-teal-700" },
-  "awaiting-direction": { label: "Awaiting direction", color: "#8250DF", text: "text-purple-700" },
+  available: { label: "Open for pickup", color: "#0E8A16", text: "text-emerald-700" },
+  claimed: { label: "In progress", color: "#B8860B", text: "text-amber-700" },
+  "in-review": { label: "Being checked", color: "#1D76DB", text: "text-blue-700" },
+  "changes-requested": { label: "Fixes requested", color: "#D93F0B", text: "text-orange-700" },
+  "needs-synthesis": { label: "Being summarised", color: "#14B8A6", text: "text-teal-700" },
+  "awaiting-direction": { label: "Waiting on a human decision", color: "#8250DF", text: "text-purple-700" },
   blocked: { label: "Blocked", color: "#B60205", text: "text-red-700" },
   done: { label: "Done", color: "#5319E7", text: "text-violet-700" },
   none: { label: "New", color: "#78716C", text: "text-stone-600" },
 };
+
+// Translate any raw state string (issue status label or stream doc lifecycle
+// state) into a partner-friendly label; unknown states fall back to the raw
+// string, capitalised.
+export function statusLabel(state: string): string {
+  if (!state) return "";
+  const m = STATUS_META[state as StatusKey];
+  if (m) return m.label;
+  return state.charAt(0).toUpperCase() + state.slice(1);
+}
 
 export const DOMAIN_LABELS: Record<string, string> = {
   "child-welfare": "Child welfare",

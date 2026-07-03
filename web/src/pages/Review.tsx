@@ -32,7 +32,7 @@ export default function Review() {
 
       <h2 className="mb-3 flex items-center gap-2 font-serif text-xl font-semibold"><ScanEye className="h-5 w-5" /> In the review queue</h2>
       {queue.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="Nothing waiting">No open PRs or in-review work right now. New submissions show up here for a human to check.</EmptyState>
+        <EmptyState icon={ShieldCheck} title="Nothing waiting">No submitted work waiting to be checked right now. New submissions show up here for a human to check.</EmptyState>
       ) : (
         <div className="space-y-3">
           {queue.map((i) => (
@@ -40,7 +40,7 @@ export default function Review() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-mono">#{i.number}</span>
-                  {i.isPR ? <span className="inline-flex items-center gap-1 text-violet-600"><GitPullRequest className="h-3.5 w-3.5" /> pull request</span> : <StageBadge stage={i.stage} />}
+                  {i.isPR ? <span className="inline-flex items-center gap-1 text-violet-600"><GitPullRequest className="h-3.5 w-3.5" /> submitted work</span> : <StageBadge stage={i.stage} />}
                   <DomainBadge domain={i.domain} />
                   <span className="ml-auto">{relativeTime(i.updatedAt)}</span>
                 </div>
