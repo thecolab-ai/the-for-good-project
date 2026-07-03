@@ -200,7 +200,18 @@ The judgement stays human, structurally:
   direction decision.
 - The PR links `Part of #<root>` (never `Closes` — the root stays open), and
   the **script** then moves the root `needs-synthesis → awaiting-direction`
-  with a comment linking the draft.
+  with a comment linking the draft — *unless* the draft flagged blocking
+  unknowns (next bullet).
+- **Blocking unknowns loop back to research first (ADR-0012).** If the agent
+  reports unknowns that genuinely block its conclusions, the **script** opens
+  them as chunky `stage: research` / `status: available` issues (at most
+  `FOLLOWUP_PER_ROUND`, default 3, deduped by title) and the root goes back
+  to researching instead of parking — the drain re-flags `needs-synthesis`
+  when they close and the re-synthesis integrates the answers. Hard-bounded:
+  at most `FOLLOWUP_ROUNDS` (default 2) automatic rounds per stream; the cap
+  fails closed, leftovers are called out to the steward, and closing a
+  spawned issue kills that line of inquiry. `FOLLOWUP_ROUNDS=0` disables it.
+  So the steward reads the strongest synthesis the machines could reach.
 - On a **re-synthesis** (stream drained again after more research) it updates
   the existing overview, preserving the steward, the feedback log, and prior
   dated direction entries.
@@ -218,6 +229,13 @@ The judgement stays human, structurally:
 The steward finishes the gate by hand: edit the takeaways, fix any overreach,
 **write the direction decision**, set `steward:`, merge — and if proceeding,
 open the ideate issue as `status: available` (that act *is* passing G1).
+
+**To send a parked stream back through synthesis** (new evidence landed, you
+opened or closed research by hand, or you just want the rollup redone):
+relabel the root `status: needs-synthesis` (removing `awaiting-direction`) —
+the next `synthesize_work.sh` loop picks it up and re-drafts, updating any
+still-open draft PR in place. Opening a new research issue in the stream does
+this implicitly: the stream re-drains through the normal gate when it closes.
 
 ## How a PR merges
 
