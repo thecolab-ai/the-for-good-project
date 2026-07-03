@@ -404,13 +404,15 @@ review_one() {  # $1 = PR number
     # issue_addressed_by_pr (not issue_for_pr) so DISCOVER PRs — which have no
     # closing ref, only "Part of #n" — are routed too, instead of silently
     # dropping the hand-off. A SYNTHESIS draft's root parks at
-    # "awaiting-direction" (not "in-review") while under review, so that label
-    # is stripped too, and the rework belongs to synthesize_work.sh (ADR-0011).
+    # "awaiting-direction" (not "in-review") while under review, so for
+    # synthesis PRs — and ONLY those; a generic PR that body-links a parked
+    # root must not yank it out of G1 — that label is stripped instead, and
+    # the rework belongs to synthesize_work.sh (ADR-0011).
     local iss; iss="$(issue_addressed_by_pr "$pr" || true)"
     if [ -n "$iss" ]; then
-      local picker="start_work.sh"
-      pr_is_synthesis "$pr" && picker="synthesize_work.sh"
-      if set_status_label "$iss" "changes-requested" "in-review" "awaiting-direction" 2>/dev/null; then
+      local picker="start_work.sh" old_park="in-review"
+      if pr_is_synthesis "$pr"; then picker="synthesize_work.sh"; old_park="awaiting-direction"; fi
+      if set_status_label "$iss" "changes-requested" "in-review" "$old_park" 2>/dev/null; then
         gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`$picker\` loop will pick this up." >/dev/null || true
         ok "Issue #$iss → changes-requested (back to @$author)"
       else

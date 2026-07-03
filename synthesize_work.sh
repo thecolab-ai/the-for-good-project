@@ -203,7 +203,8 @@ EOF
 # Self-heal the synthesis rework queue (mirror of start_work.sh's reconciler,
 # scoped to synthesis drafts — ADR-0011): any open synthesis/* PR whose CURRENT
 # latest review is a change-request (no commits pushed after it) but whose
-# stream root still sits "awaiting-direction" gets flipped to
+# stream root still sits "awaiting-direction" — or wedged at "in-review", the
+# poison state a pre-ADR-0011 generic runner leaves behind — gets flipped to
 # "changes-requested" so the rework pass below picks it up. This catches
 # reviews posted outside review_work.sh and hand-offs from older runners.
 reconcile_synthesis_rework() {
@@ -223,7 +224,7 @@ reconcile_synthesis_rework() {
     labels="$(issue_labels "$iss" 2>/dev/null || true)"
     case ",$labels," in
       *",status: changes-requested,"*) continue ;;   # already routed
-      *",status: awaiting-direction,"*)
+      *",status: awaiting-direction,"*|*",status: in-review,"*)
         set_status_label "$iss" "changes-requested" "awaiting-direction" "in-review" 2>/dev/null \
           && ok "Reconciled stream #$iss → changes-requested (unrouted review on synthesis PR #$pr)" || true ;;
     esac
@@ -231,12 +232,16 @@ reconcile_synthesis_rework() {
 }
 
 # Stream roots whose synthesis draft was sent back: "status: changes-requested"
-# plus an open synthesis/* PR. Echoes "<issue> <pr>" pairs, oldest root first.
+# plus an open synthesis/* PR. Only UNASSIGNED roots or ones assigned to ME —
+# an assignment is another runner's live claim, and contesting it would let
+# the deterministic tie-break STEAL mid-flight work (resolve_claim_race
+# adjudicates simultaneous claims, not established ones). "priority: high"
+# first, then oldest. Echoes "<issue> <pr>" pairs.
 synthesis_rework_targets() {
   local snap n pr
   snap="$(fetch_open_issues)" || snap='[]'
   printf '%s' "$snap" \
-    | jq -r '[.[] | select(.labels|map(.name)|index("status: changes-requested"))] | sort_by(.createdAt) | .[].number' \
+    | jq -r --arg me "$ME" '[.[] | select(.labels|map(.name)|index("status: changes-requested")) | select((.assignees|length)==0 or (.assignees|map(.login)|index($me)))] | sort_by((.labels|map(.name)|index("priority: high")|not), .createdAt) | .[].number' \
     | while IFS= read -r n; do
         [ -z "$n" ] && continue
         pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
@@ -247,12 +252,26 @@ synthesis_rework_targets() {
 resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
   local n="$1" pr="$2" branch
   rule; info "${c_bold}Stream #$n${c_reset} (synthesis rework, PR #$pr) — $(issue_field "$n" title)"
-  branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName)"
+  branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null || true)"
+  [ -z "$branch" ] && { warn "Couldn't read PR #$pr's head branch — leaving #$n for a future loop."; return 1; }
+  # Currency check: commits newer than the latest change-request mean the
+  # draft was ALREADY reworked and awaits re-review — the "changes-requested"
+  # label is just a flip that failed or was raced. Repair the label instead of
+  # burning a full agent run re-answering addressed feedback every loop.
+  local lastcr headcommit
+  lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
+  headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
+  if [ -n "$lastcr" ] && [ -n "$headcommit" ] && [[ "$headcommit" > "$lastcr" ]]; then
+    log "PR #$pr was already reworked after its last change-request — repairing #$n's status instead of re-running."
+    [ "$DRY_RUN" = 1 ] || set_status_label "$n" "awaiting-direction" "changes-requested" "in-review" 2>/dev/null || true
+    return 0
+  fi
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would rework synthesis PR #$pr (branch $branch) against the review feedback, push, and move #$n → awaiting-direction"
     return 0
   fi
-  # Claim: several synthesis runners may race a sent-back draft. Same
+  # Claim: several synthesis runners may race an UNCLAIMED sent-back draft
+  # (targets exclude other runners' live assignments). Same
   # assign-settle-tie-break as start_work.sh's claims.
   gh issue edit "$n" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
   resolve_claim_race "$n" || return 0

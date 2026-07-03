@@ -29,30 +29,39 @@ the fix needs a decision record ratified by a human maintainer.
 
 ## Decision
 
-1. **Synthesis PRs are identified by their head branch.**
+1. **Synthesis PRs are identified by their head branch, failing CLOSED.**
    `synthesize_work.sh` always creates `synthesis/<slug>`; a shared
-   `pr_is_synthesis` helper keys off that prefix. Considered instead: a label
-   on the PR (rejected — agents are forbidden from managing labels, and a
-   label can be dropped; the branch name is set by the script itself and
-   immutable for the PR's life).
+   `pr_is_synthesis` helper keys off that prefix and distinguishes "not
+   synthesis" from "couldn't read the branch" (gh error) — guards treat the
+   unknown case as don't-touch, so a transient API blip can never route a
+   synthesis draft back to a generic runner. Considered instead: a label on
+   the PR (rejected — agents are forbidden from managing labels, and a label
+   can be dropped; the branch name is set by the script itself and immutable
+   for the PR's life).
 2. **Generic runners refuse synthesis rework.** `start_work.sh` skips
-   synthesis PRs in all three rework entry points — its own rework queue
-   (unassigning itself so the synthesis runner can claim), the TTL-freed
-   unassigned queue, and its reconciler.
+   synthesis PRs (and unknown-branch PRs) in all three rework entry points —
+   its own rework queue (unassigning itself so the synthesis runner can
+   claim), the TTL-freed unassigned queue, and its reconciler.
 3. **`synthesize_work.sh` gains the rework path.** Each loop first reconciles
    (any open `synthesis/*` PR whose *current* latest review requests changes
-   but whose root sits `awaiting-direction` is flipped to
+   but whose root sits `awaiting-direction` — or wedged at `in-review`, the
+   poison state a pre-ADR-0011 runner leaves — is flipped to
    `changes-requested`), then works sent-back drafts before drafting new
-   overviews — a blocked G1 gate beats new work. The rework runs a
+   overviews — a blocked G1 gate beats new work. Targets are only unassigned
+   roots or ones assigned to this runner (an assignment is another runner's
+   live claim; contesting it would let the tie-break steal mid-flight work),
+   and a draft already reworked after its latest change-request gets its
+   status repaired rather than a fresh agent run. The rework runs a
    synthesis-specific prompt (review feedback + the standing synthesis rules:
    steward text preserved verbatim, neutral candidate outcomes, edit only the
    overview file, push to the same branch), and on push the script flips the
    root `changes-requested → awaiting-direction` (also stripping any stray
    `in-review`).
-4. **The review hand-off strips both park statuses.** `review_work.sh` now
-   removes `in-review` *and* `awaiting-direction` when flipping to
-   `changes-requested`, and its comment names the runner that will actually
-   pick the rework up (`synthesize_work.sh` for synthesis PRs).
+4. **The review hand-off strips the right park status.** `review_work.sh`
+   removes `awaiting-direction` when flipping a synthesis PR's root to
+   `changes-requested` (and only then — a generic PR that merely body-links a
+   parked root must not yank it out of G1), and its comment names the runner
+   that will actually pick the rework up.
 
 ## Consequences
 
