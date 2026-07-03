@@ -291,7 +291,8 @@ export default function Streams() {
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || String(s.stream).includes(q);
+  const needle = q.toLowerCase();
+  const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(needle) || String(s.stream).includes(q) || (s.domain || "").toLowerCase().includes(needle);
   const inProgress = streams.filter((s) => !isStreamShipped(s.state) && matchesText(s));
   const shipped = streams.filter((s) => isStreamShipped(s.state) && matchesText(s));
 
