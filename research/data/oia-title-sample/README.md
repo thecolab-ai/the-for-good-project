@@ -35,14 +35,16 @@ Both FYI scripts fetch through the repo's ADR-0006 fetch ladder (`scripts/fetch.
 
 ## What was and wasn't collected
 
-**Public, de-identified metadata only:** per-authority request *counts* and request
-*titles* (both shown openly on every FYI listing page). **No request bodies, no
-correspondence, no requester names** were fetched or stored. Personal names of
-apparently-private individuals are redacted in the committed titles (see the
-`REDACT_NAMES` list in the script — currently two individuals facing charges /
-named bare); public-interest named matters (public appointees, well-known public
-cases, already-anonymised court references) are retained, matching the rule used in
-the sibling council finding's Appendix A.
+The FYI scripts fetch public listing/index HTML pages. Those pages can display
+requester links and short correspondence/request snippets as well as request titles
+and counts. The committed JSON artifacts **parse and store only** per-authority
+request *counts*, authority slugs/URLs, request IDs, and request *titles*. They do
+**not** store request bodies, correspondence, requester names, requester profile
+links, or snippets. Personal names of apparently-private individuals are redacted in
+the committed titles (see the `REDACT_NAMES` list in the script — currently two
+individuals facing charges / named bare); public-interest named matters (public
+appointees, well-known public cases, already-anonymised court references) are
+retained, matching the rule used in the sibling council finding's Appendix A.
 
 ## Honesty note on reproducibility
 

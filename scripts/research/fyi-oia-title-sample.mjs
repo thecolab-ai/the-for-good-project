@@ -5,10 +5,12 @@
 //   research/findings/civic-transparency/repetitive-oia-requests-bodies-topics.md
 // so a reviewer can regenerate the numbers instead of trusting a scrape.
 //
-// It fetches ONLY public, de-identified metadata: the "N requests" count on each
-// FYI authority page and the visible request TITLES (with request IDs). It never
-// fetches request bodies, correspondence, or requester names. Titles that name an
-// individual are redacted before output (see redact()).
+// It fetches public FYI listing pages, which can include requester links and short
+// snippets as well as counts/titles. It parses and stores only the "N requests"
+// count on each FYI authority page and visible request TITLES (with request IDs).
+// It does not store request bodies, correspondence, requester names, profile links,
+// or snippets. Titles that name an individual are redacted before output (see
+// redact()).
 //
 // Every fetch goes through the repo's ADR-0006 fetch ladder (scripts/fetch.mjs),
 // so the provenance of each byte is the same as everywhere else in the repo.
@@ -183,7 +185,7 @@ for (const [key, rs] of normGroups) {
 const report = {
   meta: {
     generated: DATE,
-    source: "fyi.org.nz public authority pages (counts + request titles only; no bodies)",
+    source: "fyi.org.nz public authority/listing pages; output stores counts + request titles only, no requester names/snippets/bodies",
     bodies: BODIES, pagesPerBody: PAGES_PER_BODY, recentPages: RECENT_PAGES,
     note: "FYI pages are mutable and default to most-recent order; dated, reproducible-as-of-access.",
   },
