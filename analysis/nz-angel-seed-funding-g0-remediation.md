@@ -27,7 +27,7 @@ status: "proposal"
 
 **What is fact:** the current labels/states visible on [#110](https://github.com/thecolab-ai/the-for-good-project/issues/110) and [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141)-[#145](https://github.com/thecolab-ai/the-for-good-project/issues/145); the G0 rule in [`docs/STREAMS.md`](../docs/STREAMS.md); and the cited public funding figures.
 
-**What is interpretation:** that the current state should be remediated before PR #147 is treated as a valid stream-framing output, and that the most useful research framing is "test the access hypothesis" rather than "assume a marketplace is needed."
+**What is interpretation:** that the current state should be remediated before PR #147 is relied on for any stream decision, and that the most useful research framing is "test the access hypothesis" rather than "assume a marketplace is needed."
 
 **What would change the conclusion:** a maintainer or steward clearing G0 for [#110](https://github.com/thecolab-ai/the-for-good-project/issues/110) and explicitly accepting the existing children into the stream record; reopening/parking/reconciling [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141)-[#145](https://github.com/thecolab-ai/the-for-good-project/issues/145); or new evidence that the root no longer carries `needs-triage`.
 
@@ -37,7 +37,7 @@ status: "proposal"
 
 The stream rule is explicit: Discover issues open with `needs-triage`; removing that label is G0; once the root has passed G0, research children within the bounded fan-out rule may open as `status: available` directly. [`docs/STREAMS.md`](../docs/STREAMS.md)
 
-As of this revision, [#110](https://github.com/thecolab-ai/the-for-good-project/issues/110) still displays `needs-triage`, `stage: discover`, `status: changes-requested`, and `stream:110`. The five research children linked from this PR are not open available questions: [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141), [#142](https://github.com/thecolab-ai/the-for-good-project/issues/142), [#143](https://github.com/thecolab-ai/the-for-good-project/issues/143), [#144](https://github.com/thecolab-ai/the-for-good-project/issues/144), and [#145](https://github.com/thecolab-ai/the-for-good-project/issues/145) are closed and labelled `status: done`.
+A live issue-state check during this revision showed [#110](https://github.com/thecolab-ai/the-for-good-project/issues/110) still carrying `needs-triage`, `stage: discover`, and `stream:110`; transient review-status labels are runner-managed and may change during review. The five research children linked from this PR are not open available questions: [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141), [#142](https://github.com/thecolab-ai/the-for-good-project/issues/142), [#143](https://github.com/thecolab-ai/the-for-good-project/issues/143), [#144](https://github.com/thecolab-ai/the-for-good-project/issues/144), and [#145](https://github.com/thecolab-ai/the-for-good-project/issues/145) are closed and labelled `status: done`.
 
 This means the child issues should be referenced as a process incident until a human remediates them. This document therefore does not call them approved fan-out, does not list them as open follow-up questions, and does not treat their closure as evidence that G0 has passed.
 
