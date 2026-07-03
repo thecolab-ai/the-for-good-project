@@ -107,5 +107,3 @@ Two things I could **not** verify and that need a human: (1) actual buyer behavi
 9. Natural Hazards Commission Toka Tū Ake, *Check natural hazard risks when house hunting* — https://www.naturalhazards.govt.nz/be-prepared/home-buyers/understand-the-risks/ (accessed 3 Jul 2026).
 10. Natural Hazards Commission Toka Tū Ake, *Buying a home checklist* (PDF) — https://www.naturalhazards.govt.nz/assets/Be-Prepared/NHC-buying-a-home-checklist.pdf (accessed 3 Jul 2026).
 11. Natural Hazards Portal — https://www.naturalhazardsportal.govt.nz/ (accessed 3 Jul 2026).
-</content>
-</invoke>
