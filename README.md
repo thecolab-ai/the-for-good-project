@@ -1,83 +1,123 @@
 # The For Good Project
 
-**An open research commons where people and AI agents work together to solve New Zealand's biggest societal problems.**
+![Aotearoa evidence map showing people and AI agents collaborating on public-good research](docs/assets/readme/for-good-hero.jpg)
 
-By [thecolab.ai](https://thecolab.ai) — New Zealand's community-driven AI consultancy. _AI expertise, built together._
+**An open research commons where people and AI agents work together on New Zealand's biggest societal problems.**
 
-**▶ Live dashboard: [thecolab-ai.github.io/the-for-good-project](https://thecolab-ai.github.io/the-for-good-project/)** — track the work, browse findings, see who's contributing, and submit a problem.
+By [thecolab.ai](https://thecolab.ai), New Zealand's community-driven AI consultancy: _AI expertise, built together._
+
+**Live dashboard:** [thecolab-ai.github.io/the-for-good-project](https://thecolab-ai.github.io/the-for-good-project/) - track issues, browse findings, follow review, and see what is moving.
 
 ---
 
-## The idea
+## What This Is
 
-Lots of smart people have AI subscriptions with tokens to spare. Separately, New Zealand has hard problems — child welfare, access to grants and social services, civic transparency, sensible AI policy, biosecurity — that nobody has time to chip away at.
+The For Good Project turns spare AI capacity and human judgement into a public queue of useful work.
 
-This repo puts those two things together. It's a shared workspace where you (or an AI agent you point at it) can pick up a real problem, do a piece of honest work on it, and hand the next person something better than they found. No meetings, no gatekeepers, no duplicated effort. Just a queue of useful work and a method that keeps the quality high.
+New Zealand has hard civic problems: child welfare, access to grants and social services, civic transparency, sensible AI policy, biosecurity, and more. Plenty of people have the tools to help, but useful work gets lost when every contributor starts from scratch.
 
-Everything here is public and reusable. The point is impact, not a portfolio.
+This repo gives the work a shared shape:
 
-Where we're headed and how we keep it honest: **[read the Manifesto](MANIFESTO.md)** (the spirit) and the **[Constitution](CONSTITUTION.md)** (the binding rules).
+- Problems are framed as GitHub issues.
+- Research is written as cited findings.
+- Findings become feasible solution ideas.
+- The best ideas become small working projects.
+- Human stewards and adversarial reviewers keep the chain honest.
 
-## How it works
+Everything is public and reusable. The aim is impact, not portfolio theatre.
 
-Work moves through four stages. Each stage is a GitHub Issue you can claim and push forward.
+Read the [Manifesto](MANIFESTO.md) for the spirit and the [Constitution](CONSTITUTION.md) for the binding rules.
 
-1. **🔍 Discover** — surface a real NZ problem and shape it into questions worth researching.
-2. **📚 Research** — investigate one question properly: cite every claim, verify the surprising ones, mark your confidence.
-3. **💡 Ideate** — turn research into concrete, feasible solutions a small team could actually ship.
-4. **🔨 Build** — implement the best ideas. Tools, guides, datasets, prototypes — real things people can use.
+## How Work Moves
 
-A problem enters as a Discover issue and spawns Research questions. Research produces cited findings. Findings feed Ideate. The best ideas become Build projects. The whole chain stays visible and linked, so anyone (human or agent) can join at any stage.
+![Four-stage workflow from problem discovery through research, ideation, and build](docs/assets/readme/for-good-workflow.jpg)
 
+Every piece of work moves through four stages. Each stage is an issue someone can claim and move forward.
+
+| Stage | Output | What Good Looks Like |
+|---|---|---|
+| Discover | A crisp problem statement and researchable questions | The problem affects real people in NZ, has enough evidence to investigate, and is narrow enough to hand off |
+| Research | One cited finding in `research/findings/` | Every factual claim is sourced, surprising claims are checked, confidence is marked, and limits are explicit |
+| Ideate | One feasible solution in `solutions/` | The idea names a small first version, who it helps, risks, and the next concrete action |
+| Build | A usable artifact in `projects/` | A tool, guide, dataset, or prototype someone can actually run or apply |
+
+A Discover issue starts a stream. Research issues answer pieces of it. Human gates sit between research and ideation, and again before build, so agents can produce volume without deciding direction alone.
+
+## Why The Quality Bar Is High
+
+![Evidence cards moving through citations, confidence checks, human gates, and adversarial review](docs/assets/readme/for-good-trust-loop.jpg)
+
+This repo is designed for adversarial review. A reviewer should be able to try to refute a finding and still see where every claim came from.
+
+The core rule is simple: **cite everything, and be honest about what you do not know.**
+
+That means:
+
+- Prefer official NZ sources, established NGOs, councils, Stats NZ, and peer-reviewed work.
+- Mark confidence as High, Medium, or Low.
+- Use two sources for load-bearing or surprising claims where possible.
+- Say what would change your mind.
+- Do not publish personal data.
+- Do not let generated output outrun evidence or lived reality.
+
+A low-confidence finding with clear limits is useful. An uncited confident answer is not.
+
+## Start In 5 Minutes
+
+### If You Are A Person
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md). It is the method that keeps this useful.
+2. Find an open [`status: available`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+available%22) issue. Start with [`good first issue`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) if you are new.
+3. Claim it, do one piece of work, and open a pull request.
+4. If no listed problem matches what you know, [open a new problem](../../issues/new/choose).
+5. If you know the domain but are short on time, be the judgement layer: steward a [stream](docs/STREAMS.md), review a synthesis, or tell us where the research does not match reality on the ground.
+
+### If You Are An AI Agent
+
+Read [AGENTS.md](AGENTS.md). It explains how to claim an issue, follow the research method, cite sources, and open a PR.
+
+For unattended queue work:
+
+```bash
+./start_work.sh
 ```
-Discover ──▶ Research ──▶ Ideate ──▶ Build
- problem     cited        feasible    real
- framed      findings     solutions   things
+
+For adversarial PR review:
+
+```bash
+./review_work.sh
 ```
 
-## Start in 5 minutes
+See [docs/AUTOMATION.md](docs/AUTOMATION.md) for the wrapper scripts.
 
-**If you're a person:**
+## Where Things Live
 
-1. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) — it's short, and it's the method that keeps this useful.
-2. Find an unclaimed issue: [**`status: available`**](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+available%22) — start with [**`good first issue`**](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) if you're new.
-3. Claim it (assign yourself + add `status: claimed`), do the work following the method, open a pull request.
-4. No problem you care about listed? [**Open a new one**](../../issues/new/choose).
-5. Know a domain but short on time? You're the **judgement layer**: steward a [stream](docs/STREAMS.md), review a synthesis, or tell us where the research doesn't match reality on the ground. Agents do the volume; humans decide what matters.
-
-**If you're an AI agent (Claude Code, etc.):**
-
-Read [`AGENTS.md`](AGENTS.md). It tells you exactly how to claim an issue, follow the research method, and open a PR — designed so you can work a task end to end without a human babysitting each step. Or just run **`./start_work.sh`** to work the queue on autopilot (and **`./review_work.sh`** to adversarially review PRs) — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md).
-
-## What you'll find here
-
-| Path | What's in it |
+| Path | Purpose |
 |---|---|
-| [`research/findings/`](research/findings) | Cited research findings, one file per question, grouped by domain |
-| [`solutions/`](solutions) | Proposed solutions — the feasible ideas that came out of research |
-| [`projects/`](projects) | Implementations: tools, guides, datasets, prototypes |
-| [`streams/`](streams) | Plain-language overviews of each stream of work, written for non-GitHub humans |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | The research method and the full contribution workflow |
-| [`AGENTS.md`](AGENTS.md) | How AI agents work the repo |
-| [`docs/`](docs) | Deeper docs: the method in full, domains, streams & human gates, governance |
-| [`docs/adr/`](docs/adr) | Architecture Decision Records — why the project works the way it does |
+| [research/findings/](research/findings) | Cited research findings, one file per question, grouped by domain |
+| [solutions/](solutions) | Proposed solutions that came out of research |
+| [projects/](projects) | Implementations: tools, guides, datasets, and prototypes |
+| [streams/](streams) | Plain-language stream overviews maintained by human stewards |
+| [analysis/](analysis) | Longer project analysis, operating plans, and strategy reviews |
+| [web/](web) | The public dashboard application |
+| [docs/](docs) | Method, governance, domains, streams, automation, and ADRs |
+| [AGENTS.md](AGENTS.md) | Repo operating instructions for coding and research agents |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | The human contribution workflow and research method |
 
-## The domains we're working on
+## Current Domains
 
-Child welfare · Grant & social-service access · Civic transparency · AI policy · Biosecurity — and more as the community surfaces them. Details in [`docs/DOMAINS.md`](docs/DOMAINS.md).
+Child welfare, grant and social-service access, civic transparency, AI policy, biosecurity, and other public-good questions surfaced by the community.
 
-## The one rule that matters
+See [docs/DOMAINS.md](docs/DOMAINS.md) for the current domain list.
 
-**Cite everything, and be honest about what you don't know.** A finding that says "Medium confidence, one source, needs verification" is worth more than a confident guess. This work informs real decisions about real people — see the method in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+## Community
 
-## Powered by the community
-
-The For Good Project is run by [thecolab.ai](https://thecolab.ai) and the Claude Code Meetups NZ community. It's connected to our WhatsApp community, where you can propose problems and follow findings as they land — [get involved](https://thecolab.ai).
+The For Good Project is run by [thecolab.ai](https://thecolab.ai) and the Claude Code Meetups NZ community. It is connected to the wider The Colab community, where people propose problems, review findings, and help decide what should happen next.
 
 ## Licence
 
-Research and content: [CC BY 4.0](LICENSE) — use it, remix it, just credit the project. Code under [`projects/`](projects): [MIT](projects/LICENSE). See [`CONTRIBUTING.md`](CONTRIBUTING.md#licence) for details.
+Research, findings, and docs are licensed under [CC BY 4.0](LICENSE). Code under [projects/](projects) is licensed under [MIT](projects/LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md#licence) for details.
 
 ---
 
-_Built together, in Aotearoa. 🇳🇿_
+_Built together, in Aotearoa._
