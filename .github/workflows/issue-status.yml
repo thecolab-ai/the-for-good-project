@@ -32,20 +32,24 @@ jobs:
             --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number')
           [ -z "$issues" ] && { echo "No linked issues."; exit 0; }
           for n in $issues; do
+            # Sweep EVERY other status when setting one: an issue carrying two
+            # status labels at once (e.g. in-review + awaiting-direction) is
+            # the soup that confused reviewers and the website.
+            sweep() {  # $1 = issue, $2 = status to set
+              local args=(--add-label "status: $2") st
+              for st in available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done; do
+                [ "$st" = "$2" ] || args+=(--remove-label "status: $st")
+              done
+              gh issue edit "$1" --repo "$REPO" "${args[@]}" || true
+            }
             if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
               echo "PR #$PR merged → issue #$n → done"
-              gh issue edit "$n" --repo "$REPO" \
-                --add-label "status: done" \
-                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: available" --remove-label "status: changes-requested" || true
+              sweep "$n" done
             elif [ "$ACTION" = "closed" ]; then
               echo "PR #$PR closed unmerged → issue #$n → available"
-              gh issue edit "$n" --repo "$REPO" \
-                --add-label "status: available" \
-                --remove-label "status: in-review" --remove-label "status: claimed" --remove-label "status: changes-requested" || true
+              sweep "$n" available
             else
               echo "PR #$PR open → issue #$n → in-review"
-              gh issue edit "$n" --repo "$REPO" \
-                --add-label "status: in-review" \
-                --remove-label "status: claimed" --remove-label "status: available" || true
+              sweep "$n" in-review
             fi
           done

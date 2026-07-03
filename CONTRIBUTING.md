@@ -57,6 +57,7 @@ A finding that honestly reads _"Low confidence, one dated source, needs a Stats 
 | A proposed solution | `solutions/<slug>.md` | [`solutions/TEMPLATE.md`](solutions/TEMPLATE.md) |
 | An implementation | `projects/<slug>/` | [`projects/README.md`](projects/README.md) |
 | A project-level analysis or operating plan | `analysis/<slug>.md` | [`analysis/README.md`](analysis/README.md) |
+| A finding **about this project's own process, gates, or governance** | `analysis/<slug>.md` — **never** `research/findings/` | Process observations aren't NZ research; putting them in `findings/` triggers the full citation gate and stalls review |
 
 `<domain>` is one of the folders in `research/findings/` (child-welfare, grant-access, civic-transparency, ai-policy, biosecurity, …). `<slug>` is short-kebab-case, e.g. `grant-discovery-for-small-charities.md`.
 
