@@ -60,7 +60,7 @@ The full vocabulary, in one table:
 | `review: claimed` | PRs | `review_work.sh` | A reviewer is holding this PR (double-review lock) |
 | `review: human-only` | PRs | maintainers | Pipeline/governance change — humans review and merge, agents skip |
 | `do-not-automate` | issues | humans only | Parking brake: excluded from every automation queue |
-| `priority: high` | issues | humans | Jumps every queue |
+| `priority: high` | issues | humans | Steward-curated **shortlist**, not a default — honoured for at most `HIGH_PRIORITY_CAP` streams at a time (#293, below) |
 | `stage: *` / `domain: *` / `stream:<n>` | issues/PRs | template / `stream-sync.yml` | What kind of work, which problem area, which stream |
 
 `start_work.sh` moves `available → claimed → in-review` (and
@@ -107,6 +107,25 @@ worktree from `origin/main`, hands the issue to the agent with the method baked
 into the prompt, then finds the PR the agent opened (via GitHub's closing-issue
 link) and flips the issue to `status: in-review`. If the agent opened no PR,
 the issue is released back to `available`.
+
+Two bounds shape what gets picked up (#292 / #293, ADR-0013):
+
+- **Active-streams cap.** A `stage: discover` root is only claimed while
+  fewer than `MAX_ACTIVE_STREAMS` (default 5) streams are active (open child
+  work, or a root being worked). Roots beyond the cap stay
+  `status: available` in the backlog and are picked up as streams drain —
+  so ten approved streams *sequence* through the pipeline instead of all
+  converging on the human synthesis gate at once (see
+  [STREAMS.md](STREAMS.md)).
+- **Priority discipline.** `priority: high` is a steward-curated shortlist,
+  not a default. The queue honours it for at most `HIGH_PRIORITY_CAP`
+  (default 5) **streams** at a time — oldest high streams first, computed
+  identically by every runner; high items beyond the cap sort by age like
+  everything else. Counting streams (not issues) means stream-level
+  propagation (#164) can mark a whole stream's children high without eating
+  the cap, while labelling everything high still can't make "high" mean
+  "everything". Humans: keep the shortlist small — if more than ~5 streams
+  are high, downgrade some rather than relying on the cap.
 
 For **rework** it checks out the PR branch in a fresh worktree, feeds the agent
 the reviewer's feedback (review bodies + inline comments), and — once the agent
@@ -171,6 +190,17 @@ tooling failure, not a PR verdict: the merge check is left unset (merge is
 still blocked — the check never went green) so a later loop simply retries,
 and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
+**Review rounds are capped (#287 / ADR-0013).** A PR gets at most
+`MAX_REVIEW_ROUNDS` (default 3) change-requesting review rounds. Instead of
+an (N+1)th agent re-review, the loop **parks the PR for a human**: the
+merge check is set to `pending` ("Awaiting human maintainer"), a one-time
+summary of the unresolved points is posted, and later loops skip the PR —
+including across new pushes — until a maintainer decides (merge it, send it
+back with concrete asks, apply `review: human-only`, or force one more agent
+round with `FORCE=1 PR=<n>`). Prior review rounds and author replies are
+already injected into every reviewer prompt as untrusted context, so a fresh
+reviewer must bring *new* evidence rather than re-litigate resolved points.
+
 ```bash
 REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
 REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude ./review_work.sh
@@ -190,6 +220,16 @@ review scripts themselves, merge rules, ADR statuses). Label them
 it and merges it themselves — as admin, or by setting the
 `for-good/adversarial-review` check by hand. The label must be applied
 **deliberately by a maintainer, never by a work agent**.
+
+That rule is **enforced, not just convention** (#288 / ADR-0013):
+[`human-only-guard.yml`](../.github/workflows/human-only-guard.yml) reverts
+any add/removal of `review: human-only` performed by a login that isn't on
+the `human_maintainers` allow-list in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json), and
+records the attempt on the thread. Runner prompts additionally forbid agents
+from ever touching the label. An agent that believes a PR needs the label
+says so in a comment and leaves the labelling to a maintainer (ADR-0009) —
+or, in the review loop, parks the PR via the pending merge check (#287).
 
 ### The different-identity rule (important)
 

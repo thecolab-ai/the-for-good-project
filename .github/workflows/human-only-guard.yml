@@ -1,0 +1,63 @@
+# Guard the `review: human-only` label (#288 / ADR-0013) — zero model tokens.
+#
+# That label is the switch that takes a PR out of the agent review/merge loop
+# entirely, so only a HUMAN MAINTAINER may toggle it (docs/AUTOMATION.md).
+# This workflow makes that rule enforced instead of conventional: when anyone
+# not on the human_maintainers allow-list (.github/trusted-reviewers.json)
+# adds or removes the label, the change is reverted and recorded on the
+# thread. Reverts run with GITHUB_TOKEN, whose label events don't re-trigger
+# workflows — no loop is possible.
+name: Human-only label guard
+
+on:
+  pull_request_target:
+    types: [labeled, unlabeled]
+  issues:
+    types: [labeled, unlabeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: human-only-guard-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    if: "github.event.label.name == 'review: human-only'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # default branch: the TRUSTED allow-list
+      - name: Revert non-maintainer toggles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ACTOR: ${{ github.event.sender.login }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          owner="${REPO%%/*}"; name="${REPO##*/}"
+          label="review: human-only"
+
+          # Our own reverts (and other GITHUB_TOKEN workflows) are exempt —
+          # they can't re-trigger this workflow anyway, but belt and braces.
+          [ "$ACTOR" = "github-actions[bot]" ] && { echo "Actor is github-actions[bot] — skipping."; exit 0; }
+
+          # FAIL CLOSED: only logins in human_maintainers may toggle the label.
+          if jq -er --arg a "$ACTOR" '.human_maintainers // [] | index($a)' .github/trusted-reviewers.json >/dev/null; then
+            echo "@$ACTOR is a human maintainer — '$label' $ACTION on #$NUM allowed."
+            exit 0
+          fi
+
+          echo "::warning::@$ACTOR (not on human_maintainers) tried to $ACTION '$label' on #$NUM — reverting."
+          if [ "$ACTION" = "labeled" ]; then
+            gh api -X DELETE "repos/$owner/$name/issues/$NUM/labels/$(jq -rn --arg l "$label" '$l|@uri')" >/dev/null
+            verb="added"; undo="removed it again"
+          else
+            gh api -X POST "repos/$owner/$name/issues/$NUM/labels" -f "labels[]=$label" >/dev/null
+            verb="removed"; undo="restored it"
+          fi
+          gh issue comment "$NUM" --repo "$REPO" --body "🛡️ \`$label\` was $verb by @$ACTOR, who is not on the \`human_maintainers\` allow-list (\`.github/trusted-reviewers.json\`) — automation $undo. Only a human maintainer may toggle this label (#288); agents and runners must never touch it. If this was done on a maintainer's behalf, the maintainer should make the change themselves." >/dev/null || true

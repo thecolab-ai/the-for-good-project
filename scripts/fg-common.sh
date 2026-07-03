@@ -11,6 +11,8 @@ PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes on
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
+MAX_ACTIVE_STREAMS="${MAX_ACTIVE_STREAMS:-5}"  # streams worked concurrently before new roots wait in the backlog (#292)
+HIGH_PRIORITY_CAP="${HIGH_PRIORITY_CAP:-5}"    # max STREAMS whose 'priority: high' items jump the queue (#293)
 CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
 USAGE_LIMIT_SLEEP="${USAGE_LIMIT_SLEEP:-3600}"  # secs to back off when an agent hits an API usage/rate limit (60 min)
@@ -126,6 +128,17 @@ fetch_open_issues() {
 # Order: issues labelled "priority: high" first, then oldest-created first.
 # This is the whole priority system — label an issue "priority: high" to have
 # the workers pick it up before the rest of the queue.
+#
+# BOUNDED (#293 / ADR-0013): "high" only means something while it is scarce.
+# The jump-queue honours priority: high for at most HIGH_PRIORITY_CAP
+# STREAMS at a time (grouped by stream:<n> label — or the issue's own number
+# when it has none — oldest high item first, computed over the whole open
+# queue so every runner agrees). High items beyond the cap sort by age like
+# everything else. Counting STREAMS (not issues) is deliberate so that
+# stream-level priority propagation (#164) can mark a whole stream high
+# without eating the entire cap, while blanket-labelling ten streams high
+# still cannot make "high" mean "everything".
+#
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
 # "do-not-automate" is a human's parking brake: an issue carrying it is
@@ -134,7 +147,18 @@ fetch_open_issues() {
 issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
   local status="$1" snap="${2:-}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\")) | select(.labels|map(.name)|index(\"do-not-automate\")|not)$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+  printf '%s' "$snap" | jq -r --arg status "status: $status" --arg stage "${STAGE:-}" --argjson cap "$HIGH_PRIORITY_CAP" '
+    def names: [.labels[].name];
+    def is_high: names | index("priority: high");
+    def stream_key: (names | map(select(startswith("stream:")) | ltrimstr("stream:")) | first) // (.number|tostring);
+    ([ .[] | select(is_high) | select(names | index("do-not-automate") | not) ]
+     | group_by(stream_key) | sort_by(map(.createdAt) | min) | .[:$cap] | [ .[][].number ]) as $jump
+    | [ .[]
+        | select(names | index($status))
+        | select(names | index("do-not-automate") | not)
+        | select($stage == "" or (names | index("stage: " + $stage))) ]
+    | sort_by(((.number as $n | $jump | index($n)) | not), .createdAt)
+    | .[].number'
 }
 
 available_issues() { issues_with_status "available" "${1:-}"; }
@@ -160,22 +184,52 @@ unassigned_reworks() {  # $1 = optional snapshot JSON
 # $1 = optional queue snapshot (from fetch_open_issues).
 synthesis_issues() { issues_with_status "needs-synthesis" "${1:-}"; }
 
+# ACTIVE streams (#292): the producer side scales with agents, the human
+# synthesis gate does not — so the number of streams being worked at once is
+# bounded by MAX_ACTIVE_STREAMS. A stream counts as active while it is
+# consuming producer capacity: it has OPEN CHILD issues, or its root is
+# actually being worked (claimed / in-review / changes-requested). A root
+# that is merely `status: available` is a G0-approved stream waiting for a
+# slot — start_work.sh holds it in the backlog until one frees up. Emits the
+# active stream root numbers, one per line, from a fetch_open_issues snapshot.
+active_streams() {  # $1 = queue snapshot JSON
+  printf '%s' "$1" | jq -r '
+    ( [ .[] as $i
+        | $i.labels[].name
+        | select(startswith("stream:"))
+        | ltrimstr("stream:")
+        | select(. != ($i.number|tostring)) ]        # open child work → its stream is active
+    + [ .[]
+        | select([.labels[].name] | index("stage: discover"))
+        | select([.labels[].name] | (index("status: claimed") or index("status: in-review") or index("status: changes-requested")))
+        | (.number|tostring) ] )                     # a root being worked → active even before children exist
+    | unique | .[]'
+}
+
 # First value of a "<prefix>..." entry in a comma-joined label list.
 label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
   printf '%s' "$1" | tr ',' '\n' | sed -n "s/^$2//p" | head -1
 }
 
-# Depth of an issue in its stream: 0 for a root (no line-anchored "Part of #p"
-# in the body), else 1 + parent's depth, capped at 3 hops. Bounds agent
-# fan-out (docs/STREAMS.md). FAILS CLOSED: if gh errors mid-walk (rate limit,
-# network), reports the cap so fan-out is denied rather than unbounded.
+# Depth of an issue in its stream: 0 for a root, else 1 + parent's depth,
+# capped at 3 hops. Bounds agent fan-out (docs/STREAMS.md). The parent hop is
+# the line-anchored "Split from #m" if present, else "Part of #p" — under the
+# flattened linking convention (#291 / ADR-0013) every child's "Part of"
+# points at the STREAM ROOT (so roll-up is exact), while "Split from" records
+# which issue actually spawned it; depth must follow the SPAWN chain or a
+# grandchild that links the root would look depth-1 and fan out forever.
+# "Split from" may share the first line with "Part of #root." — the anchor
+# allows that one prefix so prose mentions still can't mis-parent an issue.
+# FAILS CLOSED: if gh errors mid-walk (rate limit, network), reports the cap
+# so fan-out is denied rather than unbounded.
 issue_depth() {  # $1 = issue number
   local n="$1" d=0 body parent
   while [ "$d" -lt 3 ]; do
     if ! body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body 2>/dev/null)"; then
       echo 3; return
     fi
-    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*(part of[[:space:]]*#[0-9]+\.?[[:space:]]*)?split from[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)"
+    [ -z "$parent" ] && parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
     [ -z "$parent" ] && break
     d=$((d+1)); n="$parent"
   done
@@ -299,20 +353,24 @@ resolve_claim_race() {  # $1 = issue number
   return 0
 }
 
-# The closed set of issue lifecycle statuses. set_status_label sweeps ALL of
-# them (minus the one being set) so an issue can never carry two status
-# labels at once — the "in-review + awaiting-direction" soup that confused
-# both reviewers and the website is impossible by construction. Callers may
-# still pass explicit old statuses; they're harmless no-ops now.
-ALL_STATUSES=(available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done)
-
+# Set an issue's lifecycle status ATOMICALLY (#289 / ADR-0013): compute the
+# full label set — everything the issue carries except the "status: "
+# namespace, plus the ONE new status — and replace the labels in a single
+# PUT call. The previous add-label + N remove-label form (even in one gh
+# invocation) applied adds and removes as separate mutations, leaving a
+# window where an issue held two status labels at once; interleaved
+# concurrent transitions could leave that soup behind permanently.
+# A read-modify-write can still race a concurrent edit of OTHER labels
+# (rare, self-limiting); the issue-status.yml reconciler and reap.sh's
+# conflict sweep converge any residue back to exactly one status label.
+# The closed set of statuses lives in .github/labels.yml.
 set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. ignored (legacy)
   local n="$1" new="$2"; shift 2
-  local args=(--add-label "status: $new") old
-  for old in "${ALL_STATUSES[@]}"; do
-    [ "$old" = "$new" ] || args+=(--remove-label "status: $old")
-  done
-  gh issue edit "$n" --repo "$REPO" "${args[@]}" >/dev/null
+  local keep
+  keep="$(gh issue view "$n" --repo "$REPO" --json labels \
+          --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
+  printf '%s' "$keep" | jq --arg s "status: $new" '{labels: (. + [$s])}' \
+    | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
 }
 
 # True if an exit status means the agent was INTERRUPTED by the user (Ctrl-C) or

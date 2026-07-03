@@ -39,10 +39,18 @@
 #   POLL_SECONDS=0 ./review_work.sh                          # exit instead of polling when empty
 #                                                             # (default: poll every 60s and never exit)
 #
+# REVIEW-ROUND CAP (#287 / ADR-0013): a PR gets at most MAX_REVIEW_ROUNDS
+# (default 3) change-requesting review rounds from this loop. After that the
+# PR is PARKED FOR A HUMAN: the merge check is set to `pending` ("Awaiting
+# human maintainer"), a one-time summary of the unresolved points is posted,
+# and later loops skip the PR instead of re-reviewing — no more ping-pong,
+# no goalpost-moving round 4. Agents never apply `review: human-only`
+# themselves (#288); the pending check is how they hand a PR to a human.
+#
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  REVIEW_GITHUB_TOKEN AGENT MODEL AUTO_MERGE PR MAX POLL_SECONDS DRY_RUN
-#       REVIEW_CLAIM_TTL AGENT_TIMEOUT PROVIDER HERMES_PROFILE HERMES_FLAGS
-#       FOR_GOOD_REPO REPO_DIR
+#       REVIEW_CLAIM_TTL MAX_REVIEW_ROUNDS AGENT_TIMEOUT PROVIDER
+#       HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -63,6 +71,7 @@ CLAIMED_PR=""
 REVIEW_CLAIMING_LABEL="review: claimed"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
+MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-3}"   # change-requesting rounds before the PR is parked for a human (#287)
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
 # exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
@@ -125,6 +134,49 @@ review_history() {  # $1 = pr number
     gh pr view "$1" --repo "$REPO" --json comments \
       --jq '.comments[-3:][] | "--- comment by @\(.author.login) ---\n\(.body)"' 2>/dev/null || true
   } | head -c 6000
+}
+
+# How many change-requesting review rounds this PR has already been through
+# (any reviewer — if a HUMAN requested changes, the ping-pong budget is spent
+# just the same and the hand-off to a human is already the right outcome).
+# Fails to the cap so a gh outage parks rather than re-reviews unbounded.
+review_rounds() {  # $1 = pr number -> count of CHANGES_REQUESTED reviews
+  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$1){reviews(states:CHANGES_REQUESTED,first:100){totalCount}}}}" \
+    --jq '.data.repository.pullRequest.reviews.totalCount' 2>/dev/null || echo "$MAX_REVIEW_ROUNDS"
+}
+
+# Park a PR for a HUMAN maintainer (#287): pending merge check (blocks merge,
+# and this loop skips `pending` PRs), plus ONE summary comment of the
+# unresolved points. Called instead of an (N+1)th agent re-review. Agents
+# must not apply "review: human-only" themselves (#288) — the pending check
+# is the agent-side hand-off; a maintainer takes it from here (and may add
+# the label, re-run with FORCE=1, or decide the dispute directly).
+park_for_human() {  # $1 = pr number, $2 = head sha, $3 = url, $4 = rounds
+  local pr="$1" sha="$2" url="$3" rounds="$4"
+  warn "#$pr has been through $rounds change-requesting review round(s) (cap $MAX_REVIEW_ROUNDS) — parking for a human maintainer instead of re-reviewing."
+  [ "$DRY_RUN" = 1 ] && { info "[dry-run] would set check=pending and post the round-cap summary on #$pr"; return 0; }
+  set_check "$sha" pending "Awaiting human maintainer ($rounds review rounds reached)" "$url"
+  local marker="<!-- fg-review-round-cap -->"
+  if gh pr view "$pr" --repo "$REPO" --json comments --jq '.comments[].body' 2>/dev/null | grep -qF "$marker"; then
+    return 0
+  fi
+  local body; body="$(mktemp)"
+  {
+    echo "$marker"
+    echo "⏸️ **Review-round cap reached ($rounds/$MAX_REVIEW_ROUNDS)** — this PR has cycled through $rounds change-requesting review rounds without converging, so the agent review loop is handing it to a **human maintainer** instead of re-reviewing (#287)."
+    echo
+    echo "The merge check is parked at \`pending\` (\"Awaiting human maintainer\"); agent reviewers will skip this PR from now on."
+    echo
+    echo "**Latest unresolved feedback (for the maintainer):**"
+    echo
+    echo '```text'
+    review_feedback "$pr" | head -c 3000
+    echo '```'
+    echo
+    echo "Maintainer options: decide the dispute and merge (\`merge_ready.sh\` / by hand), send it back with concrete asks, apply \`review: human-only\`, or force one more agent round with \`FORCE=1 PR=$pr ./review_work.sh\`."
+  } >"$body"
+  gh pr comment "$pr" --repo "$REPO" --body-file "$body" >/dev/null 2>&1 || true
+  rm -f "$body"
 }
 
 review_prompt() {  # $1 = PR number, $2 = absolute review file path
@@ -201,7 +253,8 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
-Do not edit the PR's files, change labels, or merge anything.
+Do not edit the PR's files, change labels (above all "review: human-only" —
+that one is a human maintainer's alone), or merge anything.
 EOF
 }
 
@@ -277,7 +330,8 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
-Do not edit the PR's files, change labels, or merge anything.
+Do not edit the PR's files, change labels (above all "review: human-only" —
+that one is a human maintainer's alone), or merge anything.
 EOF
 }
 
@@ -328,6 +382,17 @@ review_one() {  # $1 = PR number
     fi
     if [ "$st" = failure ]; then
       log "#$pr already reviewed at this revision (NEEDS_WORK) — waiting on the author's rework. Skipping (FORCE=1 to redo)."; return 0
+    fi
+    if [ "$st" = pending ]; then
+      log "#$pr is parked for a human maintainer (merge check pending) — skipping (FORCE=1 to review anyway)."; return 0
+    fi
+    # REVIEW-ROUND CAP (#287): never start an (N+1)th change-requesting round —
+    # park the PR for a human instead. Checked per PR (not per revision), so a
+    # capped PR stays parked across pushes until a human decides or FORCE=1.
+    local rounds; rounds="$(review_rounds "$pr")"
+    if [ "$rounds" -ge "$MAX_REVIEW_ROUNDS" ]; then
+      park_for_human "$pr" "$sha" "$url" "$rounds"
+      return 0
     fi
   fi
 

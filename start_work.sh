@@ -70,11 +70,18 @@ work_prompt() {  # $1 = issue number
     link_why="(\"Closes\" is required — the issue closing on merge is what tells the
    stream automation this piece of work is done.)"
   fi
-  # Bounded fan-out (docs/STREAMS.md): the agent on a root issue (depth 0) may
-  # open sub-issues, an agent on a sub-issue (depth 1) may open one more level,
-  # and depth >= 2 may not fan out at all. WHITELIST discover/research only —
-  # a missing or nonstandard stage label must fail closed, not open.
+  # Bounded fan-out (docs/STREAMS.md, #291): the agent on a root issue (depth
+  # 0) may open sub-issues, an agent on a sub-issue (depth 1) may open one
+  # more level, and depth >= 2 may not fan out at all. Every sub-issue's
+  # "Part of" must point at the STREAM ROOT — never at the spawning issue —
+  # so the stream roll-up (labels, drain check, synthesis) stays exact; the
+  # spawn generation is carried by a "Split from #<this issue>" marker, which
+  # issue_depth follows to enforce the depth limit. WHITELIST
+  # discover/research only — a missing or nonstandard stage label must fail
+  # closed, not open.
   local depth fanout; depth="$(issue_depth "$n")"
+  local fanout_root="${stream:-$n}" split_note=""
+  [ "$n" != "$fanout_root" ] && split_note=" Split from #$n."
   if [ "$stage" != "discover" ] && [ "$stage" != "research" ]; then
     fanout="Do NOT open any sub-issues from this issue — only discover/research work
 may fan out; everything else is human-gated (docs/STREAMS.md)."
@@ -85,9 +92,13 @@ parts you will NOT cover as 2-5 CHUNKY sub-issues — real researchable
 questions someone can spend hours on, never micro-tasks:
   gh issue create --repo $REPO --title \"research: <question>\" \\
     --label \"stage: research\" --label \"status: available\" \\
-    --body \"Part of #$n.${stream:+ Stream: #$stream.} <the question, why it matters, where to look>\"
-Then STILL complete this issue: narrow it to the core question, answer that to
-the full method standard, and say in your PR exactly what you split off."
+    --body \"Part of #$fanout_root.$split_note <the question, why it matters, where to look>\"
+The body's \"Part of\" MUST point at the stream root (#$fanout_root), exactly as shown —
+NEVER at this issue — and must keep the \"Part of\"/\"Split from\" wording on the
+first line: that's what keeps the stream roll-up exact and the fan-out depth
+enforceable (#291). Then STILL complete this issue: narrow it to the core
+question, answer that to the full method standard, and say in your PR exactly
+what you split off."
   else
     fanout="Do NOT open any sub-issues — this issue is at the fan-out depth limit
 (depth $depth of max 2, see docs/STREAMS.md). If the scope is still too big,
@@ -158,7 +169,9 @@ ${stream:+   The PR body must also contain the exact text  Stream: #$stream  on 
 }
 IMPORTANT: do NOT change labels or assignees on EXISTING issues — the runner
 manages issue status. (The one exception: labels on NEW sub-issues you create
-via the fan-out instruction above.) Do exactly one issue (#$n). Respect the
+via the fan-out instruction above.) In particular you must NEVER add or
+remove the "review: human-only" label on anything — only a human maintainer
+may touch it, and automation reverts anyone else (#288). Do exactly one issue (#$n). Respect the
 human gates (docs/STREAMS.md): never open ideate/build follow-up issues, and
 never write or edit streams/ overview docs — those are human steward
 decisions. When finished, print the PR URL.
@@ -200,7 +213,8 @@ Do this:
    gh pr comment $pr --repo $REPO --body "..."
 
 IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
-labels or assignees — the runner manages status. Work only on PR #$pr.
+labels or assignees — the runner manages status, and the "review: human-only"
+label is a human maintainer's alone to toggle (#288). Work only on PR #$pr.
 EOF
 }
 
@@ -388,6 +402,33 @@ reconcile_rework() {
   done
 }
 
+# Pick the next available issue, holding back NEW stream roots when the
+# active-streams cap is reached (#292): a discover root may only be claimed
+# while fewer than MAX_ACTIVE_STREAMS streams are active — unless its own
+# stream is already among them (e.g. a re-triaged root with open children).
+# Children of active streams, rework, and non-stream work are never held
+# back; held roots stay `status: available` and simply wait for a slot, so
+# the human G0 decision is sequenced, not overridden.
+pick_available() {  # $1 = queue snapshot
+  local snap="$1" n labels active count=""
+  for n in $(available_issues "$snap"); do
+    labels="$(printf '%s' "$snap" | jq -r --argjson n "$n" '.[] | select(.number==$n) | [.labels[].name] | join(",")')"
+    case ",$labels," in
+      *",stage: discover,"*)
+        if [ -z "$count" ]; then
+          active="$(active_streams "$snap")"
+          count="$(printf '%s\n' "$active" | grep -c . || true)"
+        fi
+        if [ "$count" -ge "$MAX_ACTIVE_STREAMS" ] && ! printf '%s\n' "$active" | grep -qx "$n"; then
+          log "#$n is a new stream root but $count stream(s) are already active (MAX_ACTIVE_STREAMS=$MAX_ACTIVE_STREAMS) — leaving it in the backlog."
+          continue
+        fi ;;
+    esac
+    echo "$n"; return 0
+  done
+  return 0
+}
+
 # Take the first UNASSIGNED (TTL-freed) rework whose PR lives on origin — i.e.
 # a branch we can actually push the rework to. Fork-branch PRs are skipped (only
 # their owner can push). Claims it to @me and echoes its number, else nothing.
@@ -432,7 +473,7 @@ main() {
       kind=rework
     else
       next="$(take_unassigned_rework "$snap" || true)"
-      if [ -n "$next" ]; then kind=rework; else next="$(available_issues "$snap" | head -1 || true)"; fi
+      if [ -n "$next" ]; then kind=rework; else next="$(pick_available "$snap" || true)"; fi
     fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
