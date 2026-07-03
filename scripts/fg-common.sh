@@ -94,6 +94,13 @@ make_worktree() {  # $1 = ref to check out (e.g. origin/main, refs/fg/pr-12); se
     WORKTREE=""
     return 1
   fi
+  # `git worktree add` does NOT populate submodules in the new worktree (each
+  # worktree tracks its own submodule checkout state) — without this, every
+  # agent gets an empty .skills/ and silently loses the NZ data CLIs even when
+  # correctly instructed to use them. Best-effort: a missing/offline submodule
+  # remote shouldn't fail the whole run, just leave .skills empty as before.
+  git -C "$WORKTREE" submodule update --init --quiet 2>/dev/null \
+    || warn "couldn't init the .skills submodule in $WORKTREE (offline? leaving it empty)"
 }
 
 remove_worktree() {
