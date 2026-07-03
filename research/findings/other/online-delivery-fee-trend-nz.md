@@ -1,5 +1,5 @@
 ---
-title: "NZ online free-shipping thresholds and delivery fees have risen over the past 2–3 years — clearest for thresholds, with the aggregate trend leaning heavily on one vendor's data"
+title: "NZ online free-shipping thresholds rose over the past 2–3 years (clearest case: Woolworths +25%); the direct delivery-fee trend is documented only for a single year (2025→2026, one vendor's survey), showing express fees up ~24%"
 domain: "other"
 issue: "#295"
 confidence: "Medium"
@@ -14,13 +14,13 @@ status: "draft"
 
 ## Executive answer
 
-- **Yes, the direction of travel is up — but the strongest, cleanest NZ evidence is for free-shipping *thresholds*, not headline delivery fees.** The single best-documented case is **Woolworths NZ's Delivery Saver**: the minimum spend for free delivery rose from **$80 (Sept 2023) to $100 (1 Oct 2025), +25%**, and the subscription itself from **$118 to $132.99 per six months, +12.7%** — a change Woolworths said followed *five years* of no price rise ([RNZ, 1 Sep 2025](https://www.rnz.co.nz/news/business/571681/woolworths-increases-subscription-fee-minimum-spend-for-free-delivery); [RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)).
-- **On delivery *fees*, the clearest NZ movement is in express, not standard.** Shippit's 2026 data (as reported for NZ) has average standard delivery basically flat year-on-year (**$9.70 → $10.00**, +3%) but express jumping sharply (**$14.10 → $17.42**, +24%) ([1News, 2 Jul 2026](https://www.1news.co.nz/2026/07/02/online-shoppers-facing-higher-delivery-costs-returns-fees/); [RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)).
+- **Free-shipping *thresholds* have a clean multi-year (2–3 year) NZ trend: up.** The single best-documented case is **Woolworths NZ's Delivery Saver**: the minimum spend for free delivery rose from **$80 (Sept 2023) to $100 (1 Oct 2025), +25%**, and the subscription itself from **$118 to $132.99 per six months, +12.7%** — a change Woolworths said followed *five years* of no price rise ([RNZ, 1 Sep 2025](https://www.rnz.co.nz/news/business/571681/woolworths-increases-subscription-fee-minimum-spend-for-free-delivery); [RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)). This is the part of the question I can answer with dated end-points and independent corroboration.
+- **Delivery *fees* themselves are the weaker half of the answer: the only dated NZ fee trend I found spans a *single year*, not 2–3.** Shippit's data (as reported for NZ) has average standard delivery basically flat year-on-year (**$9.70 → $10.00 (2025→2026)**, +3%) but express jumping sharply (**$14.10 → $17.42**, +24%) ([1News, 2 Jul 2026](https://www.1news.co.nz/2026/07/02/online-shoppers-facing-higher-delivery-costs-returns-fees/); [RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)). **The magnitude of any NZ delivery-fee rise over the full 2–3 year window is *unverified* — I have no dated 2023 NZ fee baseline to compare against, and this single-year delta is one vendor's survey.** Standard fees moving only ~3% in that year actually argues *against* a large delivery-fee climb; the sharp move is confined to express.
 - **The "quietly rising" aggregate narrative is real but leans on one origin.** Most of the ANZ/NZ trend numbers — thresholds climbing, fewer retailers offering free shipping — come from **Shippit** (a delivery-software vendor). Independent anchors that don't trace to Shippit are: the Woolworths change, **New World ending nationwide free delivery**, and rising carrier costs at **NZ Post** ([b2bnews.co.nz, 1 Jul 2026](https://b2bnews.co.nz/news/free-delivery-ends-as-nz-retailers-claw-back-costs/); [NZ Post, 1 Jul 2024](https://www.nzpost.co.nz/about-us/july-2024); [NZ Post, 1 Jul 2025](https://www.nzpost.co.nz/about-us/july-2025)).
 - **The underlying cost push is independently confirmed.** NZ Post raised domestic parcel prices two years running — **2024: small +5.5% / large +4%; 2025: small +2.8% / large +3.4%** — the wholesale last-mile cost retailers pass on ([NZ Post, 2024](https://www.nzpost.co.nz/about-us/july-2024); [NZ Post, 2025](https://www.nzpost.co.nz/about-us/july-2025)).
 - **What I could not pin down:** a clean, multi-retailer NZ *time-series* of advertised free-shipping thresholds from independent dated snapshots. Wayback's CDX API returned truncated results in this environment (a tooling limit, not missing history), so the aggregate NZ trend rests on Shippit plus a small number of concrete, dated retailer cases rather than a broad independent sample.
 
-**Overall confidence:** Medium — the *direction* (up) is well-supported and the Woolworths and NZ Post pieces are High-confidence, but the *magnitude of the aggregate NZ trend* rests substantially on a single vendor's survey.
+**Overall confidence:** Medium — the *threshold* trend (up, over 2–3 years) is well-supported, with the Woolworths and NZ Post pieces High-confidence. The *delivery-fee* trend is weaker: only a single-year (2025→2026) NZ delta exists, it is one vendor's survey, and the multi-year fee magnitude is **unverified** for want of a dated 2023 NZ baseline.
 
 ## Evidence
 
@@ -73,7 +73,6 @@ So the wholesale last-mile cost that retailers pass on rose in **two consecutive
 ### 5. Concrete retailer-level moves beyond Woolworths
 
 - **New World has ended nationwide free deliveries** ([b2bnews.co.nz, 1 Jul 2026](https://b2bnews.co.nz/news/free-delivery-ends-as-nz-retailers-claw-back-costs/)).
-- **Mighty Ape** narrowed Primate free-shipping eligibility, citing "increased costs of storing, processing and shipping" ([Mighty Ape Help Centre](https://help.mightyape.co.nz/hc/en-nz/articles/5177645294095-Free-Delivery-Eligibility)).
 - Returns/restocking fees (adjacent to this stream's returns child) have appeared/risen: **PB Tech 20%, Target Furniture 15%, Fishpond 17%** change-of-mind restocking fees, attributed to Consumer NZ ([1News, 2 Jul 2026](https://www.1news.co.nz/2026/07/02/online-shoppers-facing-higher-delivery-costs-returns-fees/)).
 
 ## Surprising or load-bearing claims
@@ -114,4 +113,3 @@ So the wholesale last-mile cost that retailers pass on rose in **two consecutive
 8. NZ Post, "Changes to our products and services from 1 July 2024" — https://www.nzpost.co.nz/about-us/july-2024 (accessed 2026-07-04)
 9. NZ Post, "Business pricing and product changes from 1 July 2025" — https://www.nzpost.co.nz/about-us/july-2025 (accessed 2026-07-04)
 10. b2bnews.co.nz, "Free delivery ends as NZ retailers claw back costs", 1 Jul 2026 — https://b2bnews.co.nz/news/free-delivery-ends-as-nz-retailers-claw-back-costs/ (accessed 2026-07-04)
-11. Mighty Ape Help Centre, "Free Delivery Eligibility" — https://help.mightyape.co.nz/hc/en-nz/articles/5177645294095-Free-Delivery-Eligibility (accessed 2026-07-04)
