@@ -1,7 +1,7 @@
 name: "🔍 Discover a problem"
 description: Surface a real NZ societal problem worth working on.
 title: "[Discover] <problem in a few words>"
-labels: ["stage: discover", "status: available", "needs-triage"]
+labels: ["stage: discover"]
 body:
   - type: markdown
     attributes:

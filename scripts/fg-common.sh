@@ -128,10 +128,13 @@ fetch_open_issues() {
 # the workers pick it up before the rest of the queue.
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
+# "do-not-automate" is a human's parking brake: an issue carrying it is
+# invisible to EVERY automation queue below, whatever its status. Purely
+# restrictive — it can only shrink queues.
 issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
   local status="$1" snap="${2:-}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\"))$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\")) | select(.labels|map(.name)|index(\"do-not-automate\")|not)$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
 }
 
 available_issues() { issues_with_status "available" "${1:-}"; }
@@ -141,7 +144,7 @@ available_issues() { issues_with_status "available" "${1:-}"; }
 rework_issues() {  # $1 = optional snapshot JSON
   local snap="${1:-}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r --arg me "$ME" "[.[] | select(.labels|map(.name)|index(\"status: changes-requested\")) | select(.assignees|map(.login)|index(\$me))$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+  printf '%s' "$snap" | jq -r --arg me "$ME" "[.[] | select(.labels|map(.name)|index(\"status: changes-requested\")) | select(.labels|map(.name)|index(\"do-not-automate\")|not) | select(.assignees|map(.login)|index(\$me))$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
 }
 
 # Reworks with NO assignee — freed by reap.sh after REWORK_TTL, so any worker
@@ -150,7 +153,7 @@ rework_issues() {  # $1 = optional snapshot JSON
 unassigned_reworks() {  # $1 = optional snapshot JSON
   local snap="${1:-}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r '[.[] | select(.labels|map(.name)|index("status: changes-requested")) | select((.assignees|length)==0)] | sort_by(.createdAt) | .[].number'
+  printf '%s' "$snap" | jq -r '[.[] | select(.labels|map(.name)|index("status: changes-requested")) | select(.labels|map(.name)|index("do-not-automate")|not) | select((.assignees|length)==0)] | sort_by((.labels|map(.name)|index("priority: high")|not), .createdAt) | .[].number'
 }
 
 # Drained stream roots waiting for a G1 synthesis draft.
@@ -296,10 +299,19 @@ resolve_claim_race() {  # $1 = issue number
   return 0
 }
 
-set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old statuses to remove
+# The closed set of issue lifecycle statuses. set_status_label sweeps ALL of
+# them (minus the one being set) so an issue can never carry two status
+# labels at once — the "in-review + awaiting-direction" soup that confused
+# both reviewers and the website is impossible by construction. Callers may
+# still pass explicit old statuses; they're harmless no-ops now.
+ALL_STATUSES=(available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done)
+
+set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. ignored (legacy)
   local n="$1" new="$2"; shift 2
-  local args=(--add-label "status: $new")
-  for old in "$@"; do args+=(--remove-label "status: $old"); done
+  local args=(--add-label "status: $new") old
+  for old in "${ALL_STATUSES[@]}"; do
+    [ "$old" = "$new" ] || args+=(--remove-label "status: $old")
+  done
   gh issue edit "$n" --repo "$REPO" "${args[@]}" >/dev/null
 }
 

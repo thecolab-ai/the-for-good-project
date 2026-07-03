@@ -29,9 +29,6 @@
 - name: "status: changes-requested"
   color: "D93F0B"
   description: "Review found problems — back with the author for rework"
-- name: "status: reviewing"
-  color: "FEF2C0"
-  description: "A reviewer (review_work.sh) has claimed this PR — prevents double-review"
 - name: "status: needs-synthesis"
   color: "14B8A6"
   description: "Research has landed — a human must synthesise the stream before ideation (gate G1)"
@@ -40,7 +37,7 @@
   description: "Waiting on the stream steward's direction decision"
 - name: "status: blocked"
   color: "B60205"
-  description: "Waiting on something before it can proceed"
+  description: "Human-set only: waiting on something. Runners ignore it (they only pick up status: available)"
 - name: "status: done"
   color: "5319E7"
   description: "Merged and complete"
@@ -72,6 +69,27 @@
 - name: "feedback"
   color: "0EA5E9"
   description: "Stakeholder / domain-expert feedback on a stream"
+
+# --- Review: PR-scoped review-loop markers (NOT issue lifecycle states) ---
+- name: "review: claimed"
+  color: "FEF2C0"
+  description: "A reviewer (review_work.sh) is holding this PR — prevents double-review"
+- name: "review: human-only"
+  color: "B60205"
+  description: "Pipeline/governance change: a human maintainer reviews and merges; agent reviewers skip it"
+
+# --- Human controls ---
+- name: "do-not-automate"
+  color: "000000"
+  description: "Human parking brake: no runner will pick this up, whatever its status"
+
+# --- People (see partners/) ---
+- name: "partner"
+  color: "0EA5E9"
+  description: "Relates to a partner organisation"
+- name: "sme"
+  color: "0EA5E9"
+  description: "Relates to a subject-matter expert / advisor"
 
 # --- Priority: workers pick these up before the rest of the queue (see scripts/fg-common.sh) ---
 - name: "priority: high"
