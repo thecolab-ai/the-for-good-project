@@ -1,0 +1,138 @@
+---
+title: "The Consumer Guarantees Act does not cover 'change of mind' — retailers set those terms, but they cannot use them to dodge a genuine CGA fault"
+domain: "other"
+issue: "#297"
+confidence: "High"   # overall confidence in the headline conclusion
+author: "claude"
+agent: "claude"
+model: "claude-opus-4-8"
+date: "2026-07-04"
+status: "draft"
+---
+
+# The Consumer Guarantees Act does not cover 'change of mind' — retailers set those terms, but they cannot use them to dodge a genuine CGA fault
+
+> **Not legal advice.** This finding describes the law and where its edges are contested. It is written by an AI research agent from public sources. Any use that turns on a specific dispute — especially the boundary between a "fault" and a "change of mind" — should be checked by a person with legal authority (a lawyer, a Community Law Centre, or the Disputes Tribunal). See *What would change this conclusion* for the points a human should verify.
+
+## Executive answer
+
+- **Two different systems are at work.** The Consumer Guarantees Act 1993 (CGA) gives you a *statutory right* to a remedy when goods are faulty, not fit for purpose, or don't match their description. "Change of mind" — you ordered the wrong size, found it cheaper elsewhere, or simply don't want it — is **not** covered by the CGA at all; there the retailer sets its own terms ([Consumer Protection / MBIE — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind); [Commerce Commission — Returns and refunds](https://www.comcom.govt.nz/consumers/dealing-with-typical-situations/returns-and-refunds/)).
+- **On change of mind, a restocking or handling fee is lawful *if disclosed up front*.** Consumer NZ's position is that a store can charge a return fee for a change-of-mind return "if they're upfront about it," but a fee you only discover *after* it's deducted is "unfair" and grounds for a bank chargeback or a Commerce Commission complaint ([Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee)). Fees observed in the market include PB Tech 20%, Fishpond 17%, Target Furniture 15%, and a boutique's flat $60 handling charge ([RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees); [Consumer NZ](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee)).
+- **On a genuine CGA fault, the retailer cannot charge you to return it, and cannot "no-refund" its way out.** Where a guarantee is breached the remedy is repair, replacement or refund **at the retailer's cost, not yours**, and a "No refunds / no exchanges" sign is not just unenforceable but an *offence* under the Fair Trading Act 1986 ([Community Law — Automatic guarantees](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/); [Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds)).
+- **The confusion — and the harm — sits on the boundary.** Because *who chooses the remedy* and *who pays the freight* flip entirely depending on which side of the line a return falls, a retailer that labels a faulty-goods return as "change of mind" converts a free statutory remedy into a fee-bearing discretionary one. Official guidance is emphatic that a retailer cannot limit CGA rights this way, but I found **no published NZ case study** documenting a specific retailer doing it — so the mechanism is well-evidenced in principle and the *prevalence* is unverified (see below).
+- **Recourse when a policy is too restrictive:** self-enforcement (the CGA is self-enforcing), then the **Disputes Tribunal** — whose jurisdiction *doubled from $30,000 to $60,000 on 24 January 2026*, no lawyers, binding decisions ([Ministry of Justice](https://www.justice.govt.nz/justice-sector-policy/key-initiatives/disputes-tribunal-jurisdiction/); [Commerce Commission — Enforcing your rights](https://www.comcom.govt.nz/consumers/your-rights-as-a-consumer/enforcing-your-rights-and-dispute-resolution/)). Free help: Community Law Centres and Citizens Advice Bureau.
+
+**Overall confidence:** High — on the core legal architecture (what the CGA covers, that change of mind is excluded, that CGA faults can't be fee-charged or contracted out, and the recourse path). **Medium/Low** on the *prevalence* of retailers mislabelling faults as change of mind, which I could describe as a mechanism but not quantify.
+
+## Evidence
+
+### 1. The CGA is about *faults and fitness*, not buyer's remorse
+
+The CGA 1993 gives consumers a set of automatic guarantees when they buy goods for personal, domestic or household use from a business ([Consumer Guarantees Act 1993, New Zealand Legislation](https://www.legislation.govt.nz/act/public/1993/0091/latest/whole.html) — the full Act renders in a browser; the section descriptions below are drawn from the official MBIE, Commerce Commission and Community Law summaries of it). The guarantees most relevant to returns are:
+
+- **Acceptable quality** — goods must be of acceptable quality: safe, durable, free from minor defects, and acceptable in appearance and finish (CGA s6) ([Community Law — Automatic guarantees](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/)).
+- **Fit for purpose** — goods must be reasonably fit for any particular purpose the consumer made known (CGA s8) ([Community Law](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/)).
+- **Match their description** — goods must correspond with their description (CGA s9) ([Community Law](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/)).
+
+When one of these is breached, the consumer has a right to a remedy against the supplier (CGA s18). **Change of mind is a different animal.** MBIE's Consumer Protection service states plainly: "A business usually doesn't have to let you return an item you have simply changed your mind about," and "the sale is final unless the item breaches a guarantee under the Consumer Guarantees Act" ([Consumer Protection — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind)). The Commerce Commission echoes this: "The retailer is not required to give you a cash refund if you have changed your mind" ([Commerce Commission — Returns and refunds](https://www.comcom.govt.nz/consumers/dealing-with-typical-situations/returns-and-refunds/)). Consumer NZ: "You don't have the right to return goods simply because you've changed your mind or your circumstances have changed" ([Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds)).
+
+So on a change-of-mind return, whatever the retailer offers — a refund, an exchange, a credit note, or nothing — is a matter of that retailer's own policy, not law ([Consumer Protection — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind)).
+
+### 2. Who chooses the remedy — and who pays — depends entirely on which system applies
+
+This is the crux of why the boundary matters. The remedy rules diverge sharply:
+
+**For a genuine CGA fault:**
+- If the problem is **minor** and *can be fixed*, the **retailer** chooses whether to repair, replace, or refund — but must do so at no charge and within a reasonable time ([Consumer Protection — Know your rights to a refund, replacement or repair](https://www.consumerprotection.govt.nz/general-help/how-to-complain/know-your-rights-to-a-refund-replacement-or-repair); [Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds)).
+- If the problem is a **failure of a substantial character** (CGA s21) — broadly, a fault a reasonable consumer wouldn't have bought the item knowing about, goods significantly different from their description, or goods that are unsafe — the **consumer** chooses, and can insist on a refund or replacement rather than a repair. As MBIE puts it: "Even if a business thinks they can repair a substantial character fault, you can choose to get your money back instead" ([Consumer Protection — Know your rights](https://www.consumerprotection.govt.nz/general-help/how-to-complain/know-your-rights-to-a-refund-replacement-or-repair)).
+- Either way the remedy is **free to the consumer**, and the retailer cannot redirect you to the manufacturer: "The retailer can't palm you off to the manufacturer — you have the right to take the item back to the shop" ([Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds)).
+
+**For a change-of-mind return:** none of that applies. The retailer can decline outright, offer only a credit note, exclude sale items, and — critically — **charge a restocking or handling fee**, provided the fee was disclosed before purchase ([Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee); [Consumer Protection — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind)).
+
+The practical upshot: a return that is a **CGA fault** costs the consumer nothing and may give them the choice of a refund; the *same physical act of returning a box*, if it's re-labelled **change of mind**, can legitimately cost them 15–20% of the purchase price. That is exactly where confusion and consumer harm concentrate.
+
+### 3. Retailers cannot contract out of the CGA — and misstating your rights is itself an offence
+
+Retailers are free to set generous or stingy *change-of-mind* policies, but they cannot shrink the *statutory* guarantees. Two independent official sources confirm:
+
+- A "No refunds" sign in a shop "is illegal" ([Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds)).
+- Attempting to contract out — e.g. displaying "No refunds" — is "an offence under the Fair Trading Act 1986 by misleading consumers about their rights" ([Community Law — Automatic guarantees](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/)).
+
+The Commerce Commission likewise warns that "businesses cannot mislead you about your CGA rights" — for example, claiming you have "only 5 days to return a faulty item" or that faulty-goods rights are limited to a store or manufacturer warranty ([Commerce Commission — Returns and refunds](https://www.comcom.govt.nz/consumers/dealing-with-typical-situations/returns-and-refunds/)). MBIE's business-facing guidance is the mirror image: businesses "should not say they don't give refunds, or put conditions to refunds, such as set time frames," and "cannot limit their obligations to the terms of a store or manufacturer's warranty" ([Consumer Protection — Obligations under the CGA](https://www.consumerprotection.govt.nz/guidance-for-businesses/complying-with-consumer-laws/obligations-under-the-consumer-guarantees-act)).
+
+So the *legal* answer to "can a restrictive policy override my CGA rights?" is a clean **no**. A policy that says "all sales final" or "returns incur a 20% restocking fee" is valid **only for change-of-mind returns**; it is void, and potentially an FTA breach, to the extent a retailer applies it to a genuine fault.
+
+### 4. Where restrictive policies bite: fees, hidden fees, and the labelling problem
+
+The market context (the reason this stream exists) is that returns fees are spreading. RNZ (2 Jul 2026) reports PB Tech charging "20 percent in restocking fees for change-of-mind returns," with Target Furniture at 15% and Fishpond at 17% ([RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)). Consumer NZ documents the same three plus a boutique charging a flat "$60" handling/processing fee ([Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee)). RNZ also notes the consumer tension: "half of shoppers said they would be hesitant to shop with a retailer that did not offer free returns but only 10 percent did" ([RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees)).
+
+Consumer NZ draws the legal line cleanly around these fees:
+
+> "If you're returning the product under a change of mind policy, a store can charge you a return fee if they're upfront about it… if you only find out about the fee because it's deducted from your bank account, we think this is unfair" — grounds for a **chargeback** or a **Commerce Commission complaint** ([Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee)).
+
+> "If you're returning the product because it's not fit for purpose, doesn't match the description, or it's faulty… a store can't charge you a return fee" ([Consumer NZ](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee)).
+
+The **labelling problem** follows directly. Nothing in a product's physical state announces whether a dispute is a "fault" or a "change of mind" — that is a legal characterisation, and the two parties have opposite incentives about which label to apply. A consumer returning a jacket that arrived with a broken zip has a free CGA remedy; if the retailer records it as "change of mind," it can deduct a restocking fee and the consumer, not knowing the difference, may pay it. Official guidance treats this as *impermissible* (see §3), which is the consumer's protection — but the protection only works if the consumer knows to assert the fault, and, if refused, is willing to escalate. **I did not find a published NZ case study of a named retailer refusing a CGA-covered return by labelling it change of mind** (the issue asked for one). The mechanism is clear from the law; its prevalence is not something I can evidence, and is flagged below as unverified.
+
+### 5. Recourse: self-enforcement, then the Disputes Tribunal
+
+The CGA is **self-enforcing** — "you can take your own action" ([Commerce Commission — Enforcing your rights and dispute resolution](https://www.comcom.govt.nz/consumers/your-rights-as-a-consumer/enforcing-your-rights-and-dispute-resolution/)). The escalation ladder that emerges from the official sources is:
+
+1. **Complain to the retailer**, in writing, asserting the specific guarantee breached and the remedy sought. If the retailer refuses or delays unreasonably, the consumer may have the goods repaired elsewhere and recover the reasonable cost, or reject the goods.
+2. **Get free advice** — a **Community Law Centre** (free initial legal advice; find your centre at communitylaw.org.nz) or the **Citizens Advice Bureau**, which the Commerce Commission names as handling "Consumer Guarantees Act queries" ([Commerce Commission — Enforcing your rights](https://www.comcom.govt.nz/consumers/your-rights-as-a-consumer/enforcing-your-rights-and-dispute-resolution/); [Community Law — Automatic guarantees](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/)).
+3. **For a hidden/undisclosed fee**, request a **chargeback** from your bank, and/or **report the trader** to the Commerce Commission under the Fair Trading Act — noting the Commission enforces the *law* but does **not** resolve individual disputes or recover your money for you ([Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee); [Commerce Commission — Enforcing your rights](https://www.comcom.govt.nz/consumers/your-rights-as-a-consumer/enforcing-your-rights-and-dispute-resolution/)).
+4. **File in the Disputes Tribunal.** No lawyers, an adjudicator (referee), a relatively quick hearing, and a binding decision. As of **24 January 2026 the Tribunal's monetary jurisdiction doubled from $30,000 to $60,000** under the Disputes Tribunal Amendment Act 2025, with a $468 filing fee for claims of $30,001–$60,000 ([Ministry of Justice — Disputes Tribunal jurisdiction](https://www.justice.govt.nz/justice-sector-policy/key-initiatives/disputes-tribunal-jurisdiction/); [Ministry of Justice — jurisdiction set to increase](https://www.justice.govt.nz/about/news-and-media/news/disputes-tribunal-financial-jurisdiction-set-to-increase/)). (The Commerce Commission's own "enforcing your rights" page still describes the limit as "$30,000" as at the July 2026 fetch — an example of official guidance lagging a recent change; verify current figures at the Ministry of Justice.)
+
+### 6. Comparison with Australia (ACL): the same core rule, cleaner signposting
+
+New Zealand's CGA and the Australian Consumer Law (ACL) are strikingly aligned on the point that matters here: **change of mind is not a legal right in either country.** The ACCC states consumers are "not entitled to a repair, replacement or refund under the consumer guarantees if they… simply changed their mind, found the product cheaper somewhere else, or decided they didn't like the purchase" ([ACCC — Repair, replace, refund, cancel](https://www.accc.gov.au/consumers/problem-with-a-product-or-service-you-bought/repair-replace-refund-cancel)). And, like NZ, the ACL's guarantees can't be signed away: "a business can't take away these basic rights by displaying a 'no refunds' sign" ([ACCC — Consumer guarantees](https://www.accc.gov.au/consumers/buying-products-and-services/consumer-guarantees)).
+
+The remedy allocation is also close to NZ's substantial-vs-minor split: for a **major** failure with goods the ACL gives the **consumer** the choice of refund or replacement; for a **minor** problem the **business** may choose to repair ([ACCC — Repair, replace, refund, cancel](https://www.accc.gov.au/consumers/problem-with-a-product-or-service-you-bought/repair-replace-refund-cancel)). This mirrors CGA s21's "failure of substantial character."
+
+One useful ACL framing that NZ guidance states less prominently: **if a business *does* advertise a change-of-mind policy, it must honour that policy's terms** ("if a business has a 'change of mind' policy, they must follow it") ([ACCC — Repair, replace, refund, cancel](https://www.accc.gov.au/consumers/problem-with-a-product-or-service-you-bought/repair-replace-refund-cancel)). In NZ the equivalent lever is the Fair Trading Act: a retailer that advertises "free returns" or a 30-day policy and then doesn't honour it risks a misleading-conduct claim, but the CGA itself is silent on voluntary policies. **Net: the two regimes are functionally equivalent on returns; the ACL's public materials arguably signpost the change-of-mind/guarantee boundary more explicitly for consumers.** (This is a documentation/clarity observation, not a claim of a substantive legal gap — see caveats.)
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| Change of mind is not covered by the CGA; the retailer sets those terms | [Consumer Protection — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind) | [Commerce Commission — Returns and refunds](https://www.comcom.govt.nz/consumers/dealing-with-typical-situations/returns-and-refunds/) | High |
+| A restocking fee on a change-of-mind return is lawful only if disclosed up front; a hidden fee is grounds for chargeback/complaint | [Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee) | [Consumer Protection — Change of mind](https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind) | High |
+| No fee may be charged, and no "no-refund" policy applied, to a genuine CGA fault; contracting out is an FTA offence | [Community Law — Automatic guarantees](https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/) | [Consumer NZ — Returns and refunds](https://www.consumer.org.nz/articles/returns-and-refunds) | High |
+| Observed change-of-mind fees: PB Tech 20%, Fishpond 17%, Target Furniture 15%, boutique $60 flat | [RNZ, 2 Jul 2026](https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees) | [Consumer NZ — Can shops charge a return fee?](https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee) | High |
+| Disputes Tribunal limit doubled from $30,000 to $60,000 on 24 Jan 2026 | [Ministry of Justice — jurisdiction](https://www.justice.govt.nz/justice-sector-policy/key-initiatives/disputes-tribunal-jurisdiction/) | [Ministry of Justice — set to increase (news)](https://www.justice.govt.nz/about/news-and-media/news/disputes-tribunal-financial-jurisdiction-set-to-increase/) | High |
+| Australia (ACL) also excludes change of mind and bars contracting out; remedy split mirrors NZ | [ACCC — Repair, replace, refund, cancel](https://www.accc.gov.au/consumers/problem-with-a-product-or-service-you-bought/repair-replace-refund-cancel) | [ACCC — Consumer guarantees](https://www.accc.gov.au/consumers/buying-products-and-services/consumer-guarantees) | High |
+| Retailers *systematically* re-label CGA faults as "change of mind" to charge fees | *No published NZ case study found* | — | **Low — mechanism only, prevalence unverified** |
+
+## What would change this conclusion
+
+- **A documented NZ case (Disputes Tribunal decision, Consumer NZ investigation, or media exposé)** showing a named retailer refusing a CGA-covered return by calling it change of mind would let me upgrade the prevalence claim from "mechanism" to "evidenced practice." Disputes Tribunal decisions on consumer-guarantee jurisdiction are published ([Disputes Tribunal — decisions finder](https://disputestribunal.govt.nz/disputes-decision-finder)) and would be the place to look; I did not mine them for this finding. **This is the single biggest gap.**
+- **A legal reviewer should verify the section-level statements** (s6/s8/s9/s18/s21) against the Act's operative text at [legislation.govt.nz](https://www.legislation.govt.nz/act/public/1993/0091/latest/whole.html). I relied on official MBIE/Commerce Commission/Community Law *summaries* of those sections because the legislation site returns a browser-rendered shell to automated fetchers (a known bot-protection behaviour, not a dead link — the page title and Act load fine in a browser). The summaries are authoritative and mutually consistent, but the precise statutory wording of "failure of a substantial character" (s21) and the supplier-options ladder (s18) should be read directly before anything turns on them.
+- **The disclosure standard for restocking fees is Consumer NZ's stated *position*, not a bright-line statutory rule.** "Upfront" and "unreasonable/excessive" are judgement calls; whether a specific fee or its disclosure is unfair would ultimately be for the Disputes Tribunal or a court applying the Fair Trading Act. Treat the "disclosed = lawful" framing as a strong rule of thumb, not a guarantee.
+- **The ACL "clearer signposting" observation is a documentation impression, not a measured legal gap.** I compared consumer-facing web guidance, not the full statutory texts of the CGA and the Australian Consumer Law; a comparative-law review could confirm or overturn it.
+- **Currency of secondary figures.** The Commerce Commission's "enforcing your rights" page still cited a $30,000 Tribunal limit at the time of fetch (2026-07-04); the $60,000 figure is confirmed by the Ministry of Justice. If reusing this finding later, re-check the Tribunal limit and filing fee, which can change again.
+- **This touches legal interpretation and should be reviewed by a human with legal authority** before being used to advise any real consumer — per the issue's guardrail. It describes the law; it is not legal advice.
+
+## Open follow-up questions
+
+- **Disputes Tribunal outcomes:** What do published Tribunal decisions show about how the "fault vs change of mind" boundary is actually adjudicated, and how often consumers succeed against restocking fees? (Would need decision-database analysis.)
+- **Disclosure-quality audit:** Across the major NZ online retailers, *how clearly and how early* is a restocking/return fee disclosed before checkout? (Overlaps with the transparency child of stream #258 — worth coordinating rather than duplicating.)
+- **The "free returns" promise vs practice:** Where retailers advertise free or easy returns, do the terms and conditions quietly re-impose fees or conditions — a potential Fair Trading Act angle?
+
+## Sources
+
+1. Consumer Protection (MBIE) — Change of mind: https://www.consumerprotection.govt.nz/general-help/common-consumer-issues/change-of-mind (accessed 2026-07-04)
+2. Consumer Protection (MBIE) — Consumer Guarantees Act: https://www.consumerprotection.govt.nz/general-help/consumer-laws/consumer-guarantees-act (accessed 2026-07-04)
+3. Consumer Protection (MBIE) — Know your rights to a refund, replacement or repair: https://www.consumerprotection.govt.nz/general-help/how-to-complain/know-your-rights-to-a-refund-replacement-or-repair (accessed 2026-07-04)
+4. Consumer Protection (MBIE) — Obligations under the Consumer Guarantees Act (business guidance): https://www.consumerprotection.govt.nz/guidance-for-businesses/complying-with-consumer-laws/obligations-under-the-consumer-guarantees-act (accessed 2026-07-04)
+5. Commerce Commission — Returns and refunds: https://www.comcom.govt.nz/consumers/dealing-with-typical-situations/returns-and-refunds/ (accessed 2026-07-04)
+6. Commerce Commission — Enforcing your rights and dispute resolution: https://www.comcom.govt.nz/consumers/your-rights-as-a-consumer/enforcing-your-rights-and-dispute-resolution/ (accessed 2026-07-04)
+7. Consumer NZ — Can shops charge a return fee?: https://www.consumer.org.nz/articles/can-shops-charge-a-return-fee (accessed 2026-07-04)
+8. Consumer NZ — Returns and refunds: know your rights: https://www.consumer.org.nz/articles/returns-and-refunds (accessed 2026-07-04)
+9. Community Law — Automatic guarantees when buying from a business: https://communitylaw.org.nz/community-law-manual/test/automatic-guarantees-when-buying-from-a-business/ (accessed 2026-07-04)
+10. RNZ — Online shoppers facing higher delivery costs, returns fees (2 Jul 2026): https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees (accessed 2026-07-04)
+11. New Zealand Legislation — Consumer Guarantees Act 1993 (full Act): https://www.legislation.govt.nz/act/public/1993/0091/latest/whole.html (browser-rendered; accessed 2026-07-04)
+12. Ministry of Justice — Disputes Tribunal jurisdiction (initiative page): https://www.justice.govt.nz/justice-sector-policy/key-initiatives/disputes-tribunal-jurisdiction/ (accessed 2026-07-04)
+13. Ministry of Justice — Disputes Tribunal financial jurisdiction set to increase (news): https://www.justice.govt.nz/about/news-and-media/news/disputes-tribunal-financial-jurisdiction-set-to-increase/ (accessed 2026-07-04)
+14. Disputes Tribunal of New Zealand — decisions finder: https://disputestribunal.govt.nz/disputes-decision-finder (accessed 2026-07-04)
+15. ACCC (Australia) — Repair, replace, refund, cancel: https://www.accc.gov.au/consumers/problem-with-a-product-or-service-you-bought/repair-replace-refund-cancel (accessed 2026-07-04)
+16. ACCC (Australia) — Consumer guarantees: https://www.accc.gov.au/consumers/buying-products-and-services/consumer-guarantees (accessed 2026-07-04)
