@@ -1,5 +1,5 @@
 ---
-title: "NZ's care-and-protection pathway is designed around an open report-of-concern front door, Oranga Tamariki intake triage, statutory response timeframes, assessment/investigation, and Family Group Conferences where the statutory threshold is met"
+title: "NZ's care-and-protection pathway is designed around an open report-of-concern front door, Oranga Tamariki intake triage, operational response timeframes, assessment/investigation, and Family Group Conferences where the statutory threshold is met"
 domain: "child-welfare"
 issue: "#299"
 confidence: "High"
@@ -10,7 +10,7 @@ date: "2026-07-03"
 status: "draft"
 ---
 
-# NZ's care-and-protection pathway is designed around an open report-of-concern front door, Oranga Tamariki intake triage, statutory response timeframes, assessment/investigation, and Family Group Conferences where the statutory threshold is met
+# NZ's care-and-protection pathway is designed around an open report-of-concern front door, Oranga Tamariki intake triage, operational response timeframes, assessment/investigation, and Family Group Conferences where the statutory threshold is met
 
 ## Executive answer
 
@@ -47,7 +47,7 @@ Oranga Tamariki's public guidance says reports can be made by free 24/7 phone li
 
 **Confidence: High** — public guidance and the Act align.
 
-### Intake triage and statutory response timeframes
+### Intake triage and operational response timeframes
 
 Oranga Tamariki's Practice Centre says that when it determines a report of concern requires a statutory response, it must decide the timeframe to complete Tiaki Oranga. [Oranga Tamariki Practice Centre, "Report of concern response timeframe"](https://practice.orangatamariki.govt.nz/core-practice/practice-tools/intake-decision-response-tool/report-of-concern-response-timeframe)
 
