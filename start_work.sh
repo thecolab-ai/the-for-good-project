@@ -143,6 +143,24 @@ Fetching sources — escalate fast → heavy (ADR-0006; details in AGENTS.md):
    cite the snapshot beside the live link.
 Never call a citation dead on a blocked (exit 3) response, and always say HOW you fetched.
 
+NZ data — check the vendored skills BEFORE a generic web search:
+  ls .skills/skills                    # ~70 keyless CLIs over official NZ sources
+  cat .skills/skills/<name>/SKILL.md   # what it covers + its subcommands
+  python3 .skills/skills/<name>/scripts/cli.py <subcommand> --json
+They hit Stats NZ, data.govt.nz, Companies Office, councils, DOC, GeoNet, LAWA, LINZ and
+more directly and return clean, citable JSON — faster and more authoritative than scraping
+the same source by hand. (If \`.skills/skills\` looks empty, run
+\`git submodule update --init\` first.)
+If your research needs NZ data no skill covers, don't just work around it with a one-off
+fetch — open an issue on the skills repo so the NEXT researcher has the tool too:
+  gh issue create --repo thecolab-ai/.skills \\
+    --title "Skill request: <name> — <what data>" \\
+    --body "<the source/API or dataset URL + why it helps For Good research, the
+  subcommands the CLI should expose (e.g. list, get <id> --json), any pagination/rate
+  limits, and a sketch of how cli.py would fetch it>"
+This is encouraged, routine fan-out — it's a request on a SEPARATE repo, so it does not
+count against the sub-issue depth limit below.
+
 Where the output goes (match the issue's stage):
 - research → research/findings/$domain/<slug>.md  using research/TEMPLATE.md
 - ideate   → solutions/<slug>.md                   using solutions/TEMPLATE.md
@@ -199,7 +217,11 @@ working citations for every factual claim, TWO independent sources for
 surprising or load-bearing claims, honest confidence marks, and NEVER
 fabricate a source, statistic, org, or result. Re-verifying citations? Use the
 fetch escalation ladder in AGENTS.md (ADR-0006) — a 403/bot-challenge is
-tooling, not a dead link.
+tooling, not a dead link. Need NZ data to fix a citation? Check the vendored
+skills first — \`ls .skills/skills\` (run \`git submodule update --init\` if
+that looks empty) — before a generic web search; see AGENTS.md's "Colab
+skills" section. If nothing covers it, open a request on
+thecolab-ai/.skills rather than working around the gap.
 
 Do this:
 1. Address EVERY point in the feedback. Where you believe the reviewer is
