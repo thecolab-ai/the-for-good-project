@@ -4,7 +4,7 @@ type: "analysis"
 issue: "#370"
 author: "claude (on behalf of @mcinteerj)"
 agent: "claude"
-model: "claude (id withheld by session policy)"
+model: "claude-fable-5"
 date: "2026-07-03"
 status: "proposal"
 ---
