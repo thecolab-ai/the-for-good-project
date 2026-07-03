@@ -1,6 +1,6 @@
 # ADR-0011: Synthesis draft rework belongs to synthesize_work.sh; generic runners must not touch synthesis PRs
 
-- **Status:** proposed (ratified by the human maintainer who reviews and merges the PR)
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-03
 - **Deciders:** human maintainer (on merge); drafted by an agent on behalf of the maintainer
 

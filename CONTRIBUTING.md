@@ -1,5 +1,7 @@
 # Contributing
 
+> One-page map of how everything fits: [docs/OVERVIEW.md](docs/OVERVIEW.md).
+
 Welcome. This is the method that keeps The For Good Project useful. It's short on purpose — read it once and you're ready.
 
 The work here informs real decisions about real people. That's why the bar is "cited and honest," not "fast and confident."
@@ -17,7 +19,7 @@ Every piece of work is a GitHub Issue moving through four stages:
 
 Issues link forward: a Discover issue spawns Research issues; a Research finding feeds an Ideate issue; a chosen idea becomes a Build issue. Always link the issue you came from (`Part of #123`) so the chain stays traceable.
 
-Everything descending from one Discover issue is a **stream** (tracked by an auto-applied `stream:<n>` label and a plain-language overview in [`streams/`](streams/README.md)). Streams pass through **human gates**: a person must synthesise the research before ideation starts (G1) and approve a solution before anything is built (G2) — see [`docs/STREAMS.md`](docs/STREAMS.md). Agents do the volume; humans do the judgement.
+Everything descending from one Discover issue is a **stream** (tracked by an auto-applied `stream:<n>` label and a plain-language overview in [`streams/`](streams/README.md)). Streams pass through **human gates**: an agent drafts the synthesis, then a person reviews it and sets direction before ideation starts (G1) and approve a solution before anything is built (G2) — see [`docs/STREAMS.md`](docs/STREAMS.md). Agents do the volume; humans do the judgement.
 
 ## The workflow
 

@@ -9,25 +9,66 @@ no model calls. **The scripts own every status change and the merge gate; the
 agent only does the actual work.** That's deliberate — it's why tracking stays
 correct no matter which agent runs or how it behaves.
 
-## The status lifecycle
+## The status lifecycle (canonical — every other doc links here)
+
+An issue carries exactly **one** `status:` label at a time — the scripts and
+the `issue-status.yml` action sweep all others whenever they set one.
+
+**Work issues** (research / ideate / build):
 
 ```
-status: available ──claim──▶ status: claimed ──PR opened──▶ status: in-review ──review passes + merge──▶ status: done
-        ▲                                                       │        ▲
-        │                                                review says     │ author's next loop
-        │                                                NEEDS_WORK      │ pushes the rework
-        │                                                       ▼        │
-        │                                              status: changes-requested
-        └───────────── agent opened no PR (released) ◀─────────┘ (PR closed / gone)
+(no status) ──maintainer triages──▶ available ──claim──▶ claimed ──PR opened──▶ in-review ──review passes + merge──▶ done
+                                        ▲                                          │      ▲
+                                        │                                   review says   │ author's next loop
+                                        │                                   NEEDS_WORK    │ pushes the rework
+                                        │                                          ▼      │
+                                        │                                  changes-requested
+                                        └────── agent opened no PR (released) ◀────┘ (PR closed / gone)
 ```
+
+**Stream roots** (Discover issues) never close via a PR and follow the gate
+cycle instead:
+
+```
+(no status) ──G0: maintainer──▶ available → claimed → in-review ──framing PR merges──▶ (no status: researching)
+                                                                                             │
+                             children all close (the stream "drains")                       ▼
+        ┌──────────────────────────────────────────────────────────────────── needs-synthesis
+        │                                                                            │
+        │            synthesize_work.sh drafts/updates the overview PR               ▼
+        │        draft flags BLOCKING UNKNOWNS (ADR-0012, bounded)          ┌── which way? ──┐
+        └── back to researching: follow-up research issues open ◀───────────┤                ├───▶ awaiting-direction
+            (re-drains → re-synthesises with the answers folded in)         └────────────────┘    (gate G1: the human
+                                                                                                    steward decides)
+        reviewer sends the draft back:  awaiting-direction → changes-requested → awaiting-direction
+        (synthesis rework belongs to synthesize_work.sh, never start_work.sh — ADR-0011)
+```
+
+The full vocabulary, in one table:
+
+| Label | Applies to | Set by | Meaning |
+|---|---|---|---|
+| *(no status)* | new Discover issues | the issue template | Not yet triaged — invisible to every runner (gate **G0**) |
+| `status: available` | issues | maintainer (G0) · scripts (release) | Up for grabs — the ONLY status runners pick up |
+| `status: claimed` | issues | `start_work.sh` | A worker is on it |
+| `status: in-review` | issues | scripts + `issue-status.yml` | Its PR is open and awaiting adversarial review |
+| `status: changes-requested` | issues | `review_work.sh` | Review found problems — routed back for rework |
+| `status: needs-synthesis` | stream roots | `stream-sync.yml` (drain) · humans (force a re-synthesis) | Stream drained — synthesis queue |
+| `status: awaiting-direction` | stream roots | `synthesize_work.sh` | Parked at gate **G1** for the human steward's direction decision |
+| `status: blocked` | issues | humans only | Waiting on something. Runners ignore it either way |
+| `status: done` | issues | merge automation | Merged and complete |
+| `review: claimed` | PRs | `review_work.sh` | A reviewer is holding this PR (double-review lock) |
+| `review: human-only` | PRs | maintainers | Pipeline/governance change — humans review and merge, agents skip |
+| `do-not-automate` | issues | humans only | Parking brake: excluded from every automation queue |
+| `priority: high` | issues | humans | Jumps every queue |
+| `stage: *` / `domain: *` / `stream:<n>` | issues/PRs | template / `stream-sync.yml` | What kind of work, which problem area, which stream |
 
 `start_work.sh` moves `available → claimed → in-review` (and
 `changes-requested → in-review` after rework). `review_work.sh` records reviews
-and flips `in-review → changes-requested` on a NEEDS_WORK verdict, which routes
-the work back to its **author**: the issue stays assigned to them, and their
-next `start_work.sh` loop picks it up before any new issue. `merge_ready.sh`
-(maintainer) merges what qualifies → `done`. No agent is trusted to set these
-itself.
+and flips `in-review → changes-requested` on a NEEDS_WORK verdict — **except
+for synthesis draft PRs (branch `synthesis/*`), whose rework routes to
+`synthesize_work.sh` (ADR-0011)**. `merge_ready.sh` (maintainer) merges what
+qualifies → `done`. No agent is trusted to set these itself.
 
 ### Worktrees & fresh main
 
@@ -94,7 +135,8 @@ Two TTLs are enforced:
 - `status: claimed` with no PR after `CLAIM_TTL` (default 2 hours) is moved
   back to `status: available` and unassigned.
 - `status: changes-requested` with assignees after `REWORK_TTL` (default 2
-  hours) is unassigned, so any worker's `start_work.sh` loop can pick up the
+  hours) is unassigned, so any worker's `start_work.sh` loop — or
+  `synthesize_work.sh`, for a synthesis draft (ADR-0011) — can pick up the
   rework.
 
 Run it manually when you want an immediate sweep:

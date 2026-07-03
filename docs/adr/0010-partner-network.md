@@ -1,6 +1,6 @@
 # ADR-0010: Track the partner / SME / advisory network in the open, behind a consent gate
 
-- **Status:** proposed (requires human-maintainer ratification before merge)
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-03
 - **Deciders:** human maintainer (on merge); drafted by an agent at the maintainer's request
 - **Discussion:** [issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123)
