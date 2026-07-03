@@ -557,6 +557,10 @@ review_one() {  # $1 = PR number
     if [ -n "$iss" ]; then
       local picker="start_work.sh" old_park="in-review"
       if pr_is_synthesis "$pr"; then picker="synthesize_work.sh"; old_park="awaiting-direction"; fi
+      # A framing PR's rework belongs to frame_work.sh (ADR-0014): its root
+      # may sit at in-review or at no-status (researching posture) — the
+      # atomic set replaces either — but only the framing runner may rework.
+      if pr_is_framing "$pr"; then picker="frame_work.sh"; fi
       if set_status_label "$iss" "changes-requested" "in-review" "$old_park" 2>/dev/null; then
         gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`$picker\` loop will pick this up." >/dev/null || true
         ok "Issue #$iss → changes-requested (back to @$author)"

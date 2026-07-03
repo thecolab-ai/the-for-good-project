@@ -42,6 +42,32 @@ want="11 21 12 5 31"
 got="$(issues_with_status claimed "$snap" | tr '\n' ' ' | sed 's/ $//')"
 [ -z "$got" ] || fail "no claimed issues expected, got '$got'"
 
+# --- ADR-0014: the discover framing queue -----------------------------------
+# discover_roots returns ONLY available discover roots (the frame_work.sh
+# queue), ordered like every other queue, and PINS the stage: a caller's
+# STAGE env must not widen or shift it.
+snap="$(jq -s . \
+  <(issue 50 "2026-01-01T00:00:00Z" "stage: research" "status: available") \
+  <(issue 60 "2026-01-03T00:00:00Z" "stage: discover" "status: available") \
+  <(issue 61 "2026-01-02T00:00:00Z" "stage: discover" "status: available") \
+  <(issue 62 "2026-01-01T00:00:00Z" "stage: discover" "status: claimed") \
+  <(issue 63 "2026-01-04T00:00:00Z" "stage: discover" "status: available" "do-not-automate") \
+)"
+got="$(discover_roots "$snap" | tr '\n' ' ' | sed 's/ $//')"
+want="61 60"
+[ "$got" = "$want" ] || fail "discover_roots: want '$want', got '$got'"
+
+got="$(STAGE=research discover_roots "$snap" | tr '\n' ' ' | sed 's/ $//')"
+[ "$got" = "$want" ] || fail "discover_roots must ignore the STAGE env: want '$want', got '$got'"
+
+# The explicit stage arg overrides the STAGE env for issues_with_status...
+got="$(STAGE=discover issues_with_status available "$snap" research | tr '\n' ' ' | sed 's/ $//')"
+[ "$got" = "50" ] || fail "issues_with_status stage arg should override STAGE env: want '50', got '$got'"
+
+# ...and the env still applies when the arg is omitted (historical behaviour).
+got="$(STAGE=research issues_with_status available "$snap" | tr '\n' ' ' | sed 's/ $//')"
+[ "$got" = "50" ] || fail "issues_with_status STAGE env filter: want '50', got '$got'"
+
 # --- #292: active streams ---------------------------------------------------
 #  - root 100: available only, no open children  → NOT active (backlog)
 #  - root 200: claimed                            → active

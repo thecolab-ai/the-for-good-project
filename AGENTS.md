@@ -9,7 +9,7 @@ You are here to move one issue forward, to a high standard, end to end. Work lik
 
 ## The loop
 
-1. **Pick one unclaimed issue.** Prefer `status: available`. Match it to your strengths. Do **one** issue per branch/PR.
+1. **Pick one unclaimed issue.** Prefer `status: available`. Match it to your strengths. Do **one** issue per branch/PR. Never pick a `stage: discover` root — framing is reserved for `frame_work.sh` under a trusted identity ([ADR-0014](docs/adr/0014-discover-framing-capability-floor.md)).
    ```
    gh issue list --label "status: available" --state open --json number,title,labels
    ```
@@ -90,7 +90,7 @@ rather than waiting.
 
 ## What each stage needs from you
 
-- **🔍 Discover** — Take a broad problem and produce: a crisp problem statement, who it affects (with NZ figures + sources), what's already being done, and **3–6 specific researchable questions** you'd open as follow-up issues. Output goes in the issue itself (and you may open the child Research issues).
+- **🔍 Discover** — **Framing-script territory: never claim a discover root from a generic work loop** ([ADR-0014](docs/adr/0014-discover-framing-capability-floor.md)). Discover roots are framed only by `frame_work.sh`, run by a powerful model under a trusted identity (the `framers` allow-list in [`.github/trusted-reviewers.json`](.github/trusted-reviewers.json)); `start_work.sh` skips them. The framing produces: a crisp problem statement, who it affects (with NZ figures + sources), what's already being done, the root's hypotheses graded against evidence, and **3–6 specific researchable questions** — written to `analysis/<slug>-framing.md` as a PR, with the questions proposed in the runner's JSON side-file. The **script** then opens them as child Research issues (the framing agent never opens issues itself), so the stream fans out automatically.
 - **📚 Research** — Answer **one** question. Write a finding to `research/findings/<domain>/<slug>.md` using [`research/TEMPLATE.md`](research/TEMPLATE.md). This is the core of the project — hold the line on citations and confidence.
 - **💡 Ideate** — Turn one or more findings into 1–3 concrete, feasible solutions a small volunteer team could ship. Write to `solutions/<slug>.md` using [`solutions/TEMPLATE.md`](solutions/TEMPLATE.md). Rank by impact, feasibility, and time-to-first-useful-result.
 - **🔨 Build** — Implement a chosen solution under `projects/<slug>/`. Keep it small, working, and documented. Link the solution and findings it came from.
@@ -188,12 +188,17 @@ skill you add makes the next contributor's research faster.
 
 ## Run it on autopilot
 
-Five scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work — `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [docs/AUTOMATION.md](docs/AUTOMATION.md)
+Six scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work — `frame_work.sh` (frame new streams, capability-floored), `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [docs/AUTOMATION.md](docs/AUTOMATION.md)
 without babysitting each step — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
-- **`./start_work.sh`** — claims the next available issue, runs the loop above,
-  and moves the issue to *in review* when a PR is opened. The script owns the
-  status labels; you (the agent) just do the work and open the PR.
+- **`./frame_work.sh`** — claims discover roots only (the general fleet never
+  does), writes the framing analysis as a PR, and opens the child research
+  issues itself. Refuses to run unless your identity is on the `framers`
+  allow-list (ADR-0014).
+- **`./start_work.sh`** — claims the next available research/ideate/build
+  issue, runs the loop above, and moves the issue to *in review* when a PR is
+  opened. The script owns the status labels; you (the agent) just do the work
+  and open the PR.
 - **`./review_work.sh`** — runs an adversarial review on open PRs and sets the
   merge gate.
 

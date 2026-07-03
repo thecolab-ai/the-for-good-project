@@ -148,13 +148,16 @@ fetch_open_issues() {
 #
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
+# $3 = optional stage filter; when omitted the STAGE env var applies (the
+# historical behaviour), so callers with a fixed queue (frame_work.sh's
+# discover queue) can pin the stage regardless of the caller's environment.
 # "do-not-automate" is a human's parking brake: an issue carrying it is
 # invisible to EVERY automation queue below, whatever its status. Purely
 # restrictive — it can only shrink queues.
-issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
-  local status="$1" snap="${2:-}"
+issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON; $3 = optional stage
+  local status="$1" snap="${2:-}" stage="${3-${STAGE:-}}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r --arg status "status: $status" --arg stage "${STAGE:-}" --argjson cap "$HIGH_PRIORITY_CAP" '
+  printf '%s' "$snap" | jq -r --arg status "status: $status" --arg stage "$stage" --argjson cap "$HIGH_PRIORITY_CAP" '
     def names: [.labels[].name];
     def is_high: names | index("priority: high");
     def stream_key: (names | map(select(startswith("stream:")) | ltrimstr("stream:")) | first) // (.number|tostring);
@@ -169,6 +172,12 @@ issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snaps
 }
 
 available_issues() { issues_with_status "available" "${1:-}"; }
+
+# Available DISCOVER roots — the framing queue (ADR-0014). Ordered like every
+# other queue (bounded priority jump, then age). Pins the stage explicitly, so
+# a caller's STAGE env can't widen it: this queue is discover by definition,
+# and it is frame_work.sh's alone — start_work.sh never claims discover roots.
+discover_roots() { issues_with_status "available" "${1:-}" "discover"; }
 
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
 # $1 = optional queue snapshot (from fetch_open_issues).
@@ -312,6 +321,27 @@ pr_is_synthesis() {  # $1 = pr number
   esac
 }
 
+# Is a PR a DISCOVER FRAMING? Framing branches are always discover/<slug>
+# (frame_work.sh mints them that way, and the old start_work.sh discover
+# prompt used "$stage/<slug>" — same shape), so the head branch is the
+# marker, exactly like pr_is_synthesis. Framing rework belongs to
+# frame_work.sh ONLY (ADR-0014): the capability floor on setting a stream's
+# direction applies to REWORK of the framing too, so the general
+# start_work.sh loop must hand these off, never feed them its generic
+# research rework prompt.
+# Returns 0 = framing, 1 = not framing, 2 = UNKNOWN (gh failed). Callers
+# guarding the generic path must fail CLOSED on 2: "don't touch it this
+# loop", never "not a framing" (same contract as pr_is_synthesis).
+pr_is_framing() {  # $1 = pr number
+  local head
+  head="$(gh pr view "$1" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null)" || head=""
+  [ -z "$head" ] && return 2
+  case "$head" in
+    discover/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Issue closed by a PR (first closing ref). Use this ONLY when you specifically
 # mean "the issue merging this PR will CLOSE" (e.g. marking it done) — discover
 # PRs have no closing ref by design, so this is empty for them.
@@ -377,6 +407,18 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. ign
   keep="$(gh issue view "$n" --repo "$REPO" --json labels \
           --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
   printf '%s' "$keep" | jq --arg s "status: $new" '{labels: (. + [$s])}' \
+    | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
+}
+
+# Remove EVERY "status: " label, keeping the rest — the "researching" posture
+# a stream root holds between its framing fan-out and the drain flagging it
+# needs-synthesis (docs/STREAMS.md). Same atomic whole-set PUT as
+# set_status_label, so it can't leave a partial label soup behind.
+clear_status_label() {  # $1 = issue
+  local n="$1" keep
+  keep="$(gh issue view "$n" --repo "$REPO" --json labels \
+          --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
+  printf '%s' "$keep" | jq '{labels: .}' \
     | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
 }
 
