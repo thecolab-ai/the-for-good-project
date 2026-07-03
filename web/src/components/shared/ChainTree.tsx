@@ -5,7 +5,7 @@ import type { IssueLite } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { DomainBadge, StageBadge, StatusBadge } from "./Badges";
 import { PersonAvatar } from "./PersonAvatar";
-import { relativeTime } from "@/lib/format";
+import { relativeTime, cleanTitle } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function PrChip({ pr }: { pr: IssueLite }) {
@@ -41,7 +41,7 @@ function NodeRow({ node, dimmed }: { node: ChainNode; dimmed: boolean }) {
       <Link to={`/issue/${issue.number}`} className="min-w-0 flex-1 basis-56">
         <span className="mr-1.5 font-mono text-xs text-muted-foreground">#{issue.number}</span>
         <span className={cn("text-sm font-medium hover:text-brand-cyan-dark", closed && "text-muted-foreground line-through decoration-border")}>
-          {issue.title.replace(/^\[[^\]]+\]\s*/, "")}
+          {cleanTitle(issue.title)}
         </span>
       </Link>
       {node.prs.map((pr) => <PrChip key={pr.number} pr={pr} />)}

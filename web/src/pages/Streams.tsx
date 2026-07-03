@@ -13,7 +13,7 @@ import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge, StageBadge, StatusBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { streamStateStyle, harnessLabel, isStreamShipped, streamStageIndex, subtasksByStream } from "@/lib/streams";
-import { relativeTime } from "@/lib/format";
+import { relativeTime, cleanTitle } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary, IssueLite } from "@/lib/types";
 
@@ -21,6 +21,21 @@ type Filter = "all" | "progress" | "shipped";
 type View = "cards" | "table";
 type SortKey = "stream" | "state" | "issues" | "findings" | "merged" | "updated";
 const VIEW_KEY = "fgp-streams-view";
+
+// Sort accessors — static, so keep them out of render.
+const RANK: Record<SortKey, (s: StreamSummary) => number | string> = {
+  stream: (s) => s.stream,
+  state: (s) => streamStageIndex(s.state),
+  issues: (s) => s.issues,
+  findings: (s) => s.findings,
+  merged: (s) => s.mergedPRs,
+  updated: (s) => s.updated || "",
+};
+
+// localStorage can throw (private mode / blocked storage) — never let the
+// view preference crash or interrupt the page.
+const readView = (): View => { try { return (localStorage.getItem(VIEW_KEY) as View) || "table"; } catch { return "table"; } };
+const writeView = (v: View) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
 
 function StatePill({ state }: { state: string }) {
   if (!state) return null;
@@ -36,8 +51,6 @@ function PeopleStrip({ people, size = 22, max = 5 }: { people: StreamSummary["pe
     </div>
   );
 }
-
-const cleanTitle = (t: string) => t.replace(/^\[[^\]]+\]\s*/, "");
 
 // A single subtask (child issue) with its live status. `linkable` renders the
 // title as a link — only safe where the row itself isn't already an anchor
@@ -177,7 +190,9 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                   className="cursor-pointer border-b-0"
                   onClick={() => navigate(`/streams/${s.stream}`)}
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter") navigate(`/streams/${s.stream}`); }}
+                  // Only the row itself navigates on Enter — not inner controls
+                  // (the expand button, the title link) that bubble keydown up.
+                  onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) navigate(`/streams/${s.stream}`); }}
                 >
                   <TableCell className="pr-0">
                     {subtasks.length > 0 ? (
@@ -249,12 +264,12 @@ export default function Streams() {
   const { data, error, loading } = useSnapshot();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [view, setView] = useState<View>(() => (localStorage.getItem(VIEW_KEY) as View) || "table");
+  const [view, setView] = useState<View>(readView);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "updated", dir: "desc" });
   const streams = useMemo(() => data?.streamsSummary ?? [], [data]);
   const subtasksMap = useMemo(() => subtasksByStream(data?.issues ?? []), [data]);
 
-  const setViewPersist = (v: View) => { setView(v); localStorage.setItem(VIEW_KEY, v); };
+  const setViewPersist = (v: View) => { setView(v); writeView(v); };
   const onSort = (k: SortKey) => setSort((prev) => prev.key === k ? { key: k, dir: prev.dir === "asc" ? "desc" : "asc" } : { key: k, dir: k === "updated" ? "desc" : "asc" });
 
   // Cross-stream rollup for the header stats.
@@ -276,16 +291,8 @@ export default function Streams() {
   const inProgress = streams.filter((s) => !isStreamShipped(s.state) && matchesText(s));
   const shipped = streams.filter((s) => isStreamShipped(s.state) && matchesText(s));
 
-  const rank: Record<SortKey, (s: StreamSummary) => number | string> = {
-    stream: (s) => s.stream,
-    state: (s) => streamStageIndex(s.state),
-    issues: (s) => s.issues,
-    findings: (s) => s.findings,
-    merged: (s) => s.mergedPRs,
-    updated: (s) => s.updated || "",
-  };
   const sortStreams = (list: StreamSummary[]) => [...list].sort((a, b) => {
-    const av = rank[sort.key](a), bv = rank[sort.key](b);
+    const av = RANK[sort.key](a), bv = RANK[sort.key](b);
     const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
     return sort.dir === "asc" ? cmp : -cmp;
   });
