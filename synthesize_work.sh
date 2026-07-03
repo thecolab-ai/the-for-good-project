@@ -90,8 +90,8 @@ overview_path() {  # $1 = stream number, $2 = repo dir, $3 = root title
   if [ -n "$existing" ]; then printf '%s' "${existing#"$2/"}"; else printf 'streams/%s-%s.md' "$1" "$(slugify "$3")"; fi
 }
 
-synthesis_prompt() {  # $1 root, $2 overview path, $3 evidence list, $4 branch, $5 re-synthesis? (0/1)
-  local n="$1" path="$2" evidence="$3" branch="$4" resynth="$5"
+synthesis_prompt() {  # $1 root, $2 overview path, $3 evidence list, $4 branch, $5 re-synthesis? (0/1), $6 open draft PR to update (optional)
+  local n="$1" path="$2" evidence="$3" branch="$4" resynth="$5" update_pr="${6:-}"
   local title body domain
   title="$(issue_field "$n" title)"
   body="$(issue_field "$n" body)"
@@ -109,6 +109,52 @@ but NEVER override the steward's prior edits or decisions there."
   else
     update_note="This is the FIRST synthesis for this stream: create $path from
 streams/TEMPLATE.md. Leave 'steward:' blank for a maintainer to claim."
+  fi
+  # Blocking-unknowns instruction (ADR-0012) — omitted entirely when the
+  # follow-up loop is disabled, so the agent doesn't waste tokens on a file
+  # the runner will ignore.
+  local followup_note=""
+  if [ "$FOLLOWUP_ROUNDS" -gt 0 ]; then
+    followup_note="Blocking unknowns (ADR-0012): if — and only if — an unknown in \"What we're not
+sure about yet\" genuinely BLOCKS or materially weakens the conclusions above
+(not merely nice-to-know), ALSO write it as a proposed follow-up research
+question, as JSON, to this exact path (an uncommitted side-file; the RUNNER
+opens the issues, you still must never open issues yourself):
+$WORKTREE/.fg-followups.json
+Format — an array of at most $FOLLOWUP_PER_ROUND objects:
+[{\"title\": \"research: <chunky question>\", \"why\": \"<1-2 sentences: which unknown this resolves and why the synthesis needs it>\"}]
+Each must be a CHUNKY question someone can spend hours on, never a micro-task,
+answerable from public sources by the project method. If nothing blocks the
+conclusions, write [] or nothing — zero is the common, correct answer. Do NOT
+commit this file."
+  fi
+  # How to publish: a fresh draft opens a new PR; an UPDATE (the stream
+  # re-drained while the previous draft PR is still open — ADR-0012 round 2+)
+  # replaces that PR's head with a main-based commit instead, because the same
+  # branch name already exists on origin and a plain push would be rejected —
+  # leaving the STALE draft looking like this run's output.
+  local publish_note
+  if [ -n "$update_pr" ]; then
+    publish_note="Then, using git and gh (already authenticated) — the draft PR for this
+stream ALREADY EXISTS (#$update_pr, branch $branch) and your job is to UPDATE it:
+1. git checkout -b $branch    (a local branch; you are based on latest origin/main)
+2. Commit ONLY $path, message: \"synthesis: stream #$n overview update (Part of #$n)\"
+3. git push --force-with-lease origin HEAD:refs/heads/$branch
+   (This intentionally REPLACES the PR's head — the old draft predates the
+   evidence you just integrated.)
+4. Comment on the PR summarising what the new evidence changed:
+   gh pr comment $update_pr --repo $REPO --body \"...\"
+Do NOT open a new PR. When finished, print the PR URL."
+  else
+    publish_note="Then, using git and gh (already authenticated):
+1. git checkout -b $branch
+2. Commit ONLY $path, message: \"synthesis: stream #$n overview draft (Part of #$n)\"
+3. git push -u origin $branch
+4. Open the PR:
+   gh pr create --title \"synthesis: stream #$n — $title\" \\
+     --body \"Part of #$n. Stream: #$n. G1 synthesis draft for a human steward to edit, decide direction, and merge.\"
+   (Use \"Part of\", NOT \"Closes\" — the stream root must stay open.)
+When finished, print the PR URL."
   fi
   cat <<EOF
 You are the SYNTHESIS agent for The For Good Project (github.com/$REPO). You
@@ -164,28 +210,9 @@ exactly. Rules:
 - Do NOT touch ANY file other than $path. Do NOT open issues, close anything,
   change labels, or merge. Direction is not yours to set.
 
-Blocking unknowns (ADR-0012): if — and only if — an unknown in "What we're not
-sure about yet" genuinely BLOCKS or materially weakens the conclusions above
-(not merely nice-to-know), ALSO write it as a proposed follow-up research
-question, as JSON, to this exact path (an uncommitted side-file; the RUNNER
-opens the issues, you still must never open issues yourself):
-$WORKTREE/.fg-followups.json
-Format — an array of at most $FOLLOWUP_PER_ROUND objects:
-[{"title": "research: <chunky question>", "why": "<1-2 sentences: which unknown this resolves and why the synthesis needs it>"}]
-Each must be a CHUNKY question someone can spend hours on, never a micro-task,
-answerable from public sources by the project method. If nothing blocks the
-conclusions, write [] or nothing — zero is the common, correct answer. Do NOT
-commit this file.
+$followup_note
 
-Then, using git and gh (already authenticated):
-1. git checkout -b $branch
-2. Commit ONLY $path, message: "synthesis: stream #$n overview draft (Part of #$n)"
-3. git push -u origin $branch
-4. Open the PR:
-   gh pr create --title "synthesis: stream #$n — $title" \\
-     --body "Part of #$n. Stream: #$n. G1 synthesis draft for a human steward to edit, decide direction, and merge."
-   (Use "Part of", NOT "Closes" — the stream root must stay open.)
-When finished, print the PR URL.
+$publish_note
 EOF
 }
 
@@ -339,7 +366,8 @@ spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
 
   local count
   count="$(jq -r 'if type=="array" then length else "bad" end' "$file" 2>/dev/null || echo bad)"
-  if [ "$count" = bad ]; then warn "Follow-ups file is not a JSON array — ignoring it."; return 0; fi
+  # Non-numeric covers "bad" AND oddities like a multi-document file ("0\n0").
+  case "$count" in ''|*[!0-9]*) warn "Follow-ups file is not a single JSON array — ignoring it."; return 0 ;; esac
   [ "$count" -eq 0 ] && { log "Synthesis proposed no follow-up research."; return 0; }
 
   # Round bookkeeping: every auto-spawned issue carries a round marker in its
@@ -359,21 +387,27 @@ spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
     return 0
   fi
 
-  # Titles across the whole stream (any state) for dedupe — normalised:
-  # lower-cased, any leading "research:" stripped, whitespace squeezed. The
-  # stream's issues carry mixed prefixes, so raw comparison misses dupes.
+  # Titles across the whole stream (the 200 newest, any state) for dedupe —
+  # normalised: lower-cased, EVERY leading "research:" stripped (repeatedly,
+  # so "research: RESEARCH: x" and "x" collide), whitespace squeezed. FAILS
+  # CLOSED like the round read: no title list, no spawning.
   local titles
-  titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null \
-    | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]*research:[[:space:]]*//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  if ! titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null)"; then
+    warn "Couldn't read stream #$n's issue titles for dedupe — spawning nothing this loop."
+    return 0
+  fi
+  titles="$(printf '%s' "$titles" | tr '[:upper:]' '[:lower:]' | sed -E 's/^([[:space:]]*research:[[:space:]]*)+//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
 
   local i title why norm
   for i in $(seq 0 $((count-1))); do
     [ "$FOLLOWUPS_CREATED" -ge "$FOLLOWUP_PER_ROUND" ] && { log "Per-round cap ($FOLLOWUP_PER_ROUND) reached — dropping the rest."; break; }
-    title="$(jq -r ".[$i].title // empty" "$file" 2>/dev/null || true)"
-    why="$(jq -r ".[$i].why // empty" "$file" 2>/dev/null || true)"
+    # Newlines inside agent-supplied strings would break both the dedupe
+    # grep (line = pattern) and gh's title arg — flatten them to spaces.
+    title="$(jq -r ".[$i].title // empty" "$file" 2>/dev/null | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' || true)"
+    why="$(jq -r ".[$i].why // empty" "$file" 2>/dev/null | tr '\n' ' ' | sed -E 's/^ //; s/ $//' || true)"
     [ -z "$title" ] && continue
     case "$title" in research:*|Research:*) : ;; *) title="research: $title" ;; esac
-    norm="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]*research:[[:space:]]*//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    norm="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/^([[:space:]]*research:[[:space:]]*)+//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
     if printf '%s\n' "$titles" | grep -qxF "$norm"; then log "Skipping duplicate follow-up: $title"; continue; fi
     if gh issue create --repo "$REPO" --title "$title" \
          --label "stage: research" --label "status: available" --label "stream:$n" \
@@ -416,12 +450,20 @@ synthesize_one() {  # $1 = stream root issue number
     log "${ev:-  (none found)}"
     local path; path="$(overview_path "$n" "$REPO_DIR" "$(issue_field "$n" title)")"
     info "[dry-run] would draft: $path · branch synthesis/${path##*/}"
-    info "[dry-run] would run $AGENT on the synthesis prompt, open a PR, and move #$n → awaiting-direction"
+    info "[dry-run] would run $AGENT on the synthesis prompt, open (or update) the draft PR, and move #$n → awaiting-direction"
     info "[dry-run] blocking unknowns would spawn up to $FOLLOWUP_PER_ROUND follow-up research issue(s) (max $FOLLOWUP_ROUNDS round(s)/stream, ADR-0012) and keep #$n in research instead"
     return 0
   fi
 
-  make_worktree origin/main
+  # Claim the root while synthesising: two runners polling the same
+  # needs-synthesis root would otherwise both draft AND both spawn follow-ups
+  # — doubling the per-round cap. Same assign-settle-tie-break as elsewhere;
+  # the assignment is released when this run finishes.
+  gh issue edit "$n" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
+  resolve_claim_race "$n" || return 0
+  unclaim() { gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true; }
+
+  make_worktree origin/main || { unclaim; return 1; }
 
   local title path branch resynth=0 evidence
   title="$(issue_field "$n" title)"
@@ -430,18 +472,43 @@ synthesize_one() {  # $1 = stream root issue number
   branch="synthesis/$(basename "$path" .md)"
   evidence="$(stream_evidence "$n" "$WORKTREE")"
 
+  # An OPEN draft PR for this stream means we are re-synthesising while the
+  # previous draft is still unmerged (ADR-0012 round 2+). The branch name
+  # already exists on origin, so a fresh `git push -u` would be REJECTED and
+  # the stale draft would masquerade as this run's output. Instead: reuse the
+  # PR — materialise its current draft into the main-based worktree, and have
+  # the agent update it and force-with-lease the branch.
+  local update_pr=""
+  local cand
+  for cand in $(gh pr list --repo "$REPO" --state open --json number,headRefName --jq '.[]|select(.headRefName|startswith("synthesis/"))|.number' 2>/dev/null); do
+    if [ "$(issue_addressed_by_pr "$cand" 2>/dev/null || true)" = "$n" ]; then update_pr="$cand"; break; fi
+  done
+  if [ -n "$update_pr" ]; then
+    branch="$(gh pr view "$update_pr" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null || true)"
+    if [ -z "$branch" ]; then
+      warn "Couldn't read open draft PR #$update_pr's branch — leaving #$n for a future loop."
+      remove_worktree; unclaim; return 1
+    fi
+    if git -C "$WORKTREE" show "origin/$branch:$path" > "$WORKTREE/$path" 2>/dev/null && [ -s "$WORKTREE/$path" ]; then
+      resynth=1
+    fi
+    info "Open draft PR #$update_pr (branch $branch) exists — updating it in place instead of opening a new one."
+  fi
+
   # Zero merged findings → a hollow overview helps nobody. Ask a human.
   if [ -z "$evidence" ]; then
     warn "Stream #$n has no merged findings on disk — leaving 'needs-synthesis' and asking a human."
     gh issue comment "$n" --repo "$REPO" --body "🧐 \`synthesize_work.sh\` found **no merged findings on disk** for stream #$n (children closed without finding files, or their frontmatter \`issue:\` doesn't point at this stream's issues). A human should check whether there's anything to synthesise — leaving **needs-synthesis** in place." >/dev/null || true
-    remove_worktree
+    remove_worktree; unclaim
     return 0
   fi
 
+  local before=""
+  [ -n "$update_pr" ] && before="$(gh pr view "$update_pr" --repo "$REPO" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
   info "Evidence ($(printf '%s\n' "$evidence" | wc -l | tr -d ' ') file(s)):"; log "$evidence"
   info "Handing stream #$n to $AGENT (worktree: $WORKTREE)..."
-  set +e; run_agent "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth")" "$WORKTREE"; local rc=$?; set -e
-  was_interrupted "$rc" && { remove_worktree; warn "Interrupted — stopping."; exit 130; }
+  set +e; run_agent "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth" "$update_pr")" "$WORKTREE"; local rc=$?; set -e
+  was_interrupted "$rc" && { remove_worktree; unclaim; warn "Interrupted — stopping."; exit 130; }
   if [ "$rc" -eq 0 ]; then
     ok "Synthesis agent run complete for stream #$n"
   else
@@ -460,28 +527,49 @@ synthesize_one() {  # $1 = stream root issue number
   pr="$(gh pr list --repo "$REPO" --state open --head "$branch" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
   [ -z "$pr" ] && pr="$(pr_for_issue "$n" || true)"
 
+  # In the update path, "the PR exists" proves nothing — it existed before the
+  # run. Success = the agent actually moved its head; otherwise the stale
+  # draft would masquerade as this run's output. Leave needs-synthesis so a
+  # future loop retries.
+  if [ -n "$update_pr" ]; then
+    local after; after="$(gh pr view "$update_pr" --repo "$REPO" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
+    if [ -z "$after" ] || [ "$after" = "$before" ]; then
+      warn "Agent pushed no update to draft PR #$update_pr — leaving 'needs-synthesis' for a retry."
+      [ -n "$followups" ] && rm -f "$followups"
+      unclaim
+      return 0
+    fi
+    pr="$update_pr"
+  fi
+
   if [ -n "$pr" ]; then
     # Blocking unknowns loop back to research BEFORE the human gate
-    # (ADR-0012): only spawn when the draft PR actually exists, so a failed
-    # synthesis can't seed issues from an unreliable run.
+    # (ADR-0012): only spawn from a clean agent run whose draft PR exists —
+    # a crashed or timed-out run must not seed issues from partial output.
     FOLLOWUPS_CREATED=0
-    [ -n "$followups" ] && spawn_followups "$n" "$followups"
-    if [ "$FOLLOWUPS_CREATED" -gt 0 ]; then
-      # Machines keep grinding: the root leaves the G1 queue but does NOT park
-      # at awaiting-direction — the drain gate re-flags needs-synthesis when
-      # the follow-ups close, and the re-synthesis integrates their answers.
+    if [ -n "$followups" ] && [ "$rc" -eq 0 ]; then
+      # Strip the G1 flag BEFORE opening issues: stream-sync's opened-handler
+      # also un-flags flagged roots and would post a second, contradictory
+      # comment for every spawned issue.
       gh issue edit "$n" --repo "$REPO" --remove-label "status: needs-synthesis" >/dev/null 2>&1 || true
+      spawn_followups "$n" "$followups"
+    fi
+    if [ "$FOLLOWUPS_CREATED" -gt 0 ]; then
+      # Machines keep grinding: the root does NOT park at awaiting-direction —
+      # the drain gate re-flags needs-synthesis when the follow-ups close, and
+      # the re-synthesis integrates their answers.
       gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — but it flagged blocking unknowns, so the stream goes **back to research first** ($FOLLOWUPS_CREATED follow-up issue(s), ADR-0012). The steward gate comes after those answers are in." >/dev/null || true
       ok "Stream #$n → back to research ($FOLLOWUPS_CREATED follow-up(s); draft PR #$pr)"
     else
       set_status_label "$n" "awaiting-direction" "needs-synthesis"
-      gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — a human **steward** now reviews the rollup, fixes any overreach, writes the direction decision (go deeper / pivot / proceed / park), and merges. This is gate **G1** (docs/STREAMS.md); the stream stays parked at **awaiting-direction** until then." >/dev/null || true
+      gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — a human **steward** now reviews the rollup, fixes any overreach, writes the direction decision (go deeper / pivot / proceed / park), and merges. This is gate **G1** (docs/STREAMS.md); the stream stays parked at **awaiting-direction** until then. (To send it back through synthesis instead — e.g. after closing or adding research — relabel this root \`status: needs-synthesis\`.)" >/dev/null || true
       ok "Stream #$n → awaiting-direction (draft PR #$pr)"
     fi
   else
     warn "No draft PR found for stream #$n — leaving 'needs-synthesis' for a retry."
   fi
   [ -n "$followups" ] && rm -f "$followups"
+  unclaim
   return 0
 }
 

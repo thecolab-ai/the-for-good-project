@@ -230,6 +230,13 @@ The steward finishes the gate by hand: edit the takeaways, fix any overreach,
 **write the direction decision**, set `steward:`, merge — and if proceeding,
 open the ideate issue as `status: available` (that act *is* passing G1).
 
+**To send a parked stream back through synthesis** (new evidence landed, you
+opened or closed research by hand, or you just want the rollup redone):
+relabel the root `status: needs-synthesis` (removing `awaiting-direction`) —
+the next `synthesize_work.sh` loop picks it up and re-drafts, updating any
+still-open draft PR in place. Opening a new research issue in the stream does
+this implicitly: the stream re-drains through the normal gate when it closes.
+
 ## How a PR merges
 
 The problem: GitHub only counts a review toward its native merge gate if the

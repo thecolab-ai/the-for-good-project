@@ -37,10 +37,12 @@ research without a steward's go-deeper decision, inside hard bounds.
 2. **The loop is hard-bounded.** Per stream: at most `FOLLOWUP_ROUNDS`
    (default **2**) automatic research→synthesis rounds, at most
    `FOLLOWUP_PER_ROUND` (default **3**) issues per round, deduped against
-   every existing issue title in the stream. Round counting rides on an HTML
-   marker in each spawned issue's body and FAILS CLOSED: if the script cannot
-   read the stream's issues it spawns nothing. `FOLLOWUP_ROUNDS=0` disables
-   the loop.
+   the stream's 200 newest issue titles (`research:` prefixes and case
+   normalised away). Round counting rides on an HTML marker in each spawned
+   issue's body and FAILS CLOSED: if the script cannot read the stream's
+   issues (for the round count or the dedupe list) it spawns nothing.
+   The runner claims the root while synthesising, so concurrent runners
+   cannot double a round. `FOLLOWUP_ROUNDS=0` disables the loop.
 3. **The human gate moves to the end of the loop, not away.** When follow-ups
    are spawned the root does *not* park at `awaiting-direction` — it returns
    to researching posture; the drain gate re-flags `needs-synthesis` when
@@ -55,10 +57,17 @@ research without a steward's go-deeper decision, inside hard bounds.
 
 - The steward reads the strongest synthesis the machines could reach, and
   "go deeper" is only needed for questions beyond the automatic bounds.
-- Worst-case automatic spend per stream is bounded and predictable:
-  `FOLLOWUP_ROUNDS × FOLLOWUP_PER_ROUND` research issues (default 6) plus the
-  re-syntheses; each follow-up carries a visible round marker and an explicit
+- Worst-case automatic spend per stream is bounded:
+  `FOLLOWUP_ROUNDS × FOLLOWUP_PER_ROUND` directly-spawned research issues
+  (default 6) plus the re-syntheses — noting spawned issues sit at fan-out
+  depth 1 and may themselves split once under the existing depth cap
+  (docs/STREAMS.md), so the true ceiling is that of any depth-1 research
+  issue. Each follow-up carries a visible round marker and an explicit
   "close this to stop it" note.
+- A stream re-drained while its previous draft PR is still open gets that PR
+  **updated in place** (head replaced with a main-based commit) rather than a
+  colliding new branch — so the steward always reviews the draft that
+  integrated the latest round's answers.
 - A stream's wall-clock time to reach the human gate grows by up to two full
   research rounds; acceptable because the gate was previously spent asking
   for exactly that work.
