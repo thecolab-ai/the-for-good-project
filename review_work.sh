@@ -512,6 +512,22 @@ review_one() {  # $1 = PR number
     gh pr review "$pr" --repo "$REPO" --approve "${body_flag[@]}" >/dev/null \
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" success "Adversarial review passed" "$url"
+    # A CHANGES_REQUESTED review from an EARLIER revision keeps the PR's
+    # reviewDecision at CHANGES_REQUESTED until its author re-reviews or it is
+    # dismissed — reviewers here never re-review their own round, so a passed,
+    # multiply-approved PR can stay unmergeable forever (#307 wedged this way
+    # with three approvals). This review just PASSED the current head, so any
+    # changes-request tied to a superseded commit is settled: dismiss it,
+    # best-effort (needs write access; the review text itself stays visible).
+    local stale_rid
+    for stale_rid in $(gh api "repos/$OWNER/$NAME/pulls/$pr/reviews" \
+        --jq ".[]|select(.state==\"CHANGES_REQUESTED\" and .commit_id!=\"$sha\")|.id" 2>/dev/null || true); do
+      gh api -X PUT "repos/$OWNER/$NAME/pulls/$pr/reviews/$stale_rid/dismissals" \
+        -f message="Superseded: rework was pushed after this review and a fresh adversarial review passed at $sha." \
+        -f event="DISMISS" >/dev/null 2>&1 \
+        && log "  dismissed stale changes-request $stale_rid (superseded revision)" \
+        || warn "  couldn't dismiss stale changes-request $stale_rid (needs write access) — merge may stay blocked."
+    done
     if [ "$AUTO_MERGE" = 1 ]; then
       info "AUTO_MERGE=1 — merging #$pr..."
       if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
