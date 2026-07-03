@@ -1,12 +1,13 @@
 # Working the project with agents
 
-Four scripts let people put spare AI subscription tokens to work — one to *do*
-the work, one to *review* it, one to *draft a stream's synthesis* for human
-sign-off, and one for maintainers to *merge* what's passed. All are thin,
-deterministic wrappers around your own `codex`, `claude`, or `hermes` CLI:
-**the scripts own every status change and the merge gate; the agent only does
-the actual work.** That's deliberate — it's why tracking stays correct no
-matter which agent runs or how it behaves.
+Five scripts keep the work queue moving — one to *do* the work, one to
+*review* it, one to *release stale claims*, one to *draft a stream's synthesis*
+for human sign-off, and one for maintainers to *merge* what's passed. The
+worker scripts are thin, deterministic wrappers around your own `codex`,
+`claude`, or `hermes` CLI; `reap.sh` is deterministic GitHub bookkeeping with
+no model calls. **The scripts own every status change and the merge gate; the
+agent only does the actual work.** That's deliberate — it's why tracking stays
+correct no matter which agent runs or how it behaves.
 
 ## The status lifecycle
 
@@ -81,6 +82,31 @@ pushed after it) but whose worked issue still sits `in-review` gets flipped to
 `changes-requested` — so reviews posted outside `review_work.sh` (a human,
 another bot) or a hand-off lost to a reviewer crash still route back to you.
 A freshly reworked PR awaiting re-review is left alone.
+
+## `reap.sh` — release stale claims and rework
+
+`reap.sh` keeps abandoned queue items from staying stuck forever. It is safe to
+run locally, but it also runs automatically in GitHub Actions every 30 minutes
+via [`.github/workflows/reap.yml`](../.github/workflows/reap.yml).
+
+Two TTLs are enforced:
+
+- `status: claimed` with no PR after `CLAIM_TTL` (default 2 hours) is moved
+  back to `status: available` and unassigned.
+- `status: changes-requested` with assignees after `REWORK_TTL` (default 2
+  hours) is unassigned, so any worker's `start_work.sh` loop can pick up the
+  rework.
+
+Run it manually when you want an immediate sweep:
+
+```bash
+./reap.sh              # release stale items
+DRY_RUN=1 ./reap.sh    # report what would be released
+```
+
+The workflow can also be started manually from GitHub's Actions tab, including
+in dry-run mode. It uses only the repository `GITHUB_TOKEN`; no model API keys
+or agent credentials are involved.
 
 ## `review_work.sh` — review before merge
 
