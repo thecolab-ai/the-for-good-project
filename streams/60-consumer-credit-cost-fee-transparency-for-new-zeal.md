@@ -72,16 +72,28 @@ feasible and safe to build.
   co-design, consent, and a privacy review first. (confidence: Medium overall;
   the MoneyTalks referral route itself is High) —
   [front-door requirements](../research/findings/other/credit-help-front-door-requirements.md)
+- **Existing tools already cover education and some comparison needs, but not
+  the specific support-first gap this stream is testing.** Sorted already gives
+  free, non-commercial credit education and routes people to MoneyTalks; Glimp
+  and Finance.co.nz can show fee-inclusive repayment totals; Money Compare
+  includes some high-cost/fast-cash lenders. The gap that remains across the
+  seven checked tools is narrower and more specific: none combines a
+  fee-inclusive total with a missed-payment/default-fee "stress cost",
+  no-interest community finance options, and a support-first hand-off for
+  money-tight borrowers. (confidence: Medium overall; High that none of the
+  seven checked tools showed a missed-payment/default-fee stress scenario) —
+  [existing comparator assessment](../research/findings/other/existing-nz-credit-comparators-gap-assessment.md)
 - **The right shape for any eventual product is a "help front door", not a
-  flat fee table — but that framing rests on two assumptions nobody has
-  tested.** The framing research confirms the products differ too much in law
-  and structure to flatten into one comparison, and that human help should be
-  a first-class outcome. It also names its own weakest points: there is no
-  behavioural evidence that money-tight borrowers would consult any tool
-  *before* borrowing, and existing sites (Sorted, MoneyHub, Canstar and
-  others) may already cover the comparison need — in which case the real gap
-  is trust or distribution, not missing information. (confidence: Medium) —
-  [framing](../research/findings/other/consumer-credit-transparency-framing.md)
+  flat fee table — but demand is still untested.** The framing research
+  confirms the products differ too much in law and structure to flatten into
+  one comparison, and that human help should be a first-class outcome. The
+  comparator assessment narrows the existing-tools counter-hypothesis: the
+  education and rate-lookup need is partly served, but the stress-cost,
+  community-finance, and support-handoff combination is not. The remaining
+  weakest point is behavioural: there is no evidence that money-tight borrowers
+  would consult any tool *before* borrowing. (confidence: Medium) —
+  [framing](../research/findings/other/consumer-credit-transparency-framing.md),
+  [existing comparator assessment](../research/findings/other/existing-nz-credit-comparators-gap-assessment.md)
 
 ## What we're not sure about yet
 
@@ -100,12 +112,11 @@ feasible and safe to build.
   covering an interactive credit comparison tool. This is a load-bearing
   uncertainty for the whole product idea, resolvable only by legal advice or
   the regulator.
-- **Existing comparison sites may already cover part of the need.** MoneyHub,
-  Canstar, Sorted and others publish loan comparisons; three findings note
-  them as context, and the framing research raises it to a named
-  counter-hypothesis — if those sites already serve this cohort, the gap is
-  trust or distribution, not missing information — but no finding has
-  systematically assessed them against what money-tight borrowers need.
+- **We still don't know whether partnering with an existing tool is better than
+  building anything new.** The comparator assessment found a real residual gap,
+  but it did not test whether any incumbent exposes a feed/API, would add
+  stress-cost and community-finance rows, or could route distressed borrowers
+  to MoneyTalks in partnership.
 - **No organisation has been asked anything.** MoneyTalks/FinCap capacity,
   referral preferences, and whether comparison-before-support could even cause
   harm are all unvalidated assumptions until a human talks to the sector.
@@ -128,9 +139,10 @@ feasible and safe to build.
   [cost scenarios](../research/findings/other/small-credit-cost-scenarios.md)
   (confidence: Medium) and
   [regulatory boundaries](../research/findings/other/credit-tool-regulatory-boundaries.md)
-  (confidence: Medium). Would need: careful neutral wording, dated sources for
-  every figure, and a check that this adds something existing guidance sites
-  don't.
+  (confidence: Medium), with the missed-payment gap supported by the
+  [existing comparator assessment](../research/findings/other/existing-nz-credit-comparators-gap-assessment.md)
+  (confidence: High on that specific gap). Would need: careful neutral wording
+  and dated sources for every figure.
 - **Build a provenance-tracked dataset of small-credit rates, fees, and
   eligibility criteria — every number stamped with its source and date.**
   Helps: this project's future work, researchers, and potentially the
@@ -152,14 +164,16 @@ feasible and safe to build.
   (confidence: Medium). Would need: validation with MoneyTalks/FinCap, and
   legal review of the reality-check wording before anything personalised ships.
 - **Do a validation round before building anything: talk to financial mentors
-  and MoneyTalks/FinCap, get a legal view on the advice boundary, test the
-  assumption that money-tight borrowers would use a pre-borrowing tool, and
-  assess whether existing comparison sites already fill the gap.** Helps: the
+  and MoneyTalks/FinCap, ask whether partnering with an existing comparator is
+  feasible, get a legal view on the advice boundary, and test the assumption
+  that money-tight borrowers would use a pre-borrowing tool.** Helps: the
   project, by de-risking every other option. Effort: Small. Supported by the
-  open questions in all six findings, especially
+  open questions in the findings, especially
   [front-door requirements](../research/findings/other/credit-help-front-door-requirements.md)
   (confidence: Medium),
   [framing](../research/findings/other/consumer-credit-transparency-framing.md)
+  (confidence: Medium),
+  [existing comparator assessment](../research/findings/other/existing-nz-credit-comparators-gap-assessment.md)
   (confidence: Medium), and
   [cost scenarios](../research/findings/other/small-credit-cost-scenarios.md)
   (confidence: Medium). Would need: a human steward to make the contacts —
@@ -170,7 +184,7 @@ feasible and safe to build.
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
 Signal: every finding independently calls for human validation (mentors, MoneyTalks/FinCap, or legal advice) before any borrower-facing tool is designed.
-Signal: the evidence base is consistent across all six findings — no contradictions found, but almost everything sits at Medium confidence, and the framing research itself names two untested assumptions (demand, and existing tools) that could sink the product idea.
+Signal: the evidence base is consistent across the merged findings — no contradictions found, but almost everything sits at Medium confidence, and the framing research's demand assumption is still untested.
 Signal: the 1 July 2026 regulator handover means any policy-brief audience and citations should be re-checked as FMA guidance settles.
 
 ## Feedback log
