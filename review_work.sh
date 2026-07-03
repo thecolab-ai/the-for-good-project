@@ -12,11 +12,19 @@
 # so parallel reviewers don't double-review one PR or stampede the front of the
 # list. Claims older than REVIEW_CLAIM_TTL are treated as stale and taken over.
 # Each review runs in a FRESH GIT WORKTREE of the PR head (freshly fetched), so
-# your clone is never touched. On PASS it approves (and can auto-merge); on
-# NEEDS_WORK it requests changes AND flips the linked issue to
-# "status: changes-requested" so the AUTHOR's next start_work.sh loop picks the
-# rework up. A PR already marked NEEDS_WORK at its current revision is skipped
-# until the author pushes rework (FORCE=1 to re-review anyway).
+# your clone is never touched. A review returns one of three verdicts:
+#   - PASS       → approve (and can auto-merge).
+#   - NEEDS_WORK → request changes AND flip the linked issue to
+#                  "status: changes-requested" so the AUTHOR's next
+#                  start_work.sh loop picks the rework up.
+#   - NEEDS_HUMAN → for a governance / pipeline / automation-contract change an
+#                  agent must not ratify: post the review as a COMMENT, park the
+#                  merge check at "pending" (blocks merge, but is NOT the
+#                  author's turn), and leave the issue in-review for a human
+#                  maintainer. Prevents the governance ping-pong where NEEDS_WORK
+#                  routes ratification to an agent that can't ratify (ADR-0014).
+# A PR already marked NEEDS_WORK (or parked NEEDS_HUMAN) at its current revision
+# is skipped until the author pushes rework / a human acts (FORCE=1 to re-review).
 #
 # A PR labelled "review: human-only" is excluded from this loop entirely —
 # pipeline/governance changes are reviewed and merged by a HUMAN maintainer,
@@ -201,6 +209,9 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
+   VERDICT: NEEDS_HUMAN   (rare here — only if this PR also changes project
+                           governance/pipeline and needs a maintainer to ratify
+                           rather than an agent rework loop)
 Do not edit the PR's files, change labels, or merge anything.
 EOF
 }
@@ -267,9 +278,11 @@ author's defect (one out-of-scope note is fine; a failed verdict for it is not).
 GOVERNANCE GUARD: if this PR changes how the project itself works — governance,
 an ADR's status, the pipeline/gates, CONTRIBUTING, the review/merge rules, or
 label taxonomy — that needs a HUMAN MAINTAINER decision, not an agent approval.
-In that case say so plainly and lean to VERDICT: NEEDS_WORK ("needs human
-ratification"), UNLESS it is already correctly framed as a proposal awaiting
-maintainer sign-off (then it may PASS as a proposal).
+If the change is sound but needs that ratification, use VERDICT: NEEDS_HUMAN —
+NOT NEEDS_WORK. NEEDS_WORK sends the PR back to an AGENT rework loop that cannot
+ratify anything (it just ping-pongs); NEEDS_HUMAN parks it for a maintainer.
+Reserve NEEDS_WORK here for an actual defect the author should fix. (A change
+already correctly framed as a proposal awaiting sign-off may still PASS.)
 
 OUTPUT (do exactly this):
 1. Write your full review as Markdown to the exact absolute path above: a short
@@ -277,6 +290,8 @@ OUTPUT (do exactly this):
 2. As the very LAST line of your response, print exactly one of:
    VERDICT: PASS
    VERDICT: NEEDS_WORK
+   VERDICT: NEEDS_HUMAN   (governance/pipeline change that is sound but needs
+                           a human maintainer to ratify — see GOVERNANCE GUARD)
 Do not edit the PR's files, change labels, or merge anything.
 EOF
 }
@@ -291,7 +306,8 @@ check_state() {  # $1 = sha  -> success|failure|pending|none
     --jq "[.[]|select(.context==\"$REVIEW_CHECK_CONTEXT\")][0].state // \"none\"" 2>/dev/null || echo none
 }
 
-set_check() {  # $1 sha, $2 state(success|failure), $3 desc, $4 url
+set_check() {  # $1 sha, $2 state(success|failure|pending), $3 desc, $4 url
+               # pending = NEEDS_HUMAN park: blocks merge but isn't the author's turn
   [ "$DRY_RUN" = 1 ] && { info "[dry-run] would set check $REVIEW_CHECK_CONTEXT=$2 on $1"; return 0; }
   gh api -X POST "repos/$OWNER/$NAME/statuses/$1" \
     -f state="$2" -f context="$REVIEW_CHECK_CONTEXT" -f description="$3" -f target_url="$4" >/dev/null 2>&1 \
@@ -328,6 +344,12 @@ review_one() {  # $1 = PR number
     fi
     if [ "$st" = failure ]; then
       log "#$pr already reviewed at this revision (NEEDS_WORK) — waiting on the author's rework. Skipping (FORCE=1 to redo)."; return 0
+    fi
+    # `pending` on our own review context is the NEEDS_HUMAN park marker (this
+    # script never sets pending otherwise) — waiting on a maintainer, not on
+    # re-review. Skip so the loop doesn't burn tokens re-reviewing it.
+    if [ "$st" = pending ]; then
+      log "#$pr is parked NEEDS_HUMAN at this revision — awaiting a human maintainer. Skipping (FORCE=1 to re-review)."; return 0
     fi
   fi
 
@@ -394,7 +416,7 @@ review_one() {  # $1 = PR number
   fi
 
   local verdict
-  verdict="$( { cat "$tmp"; [ -n "$body_file" ] && cat "$body_file"; } | grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK)' | tail -1 | grep -Eo 'PASS|NEEDS_WORK' || true)"
+  verdict="$( { cat "$tmp"; [ -n "$body_file" ] && cat "$body_file"; } | grep -Eo 'VERDICT:[[:space:]]*(PASS|NEEDS_WORK|NEEDS_HUMAN)' | tail -1 | grep -Eo 'PASS|NEEDS_WORK|NEEDS_HUMAN' || true)"
 
   if [ -z "$body_file" ]; then
     # The REVIEWER (not the author) failed to produce a review — a TOOLING
@@ -455,6 +477,18 @@ review_one() {  # $1 = PR number
         [ -n "$iss" ] && { set_status_label "$iss" "done" "in-review" "claimed" "changes-requested"; ok "Issue #$iss → done"; }
       else warn "Could not auto-merge #$pr (branch protection / conflicts) — leaving for a maintainer."; fi
     fi
+  elif [ "$verdict" = NEEDS_HUMAN ]; then
+    # A governance / pipeline / automation-contract change that an agent must
+    # NOT ratify (ADR-0014). Post the review as a plain COMMENT — never
+    # --request-changes (that routes to changes-requested → an agent rework
+    # loop that can't ratify anything; the #125/#169 ping-pong). Park the merge
+    # check at `pending` so merge stays blocked for automation while a human can
+    # still merge, and do NOT touch the linked issue: it stays in-review,
+    # waiting for a maintainer.
+    ok "Verdict: NEEDS_HUMAN"
+    gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
+    set_check "$sha" pending "Awaiting human maintainer" "$url"
+    info "#$pr parked for a human maintainer — merge check left pending, issue not routed to agent rework."
   else
     [ -z "$verdict" ] && warn "No explicit verdict parsed — failing closed (NEEDS_WORK)."
     warn "Verdict: NEEDS_WORK"

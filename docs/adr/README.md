@@ -49,5 +49,6 @@ routine fixes, copy changes, or web styling.
 | [0010](0010-partner-network.md) | Track the partner / SME / advisory network in the open, behind a consent gate | Accepted |
 | [0011](0011-synthesis-rework-routing.md) | Synthesis draft rework belongs to synthesize_work.sh; generic runners must not touch synthesis PRs | Accepted |
 | [0012](0012-synthesis-followup-research-loop.md) | Blocking unknowns loop back to research automatically — bounded — before the G1 human gate | Accepted |
+| [0014](0014-needs-human-review-verdict.md) | A third review verdict — NEEDS_HUMAN — parks governance PRs for a maintainer instead of ping-ponging agent rework | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

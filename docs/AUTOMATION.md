@@ -26,6 +26,10 @@ the `issue-status.yml` action sweep all others whenever they set one.
                                         └────── agent opened no PR (released) ◀────┘ (PR closed / gone)
 ```
 
+A PR whose review returns **NEEDS_HUMAN** (a governance change an agent must not
+ratify) keeps its issue in `in-review` and parks the merge check at `pending`
+for a maintainer — it does not move to `changes-requested` (ADR-0014).
+
 **Stream roots** (Discover issues) never close via a PR and follow the gate
 cycle instead:
 
@@ -165,6 +169,19 @@ body link (ADR-0008), so discover PRs — which deliberately have no closing ref
 — are routed too. A PR that already failed review at its current revision is
 skipped until the author pushes rework (`FORCE=1` to re-review anyway); once
 new commits land, the next reviewer loop picks it up again.
+
+On **NEEDS_HUMAN** — a governance / pipeline / automation-contract change that
+is sound but that an agent must not *ratify* — it posts the review as a plain
+comment, parks the merge check at `pending` ("Awaiting human maintainer"), and
+leaves the issue `in-review`. It does **not** flip to `changes-requested`,
+because that would route ratification to an agent rework loop that cannot
+ratify — the ping-pong seen on #125/#169 (ADR-0014). A PR parked `pending` is
+skipped by later loops until a human acts (`FORCE=1` to re-review). Use this,
+not `NEEDS_WORK`, when a governance change is correct but needs a maintainer;
+reserve `NEEDS_WORK` for an author-fixable defect. This is close kin to
+`review: human-only` (below): that label keeps a PR out of the agent loop from
+the start, whereas NEEDS_HUMAN is where an agent review *discovers* mid-flight
+that a change needs a human and hands it off cleanly.
 
 If the review agent **crashes before writing a review**, that's a reviewer
 tooling failure, not a PR verdict: the merge check is left unset (merge is
@@ -359,8 +376,10 @@ collective keeps itself unblocked.
   trust, not arbitrary input. Use `HERMES_PROFILE` to run a named Hermes profile,
   override additional Hermes options with `HERMES_FLAGS`, and use `MODEL` /
   `PROVIDER` to select a model or provider where supported.
-- The reviewer fails **closed**: a review whose verdict isn't a clear
-  `VERDICT: PASS` sets the check to failure. (A reviewer *crash* that produces
-  no review at all leaves the check unset so a later loop retries — merge is
-  still blocked either way; ADR-0008.)
+- The reviewer fails **closed**: a review whose verdict is neither a clear
+  `VERDICT: PASS` nor an explicit `VERDICT: NEEDS_HUMAN` is treated as
+  `NEEDS_WORK` and sets the check to failure. An explicit NEEDS_HUMAN instead
+  parks the check at `pending` (ADR-0014); a reviewer *crash* that produces no
+  review at all leaves the check unset so a later loop retries — merge is
+  blocked in every case (ADR-0008).
 - Set `AGENT_TIMEOUT` (seconds) to cap a runaway agent; `MODEL` to pick a model.
