@@ -109,6 +109,18 @@ jobs:
                 gh issue comment "$stream" --repo "$REPO" --body "🔄 New work opened in this stream (#$NUM) — pulling it back out of the synthesis queue until the stream drains again." || true
               fi
             fi
+            # MISLINK CHECK (#291): a child's "Part of" must point at the
+            # stream ROOT, never at another child — that's what keeps the
+            # drain check, depth bound and synthesis roll-up exact. Flag a
+            # mislinked child ONCE with the exact repair to make.
+            po=$(printf '%s' "$BODY" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            if [ -n "$po" ] && [ "$po" != "$stream" ] && [ "$NUM" != "$stream" ]; then
+              marker="<!-- fg-stream-mislink -->"
+              if ! gh issue view "$NUM" --repo "$REPO" --json comments --jq '.comments[].body' 2>/dev/null | grep -qF "$marker"; then
+                gh issue comment "$NUM" --repo "$REPO" --body "$(printf '%s\n%s' "$marker" "⚠️ This issue's \`Part of #$po\` points at a NON-ROOT issue; its stream root is **#$stream**. Children must link the stream root directly (#291): edit the body's first line to \`Part of #$stream. Split from #$po.\` so the stream roll-up and the fan-out depth limit stay exact.")" || true
+                echo "Flagged #$NUM as mislinked (Part of #$po, root #$stream)."
+              fi
+            fi
           fi
           echo "Applied $label to #$NUM"
 

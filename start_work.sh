@@ -70,11 +70,18 @@ work_prompt() {  # $1 = issue number
     link_why="(\"Closes\" is required — the issue closing on merge is what tells the
    stream automation this piece of work is done.)"
   fi
-  # Bounded fan-out (docs/STREAMS.md): the agent on a root issue (depth 0) may
-  # open sub-issues, an agent on a sub-issue (depth 1) may open one more level,
-  # and depth >= 2 may not fan out at all. WHITELIST discover/research only —
-  # a missing or nonstandard stage label must fail closed, not open.
+  # Bounded fan-out (docs/STREAMS.md, #291): the agent on a root issue (depth
+  # 0) may open sub-issues, an agent on a sub-issue (depth 1) may open one
+  # more level, and depth >= 2 may not fan out at all. Every sub-issue's
+  # "Part of" must point at the STREAM ROOT — never at the spawning issue —
+  # so the stream roll-up (labels, drain check, synthesis) stays exact; the
+  # spawn generation is carried by a "Split from #<this issue>" marker, which
+  # issue_depth follows to enforce the depth limit. WHITELIST
+  # discover/research only — a missing or nonstandard stage label must fail
+  # closed, not open.
   local depth fanout; depth="$(issue_depth "$n")"
+  local fanout_root="${stream:-$n}" split_note=""
+  [ "$n" != "$fanout_root" ] && split_note=" Split from #$n."
   if [ "$stage" != "discover" ] && [ "$stage" != "research" ]; then
     fanout="Do NOT open any sub-issues from this issue — only discover/research work
 may fan out; everything else is human-gated (docs/STREAMS.md)."
@@ -85,9 +92,13 @@ parts you will NOT cover as 2-5 CHUNKY sub-issues — real researchable
 questions someone can spend hours on, never micro-tasks:
   gh issue create --repo $REPO --title \"research: <question>\" \\
     --label \"stage: research\" --label \"status: available\" \\
-    --body \"Part of #$n.${stream:+ Stream: #$stream.} <the question, why it matters, where to look>\"
-Then STILL complete this issue: narrow it to the core question, answer that to
-the full method standard, and say in your PR exactly what you split off."
+    --body \"Part of #$fanout_root.$split_note <the question, why it matters, where to look>\"
+The body's \"Part of\" MUST point at the stream root (#$fanout_root), exactly as shown —
+NEVER at this issue — and must keep the \"Part of\"/\"Split from\" wording on the
+first line: that's what keeps the stream roll-up exact and the fan-out depth
+enforceable (#291). Then STILL complete this issue: narrow it to the core
+question, answer that to the full method standard, and say in your PR exactly
+what you split off."
   else
     fanout="Do NOT open any sub-issues — this issue is at the fan-out depth limit
 (depth $depth of max 2, see docs/STREAMS.md). If the scope is still too big,

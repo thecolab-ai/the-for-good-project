@@ -165,17 +165,25 @@ label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
   printf '%s' "$1" | tr ',' '\n' | sed -n "s/^$2//p" | head -1
 }
 
-# Depth of an issue in its stream: 0 for a root (no line-anchored "Part of #p"
-# in the body), else 1 + parent's depth, capped at 3 hops. Bounds agent
-# fan-out (docs/STREAMS.md). FAILS CLOSED: if gh errors mid-walk (rate limit,
-# network), reports the cap so fan-out is denied rather than unbounded.
+# Depth of an issue in its stream: 0 for a root, else 1 + parent's depth,
+# capped at 3 hops. Bounds agent fan-out (docs/STREAMS.md). The parent hop is
+# the line-anchored "Split from #m" if present, else "Part of #p" — under the
+# flattened linking convention (#291 / ADR-0013) every child's "Part of"
+# points at the STREAM ROOT (so roll-up is exact), while "Split from" records
+# which issue actually spawned it; depth must follow the SPAWN chain or a
+# grandchild that links the root would look depth-1 and fan out forever.
+# "Split from" may share the first line with "Part of #root." — the anchor
+# allows that one prefix so prose mentions still can't mis-parent an issue.
+# FAILS CLOSED: if gh errors mid-walk (rate limit, network), reports the cap
+# so fan-out is denied rather than unbounded.
 issue_depth() {  # $1 = issue number
   local n="$1" d=0 body parent
   while [ "$d" -lt 3 ]; do
     if ! body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body 2>/dev/null)"; then
       echo 3; return
     fi
-    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*(part of[[:space:]]*#[0-9]+\.?[[:space:]]*)?split from[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)"
+    [ -z "$parent" ] && parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
     [ -z "$parent" ] && break
     d=$((d+1)); n="$parent"
   done

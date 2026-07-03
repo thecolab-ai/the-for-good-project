@@ -32,9 +32,14 @@ number of the originating Discover issue — everything descending from issue
   [`.github/workflows/stream-sync.yml`](../.github/workflows/stream-sync.yml):
   a new `stage: discover` issue roots its own stream; children inherit it from
   a `Stream: #n` or `Part of #<parent>` line in their body.
-- **Body convention** (keeps the tree, not just the tag): every child issue
-  carries `Part of #<parent>` (immediate parent) and, when the parent isn't the
-  root, `Stream: #<root>`.
+- **Body convention** (keeps the roll-up exact, #291): every child issue
+  carries `Part of #<root>` — the **stream root**, never another child. An
+  issue split off a non-root issue *also* carries `Split from #<issue>` on
+  the same first line (`Part of #<root>. Split from #<issue>.`) — that
+  preserves the spawn tree and is what the fan-out depth limit is computed
+  from. `stream-sync.yml` flags any child whose `Part of` points at a
+  non-root, with the exact repair to make. (Older issues may still carry
+  `Part of #<parent>` chains; depth follows those as before.)
 - **A living overview doc** at [`streams/<n>-<slug>.md`](../streams/README.md)
   — the plain-language front page, maintained by the stream's steward. Its
   frontmatter `state:` field is the single source of truth for where the
@@ -64,8 +69,12 @@ depth 1             — those sub-issues. Their agents MAY open one more level.
 depth 2             — leaf issues. NO further sub-issues, full stop.
 ```
 
-Depth is the number of `Part of #…` hops from the root; `start_work.sh`
-computes it and tells the agent explicitly whether fan-out is allowed. An
+Depth is the number of **spawn** hops from the root: `issue_depth` follows
+the line-anchored `Split from #…` marker (falling back to `Part of #…` for
+older issues) — so even though every child's `Part of` points at the root
+(#291), a grandchild still counts as depth 2 and may not fan out further.
+`start_work.sh` computes it and tells the agent explicitly whether fan-out
+is allowed. An
 agent that splits still **completes its own issue** (narrowed to the core
 question) — splitting is scope-narrowing, never a hand-off. If a depth-2
 issue is still too big, the agent narrows it in the PR and lists what it left
