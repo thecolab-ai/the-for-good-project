@@ -1,7 +1,7 @@
 ---
 stream: 61
 title: "Shoppers can't tell a real supermarket deal from a manufactured one"
-state: needs-synthesis
+state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-03

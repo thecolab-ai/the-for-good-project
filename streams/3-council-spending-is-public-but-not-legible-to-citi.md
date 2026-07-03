@@ -1,7 +1,7 @@
 ---
 stream: 3
 title: "Council spending is public but not legible to citizens"
-state: needs-synthesis
+state: awaiting-direction
 steward: ""
 domain: civic-transparency
 updated: 2026-07-03

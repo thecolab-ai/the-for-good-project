@@ -1,7 +1,7 @@
 ---
 stream: 60
 title: "The true cost of small loans is hard for New Zealanders to see or compare"
-state: needs-synthesis
+state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-02
