@@ -54,6 +54,7 @@ jumps queues.
 | Question | Doc |
 |---|---|
 | How do I contribute / what's the method? | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| How does git / version control work here? | [docs/GIT-WORKFLOW.md](GIT-WORKFLOW.md) |
 | What do the scripts and labels do, exactly? | [docs/AUTOMATION.md](AUTOMATION.md) |
 | How do streams and the human gates work? | [docs/STREAMS.md](STREAMS.md) |
 | Why is it like this? | [docs/adr/](adr/README.md) |
