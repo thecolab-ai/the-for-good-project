@@ -51,6 +51,17 @@ feasible and safe to build.
   Zealanders live in material hardship, so many borrowers have no buffer at
   all. (confidence: Medium) —
   [fees and vulnerable borrowers](../research/findings/other/credit-fees-vulnerable-borrowers.md)
+- **The cheapest, safest credit often can't be used at the moment of need.**
+  No-interest community loans (Good Shepherd's Good Loans, Ngā Tāngata
+  Microfinance) are materially cheaper than commercial small loans for
+  eligible low-income borrowers — but they cannot be used for cash, urgent
+  needs, day-to-day living costs, rent arrears or overdue bills, and
+  applications take time. So the people under the most pressure can be
+  excluded from exactly the products that would cost them least, and
+  eligibility rules act as a harm vector, not just an access rule.
+  (confidence: Medium) —
+  [cost scenarios](../research/findings/other/small-credit-cost-scenarios.md),
+  [fees and vulnerable borrowers](../research/findings/other/credit-fees-vulnerable-borrowers.md)
 - **A tool can safely publish education and factual comparisons, but saying
   "you should take this loan" would likely be regulated financial advice.**
   Factual cost information and neutral reality-checks (for example "this
