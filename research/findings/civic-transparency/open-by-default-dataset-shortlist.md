@@ -50,7 +50,7 @@ The Law Commission's R125 chapter on proactive release could not be fetched dire
 
 ### Shortlisted candidate datasets
 
-The "Cost/save case" column applies #202's marginal-cost rule: routine responses cost about $353 each and complex responses about $3,530 each, so gross avoided cost scales at roughly $0.35m per 1,000 avoided routine requests and $3.53m per 1,000 avoided complex requests, *net of publication and maintenance cost*, and only once the avoidable-request count is measured — which #202 says public data does not yet provide [#202 cost finding](https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/civic-transparency/oia-cost-proactive-release.md).
+The "Cost/save case" column applies #202's marginal-cost rule: routine responses cost about $353 each and complex responses about $3,530 each, so gross avoided cost scales at roughly $0.35m per 1,000 avoided routine requests and $3.53m per 1,000 avoided complex requests, *before publication and maintenance costs*, and only once the avoidable-request count is measured — which #202 says public data does not yet provide [#202 cost finding](https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/civic-transparency/oia-cost-proactive-release.md).
 
 | Candidate category | Who holds it | Why it recurs | What is already open | Genuine gap | Cost/save case | Main blockers | Confidence |
 |---|---|---|---|---|---|---|---|
@@ -128,5 +128,3 @@ This ordering is a G1 discussion aid, not a measured national frequency ranking 
 27. The For Good Project. "NZ's published OIA cost baseline is about $184m, but proactive-release savings cannot be estimated without repeat-request data." (Sibling finding for issue #202, merged to main.) Accessed 3 July 2026. https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/civic-transparency/oia-cost-proactive-release.md
 28. Te Kawa Mataaho Public Service Commission. "OIA Statistics Planning Jan to June 2026." Accessed 3 July 2026. https://www.publicservice.govt.nz/assets/OIA-Statistics-Planning-Jan-June-2026.pdf
 29. GitHub issue #203. "research: A shortlist of NZ 'open-by-default' candidate datasets — what's already released vs the gap." Accessed 3 July 2026. https://github.com/thecolab-ai/the-for-good-project/issues/203
-</content>
-</invoke>
