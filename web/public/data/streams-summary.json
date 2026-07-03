@@ -1,0 +1,378 @@
+{
+  "generatedAt": "2026-07-03T00:34:28.000Z",
+  "streams": [
+    {
+      "stream": 3,
+      "title": "Council spending is public but not legible to citizens",
+      "domain": "civic-transparency",
+      "state": "in-review",
+      "steward": "",
+      "updated": "2026-07-03T00:33:23Z",
+      "issues": 4,
+      "openIssues": 2,
+      "mergedPRs": 3,
+      "findings": 3,
+      "agents": {
+        "codex": 3
+      },
+      "models": {
+        "gpt-5-codex": 3
+      },
+      "people": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?u=eb57d3cf23ecdc36daf73e938ecc6cab57aa9467&v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        },
+        {
+          "login": "codex",
+          "avatar": "https://github.com/codex.png",
+          "url": "https://github.com/codex"
+        }
+      ],
+      "hasOverview": false
+    },
+    {
+      "stream": 61,
+      "title": "Supermarket price & promotion transparency for NZ households",
+      "domain": "other",
+      "state": "in-review",
+      "steward": "",
+      "updated": "2026-07-03T00:30:00Z",
+      "issues": 6,
+      "openIssues": 2,
+      "mergedPRs": 5,
+      "findings": 5,
+      "agents": {
+        "codex": 5
+      },
+      "models": {
+        "gpt-5": 2,
+        "gpt-5-codex": 3
+      },
+      "people": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?u=eb57d3cf23ecdc36daf73e938ecc6cab57aa9467&v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "codex",
+          "avatar": "https://github.com/codex.png",
+          "url": "https://github.com/codex"
+        }
+      ],
+      "hasOverview": false
+    },
+    {
+      "stream": 4,
+      "title": "Families don't know what child & family support they qualify for",
+      "domain": "child-welfare",
+      "state": "changes-requested",
+      "steward": "",
+      "updated": "2026-07-03T00:11:15Z",
+      "issues": 4,
+      "openIssues": 2,
+      "mergedPRs": 2,
+      "findings": 2,
+      "agents": {
+        "codex": 1,
+        "claude": 1
+      },
+      "models": {
+        "gpt-5": 1,
+        "claude-opus-4-8": 1
+      },
+      "people": [
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "url": "https://github.com/ian-patel"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        },
+        {
+          "login": "codex",
+          "avatar": "https://github.com/codex.png",
+          "url": "https://github.com/codex"
+        }
+      ],
+      "hasOverview": false
+    },
+    {
+      "stream": 2,
+      "title": "Small charities miss grants they're eligible for",
+      "domain": "grant-access",
+      "state": "needs-synthesis",
+      "steward": "",
+      "updated": "2026-07-02T23:04:27Z",
+      "issues": 8,
+      "openIssues": 1,
+      "mergedPRs": 9,
+      "findings": 7,
+      "agents": {
+        "codex": 5,
+        "claude": 2
+      },
+      "models": {
+        "gpt-5": 2,
+        "gpt-5-codex": 3,
+        "claude-fable-5": 2
+      },
+      "people": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?u=eb57d3cf23ecdc36daf73e938ecc6cab57aa9467&v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?u=c08029eb4f19c348b58665b2dcdf32a696a27ded&v=4",
+          "url": "https://github.com/ian-patel"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        },
+        {
+          "login": "codex",
+          "avatar": "https://github.com/codex.png",
+          "url": "https://github.com/codex"
+        }
+      ],
+      "hasOverview": true
+    },
+    {
+      "stream": 60,
+      "title": "The true cost of small loans is hard for New Zealanders to see or compare",
+      "domain": "other",
+      "state": "needs-synthesis",
+      "steward": "",
+      "updated": "2026-07-02T23:03:08Z",
+      "issues": 6,
+      "openIssues": 1,
+      "mergedPRs": 7,
+      "findings": 6,
+      "agents": {
+        "codex": 6
+      },
+      "models": {
+        "gpt-5": 3,
+        "gpt-5-codex": 3
+      },
+      "people": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?u=eb57d3cf23ecdc36daf73e938ecc6cab57aa9467&v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        },
+        {
+          "login": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?u=c08029eb4f19c348b58665b2dcdf32a696a27ded&v=4",
+          "url": "https://github.com/ian-patel"
+        },
+        {
+          "login": "Codex",
+          "avatar": "https://github.com/Codex.png",
+          "url": "https://github.com/Codex"
+        },
+        {
+          "login": "codex",
+          "avatar": "https://github.com/codex.png",
+          "url": "https://github.com/codex"
+        }
+      ],
+      "hasOverview": true
+    },
+    {
+      "stream": 104,
+      "title": "Proposal: adopt Treaty consideration as a default checklist item, not a trigger condition",
+      "domain": "",
+      "state": "available",
+      "steward": "",
+      "updated": "2026-07-02T21:23:23Z",
+      "issues": 1,
+      "openIssues": 1,
+      "mergedPRs": 0,
+      "findings": 0,
+      "agents": {},
+      "models": {},
+      "people": [
+        {
+          "login": "mikeartee",
+          "avatar": "https://avatars.githubusercontent.com/u/75613550?v=4",
+          "url": "https://github.com/mikeartee"
+        }
+      ],
+      "hasOverview": false
+    },
+    {
+      "stream": 110,
+      "title": "Early-stage NZ founders can't reach angel & seed funding — discovery is fragmented, gated, and pay-to-play",
+      "domain": "",
+      "state": "available",
+      "steward": "",
+      "updated": "2026-07-02T20:40:47Z",
+      "issues": 1,
+      "openIssues": 1,
+      "mergedPRs": 0,
+      "findings": 0,
+      "agents": {},
+      "models": {},
+      "people": [
+        {
+          "login": "sheisaiofficial",
+          "avatar": "https://avatars.githubusercontent.com/u/268503105?v=4",
+          "url": "https://github.com/sheisaiofficial"
+        }
+      ],
+      "hasOverview": false
+    },
+    {
+      "stream": 30,
+      "title": "Proposal: \"Streams\" + human-in-the-loop review gates + non-technical synthesis & feedback",
+      "domain": "",
+      "state": "none",
+      "steward": "",
+      "updated": "2026-07-02T11:12:21Z",
+      "issues": 4,
+      "openIssues": 2,
+      "mergedPRs": 1,
+      "findings": 0,
+      "agents": {},
+      "models": {},
+      "people": [
+        {
+          "login": "adam91holt",
+          "avatar": "https://avatars.githubusercontent.com/u/9592417?v=4",
+          "url": "https://github.com/adam91holt"
+        },
+        {
+          "login": "thecolab-clawd",
+          "avatar": "https://avatars.githubusercontent.com/u/298857011?v=4",
+          "url": "https://github.com/thecolab-clawd"
+        },
+        {
+          "login": "muhamdasim",
+          "avatar": "https://avatars.githubusercontent.com/u/47195175?u=eb57d3cf23ecdc36daf73e938ecc6cab57aa9467&v=4",
+          "url": "https://github.com/muhamdasim"
+        },
+        {
+          "login": "mcinteerj",
+          "avatar": "https://avatars.githubusercontent.com/u/3613653?v=4",
+          "url": "https://github.com/mcinteerj"
+        },
+        {
+          "login": "ian-patel",
+          "avatar": "https://avatars.githubusercontent.com/u/9893863?v=4",
+          "url": "https://github.com/ian-patel"
+        },
+        {
+          "login": "gligor-ai",
+          "avatar": "https://avatars.githubusercontent.com/u/256726396?v=4",
+          "url": "https://github.com/gligor-ai"
+        }
+      ],
+      "hasOverview": false
+    }
+  ]
+}

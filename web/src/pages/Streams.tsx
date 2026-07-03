@@ -42,12 +42,15 @@ function StatePill({ state }: { state: string }) {
   return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{state}</span>;
 }
 
-function PeopleStrip({ people, size = 22, max = 5 }: { people: StreamSummary["people"]; size?: number; max?: number }) {
+function PeopleStrip({ people, steward, size = 22, max = 5 }: { people: StreamSummary["people"]; steward?: string; size?: number; max?: number }) {
   if (people.length === 0) return <span className="text-[11px] text-muted-foreground">—</span>;
+  // Steward first, then ring their avatar so the person steering the stream stands out.
+  const s = steward?.replace(/^@/, "");
+  const ordered = s ? [...people.filter((p) => p.login === s), ...people.filter((p) => p.login !== s)] : people;
   return (
     <div className="flex -space-x-2">
-      {people.slice(0, max).map((p) => <PersonAvatar key={p.login} login={p.login} avatar={p.avatar} size={size} />)}
-      {people.length > max ? <span className="flex items-center pl-3 text-[11px] text-muted-foreground" style={{ height: size }}>+{people.length - max}</span> : null}
+      {ordered.slice(0, max).map((p) => <PersonAvatar key={p.login} login={p.login} avatar={p.avatar} size={size} className={cn(p.login === s && "rounded-full ring-2 ring-brand-cyan ring-offset-1 ring-offset-background")} />)}
+      {ordered.length > max ? <span className="flex items-center pl-3 text-[11px] text-muted-foreground" style={{ height: size }}>+{ordered.length - max}</span> : null}
     </div>
   );
 }
@@ -125,7 +128,7 @@ function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }
         ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          {s.people.length > 0 ? <PeopleStrip people={s.people} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
+          {s.people.length > 0 ? <PeopleStrip people={s.people} steward={s.steward} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
         </div>
       </Card>
@@ -218,7 +221,7 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                   <TableCell className="text-right tabular-nums">{s.findings}</TableCell>
                   <TableCell className="text-right tabular-nums">{s.mergedPRs}</TableCell>
                   {/* Avatars are external profile links; stop clicks bubbling to the row's navigate. */}
-                  <TableCell><span className="inline-flex" onClick={(e) => e.stopPropagation()}><PeopleStrip people={s.people} size={20} max={4} /></span></TableCell>
+                  <TableCell><span className="inline-flex" onClick={(e) => e.stopPropagation()}><PeopleStrip people={s.people} steward={s.steward} size={20} max={4} /></span></TableCell>
                   <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{s.updated ? relativeTime(s.updated) : "—"}</TableCell>
                 </TableRow>
                 {isOpen ? (

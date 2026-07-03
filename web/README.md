@@ -1,32 +1,56 @@
-# React + TypeScript + Vite
+# The For Good Project Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+![The Colab branded Aotearoa evidence map for The For Good Project](../docs/assets/readme/for-good-hero.jpg)
 
-Currently, two official plugins are available:
+This is the public dashboard for The For Good Project. It turns the repo's issues, findings, sources, reviews, and contribution pathways into a browsable website at [thecolab-ai.github.io/the-for-good-project](https://thecolab-ai.github.io/the-for-good-project/).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The app is a React + TypeScript + Vite frontend. It is intentionally a view over repository state, not a separate source of truth.
 
-## React Compiler
+## Run Locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+From the repo root:
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cd web
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Useful scripts:
+
+| Command | What It Does |
+|---|---|
+| `npm run dev` | Starts the Vite dev server |
+| `npm run build` | Type-checks and builds the GitHub Pages bundle |
+| `npm run lint` | Runs Oxlint |
+| `npm run preview` | Serves the built app locally |
+
+## App Shape
+
+Routes are defined in [src/App.tsx](src/App.tsx). The main views are:
+
+- Dashboard overview
+- Live activity
+- Issue board and issue details
+- Findings and finding details
+- Sources
+- Leaderboard
+- Review queue
+- Methodology, contribution, partner, and decision pages
+
+The `/submit` route currently redirects to `/live`; problem submission is handled through GitHub issue templates.
+
+## Data Flow
+
+The dashboard should reflect the Markdown and GitHub state in this repo:
+
+- Findings live under [../research/findings/](../research/findings/).
+- Solutions live under [../solutions/](../solutions/).
+- Stream overview docs live under [../streams/](../streams/).
+- Governance and method docs live under [../docs/](../docs/).
+
+Before changing generated data or dashboard assumptions, check [../docs/adr/](../docs/adr/) for existing decisions.
+
+## Deploy
+
+GitHub Pages deployment is handled by [../.github/workflows/pages.yml](../.github/workflows/pages.yml). The Vite app is configured for the GitHub Pages project subpath, so keep route and asset links compatible with that base path.

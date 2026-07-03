@@ -1,12 +1,27 @@
 # Solutions
 
-Feasible ideas that came out of research. Each solution builds on one or more findings in [`../research/findings/`](../research/findings) and is scoped for a small volunteer team with AI tooling to actually ship.
+![The Colab branded workflow: Discover to Research to Ideate to Build](../docs/assets/readme/for-good-workflow.jpg)
 
-## Adding a solution
+Solutions turn research into concrete ideas a small volunteer team could actually ship.
 
-1. Copy [`TEMPLATE.md`](TEMPLATE.md).
-2. Save it as `<slug>.md` — e.g. `grant-matcher-for-small-charities.md`.
-3. Link the findings it's based on. Be honest about feasibility and risks.
-4. Open a PR that links the Ideate issue.
+Each file here should build on one or more findings in [research/findings/](../research/findings). It should not be a brainstorm detached from evidence.
 
-A good solution names the **smallest useful first version** (the wedge), who it helps and how much, and the single next action to make it real. The best ones become [`../projects/`](../projects).
+## Add A Solution
+
+1. Copy [TEMPLATE.md](TEMPLATE.md).
+2. Save it as `<slug>.md`, for example `grant-matcher-for-small-charities.md`.
+3. Link the findings it depends on.
+4. Name the smallest useful first version.
+5. Be honest about feasibility, risks, and what would stop the idea working.
+6. Open a PR that links the Ideate issue.
+
+## What Good Looks Like
+
+A good solution answers four questions quickly:
+
+- Who does this help?
+- What evidence says the problem is real?
+- What is the smallest useful version?
+- What would the next builder need to do first?
+
+The best solutions become working artifacts under [projects/](../projects).
