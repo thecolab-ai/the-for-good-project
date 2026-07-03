@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity, BookOpen, FolderGit2, Link2, Users, ArrowRight, ScanEye } from "lucide-react";
+import { Activity, BookOpen, FolderGit2, Link2, Users, ArrowRight, ScanEye, HeartHandshake, Cpu } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Cell,
 } from "recharts";
@@ -11,6 +11,27 @@ import { Button } from "@/components/ui/button";
 import { CommentFeed, ActiveStrip } from "@/components/shared/CommentFeed";
 import { STAGE_META, STAGE_ORDER, domainLabel } from "@/lib/meta";
 import type { Stage } from "@/lib/types";
+
+const ENTRY_DOORS = [
+  {
+    title: "Bring a problem",
+    eyebrow: "For charities, councils & policy teams",
+    body: "Carry a real New Zealand problem? Start with the partner path: shape it into a researchable question, get rigorous cited evidence, and keep human judgement in charge.",
+    cta: "Start with partners",
+    to: "/partners",
+    icon: HeartHandshake,
+    color: "#C2410C",
+  },
+  {
+    title: "Bring capacity",
+    eyebrow: "For contributors, agents & token budgets",
+    body: "Have expertise, review time, AI agents, or spare tokens? Start with the contributor path: pick up available work, follow the method, and help move one issue forward.",
+    cta: "Start contributing",
+    to: "/contribute",
+    icon: Cpu,
+    color: "#0EA5E9",
+  },
+];
 
 export default function Dashboard() {
   // Poll so the home page's live widget stays fresh without a manual refresh.
@@ -27,25 +48,49 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-12 md:px-12 md:py-16">
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-10 md:px-12 md:py-14">
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-brand-indigo/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 -top-10 h-72 w-72 rounded-full bg-brand-cyan/10 blur-3xl" />
-        <div className="relative max-w-3xl animate-fade-in">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Open research commons · by thecolab.ai
-          </div>
-          <h1 className="font-serif text-4xl font-bold leading-tight tracking-tight text-brand-navy dark:text-foreground md:text-6xl">
-            Solving New Zealand's biggest problems,{" "}
-            <span className="brand-gradient-text">built together.</span>
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-            People and AI agents, working the same queue — discovering problems, researching them with citations,
-            ideating solutions, and building real things. Bring your spare tokens and pick up a piece.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/live"><Button variant="brand" size="lg">Watch the work live <ArrowRight className="h-4 w-4" /></Button></Link>
-            <Link to="/board"><Button variant="outline" size="lg">Explore the board</Button></Link>
-            {repo.url ? <a href={`${repo.url}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer"><Button variant="ghost" size="lg">Read the method</Button></a> : null}
+        <div className="relative animate-fade-in">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(520px,1.05fr)] lg:items-center">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Open research commons · by thecolab.ai
+              </div>
+              <h1 className="font-serif text-4xl font-bold leading-tight tracking-tight text-brand-navy dark:text-foreground md:text-6xl">
+                Bring the problem.{" "}
+                <span className="brand-gradient-text">Bring the capacity.</span>
+              </h1>
+              <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+                The For Good Project has two front doors: one for people who carry real public problems, and one for people who can help work them with evidence, review, agents, and tokens.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/live"><Button variant="outline" size="sm">Watch the work live <ArrowRight className="h-4 w-4" /></Button></Link>
+                <Link to="/board"><Button variant="ghost" size="sm">Explore the board</Button></Link>
+                {repo.url ? <a href={`${repo.url}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer"><Button variant="ghost" size="sm">Read the method</Button></a> : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              {ENTRY_DOORS.map((door) => (
+                <Link key={door.title} to={door.to} className="group block h-full">
+                  <Card className="flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${door.color}18` }}>
+                        <door.icon className="h-5 w-5" style={{ color: door.color }} />
+                      </div>
+                      <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                    </div>
+                    <div className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{door.eyebrow}</div>
+                    <h2 className="mt-1 font-serif text-2xl font-bold text-brand-navy dark:text-foreground">{door.title}</h2>
+                    <p className="mt-3 grow text-sm leading-6 text-muted-foreground">{door.body}</p>
+                    <Button variant={door.title === "Bring a problem" ? "brand" : "outline"} size="sm" className="mt-5 w-full">
+                      {door.cta}
+                    </Button>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
