@@ -15,12 +15,12 @@ status: "draft"
 ## Executive answer
 
 - FYI exposes request, user, authority, Atom feed, feed-JSON, and all-authorities CSV surfaces, but its own API help says it does not have a full API and is adding API-like features incrementally [FYI API help](https://fyi.org.nz/help/api); my direct tests found no request-level bulk dump, and the CSV export is authority metadata only [FYI all-authorities.csv](https://fyi.org.nz/body/all-authorities.csv).
-- The reliable request-level metadata surface is each public request `.json`: for five recent public requests tested, the JSON contained `title`, `public_body`, `described_state`, `display_status`, `created_at`, `updated_at`, `law_used`, `tags`, and event rows with event dates and message IDs [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json).
+- The reliable request-level metadata surface is each public request `.json`: for five recent requests taken from FYI's public successful-request list (IDs 34692, 34820, 34868, 34872, 34994; fetched 2026-07-03), every request JSON carried the top-level keys `title`, `public_body`, `described_state`, `display_status`, `created_at`, `updated_at`, `law_used`, `tags`, and `info_request_events` — but `tags` was an empty array in all five, so the field is available yet sparsely populated in practice [FYI successful-request list](https://fyi.org.nz/list/successful), [request 34872 JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json), [request 34994 JSON](https://fyi.org.nz/request/34994-unlocked-and-unaccounted-for-guns-and-tasers-among-tactical-gear-lost-by-police.json).
 - Atom and feed-JSON are useful for discovery and updates, but they include snippets and requester names; they should not be treated as a de-identified dataset or as a complete body export [sample request feed](https://fyi.org.nz/feed/request/34872-appointment-of-members-of-the-electoral-commission), [sample feed JSON](https://fyi.org.nz/feed/request/34872-appointment-of-members-of-the-electoral-commission.json).
 - Responsible collection should be metadata-first, low-rate, and pre-agreed with FYI before any large pull: `robots.txt` blocks search/feed paths for general crawlers, blocks many named AI/bot user agents entirely, and says the blocks are mainly to reduce bot server load [FYI robots.txt](https://fyi.org.nz/robots.txt); FYI is volunteer-run and invites contact for missing API features [FYI contact](https://fyi.org.nz/help/contact), [FYI API help](https://fyi.org.nz/help/api).
 - The Public Service Commission all-data CSV can be joined as an agency-period denominator where FYI authority names can be reconciled to PSC agencies, but it cannot be joined request-by-request and does not cover all FYI authorities such as local government bodies or ministers' offices [PSC OIA statistics page](https://www.publicservice.govt.nz/data/oia-statistics), [PSC all-data CSV](https://www.publicservice.govt.nz/assets/DirectoryFile/v_OIAStatisticsAllDataResults-1.csv), [FYI all-authorities.csv](https://fyi.org.nz/body/all-authorities.csv).
 
-**Overall confidence:** Medium — the endpoint behaviour is directly verified on 2026-07-03 with low-volume fetches, but corpus-wide completeness should not be measured until FYI has agreed to the collection method.
+**Overall confidence:** Medium — the endpoint behaviour is directly verified on 2026-07-03 with low-volume fetches across five distinct public requests (the per-request field check is tabulated below), but corpus-wide completeness should not be measured until FYI has agreed to the collection method.
 
 ## Evidence
 
@@ -32,9 +32,29 @@ The authority CSV is not a request corpus export: its header is `Name, Short nam
 
 ### Retrievable request fields and completeness
 
-For the request `.json` surface, a direct fetch of one public request returned top-level request keys `id`, `url_title`, `title`, `created_at`, `updated_at`, `described_state`, `display_status`, `awaiting_description`, `prominence`, `law_used`, `tags`, `public_body`, `user`, and `info_request_events` [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json). I then checked five recent public request JSON endpoints from the public successful-request list and all five contained `title`, `public_body`, `described_state`, `created_at`, `updated_at`, `tags`, and at least one `info_request_events` row [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json). That is enough to treat those fields as available for a pilot, but not enough to claim corpus-wide completeness without a permitted crawl [FYI robots.txt](https://fyi.org.nz/robots.txt).
+For the request `.json` surface, a direct fetch of one public request returned top-level request keys `id`, `url_title`, `title`, `created_at`, `updated_at`, `described_state`, `display_status`, `awaiting_description`, `prominence`, `law_used`, `tags`, `public_body`, `user`, and `info_request_events` [request 34872 JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json).
 
-For each request, `public_body` gives the authority, `described_state` and `display_status` give FYI's current classified state, and event rows give event-level `event_type`, `created_at`, `described_state`, `calculated_state`, `display_status`, `incoming_message_id`, `outgoing_message_id`, and `comment_id` [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json). The practical mapping is: title = `title`; authority = `public_body.name` and `public_body.url_name`; status/outcome = `described_state`, `display_status`, and latest event `calculated_state`; dates = request `created_at`, `updated_at`, and event `created_at`; tags = request `tags`; category = not a separate field in the tested request JSON, so any category analysis should use `tags`, authority tags, search status labels, or a separately built taxonomy rather than assuming a first-class category field [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json), [FYI advanced search](https://fyi.org.nz/advancedsearch).
+To test whether that shape holds across requests rather than for one lucky sample, I took the five most recent requests visible on FYI's public successful-request list on 2026-07-03 and fetched each `.json` [FYI successful-request list](https://fyi.org.nz/list/successful). The check is reproducible with:
+
+```
+for id in 34692 34820 34868 34872 34994; do
+  curl -LfsS "https://fyi.org.nz/request/${id}.json"   # 302-redirects to the slug URL and returns the request JSON
+done
+```
+
+All five returned HTTP 200 and carried every one of the nine load-bearing keys, with `law_used` set to `foi` throughout; the only completeness gap is that `tags` was an empty array in all five:
+
+| Request ID | Created (UTC+12) | `described_state` | `info_request_events` rows | `tags` populated? | All 9 keys present? |
+|---|---|---|---|---|---|
+| 34692 | 2026-05-13 | successful | 11 | no (`[]`) | yes |
+| 34820 | 2026-05-30 | successful | 7 | no (`[]`) | yes |
+| 34868 | 2026-06-07 | partially_successful | 4 | no (`[]`) | yes |
+| 34872 | 2026-06-07 | successful | 6 | no (`[]`) | yes |
+| 34994 | 2026-06-28 | successful | 3 | no (`[]`) | yes |
+
+The keys named above are therefore present and populated for a pilot in every sampled request except `tags`, which exists as a field but was unpopulated in all five and so cannot be relied on for classification. This is enough to treat the metadata shape as stable for a pilot, but not enough to claim corpus-wide completeness — including how often `tags`, `law_used`, or event fields are actually filled across the full archive — without a permitted crawl [FYI robots.txt](https://fyi.org.nz/robots.txt).
+
+For each request, `public_body` gives the authority, `described_state` and `display_status` give FYI's current classified state, and event rows give event-level `event_type`, `created_at`, `described_state`, `calculated_state`, `display_status`, `incoming_message_id`, `outgoing_message_id`, and `comment_id` [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json). The practical mapping is: title = `title`; authority = `public_body.name` and `public_body.url_name`; status/outcome = `described_state`, `display_status`, and latest event `calculated_state`; dates = request `created_at`, `updated_at`, and event `created_at`; tags = request `tags`; category = not a separate field in the tested request JSON, and because request `tags` were empty in all five sampled requests, category analysis should lean on authority tags, search status labels, or a separately built taxonomy rather than assuming either a first-class category field or reliably populated request tags [sample request JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json), [FYI advanced search](https://fyi.org.nz/advancedsearch).
 
 FYI's advanced search documents status filters including `waiting_response`, `not_held`, `rejected`, `partially_successful`, `successful`, `waiting_clarification`, `gone_postal`, `internal_review`, `error_message`, `requires_admin`, and `user_withdrawn`; it also documents `latest_status`, `requested_from`, `requested_by`, `request`, `filetype`, date ranges, and `tag:` query operators [FYI advanced search](https://fyi.org.nz/advancedsearch). Those search operators are useful for manually validating classification logic, but search paths are disallowed in FYI's `robots.txt`, so they should not be used as a crawling backbone without operator permission [FYI robots.txt](https://fyi.org.nz/robots.txt).
 
@@ -99,7 +119,13 @@ That CSV can provide an agency-period denominator for questions like "what share
 5. FYI, "Advanced search", fetched with `curl` on 2026-07-03: <https://fyi.org.nz/advancedsearch>.
 6. FYI, all-authorities CSV, fetched with `curl` on 2026-07-03: <https://fyi.org.nz/body/all-authorities.csv>.
 7. FYI, PSC authority JSON, fetched with `curl` on 2026-07-03: <https://fyi.org.nz/body/psc.json>.
-8. FYI, sample public request JSON, fetched with `curl` on 2026-07-03: <https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json>.
+8. FYI, public successful-request list (used to select the five sampled requests), fetched with `curl` on 2026-07-03 (HTML at HTTP 200; note the `.json` variant returned HTTP 500 that day): <https://fyi.org.nz/list/successful>.
+8a. FYI, sampled public request JSONs, each fetched with `curl` on 2026-07-03 (all HTTP 200):
+    - <https://fyi.org.nz/request/34692-appointment-to-the-board-of-the-tertiary-education-commission.json>
+    - <https://fyi.org.nz/request/34820-appointment-to-the-building-practitioners-board.json>
+    - <https://fyi.org.nz/request/34868-key-to-communities-shelby-new-zealand-promotion.json>
+    - <https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json>
+    - <https://fyi.org.nz/request/34994-unlocked-and-unaccounted-for-guns-and-tasers-among-tactical-gear-lost-by-police.json>
 9. FYI, sample public request Atom feed, fetched with `curl` on 2026-07-03: <https://fyi.org.nz/feed/request/34872-appointment-of-members-of-the-electoral-commission>.
 10. FYI, sample public request feed JSON, fetched with `curl` on 2026-07-03: <https://fyi.org.nz/feed/request/34872-appointment-of-members-of-the-electoral-commission.json>.
 11. mySociety, "API | Alaveteli", fetched with built-in WebSearch/WebFetch on 2026-07-03: <https://alaveteli.org/docs/developers/api/>.
