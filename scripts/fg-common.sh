@@ -73,7 +73,16 @@ make_worktree() {  # $1 = ref to check out (e.g. origin/main, refs/fg/pr-12); se
   git -C "$REPO_DIR" fetch origin --quiet
   local parent; parent="$(mktemp -d "${TMPDIR:-/tmp}/fg-worktree.XXXXXX")"
   WORKTREE="$parent/repo"
-  git -C "$REPO_DIR" worktree add --quiet --detach "$WORKTREE" "$1"
+  # If `worktree add` fails (bad/missing ref), the dir never gets created —
+  # bail loudly and clear WORKTREE so callers never `cd` into a ghost path and
+  # run the agent against the wrong tree. Callers invoked with `|| true` disable
+  # `set -e` inside the function, so we can't rely on it aborting for us.
+  if ! git -C "$REPO_DIR" worktree add --quiet --detach "$WORKTREE" "$1"; then
+    err "worktree add failed for ref '$1'"
+    rm -rf "$parent" 2>/dev/null || true
+    WORKTREE=""
+    return 1
+  fi
 }
 
 remove_worktree() {

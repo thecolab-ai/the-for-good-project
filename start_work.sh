@@ -248,7 +248,7 @@ work_one() {  # $1 = issue number
     info "[dry-run] would run: AGENT=$AGENT in a fresh origin/main worktree on the following prompt:"; log "$(work_prompt "$n" | sed 's/^/    /')"
     finish_issue "$n"; return 0
   fi
-  make_worktree origin/main
+  make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
   info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
   set +e; run_agent "$(work_prompt "$n")" "$WORKTREE"; local rc=$?; set -e
   was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run, don't roll to the next issue
@@ -269,6 +269,19 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
     fi
     return 0
   fi
+  # A fork PR's branch lives on the contributor's fork, not origin — we can
+  # neither check it out as origin/$branch nor push a rework to it (only its
+  # author can). Drop it from MY rework queue so the loop doesn't spin on it
+  # forever; take_unassigned_rework already skips fork PRs the same way.
+  local head_owner
+  head_owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
+  if [ "$head_owner" != "$OWNER" ]; then
+    warn "#$n's PR #$pr lives on a fork ($head_owner) — can't push a rework. Unassigning @me."
+    if [ "$DRY_RUN" = 0 ]; then
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null || true
+    fi
+    return 0
+  fi
   branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName)"
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would rework PR #$pr (branch $branch) against the review feedback, push, and move #$n → in-review"
@@ -276,7 +289,7 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   fi
   local before after
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
-  make_worktree "origin/$branch"
+  make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
   info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
   set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE"; local rc=$?; set -e
   was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run
