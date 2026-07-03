@@ -1,4 +1,5 @@
-import type { IssueLite, Finding } from "./types";
+import type { IssueLite, Finding, Stage } from "./types";
+import { STAGE_ORDER } from "./meta";
 
 // issue number -> stream number, from the stream:<n> label.
 export function issueStreamMap(issues: IssueLite[]): Map<number, number> {
@@ -8,6 +9,30 @@ export function issueStreamMap(issues: IssueLite[]): Map<number, number> {
     if (l) m.set(it.number, Number(l.replace(/stream:/i, "")));
   }
   return m;
+}
+
+const stageRank = (stage: Stage) => {
+  const i = STAGE_ORDER.indexOf(stage as Exclude<Stage, "none">);
+  return i === -1 ? STAGE_ORDER.length : i;
+};
+
+// stream number -> its subtask issues (the non-PR children of the Discover
+// root: research / ideate / build), ordered by stage then number. Lets the
+// overview surface each stream's created subtasks and their live status
+// without loading the full lineage DAG.
+export function subtasksByStream(issues: IssueLite[]): Map<number, IssueLite[]> {
+  const m = issueStreamMap(issues);
+  const out = new Map<number, IssueLite[]>();
+  for (const it of issues) {
+    if (it.isPR || it.stage === "discover") continue;
+    const s = m.get(it.number);
+    if (s == null) continue;
+    const list = out.get(s) ?? [];
+    list.push(it);
+    out.set(s, list);
+  }
+  for (const list of out.values()) list.sort((a, b) => stageRank(a.stage) - stageRank(b.stage) || a.number - b.number);
+  return out;
 }
 
 export function findingsForStream(stream: number, findings: Finding[], issues: IssueLite[]): Finding[] {
