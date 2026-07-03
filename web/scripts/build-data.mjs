@@ -88,16 +88,31 @@ async function main() {
   const reviewsGiven = new Map();  // login -> Set(prNumbers)
   const reviewLast = new Map();    // login -> most recent review ISO timestamp
   const reviewPeopleByPr = new Map(); // pr number -> Map(login -> Person)
+  const pathToAuthor = new Map(); // repo file path -> { login, merged, mergedAt } of the PR that added/last-touched it
+  const nameVotes = new Map();    // login -> Map(display name -> count), from commit author names
   try {
     let after = null;
     for (let i = 0; i < 10; i++) {
-      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login avatarUrl url} state submittedAt}}}}}}`;
+      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number mergedAt author{login} files(first:100){nodes{path}} commits(last:1){nodes{commit{author{name}}}} reviews(first:50){nodes{author{login avatarUrl url} state submittedAt}}}}}}`;
       const gres = await fetch(`${API}/graphql`, { method: "POST", headers, body: JSON.stringify({ query: q, variables: { cursor: after } }) });
       if (!gres.ok) { console.warn("reviews graphql:", gres.status); break; }
       const data = (await gres.json())?.data?.repository?.pullRequests;
       if (!data) break;
       for (const pr of data.nodes) {
         const prAuthor = pr.author?.login;
+        if (prAuthor) {
+          // Which GitHub user added/last-touched each file — the reliable author
+          // identity, independent of git user.name or finding frontmatter.
+          for (const fn of pr.files?.nodes || []) {
+            const p = fn.path, prev = pathToAuthor.get(p), merged = !!pr.mergedAt;
+            if (!prev || (merged && (!prev.merged || (pr.mergedAt || "") > (prev.mergedAt || "")))) {
+              pathToAuthor.set(p, { login: prAuthor, merged, mergedAt: pr.mergedAt });
+            }
+          }
+          // Vote for this user's display name from their commit's author name.
+          const nm = pr.commits?.nodes?.[0]?.commit?.author?.name;
+          if (nm) { const mv = nameVotes.get(prAuthor) || new Map(); mv.set(nm, (mv.get(nm) || 0) + 1); nameVotes.set(prAuthor, mv); }
+        }
         for (const rv of pr.reviews.nodes) {
           const who = rv.author?.login;
           if (!who || who === prAuthor) continue;
@@ -114,6 +129,17 @@ async function main() {
       after = data.pageInfo.endCursor;
     }
   } catch (e) { console.warn("reviews unavailable:", e.message); }
+
+  // Harness/agent tokens that sometimes land in a finding's `author:` field —
+  // never real people, so they must not become leaderboard entries.
+  const HARNESS = new Set(["codex", "claude", "hermes", "hermes-agent", "none", "unknown", "human"]);
+  // The most common display name a GitHub user has committed under (e.g. Adam
+  // has no GitHub profile name but commits as "Adam Holt"). Falls back to login.
+  const mostCommonName = (login) => {
+    const mv = nameVotes.get(login);
+    if (!mv || mv.size === 0) return null;
+    return [...mv.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  };
 
   // --- issues + PRs ---
   const issues = [];
@@ -337,7 +363,14 @@ async function main() {
   for (const p of prs) { const r = ensure(p.author); if (r) { r.prsOpened++; if (p.merged) r.prsMerged++; bumpActivity(r, p.updatedAt); } }
   for (const c of commitContributors) { const r = ensure(person(c)); if (r) r.commits += c.contributions || 0; }
   for (const f of findings) {
-    const login = f.author && f.author !== "unknown" ? canonicalAuthor(f.author) : null;
+    // Attribute a finding to the GitHub user who OPENED THE PR that added it —
+    // the reliable identity. Fall back to the frontmatter author only if no PR
+    // maps to the file, and never credit a harness name (codex/claude/…).
+    let login = pathToAuthor.get(f.path)?.login || null;
+    if (!login && f.author && f.author !== "unknown") {
+      const c = canonicalAuthor(f.author);
+      if (c && !HARNESS.has(c.toLowerCase())) login = c;
+    }
     if (!login) continue;
     if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain); bumpActivity(r, f.date);
@@ -353,7 +386,7 @@ async function main() {
     .map((p) => {
       const researchScore = p.findingsAuthored * 5 + p.prsMerged * 3 + p.issuesAssigned * 2 + p.prsOpened + Math.min(p.commits, 50);
       const reviewScore = p.reviewsGiven * 4;
-      return { ...p, domains: [...p.domains], researchScore, reviewScore, score: researchScore + reviewScore };
+      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, reviewScore, score: researchScore + reviewScore };
     })
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);

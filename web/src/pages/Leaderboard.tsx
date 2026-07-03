@@ -65,7 +65,8 @@ export default function Leaderboard() {
 
                       {/* Name + roles + last active */}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">@{c.login}</div>
+                        <div className="truncate font-medium">{c.name || `@${c.login}`}</div>
+                        {c.name && <div className="truncate text-xs text-muted-foreground">@{c.login}</div>}
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           {roles(c).map((r) => (
                             <span
