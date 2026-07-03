@@ -1,20 +1,37 @@
-# FYI.org.nz OIA request-title sample — auditable data note
+# OIA volume/title data — auditable data note
 
-This directory holds the raw, preserved sample behind the FYI title-level analysis in
+This directory holds the raw, preserved data behind
 [`research/findings/civic-transparency/repetitive-oia-requests-bodies-topics.md`](../../findings/civic-transparency/repetitive-oia-requests-bodies-topics.md),
-so a reviewer can audit the numbers directly instead of trusting a scrape.
+so a reviewer can audit every number directly instead of trusting a scrape. Three
+artifacts back the finding's three quantitative claims.
 
 ## Files
 
-- **`sample-2026-07-03.json`** — the committed snapshot. For each of the ten
+- **`psc-oia-2025-totals.csv`** — **central-government volume.** Per-agency count of
+  OIA requests *completed* in calendar 2025, parsed from the two public PSC
+  workbooks (`OIA-statistics-Jan-Jun-2025-FInal.xlsx` + `OIA-statistics-Jul-Dec-2025.xlsx`).
+  Columns: agency, Jan–Jun completed, Jul–Dec completed, 2025 total, share of total.
+  It sums to **151,619** across 111 agencies (Police 64,058; top-3 = 66%). It is the
+  "OIA requests completed" column (col C) of each workbook's *Timeliness & publication*
+  and *Police & NZDF – time & pub* sheets, category roll-up rows excluded — so it is
+  checkable line-by-line against the public workbooks. (The repo has no XLSX
+  dependency, so this table is committed as the reproducible calculation rather than a
+  runnable script; the parse method is stated in the finding's provenance section.)
+- **`authority-list-2026-07-03.json`** — **full FYI corpus.** Every active FYI
+  authority (count > 0) with its request count, plus derived corpus totals
+  (**34,487** requests across **703** active bodies; top-10 = 35.9%, top-20 = 53.4%).
+  Backs the corpus-wide FYI claims and the top-20 authority table in the finding.
+  Regenerate: `node scripts/research/fyi-authority-list.mjs > research/data/oia-title-sample/authority-list-2026-07-03.json`.
+- **`sample-2026-07-03.json`** — **FYI title sample.** For each of the ten
   highest-volume FYI authorities it preserves the FYI "N requests" count, the
   authority URL, and the sampled request titles (with FYI request IDs); plus a
   site-wide "recent" slice, the topic-cluster tally, the normalised-title
   recurrence groups, and the cross-body groups. Every title is preserved verbatim
-  so the coding is inspectable.
-- **`../../../scripts/research/fyi-oia-title-sample.mjs`** — the script that
-  produces it. Run: `node scripts/research/fyi-oia-title-sample.mjs > research/data/oia-title-sample/sample-2026-07-03.json`.
-  It fetches through the repo's ADR-0006 fetch ladder (`scripts/fetch.mjs`).
+  so the coding is inspectable. Regenerate (defaults reproduce the committed snapshot —
+  10 bodies × 6 pages + 4 recent pages):
+  `node scripts/research/fyi-oia-title-sample.mjs > research/data/oia-title-sample/sample-2026-07-03.json`.
+
+Both FYI scripts fetch through the repo's ADR-0006 fetch ladder (`scripts/fetch.mjs`).
 
 ## What was and wasn't collected
 

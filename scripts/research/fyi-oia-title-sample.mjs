@@ -28,13 +28,14 @@ const FETCH = path.join(here, "..", "fetch.mjs");
 const DATE = process.env.SAMPLE_DATE || "2026-07-03";
 
 // Top authorities on FYI (slugs verified against fyi.org.nz/body/<slug>), plus a
-// site-wide recent slice. 2 pages/body (~50 titles) + 4 recent pages (~100).
+// site-wide recent slice. Defaults reproduce the committed sample: 6 pages/body
+// (~80 titles) + 4 recent pages (~100).
 const BODIES = [
   "new_zealand_police", "ministry_of_health", "mbie", "university_of_otago",
   "acc", "ministry_of_justice", "auckland_transport", "auckland_council",
   "ministry_of_education", "wellington_city_council",
 ];
-const PAGES_PER_BODY = +(process.env.PAGES_PER_BODY || 2);
+const PAGES_PER_BODY = +(process.env.PAGES_PER_BODY || 6);
 const RECENT_PAGES = +(process.env.RECENT_PAGES || 4);
 
 function fetchUrl(url) {
