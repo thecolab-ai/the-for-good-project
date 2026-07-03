@@ -57,7 +57,11 @@ bad_bodies=(
   "${lt}/tool_use${gt}"
   "Result: [WebSearch for bed capacity...] showed 400 beds."
   "See [TODO: add citation] for details."
-  "The report said [...] funding fell."
+  "A standalone citation stub:
+
+- [...]
+"
+  "A placeholder link [...](https://www.stats.govt.nz/page) here."
   "A dangling link [MSD report]()."
   "A placeholder link [MSD report](url)."
   "An example link [report](https://example.com/report)."
@@ -74,11 +78,16 @@ for body in "${bad_bodies[@]}"; do
   rm -f "$TMP/research/findings/other/bad.md"
 done
 
-# 3) Legit look-alikes still pass: real link text starting with 'Source'.
+# 3) Legit look-alikes still pass:
+#    - reference-style/inline links named 'source', and a '[source]:' definition
+#    - a bracketed ellipsis used as scholarly QUOTATION ELISION, mid-prose
+#      (must NOT be flagged as a placeholder — the #312 review's key finding)
 write_finding "$TMP/research/findings/other/clean.md" \
   "A real link [source](https://www.stats.govt.nz/page) and a ref-style [source][1].
+The Act requires \"[...] reasonable compliance\" (s5), per [MSD][2].
 
-[1]: https://www.stats.govt.nz/page"
-run_validator >/dev/null || fail "legit 'source' links should validate"
+[1]: https://www.stats.govt.nz/page
+[2]: https://www.msd.govt.nz/page"
+run_validator >/dev/null || fail "legit 'source' links + quotation elision should validate"
 
 echo "validate-findings artifact-gate tests passed"

@@ -45,9 +45,18 @@ const isPlaceholder = (v) => !v || /[<>]/.test(v) || /YYYY-MM-DD|exact model id|
 const ARTIFACT_PATTERNS = [
   [/<\/?antml[:_][a-z]/i, "tool-wrapper artifact tag (antml:*)"],
   [/<\/?(?:function_calls?|function_results?|fnr|invoke|tool_use|tool_result|search_results?|system-reminder|automated_reminder)\b/i, "tool-wrapper artifact tag"],
-  [/\[\s*(?:WebSearch|WebFetch|web search|TODO|TBD|FIXME|CITATION NEEDED)\b[^\]]*\]/i, "placeholder citation stub"],
-  [/\[(?:source|citation|ref|link|url)\](?!\s*[([])/i, "bare placeholder citation stub (no href)"],
-  [/\[(?:\.\.\.|…)\]/, "unfilled '[...]' placeholder"],
+  [/\[\s*(?:WebSearch|WebFetch|TODO|TBD|FIXME|CITATION NEEDED)\b[^\]]*\]/i, "placeholder citation stub"],
+  // A bare "[source]/[ref]/…" stub, but NOT a markdown reference link: exempt
+  // both the inline reference "[source][1]" (next char "[") / "[source](url)"
+  // (next char "(") and the reference DEFINITION line "[source]: https://…"
+  // (next char ":").
+  [/\[(?:source|citation|ref|link|url)\](?!\s*[([:])/i, "bare placeholder citation stub (no href)"],
+  // An unfilled "[...]" citation placeholder — but ONLY as link text
+  // ("[...](" / "[...][") or standing alone on its own line/bullet. A bare
+  // "[...]" embedded in prose is standard quotation-elision (e.g. quoting a
+  // statute with omitted words) and must NOT be flagged (#290, review of #312).
+  [/\[(?:\.\.\.|…)\](?=\s*[([])/, "unfilled '[...]' placeholder link"],
+  [/^[ \t]*(?:[-*+]\s+)?\[(?:\.\.\.|…)\][ \t]*$/m, "unfilled '[...]' placeholder (standalone)"],
   [/\]\(\s*\)/, "markdown link with an EMPTY href"],
   [/\]\(\s*<?(?:url|link|href|source)>?\s*\)/i, "markdown link with a placeholder href"],
   [/\]\(\s*(?:https?:\/\/)?(?:www\.)?example\.(?:com|org|net)\b[^)]*\)/i, "markdown link pointing at example.com (placeholder)"],
