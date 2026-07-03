@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight } from "lucide-react";
+import { ArrowLeft, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -11,7 +11,7 @@ import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
-import { findingsForStream, streamStateStyle, harnessLabel } from "@/lib/streams";
+import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection } from "@/lib/streams";
 import { cleanTitle } from "@/lib/format";
 
 const alwaysMatches = () => true;
@@ -110,6 +110,44 @@ export default function StreamDetail() {
         <StreamProgress state={state} className="min-w-[560px]" />
       </Card>
 
+      {/* The human gate (G1, docs/STREAMS.md): the machines are done — a
+          person now grades the evidence and sets the direction. */}
+      {isAwaitingDirection(state) ? (
+        <Card className="mb-6 border-amber-500/40 bg-amber-500/5 p-5 ring-1 ring-amber-500/30">
+          <div className="flex flex-wrap items-start gap-4">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
+              <UserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </span>
+            <div className="min-w-0 flex-1 basis-64">
+              <div className="font-serif text-base font-semibold">Waiting on a human decision</div>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                The research is done and synthesised below, with candidate outcomes drawn from the evidence.
+                A human steward now grades the evidence, edits or rejects those options, and decides the
+                direction: <span className="font-medium text-foreground">go deeper, pivot, proceed, or park</span>.
+                Nothing gets built until a person makes that call.
+              </p>
+              <div className="mt-2 text-xs text-muted-foreground">
+                {steward
+                  ? <>Steward: <a href={`https://github.com/${steward}`} target="_blank" rel="noreferrer" className="font-medium text-foreground hover:text-brand-cyan-dark">@{steward}</a></>
+                  : <>No steward has claimed this decision yet — it's open to any maintainer.</>}
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              {hasOverview ? (
+                <a href="#synthesis" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-secondary">
+                  <Lightbulb className="h-3.5 w-3.5" /> Read the overview
+                </a>
+              ) : null}
+              {rootIssue ? (
+                <a href={rootIssue.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700">
+                  Make the direction call <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main: the journey — problem → research → synthesis */}
         <div className="space-y-8 lg:col-span-2">
@@ -165,7 +203,7 @@ export default function StreamDetail() {
           </section>
 
           {/* 3 — the synthesis */}
-          <section>
+          <section id="synthesis" className="scroll-mt-20">
             <StepHeader n={3} icon={Lightbulb} label="The synthesised stream" />
             {hasOverview ? (
               <Card className="border-l-2 border-l-brand-cyan p-6">

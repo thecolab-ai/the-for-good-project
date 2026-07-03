@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2, LayoutGrid, Rows3, Users, ChevronUp, ChevronDown, ChevronsUpDown, ChevronRight, ListTree } from "lucide-react";
+import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2, LayoutGrid, Rows3, Users, ChevronUp, ChevronDown, ChevronsUpDown, ChevronRight, ListTree, UserCheck } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -12,12 +12,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge, StageBadge, StatusBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
-import { streamStateStyle, harnessLabel, isStreamShipped, streamStageIndex, subtasksByStream } from "@/lib/streams";
+import { streamStateStyle, harnessLabel, isStreamShipped, isAwaitingDirection, streamStageIndex, subtasksByStream } from "@/lib/streams";
 import { relativeTime, cleanTitle } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary, IssueLite } from "@/lib/types";
 
-type Filter = "all" | "progress" | "shipped";
+type Filter = "all" | "decision" | "progress" | "shipped";
 type View = "cards" | "table";
 type SortKey = "stream" | "state" | "issues" | "findings" | "merged" | "updated";
 const VIEW_KEY = "fgp-streams-view";
@@ -40,6 +40,17 @@ const writeView = (v: View) => { try { localStorage.setItem(VIEW_KEY, v); } catc
 function StatePill({ state }: { state: string }) {
   if (!state) return null;
   return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{state}</span>;
+}
+
+// The human-gate marker: research is done and synthesised — a person now has
+// to grade the evidence and pick a direction. Amber so it reads as "action
+// needed", distinct from every machine-lifecycle pill.
+function DecisionPill({ className }: { className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400", className)}>
+      <UserCheck className="h-3 w-3 shrink-0" /> Human decision needed
+    </span>
+  );
 }
 
 function PeopleStrip({ people, steward, size = 22, max = 5 }: { people: StreamSummary["people"]; steward?: string; size?: number; max?: number }) {
@@ -92,12 +103,13 @@ function SubtaskList({ items, linkable, max }: { items: IssueLite[]; linkable?: 
 function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }) {
   const harnesses = Object.keys(s.agents || {});
   const models = Object.keys(s.models || {});
+  const needsHuman = isAwaitingDirection(s.state);
   return (
     <Link to={`/streams/${s.stream}`}>
-      <Card className="group flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-        <div className="flex items-center gap-2">
+      <Card className={cn("group flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md", needsHuman && "border-amber-500/40 ring-1 ring-amber-500/30")}>
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground">#{s.stream}</span>
-          <StatePill state={s.state} />
+          {needsHuman ? <DecisionPill /> : <StatePill state={s.state} />}
           <DomainBadge domain={s.domain || null} />
           {s.hasOverview ? <FileText className="ml-auto h-3.5 w-3.5 text-brand-cyan-dark" aria-label="Has overview" /> : null}
         </div>
@@ -215,7 +227,7 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                     <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
                     <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
                   </TableCell>
-                  <TableCell><StatePill state={s.state} /></TableCell>
+                  <TableCell>{isAwaitingDirection(s.state) ? <DecisionPill /> : <StatePill state={s.state} />}</TableCell>
                   <TableCell><DomainBadge domain={s.domain || null} /></TableCell>
                   <TableCell className="text-right tabular-nums" title="open / total"><span className="text-foreground">{s.openIssues}</span><span className="text-muted-foreground">/{s.issues}</span></TableCell>
                   <TableCell className="text-right tabular-nums">{s.findings}</TableCell>
@@ -279,13 +291,16 @@ export default function Streams() {
   // Cross-stream rollup for the header stats.
   const totals = useMemo(() => {
     const people = new Set<string>();
-    let findings = 0, merged = 0, inProgress = 0, shipped = 0;
+    let findings = 0, merged = 0, inProgress = 0, shipped = 0, decisions = 0;
     for (const s of streams) {
       findings += s.findings; merged += s.mergedPRs;
-      if (isStreamShipped(s.state)) shipped++; else inProgress++;
+      // Three disjoint buckets: shipped / awaiting a human / still being worked.
+      if (isStreamShipped(s.state)) shipped++;
+      else if (isAwaitingDirection(s.state)) decisions++;
+      else inProgress++;
       for (const p of s.people) people.add(p.login);
     }
-    return { count: streams.length, inProgress, shipped, findings, merged, people: people.size };
+    return { count: streams.length, inProgress, shipped, findings, merged, decisions, people: people.size };
   }, [streams]);
 
   if (loading) return <Loading />;
@@ -293,7 +308,10 @@ export default function Streams() {
 
   const needle = q.toLowerCase();
   const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(needle) || String(s.stream).includes(q) || (s.domain || "").toLowerCase().includes(needle);
-  const inProgress = streams.filter((s) => !isStreamShipped(s.state) && matchesText(s));
+  // Awaiting-direction streams are pulled OUT of "in progress" into their own
+  // pinned group: the machines are done and a human is the blocker.
+  const decisions = streams.filter((s) => isAwaitingDirection(s.state) && matchesText(s));
+  const inProgress = streams.filter((s) => !isStreamShipped(s.state) && !isAwaitingDirection(s.state) && matchesText(s));
   const shipped = streams.filter((s) => isStreamShipped(s.state) && matchesText(s));
 
   const sortStreams = (list: StreamSummary[]) => [...list].sort((a, b) => {
@@ -302,11 +320,16 @@ export default function Streams() {
     return sort.dir === "asc" ? cmp : -cmp;
   });
 
-  // Table view respects the filter but renders a single sorted list.
-  const tableRows = sortStreams(filter === "shipped" ? shipped : filter === "progress" ? inProgress : [...inProgress, ...shipped]);
-  const showProgress = filter !== "shipped" && inProgress.length > 0;
-  const showShipped = filter !== "progress" && shipped.length > 0;
-  const nothing = view === "table" ? tableRows.length === 0 : (!showProgress && !showShipped);
+  // Table view respects the filter but renders a single sorted list; on "all"
+  // the human-gate streams lead — they're the ones waiting on a person.
+  const tableRows = filter === "shipped" ? sortStreams(shipped)
+    : filter === "progress" ? sortStreams(inProgress)
+    : filter === "decision" ? sortStreams(decisions)
+    : [...sortStreams(decisions), ...sortStreams(inProgress), ...sortStreams(shipped)];
+  const showDecisions = (filter === "all" || filter === "decision") && decisions.length > 0;
+  const showProgress = (filter === "all" || filter === "progress") && inProgress.length > 0;
+  const showShipped = (filter === "all" || filter === "shipped") && shipped.length > 0;
+  const nothing = view === "table" ? tableRows.length === 0 : (!showDecisions && !showProgress && !showShipped);
 
   return (
     <div>
@@ -319,8 +342,9 @@ export default function Streams() {
       ) : (
         <>
           {/* Stats */}
-          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
             <StatCard label="Streams" value={totals.count} icon={Network} accent="#2E4057" />
+            <StatCard label="Awaiting direction" value={totals.decisions} icon={UserCheck} accent="#D97706" />
             <StatCard label="In progress" value={totals.inProgress} icon={Loader2} accent="#0EA5E9" />
             <StatCard label="Shipped" value={totals.shipped} icon={CheckCircle2} accent="#0E8A16" />
             <StatCard label="Findings" value={totals.findings} icon={FileText} accent="#8B5CF6" />
@@ -335,7 +359,8 @@ export default function Streams() {
               <Input placeholder="Search streams…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
             </div>
             <Segmented>
-              <SegButton active={filter === "all"} onClick={() => setFilter("all")}>All <span className="tabular-nums opacity-60">{inProgress.length + shipped.length}</span></SegButton>
+              <SegButton active={filter === "all"} onClick={() => setFilter("all")}>All <span className="tabular-nums opacity-60">{decisions.length + inProgress.length + shipped.length}</span></SegButton>
+              <SegButton active={filter === "decision"} onClick={() => setFilter("decision")}><UserCheck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Needs a human <span className="tabular-nums opacity-60">{decisions.length}</span></SegButton>
               <SegButton active={filter === "progress"} onClick={() => setFilter("progress")}><Loader2 className="h-3.5 w-3.5" /> In progress <span className="tabular-nums opacity-60">{inProgress.length}</span></SegButton>
               <SegButton active={filter === "shipped"} onClick={() => setFilter("shipped")}><CheckCircle2 className="h-3.5 w-3.5" /> Shipped <span className="tabular-nums opacity-60">{shipped.length}</span></SegButton>
             </Segmented>
@@ -351,6 +376,15 @@ export default function Streams() {
             <StreamTable streams={tableRows} subtasksMap={subtasksMap} sort={sort} onSort={onSort} />
           ) : (
             <div className="space-y-10">
+              {showDecisions ? (
+                <section>
+                  <SectionHeader icon={UserCheck} label="Waiting on a human decision" count={decisions.length} tint="#D97706" />
+                  <p className="-mt-1 mb-3 max-w-2xl text-sm text-muted-foreground">
+                    Research on these is done and synthesised. A human steward now grades the evidence, weighs the candidate outcomes, and decides the direction — go deeper, pivot, proceed, or park.
+                  </p>
+                  <CardGrid streams={sortStreams(decisions)} subtasksMap={subtasksMap} />
+                </section>
+              ) : null}
               {showProgress ? (
                 <section>
                   <SectionHeader icon={Loader2} label="In progress" count={inProgress.length} tint="#2E4057" />

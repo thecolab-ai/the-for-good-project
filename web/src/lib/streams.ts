@@ -80,6 +80,15 @@ export function isStreamShipped(state: string): boolean {
   return streamStageIndex(state) === 5;
 }
 
+// The human gate (G1/G2, docs/STREAMS.md): research is synthesised and the
+// stream is parked until a human steward grades the evidence and decides the
+// direction. Matches both the doc lifecycle state and the root issue status
+// ("awaiting-direction"). Single source of truth for the "needs a human"
+// treatment on the Streams and StreamDetail pages.
+export function isAwaitingDirection(state: string): boolean {
+  return (state || "").toLowerCase().includes("direction");
+}
+
 // The agent frontmatter value → a human harness label.
 export function harnessLabel(agent: string): string {
   const a = (agent || "").toLowerCase();
