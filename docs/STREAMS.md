@@ -96,10 +96,15 @@ From there, **`synthesize_work.sh`** (see [AUTOMATION.md](AUTOMATION.md),
 ADR-0003, ADR-0007) does the tedious half: an agent reads every merged finding
 in the stream and drafts the overview as a PR — takeaways with carried
 confidence, open questions, and 2–4 neutral candidate outcomes the evidence
-could support — and the root moves to `status: awaiting-direction`. The
-judgement half never leaves the human: the options are unranked and
-unrecommended, the draft's direction section is a literal `TODO(steward)`,
-and only the steward's edit + decision + merge passes the gate.
+could support. If the draft flags unknowns that genuinely **block** its
+conclusions, the stream first loops back to research automatically —
+bounded to ≤3 issues/round and ≤2 rounds/stream (ADR-0012) — and only
+re-synthesises once the answers land; otherwise (or once the loop is spent)
+the root moves to `status: awaiting-direction`. The judgement half never
+leaves the human: the options are unranked and unrecommended, the draft's
+direction section is a literal `TODO(steward)`, and only the steward's edit
++ decision + merge passes the gate. To send a parked stream back through
+synthesis at any time, relabel the root `status: needs-synthesis`.
 
 ## 2. The human gates
 
@@ -156,16 +161,4 @@ a human.
   required**. Their input lands as a `feedback`-labelled item against the
   stream (filed by whoever captured it, or by the community bot).
 
-## 4. Decisions made (from #30's open questions)
-
-1. **`stream:<n>` label + body convention**, not Projects/milestones — least
-   friction, queryable, and the Action removes the bookkeeping burden.
-2. **Stream state lives in the overview doc's frontmatter** (single source of
-   truth). The label taxonomy stays small; the human work queue is driven by
-   `status: needs-synthesis` / `status: awaiting-direction` on the root issue.
-3. **Stewards**: trusted reviewers; maintainer co-sign for sensitive domains.
-4. **Feedback channel**: WhatsApp → community bot first (that's where this
-   community already is), web form later — split into its own issue.
-5. **Agent-drafted synthesis**: deferred. The reviewer stays per-finding; if
-   G1 proves heavy, an agent can *draft* the synthesis for the steward to
-   edit — but the decision stays human.
+(Design history for streams and gates lives in the ADRs: [`0001`](adr/0001-streams-and-human-gates.md), [`0003`](adr/0003-agent-drafted-synthesis.md), [`0007`](adr/0007-synthesis-drafts-candidate-outcomes.md), [`0011`](adr/0011-synthesis-rework-routing.md), [`0012`](adr/0012-synthesis-followup-research-loop.md).)

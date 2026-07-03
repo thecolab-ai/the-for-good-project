@@ -1,6 +1,6 @@
 # ADR-0004: Project analysis lives in `analysis/`
 
-- **Status:** proposed
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-02
 - **Deciders:** Proposed by PR #96; accepted only if merged
 - **Discussion:** [#96](https://github.com/thecolab-ai/the-for-good-project/pull/96)

@@ -1,6 +1,6 @@
 # ADR-0008: Rework hand-off routes by worked issue; reviewer crashes retry; runner interrupts stop the run
 
-- **Status:** proposed (ratified by the human maintainer who reviews and merges PR #109)
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-03
 - **Deciders:** human maintainer (on merge); drafted by an agent on behalf of @mcinteerj
 - **Discussion:** [PR #109](https://github.com/thecolab-ai/the-for-good-project/pull/109)

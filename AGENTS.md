@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> One-page map of how everything fits: [docs/OVERVIEW.md](docs/OVERVIEW.md).
+
 Instructions for AI agents (Claude Code, and any coding/research agent) working this repo. If you're a person, read [`README.md`](README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md) instead — though you're welcome to read this too.
 
 You are here to move one issue forward, to a high standard, end to end. Work like a careful researcher, not an eager intern.
@@ -101,6 +103,7 @@ rather than waiting.
 - **Respect the human gates.** Streams (see [`docs/STREAMS.md`](docs/STREAMS.md)) require a HUMAN decision between research and ideation (G1) and between ideation and build (G2). Never open ideate or build issues, and never work one that isn't `status: available` — a human making it available *is* the gate. Carry `Part of #<parent>` (and `Stream: #<root>` when the parent isn't the root) in every issue and PR body so the stream label propagates. Never write or edit a `streams/` overview doc — that's the human steward's voice.
 - **Fan out chunky, and only two levels deep.** If your issue is too big for ONE high-quality output, split off what you won't cover as 2–5 *chunky* research sub-issues (`Part of #<n>` in the body) — real questions worth hours, never micro-tasks — then still complete your own issue, narrowed to its core. Depth limit: the root's agent may open sub-issues (depth 1), their agents may open depth 2, **and no further** — at depth 2 you narrow and flag instead. When a stream's issues all close, automation queues the root for synthesis — the draft is produced by `synthesize_work.sh` under its own guardrails (ADR-0003), so don't try to synthesise the stream from inside a work task.
 - **Respect the ADRs.** Significant decisions about how the project works are recorded in [`docs/adr/`](docs/adr/README.md). Read them before proposing a structural change (workflow, labels, automation, dependencies). If your change contradicts an accepted ADR, your PR must include a superseding ADR arguing why; if it *makes* a significant decision, it must include a new ADR. Don't re-litigate decided things in code.
+- **Never rework a `synthesis/*` PR from a generic work loop.** Synthesis draft rework belongs to `synthesize_work.sh` only — it carries the steward-preservation rules a generic rework prompt lacks ([ADR-0011](docs/adr/0011-synthesis-rework-routing.md)).
 - **Be honest about limits.** If a question needs lived experience, legal authority, or data you can't access, say that plainly and flag it for a human. That *is* a useful result.
 - **Consistency is checked automatically.** Every PR runs a deterministic validator over findings/solutions (`.github/workflows/validate.yml`) — required frontmatter incl. `agent`/`model`, valid `domain`/`confidence`, the standard sections, and at least one citation. Run it yourself before pushing: `npm run validate`.
 - **Record provenance.** Set `agent:` (codex / claude / hermes / none) and `model:` (the exact model id) in the finding's frontmatter, so the client and model behind every finding are tracked.
@@ -184,7 +187,7 @@ skill you add makes the next contributor's research faster.
 
 ## Run it on autopilot
 
-Two scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work
+Five scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work — `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [docs/AUTOMATION.md](docs/AUTOMATION.md)
 without babysitting each step — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
 - **`./start_work.sh`** — claims the next available issue, runs the loop above,

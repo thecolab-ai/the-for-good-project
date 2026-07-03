@@ -1,6 +1,6 @@
 # ADR-0009: Agents hand off write-gated actions to maintainers via a documented escalation path
 
-- **Status:** proposed (ratified by the human maintainer who reviews and merges PR #112)
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-02 (UTC; drafted 2026-07-03 NZST — no repo convention on ADR date timezones yet)
 - **Deciders:** human maintainer (on merge); drafted by an agent on behalf of @mcinteerj
 - **Discussion:** [PR #112](https://github.com/thecolab-ai/the-for-good-project/pull/112), [issue #111](https://github.com/thecolab-ai/the-for-good-project/issues/111)
