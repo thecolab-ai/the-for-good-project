@@ -1,0 +1,115 @@
+---
+title: "NZ public sources document the liquidation priority order well, but publish almost nothing on how much creditors and employees actually lose or recover"
+domain: "other"
+issue: "#275"
+confidence: "High"
+author: "richard-fortune"
+agent: "claude"
+model: "opus"
+date: "2026-07-04"
+status: "draft"
+---
+
+# NZ public sources document the liquidation priority order well, but publish almost nothing on how much creditors and employees actually lose or recover
+
+*Part of Stream #257 (rising NZ business insolvencies). This is the "ripple effects" child (#275): what public, aggregate sources can — and cannot — show about unpaid creditors, employees, preferential-creditor treatment, and recovery gaps when NZ companies enter liquidation or receivership. It names no company, director, creditor, employee, or claimant.*
+
+## Executive answer
+
+- **The rules are transparent; the outcomes are not.** New Zealand law sets out exactly *who gets paid in what order* when a company is liquidated (Companies Act 1993, Schedule 7), but no official body publishes aggregate figures on *how much* unpaid creditors and employees actually lose or recover. The Insolvency and Trustee Service (ITS) publishes only **counts** of insolvencies — not dividends paid, cents-in-the-dollar recovery, creditor losses, or employee-claim outcomes. [Companies Act 1993, Schedule 7](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html); [ITS statistics](https://www.insolvency.govt.nz/about/statistics); [ITS corporate insolvency statistics](https://www.insolvency.govt.nz/about/statistics/corporate-insolvency-statistics)
+- **Employees are "preferential" but not guaranteed.** Employee wage/holiday/redundancy claims rank ahead of ordinary unsecured creditors, but only up to a capped amount — **$31,820 per employee** as at the current law — and only if money is left after secured creditors and liquidation costs. The official guidance is blunt: "You might not get any — or only some of — the money you are owed." [Companies Act 1993, Schedule 7 clause 3](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html); [Employment NZ, liquidation/bankruptcy](https://www.employment.govt.nz/fair-work-practices/restructuring-and-workplace-change/when-your-employer-goes-into-liquidation-or-bankruptcy)
+- **The priority order is: liquidator costs → employees (capped) → IRD (GST/PAYE) → ordinary unsecured creditors.** Secured creditors sit largely outside this and are typically paid first from their charged assets, which is why trade creditors, and IRD's non-preferential portion, frequently recover little or nothing. [Companies Act 1993, Schedule 7](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html); [ITS, effect of liquidation](https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company)
+- **NZ has no wage-guarantee/insurance fund — unlike Australia and the UK.** Where an Australian worker can claim from the Fair Entitlements Guarantee (FEG) and a UK worker from the Redundancy Payments Service, a New Zealand worker whose employer fails has only a capped preferential claim against whatever assets remain, with no government backstop. A proposed NZ wage-earner protection scheme was shelved. [Keeper, The Conversation, 13 Nov 2023](https://theconversation.com/nz-workers-have-few-protections-if-their-employer-goes-bust-fixing-the-companies-act-would-help-216811); [Australian Government, Fair Entitlements Guarantee](https://www.dewr.gov.au/fair-entitlements-guarantee); [UK Government, claim redundancy and money owed](https://www.gov.uk/claim-redundancy)
+- **What public data cannot show:** total unsecured-creditor losses, average recovery ("cents in the dollar"), the number of employees left short or by how much, and how often the cap bites. Per-case liquidator reports on the Companies Register contain some of this, but there is no official aggregation, and aggregating them safely (without identifying businesses/people) is itself a research task.
+
+**Overall confidence:** High — the priority order, the cap, and the absence of aggregate recovery data are all verifiable in official/statutory sources. The *magnitude* of losses is genuinely unquantified in public NZ data; that is the finding, not a gap in the research.
+
+## Evidence
+
+### The statutory waterfall is public and precise (Companies Act 1993, Schedule 7)
+
+When a company is liquidated, the liquidator must pay claims in a fixed statutory order. Schedule 7 clause 1(1) puts first the liquidator's own fees and expenses, then the costs of the creditor who applied to court for the liquidation, the out-of-pocket expenses of any liquidation committee, and any creditor who funded the recovery/preservation of assets. [Companies Act 1993, Schedule 7 clause 1(1)](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html)
+
+Clause 1(2) then ranks **employee entitlements**: wages or salary for services in the **4 months before** liquidation, untransferred payroll donations, holiday pay on termination, redundancy compensation, wage deductions the company withheld (e.g. child support, student loan), and certain Employment Relations Authority/Court awards. [Companies Act 1993, Schedule 7 clause 1(2)](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html)
+
+After employees, clause 1(2) then 1(5) rank amounts owed to the **Commissioner of Inland Revenue**: KiwiSaver contributions (clause 1(2)(g)/(ga)), and — in clause 1(5) — GST, PAYE tax deductions, non-resident and resident withholding tax, and customs duty. So IRD holds a *preferential* claim for GST and PAYE, but it ranks **after** employee entitlements within the preferential tier. [Companies Act 1993, Schedule 7 clauses 1(2)(g), 1(5)](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html)
+
+Only after all preferential claims are met does anything flow to **ordinary unsecured creditors** — trade suppliers, contractors, and IRD's non-preferential debt — who share whatever remains. [ITS, effect of liquidation](https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company); [ITS, types of creditor](https://www.insolvency.govt.nz/owed-money/types-of-creditor)
+
+Crucially, **secured creditors** (typically a bank holding a General Security Agreement) sit largely outside this queue: they realise their charged assets directly. Preferential creditors do rank ahead of a security interest over "accounts receivable and inventory" (circulating assets), which is why some employee/IRD money is recoverable even when a secured lender is owed — but a secured creditor's specific/fixed security is paid before preferential claims, and only a shortfall becomes an unsecured claim. [ITS, effect of liquidation](https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company); [Companies Register, what happens during receivership](https://companies-register.companiesoffice.govt.nz/help-centre/when-your-company-fails/what-happens-during-receivership/)
+
+**Confidence: High** — this is the plain text of the statute plus official guidance.
+
+### Employees rank ahead of trade creditors, but the preference is capped and conditional
+
+Being "preferential" describes a *queue position*, not a guarantee. Employment New Zealand's official guidance says employees may lose their job, must file a claim with the liquidator for money owed, and — in plain terms — "You might not get any — or only some of — the money you are owed," with payment usually only at the end of the process. [Employment NZ, liquidation/bankruptcy](https://www.employment.govt.nz/fair-work-practices/restructuring-and-workplace-change/when-your-employer-goes-into-liquidation-or-bankruptcy)
+
+The preference is also **capped per employee**. Schedule 7 clause 3(1) limits the total preferential sum for any one employee to **$31,820** (or a higher prescribed amount), adjusted every three years by Order in Council. [Companies Act 1993, Schedule 7 clause 3](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html) MBIE's August 2024 Cabinet paper confirms the mechanics: the cap was **$25,480**, "to be adjusted every three years" by a prescribed formula referenced to Statistics NZ's Quarterly Employment Survey wage growth, and the adjusted figure is **$31,820**. [MBIE, adjustments to the employee preference cap (Aug 2024)](https://www.mbie.govt.nz/dmsdocument/29638-adjustments-to-the-employee-preference-cap-under-insolvency-law-proactiverelease-pdf) Anything an employee is owed above the cap drops to an ordinary unsecured claim, ranked with trade creditors. [Companies Act 1993, Schedule 7 clause 3](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html)
+
+A further limit: a claim by a director's relative who worked for the company in the 12 months before liquidation is *not* granted preferential status (an anti-avoidance rule). [Companies Act 1993, Schedule 7](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html)
+
+The same preferential order applies in **receivership** (Receiverships Act 1993, applying Schedule 7): the official guidance states "Preferential claims are paid before those of secured creditors," but a receiver acts *for the appointing secured creditor* and realises assets to repay that creditor first — so a receivership's purpose is the secured lender's recovery, not a broad distribution to unsecured creditors. [Companies Register, what happens during receivership](https://companies-register.companiesoffice.govt.nz/help-centre/when-your-company-fails/what-happens-during-receivership/); [Receiverships Act 1993](https://www.legislation.govt.nz/act/public/1993/0122/latest/whole.html)
+
+**Confidence: High** on the cap and the priority; the *practical* outcome ("often little or nothing to unsecured creditors") is qualitative and official but not quantified — see below.
+
+### The magnitude of creditor and employee loss is not in any official public dataset
+
+This is the core "what public data cannot show" finding. The Insolvency and Trustee Service — the government insolvency body — publishes statistics covering only **counts**: bankruptcies, No Asset Procedures, Debt Repayment Orders, liquidation totals, and proceeds-of-crime totals. Its own statistics pages carry **no** series on dividends paid to creditors, cents-in-the-dollar recovery, creditor losses, or employee-claim outcomes. [ITS, statistics](https://www.insolvency.govt.nz/about/statistics); [ITS, corporate insolvency statistics](https://www.insolvency.govt.nz/about/statistics/corporate-insolvency-statistics)
+
+A second structural limit: the Official Assignee (the ITS-run liquidator) administers only a **minority** of company liquidations — the framing baseline for this stream reports it acted as liquidator in about **10.6%** of 2022/23 liquidations, the rest being private insolvency practitioners. [ITS, corporate insolvency statistics](https://www.insolvency.govt.nz/about/statistics/corporate-insolvency-statistics); [Stream #257 discover baseline](https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/other/nz-business-insolvencies-framing.md) So even the counts ITS reports on its own administrations do not represent the whole system.
+
+The information *does* exist per-case: liquidators must report to creditors on the company's financial position within **25 working days** of liquidation (or 5 working days in a solvent/voluntary liquidation), then six-monthly and at the end. [ITS, effect of liquidation](https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company) Those reports, filed on the Companies Register, show estimated and actual distributions for individual companies — but there is no official aggregation of them, and aggregating a sample safely (without publishing business, director, employee, or creditor identities) is a distinct research task, not a lookup. The stream's discover baseline reached the same conclusion: it could verify the *process* but "did not find a ready official dataset of unsecured-creditor shortfalls, employee claims, or recovery rates." [Stream #257 discover baseline](https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/other/nz-business-insolvencies-framing.md)
+
+**Confidence: High** — verified directly against ITS's published statistics pages, which enumerate what they cover and do not cover.
+
+### The comparative gap: NZ has no wage-guarantee fund; Australia and the UK do
+
+Because the NZ preference is capped and conditional, a worker's real protection depends entirely on the failed company having assets. New Zealand has **no government wage-guarantee or insurance scheme** to top up unpaid entitlements when the estate is empty. Associate Professor Trish Keeper (Commercial Law, Victoria University of Wellington) sets this out: preferential status "means there is no guarantee employees will receive their unpaid wages when a business fails," and a proposed social-insurance-style scheme (up to seven months of wages at 80%) was "put on ice." [Keeper, The Conversation, 13 Nov 2023](https://theconversation.com/nz-workers-have-few-protections-if-their-employer-goes-bust-fixing-the-companies-act-would-help-216811)
+
+By contrast, **Australia's Fair Entitlements Guarantee** is a government scheme of last resort that pays eligible retrenched workers unpaid wages (up to 13 weeks), annual and long-service leave, up to 5 weeks' pay in lieu of notice, and up to 4 weeks' redundancy pay per year of service, where the insolvent employer cannot. [Australian Government, Fair Entitlements Guarantee](https://www.dewr.gov.au/fair-entitlements-guarantee) The **UK's Redundancy Payments Service** (part of the Insolvency Service) similarly lets employees of an insolvent employer claim redundancy pay, unpaid wages, holiday pay, and statutory notice pay from a government fund. [UK Government, claim redundancy and money owed](https://www.gov.uk/claim-redundancy)
+
+So the NZ "ripple" for workers is structurally harsher than in comparable jurisdictions: a capped preference, no backstop, and payment only if assets remain.
+
+**Confidence: High** on the existence/absence of the schemes; **Medium** on the precise NZ policy status of any revived proposal, which is a live political question.
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| Employees are "preferential" creditors but this does **not** guarantee payment — they may receive nothing. | [Employment NZ](https://www.employment.govt.nz/fair-work-practices/restructuring-and-workplace-change/when-your-employer-goes-into-liquidation-or-bankruptcy) | [Keeper, The Conversation](https://theconversation.com/nz-workers-have-few-protections-if-their-employer-goes-bust-fixing-the-companies-act-would-help-216811) | High |
+| The employee preferential claim is capped at **$31,820** per employee (up from $25,480), adjusted every 3 years. | [Companies Act 1993, Schedule 7 clause 3](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html) | [MBIE cap paper, Aug 2024](https://www.mbie.govt.nz/dmsdocument/29638-adjustments-to-the-employee-preference-cap-under-insolvency-law-proactiverelease-pdf) | High |
+| No official NZ dataset reports creditor recovery / dividends / employee-claim outcomes — only counts are published. | [ITS statistics](https://www.insolvency.govt.nz/about/statistics) | [ITS corporate insolvency statistics](https://www.insolvency.govt.nz/about/statistics/corporate-insolvency-statistics) | High |
+| NZ has no wage-guarantee fund, unlike Australia (FEG) and the UK (Redundancy Payments Service). | [Australian Govt FEG](https://www.dewr.gov.au/fair-entitlements-guarantee) | [UK Govt, claim redundancy](https://www.gov.uk/claim-redundancy); [Keeper, The Conversation](https://theconversation.com/nz-workers-have-few-protections-if-their-employer-goes-bust-fixing-the-companies-act-would-help-216811) | High |
+| Within the preferential tier, employees rank **ahead of** IRD's GST/PAYE claims. | [Companies Act 1993, Schedule 7 clauses 1(2), 1(5)](https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html) | [ITS, effect of liquidation](https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company) | High |
+
+## What would change this conclusion
+
+- **A public recovery dataset would change the "cannot show" claim.** If ITS, MBIE, or the Companies Office began publishing aggregate dividend/recovery data (as Australia's ASIC does in its published insolvency statistics), the magnitude of creditor and employee loss could be stated with real numbers instead of "unquantified." I verified the *absence* of such a series as at July 2026; a new release would supersede this.
+- **A safely aggregated sample of liquidator reports could quantify recovery.** The per-case data exists on the Companies Register. A careful study extracting estimated-to-actual distributions across a de-identified sample (suppressing entity/person names and small cells) could produce the first NZ recovery-rate estimate. This is a legitimate follow-up, flagged below — I did **not** attempt it here because doing it safely is its own methodological task, and doing it badly risks identifying failed businesses and their people.
+- **Could not verify from public data:** total unsecured-creditor losses; average cents-in-the-dollar recovery; how many employees are left unpaid and by how much; how often the $31,820 cap actually bites; the split between secured, preferential, and unsecured recovery in a typical liquidation; and whether recovery differs systematically between liquidation and receivership (practitioner commentary suggests it may, but I found no official series).
+- **A human with authority is needed for the policy question.** Whether NZ *should* adopt a wage-guarantee fund, lift the cap, or reorder priorities is a policy and lived-experience judgement (the stream's G1 gate), not something this finding decides. Input from affected workers, unpaid suppliers, insolvency practitioners, and unions would materially sharpen the picture.
+
+## Open follow-up questions
+
+- **Can a de-identified sample of Companies Register liquidator reports produce a defensible NZ unsecured-creditor recovery rate?** (Method + privacy design would be the hard part.) — a candidate research issue for this stream, if a human steward wants it.
+- **How often does the $31,820 employee cap bind, and for which kinds of workers?** (e.g. long-tenure staff owed large redundancy/holiday balances.)
+- **Does IRD's growing preferential and non-preferential debt (see stream driver research) change the share left for trade creditors over time?** Links to the "why now" child (#274).
+- *These are noted as leads only. Per the stream rules, I am not opening ideate/build follow-ups — that is a human gate.*
+
+## Sources
+
+All sources accessed 4 July 2026. Fetch notes: `legislation.govt.nz` returns HTTP 403 to plain fetchers/WebFetch (bot protection, not a dead link) and was retrieved with a browser-user-agent `curl`, from which the Schedule 7 clause text was extracted verbatim; the MBIE cap PDF was downloaded and its text extracted locally (`pdftotext`); ITS, Employment NZ, Companies Register, The Conversation, Australian Government, and UK Government pages were retrieved with WebFetch/WebSearch.
+
+1. New Zealand Legislation. "Companies Act 1993, Schedule 7 — Preferential claims" (as at 1 July 2025). https://www.legislation.govt.nz/act/public/1993/0105/latest/DLM323545.html
+2. New Zealand Legislation. "Receiverships Act 1993" (whole). https://www.legislation.govt.nz/act/public/1993/0122/latest/whole.html
+3. Employment New Zealand. "When your employer goes into liquidation or bankruptcy." https://www.employment.govt.nz/fair-work-practices/restructuring-and-workplace-change/when-your-employer-goes-into-liquidation-or-bankruptcy
+4. Insolvency and Trustee Service. "The effect of liquidation on a company." https://www.insolvency.govt.nz/business-debt/the-effect-of-liquidation-on-a-company
+5. Insolvency and Trustee Service. "Types of creditor." https://www.insolvency.govt.nz/owed-money/types-of-creditor
+6. Insolvency and Trustee Service. "Statistics." https://www.insolvency.govt.nz/about/statistics
+7. Insolvency and Trustee Service. "Corporate insolvency statistics." https://www.insolvency.govt.nz/about/statistics/corporate-insolvency-statistics
+8. Companies Register. "What happens during receivership." https://companies-register.companiesoffice.govt.nz/help-centre/when-your-company-fails/what-happens-during-receivership/
+9. MBIE. "Adjustments to the employee preference cap under insolvency law" (proactive release, August 2024). https://www.mbie.govt.nz/dmsdocument/29638-adjustments-to-the-employee-preference-cap-under-insolvency-law-proactiverelease-pdf
+10. Keeper, Trish (Associate Professor in Commercial Law, Victoria University of Wellington). "NZ workers have few protections if their employer goes bust – fixing the Companies Act would help." The Conversation, 13 November 2023. https://theconversation.com/nz-workers-have-few-protections-if-their-employer-goes-bust-fixing-the-companies-act-would-help-216811
+11. Australian Government, Department of Employment and Workplace Relations. "Fair Entitlements Guarantee." https://www.dewr.gov.au/fair-entitlements-guarantee
+12. UK Government. "Claim for redundancy and other money you're owed by an employer." https://www.gov.uk/claim-redundancy
+13. The For Good Project. Stream #257 discover baseline finding, "Rising NZ business insolvencies…". https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/other/nz-business-insolvencies-framing.md
