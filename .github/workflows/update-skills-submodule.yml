@@ -1,19 +1,25 @@
 # Keep the vendored `.skills` submodule (thecolab-ai/.skills) pointed at its
-# latest upstream commit. Runs hourly and can be kicked manually. Opens a PR
-# when the pointer moves instead of pushing straight to main — `main` requires
-# the `validate` and `for-good/adversarial-review` status checks, which a bare
-# push can never satisfy (confirmed: the direct-push version of this workflow
-# failed with GH006 on its first run). Going through a PR needs no branch-
-# protection bypass and keeps this workflow's commits under the same review
-# gate as everything else in the repo; the pointer-only diff gets the
-# lightweight "standard maintainer review" path (see review_work.sh
-# pr_review_kind), not the citation-gated research method.
+# latest upstream commit. Fires immediately on a push to that repo's main (via
+# repository_dispatch — see thecolab-ai/.skills .github/workflows/notify-forgood.yml),
+# with the hourly schedule kept as a fallback for any dispatch that's missed or
+# fires before that workflow's dispatch secret exists. Can also be kicked
+# manually. Opens a PR when the pointer moves instead of pushing straight to
+# main — `main` requires the `validate` and `for-good/adversarial-review`
+# status checks, which a bare push can never satisfy (confirmed: the
+# direct-push version of this workflow failed with GH006 on its first run).
+# Going through a PR needs no branch-protection bypass and keeps this
+# workflow's commits under the same review gate as everything else in the
+# repo; the pointer-only diff gets the lightweight "standard maintainer
+# review" path (see review_work.sh pr_review_kind), not the citation-gated
+# research method.
 name: Update .skills submodule
 
 on:
   schedule:
     - cron: "0 * * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [skills-updated]
 
 permissions:
   contents: write
