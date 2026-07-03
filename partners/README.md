@@ -10,14 +10,17 @@ per organisation/relationship. Decided in
 
 It exists because of a tension we refuse to resolve quietly: this project is
 built completely in the open, but it tracks real people at real organisations.
-[CONSTITUTION.md](../CONSTITUTION.md) Article III (protect people) wins. The
-resolution is a **consent gate** on every record.
+[CONSTITUTION.md](../CONSTITUTION.md) Article III (protect people) wins, and it
+is non-negotiable: **no personal or identifying data.** The resolution is a
+**consent gate** on every record that stays strictly inside that rule.
 
 ## The consent rule (hard rule)
 
-**No personal names, emails, or contact details go in this repo until that
-person has explicitly consented.** Until then, records are *role +
-organisation-type only* ("a senior analyst at [a statistics agency]").
+**An individual's personal name, email, or contact detail never goes in this
+repo — at any consent level.** People are always referred to by role and
+organisation-type ("a senior analyst at [a statistics agency]"), never by name.
+Consent does not unlock personal names; it governs how visible the
+**organisation** is, from role-and-sector-only up to a publicly listed partner.
 
 Every record carries a `consent:` level in its frontmatter. **The safe default
 everywhere is `private`.** Escalating a record's visibility is a deliberate,
@@ -27,9 +30,22 @@ logged act — note it, dated, in the record's interaction log.
 |---|---|---|
 | `private` (default) | Role + sector + org-type only — "a policy lead at a regulator" | The organisation's name; any individual's name or contact detail |
 | `org-named` | The organisation by name; roles within it | Any individual's name or contact detail |
-| `fully-public` | A named individual, *because they explicitly said yes* (record when/how consent was given) | Contact details beyond what the person approved |
+| `public` | The organisation named and openly listed as a partner/advisor on the outward-facing [partners page](https://thecolab-ai.github.io/the-for-good-project/#/partners), *because the organisation explicitly said yes* (record when/how consent was given) | Any individual's name or contact detail |
 
 If you're unsure which level applies, it's `private`.
+
+### Why no personal names, even with consent
+
+The Constitution's Article III ("No personal or identifying data") is a rule
+that does not bend, and Article IX says it wins over every working doc. This
+registry therefore stays entirely at the **organisation** level: even a
+consenting individual appears only as a role at a named org, never by name.
+Naming a consenting *person* in the open would narrow Article III, which under
+[Article VIII.2](../CONSTITUTION.md) requires an explicit Constitution
+amendment ratified by a human maintainer — deliberately **out of scope** for
+this registry. If that need ever becomes real, it goes through amendment, not
+through a record here. This is the project's fail-closed posture (Article V.2):
+when unsure, we stop at the safer rule.
 
 ## How the network works
 

@@ -4,17 +4,20 @@ org-type: regulator    # regulator | agency | funder | nfp | community | academi
 sector: ""             # e.g. financial-conduct, statistics, social-investment, grocery, child-welfare
 role: connector        # connector | sme | early-user | advisory | data-provider
 status: exploring      # exploring | intro-made | in-conversation | committed | active
-consent: private       # private | org-named | fully-public — DEFAULT private, see partners/README.md
+consent: private       # private | org-named | public — DEFAULT private, see partners/README.md
 streams: []            # issue #s this partner informs or could use, e.g. [60, 61]
 updated: YYYY-MM-DD
 ---
 
 <!--
-Consent gate (hard rule — CONSTITUTION.md Art III):
-  private      → role + sector + org-type only. No org name, no individual's name.
-  org-named    → organisation may be named. Still NO individual's name or contact detail.
-  fully-public → a named individual may appear because they explicitly said yes.
-                 Record when/how consent was given in the interaction log.
+Consent gate (hard rule — CONSTITUTION.md Art III, "no personal or identifying data"):
+  private   → role + sector + org-type only. No org name, no individual's name.
+  org-named → organisation may be named. Still NO individual's name or contact detail.
+  public    → organisation named + openly listed as a partner because it explicitly
+              said yes. Still NO individual's name or contact detail — the registry
+              stays at the organisation level at every tier. Record when/how consent
+              was given in the interaction log.
+An individual's name never goes in this repo at any tier (see partners/README.md).
 Write the whole body to the consent level above. When in doubt: private.
 -->
 

@@ -1,19 +1,21 @@
 ---
 name: manage-partner
-description: Use when adding, updating, redaction-checking, or drafting outward artifacts for a partner/SME/advisory record in partners/ — enforces the consent gate (private | org-named | fully-public) so no personal name or contact detail ever lands in the repo without explicit consent.
+description: Use when adding, updating, redaction-checking, or drafting outward artifacts for a partner/SME/advisory record in partners/ — enforces the consent gate (private | org-named | public) so no individual's personal name or contact detail ever lands in the repo, and no organisation is named above its recorded consent.
 ---
 
 # Manage a partner record (consent-gated)
 
 You manage records in [`partners/`](../../../partners/README.md) — the open,
 consent-gated registry of the project's trust network. The governing rule is
-[CONSTITUTION.md](../../../CONSTITUTION.md) Article III (protect people) as
-applied by [ADR-0010](../../../docs/adr/0010-partner-network.md):
+[CONSTITUTION.md](../../../CONSTITUTION.md) Article III (protect people — "no
+personal or identifying data"), which does not bend, as applied by
+[ADR-0010](../../../docs/adr/0010-partner-network.md):
 
-**No personal names, emails, phone numbers, or contact details in the repo
-unless the record's frontmatter says `consent: fully-public` — explicitly, and
-with the consent noted in the interaction log. This is not your call to make;
-absent recorded consent, you refuse and redact.**
+**No individual's personal name, email, phone number, or contact detail ever
+goes in the repo — at any consent level.** Consent does not unlock personal
+names; it only governs how visible the **organisation** is. Naming an org above
+its recorded consent is not your call to make; absent recorded consent, you
+refuse and redact. When in doubt, fail closed to `private`.
 
 ## Consent levels (what you may write)
 
@@ -21,11 +23,14 @@ absent recorded consent, you refuse and redact.**
 |---|---|---|
 | `private` (default) | role, sector, org-type | org name; any personal name/contact |
 | `org-named` | + the organisation's name | any personal name/contact |
-| `fully-public` | + the named individual, as consented | contact details beyond what was approved |
+| `public` | + the organisation openly listed as a partner/advisor, as consented | any individual's personal name or contact detail |
 
-When a brief doesn't state a consent level, use `private`. Never infer
-escalation ("they seem happy to be named") — escalation requires the human to
-state it, and you record when/how in the interaction log.
+The registry stays at the **organisation** level at every tier — an
+individual's name never appears, even at `public`, even with the person's
+consent (that would need a Constitution amendment; see ADR-0010). When a brief
+doesn't state a consent level, use `private`. Never infer escalation ("they
+seem happy to be named") — escalation requires the human to state it, and you
+record when/how in the interaction log.
 
 ## Operations
 
@@ -33,8 +38,8 @@ state it, and you record when/how in the interaction log.
 From a short brief: write/update `partners/<slug>.md` using
 [`partners/TEMPLATE.md`](../../../partners/TEMPLATE.md).
 - Slug describes the relationship at its consent level (e.g.
-  `grocery-sector-connector.md`) — never a person's name, even at
-  `fully-public` (file names outlive consent changes).
+  `grocery-sector-connector.md`) — never a person's name (file names outlive
+  consent changes, and personal names never belong in the repo anyway).
 - Fill frontmatter exactly (org, org-type, sector, role, status, consent,
   streams, updated — today's date).
 - If the brief contains detail above the consent level, **write the record
@@ -68,7 +73,9 @@ never send them.
 ## Non-goals (never)
 
 - Never contact anyone, on any channel.
-- Never publish a name without `consent: fully-public` recorded in the file.
+- Never write an individual's personal name or contact detail into a record —
+  no consent level permits it. Never name an organisation above its recorded
+  consent (`org-named` or `public`).
 - Never invent a relationship, an interaction, or a quote. If the brief
   doesn't say it happened, it isn't in the log.
 - No personal data beyond the consent level, anywhere — including commit
