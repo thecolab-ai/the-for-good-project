@@ -49,5 +49,6 @@ routine fixes, copy changes, or web styling.
 | [0010](0010-partner-network.md) | Track the partner / SME / advisory network in the open, behind a consent gate | Accepted |
 | [0011](0011-synthesis-rework-routing.md) | Synthesis draft rework belongs to synthesize_work.sh; generic runners must not touch synthesis PRs | Accepted |
 | [0012](0012-synthesis-followup-research-loop.md) | Blocking unknowns loop back to research automatically — bounded — before the G1 human gate | Accepted |
+| [0013](0013-stream-level-priority.md) | Priority is a stream-level decision inherited by children | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

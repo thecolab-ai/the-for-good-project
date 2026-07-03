@@ -32,6 +32,10 @@ number of the originating Discover issue — everything descending from issue
   [`.github/workflows/stream-sync.yml`](../.github/workflows/stream-sync.yml):
   a new `stage: discover` issue roots its own stream; children inherit it from
   a `Stream: #n` or `Part of #<parent>` line in their body.
+- **Priority belongs to the root.** A steward/maintainer marks the stream root
+  with `priority: high` when the whole problem should jump the queue; the same
+  Action propagates that label to children and removes it if the root is
+  deprioritised.
 - **Body convention** (keeps the tree, not just the tag): every child issue
   carries `Part of #<parent>` (immediate parent) and, when the parent isn't the
   root, `Stream: #<root>`.

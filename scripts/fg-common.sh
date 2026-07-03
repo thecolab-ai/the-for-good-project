@@ -124,8 +124,9 @@ fetch_open_issues() {
 
 # Numbers of open issues with a given status label, optional STAGE filter.
 # Order: issues labelled "priority: high" first, then oldest-created first.
-# This is the whole priority system — label an issue "priority: high" to have
-# the workers pick it up before the rest of the queue.
+# Priority is a stream-level decision: a steward/maintainer sets "priority: high"
+# on the stream root and stream-sync propagates it to the children, so this
+# simple sort lifts a whole prioritised stream through the queue as a group.
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
 # "do-not-automate" is a human's parking brake: an issue carrying it is
