@@ -1,0 +1,98 @@
+# ADR-0010: Track the partner / SME / advisory network in the open, behind a consent gate
+
+- **Status:** proposed (requires human-maintainer ratification before merge)
+- **Date:** 2026-07-03
+- **Deciders:** human maintainer (on merge); drafted by an agent at the maintainer's request
+- **Discussion:** [issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123)
+
+## Context
+
+The demand side of the project is forming: connectors are offering introductions to
+regulators, agencies, funders and NFPs who could tell us the right questions to ask,
+act as early use cases, and influence adoption — the demand-pull / broker mechanism
+the gap analysis called for and the stakeholder-feedback loop of issue #30. That trust
+network needs to be tracked and grown *in the open*, like everything else here.
+
+But it tracks real people at real organisations, and the Constitution's Article III
+(protect people) does not bend: no personal or identifying data. Article IX puts that
+rule above every working doc. So the registry must stay *inside* Article III, not
+reinterpret it: it tracks **organisations**, never named individuals. The tension
+between "build in the open" and "protect people" forces an explicit disclosure rule
+rather than ad-hoc judgement per record. A second constraint: resource-scarce organisations
+have often never been asked "what problem would you want solved if capacity were
+free?", so the mechanism must make that question easy and low-pressure — a lightweight
+registry and a plain-language ask, not process weight. Third: the repo already has
+working conventions (markdown + frontmatter, labels, ADRs, skills); new machinery
+would need to justify itself against a markdown file and a label.
+
+## Decision
+
+We will track the partner network in three layers, each with one job, plus a skill:
+
+1. **Registry** — one markdown file per organisation/relationship in
+   [`partners/`](../../partners/README.md), with role-based frontmatter and a
+   **consent gate** that escalates *organisation* visibility only: `consent:
+   private` (default — role + sector only, no org name) → `org-named`
+   (organisation may be named in the record; still no individual's name) →
+   `public` (organisation openly listed as a partner/advisor on the outward
+   partners page *because the organisation explicitly said yes*). At **every**
+   tier an individual's personal name or contact detail is excluded — the
+   registry stays at the organisation level. Escalating a record's visibility is
+   a deliberate, logged act, never a default.
+2. **Pipeline** — GitHub labels `partner` and `sme`, with relationship stage carried
+   in each record's `status:` frontmatter (exploring → intro-made → in-conversation
+   → committed → active). A CRM in GitHub, no new tooling.
+3. **Conversation** — GitHub Discussions categories ("Partners & advisory",
+   "Questions from the field") for the talking; the registry holds the settled state.
+   Enabling Discussions is a repo setting, flagged for a maintainer.
+
+A **`manage-partner` skill** (`.claude/skills/manage-partner/SKILL.md`) makes the
+consent gate mechanical for agents: it writes/updates records at the stated consent
+level, refuses to name an organisation above its recorded consent, refuses any
+individual's personal name or contact detail at every tier, redaction-checks drafts,
+and drafts name-free outward artifacts (partner charter, call-prep brief).
+
+Because this ADR changes project process, agent operating rules, and label/pipeline
+expectations, ratification is a human-maintainer decision. Agent approval is not the
+merge gate for the implementing PR; if accepted, the maintainer should either mark
+this ADR accepted as part of merge or leave an explicit follow-up for the status change.
+
+**Staying inside Article III (no personal names, even with consent).** An earlier
+draft of this ADR proposed a `fully-public` tier under which a consenting individual
+could be named in the repo. That was withdrawn: Article III ("no personal or
+identifying data") does not bend, and Article IX ranks it above this ADR, so a working
+doc cannot narrow it. Naming a consenting *person* in the open would be a narrowing of
+Article III, which under Article VIII.2 requires an explicit Constitution amendment
+ratified by a human maintainer — and Articles IV/V.2 tell agents to fail closed when a
+rule is in tension. So the top tier is `public` (the **organisation** openly listed),
+and personal-name attribution is **deferred**: if the project ever wants it, it goes
+through a Constitution amendment argued in the open, not through a record here.
+
+Options considered and rejected: a private CRM or spreadsheet outside the repo
+(rejected — breaks build-in-the-open and hides the demand-side mechanism the project
+is trying to demonstrate); keeping everything fully anonymous forever (rejected —
+organisations that *want* to stand behind the work publicly are part of its
+credibility; org-level consent makes that possible safely, without naming individuals);
+naming consenting individuals in the repo (rejected here — needs a Constitution
+amendment, see above); a dedicated Project board as the primary pipeline (deferred —
+labels + frontmatter carry the state today; a board can be layered on without a new
+decision).
+
+## Consequences
+
+Easier: growing the trust network transparently; onboarding a new partner (copy the
+template, default private); agents handling partner records safely without per-case
+judgement; showing prospective partners exactly how they'll be treated before they
+commit. Harder: records at `private` are deliberately vague, so readers can't always
+tell who is involved — that opacity is the accepted cost of the default; and every
+visibility escalation needs an explicit consent trail, which adds friction by design.
+
+We explicitly accept that a public registry of relationship stages could feel
+exposing to a partner even at `org-named` — the promise in each record (nothing
+published about them without sign-off, freedom to walk away) is the mitigation, and
+it must be honoured over any transparency instinct.
+
+Tripwire: if a real individual's personal name or contact detail ever lands in
+`partners/` at all (no consent level permits it), or if the registry goes stale while
+the real network grows elsewhere (e.g. a private doc), this structure has failed and
+should be revisited.
