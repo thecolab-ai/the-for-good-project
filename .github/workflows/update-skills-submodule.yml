@@ -1,0 +1,43 @@
+# Keep the vendored `.skills` submodule (thecolab-ai/.skills) pointed at its
+# latest upstream commit. Runs hourly, commits the moved pointer straight to the
+# default branch when it changes, and can be kicked manually.
+name: Update .skills submodule
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-skills-submodule
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Update .skills to latest upstream commit
+        run: git submodule update --remote --recursive .skills
+
+      - name: Commit and push if the pointer moved
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .skills; then
+            echo "No .skills update available — pointer unchanged."
+            exit 0
+          fi
+          new_sha="$(git -C .skills rev-parse --short HEAD)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .skills
+          git commit -m "chore: update .skills submodule to ${new_sha}"
+          git push
