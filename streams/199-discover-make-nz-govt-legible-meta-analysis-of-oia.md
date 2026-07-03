@@ -4,7 +4,7 @@ title: "New Zealanders keep asking government the same questions — some answer
 state: awaiting-direction
 steward: ""
 domain: civic-transparency
-updated: 2026-07-03
+updated: 2026-07-04
 image: ""
 ---
 
@@ -40,13 +40,26 @@ complete and a human steward needs to decide where it goes next.
   already-published information. (confidence: Medium) —
   [cost baseline](../research/findings/civic-transparency/oia-cost-proactive-release.md)
 - **Request volume is extremely concentrated: Police alone completed about
-  42% of central-government requests in 2025, and the top three bodies about
-  66%.** The concentration itself is well evidenced from official data; the
-  further idea that those bodies mostly handle personal, one-off records (like
-  someone's own crash report) — which publishing datasets would *not* fix —
-  is a flagged hypothesis, not a measured fact. (confidence: High for the
-  concentration; Low for the personal-records explanation) —
+  42% of central-government requests in 2025, and the top three bodies —
+  Police, the Natural Hazards Commission (the former EQC), and Corrections —
+  about 66%.** The concentration itself is well evidenced from official data,
+  but that 66% is a share of request *volume* only — it says nothing about
+  what kinds of requests those are. (confidence: High for the concentration) —
   [which bodies and topics repeat](../research/findings/civic-transparency/repetitive-oia-requests-bodies-topics.md)
+- **The follow-up check on those three high-volume bodies confirmed the
+  "mostly personal records" explanation in direction for only one of them —
+  and found it can't currently be measured for the other two.** The Natural
+  Hazards Commission states itself that its most common request is claims
+  information about a specific property — an individual record no open
+  dataset could replace. Corrections runs a separate channel for requests
+  from prisoners but doesn't record what type of requests they are, and
+  Police divert "information about yourself" requests to a different law
+  entirely, so what actually makes up Police's huge OIA count is unknown. No
+  agency publishes a request-type breakdown, so how much of the headline
+  volume open data could ever address cannot be measured from public sources
+  today. (confidence: Medium for what each agency's channels show; Low for
+  any claim that personal records *dominate* Police or Corrections volume) —
+  [what the biggest requestees actually handle](../research/findings/civic-transparency/oia-request-types-police-corrections-nhc.md)
 - **The topics that recur in the public archive are the accountability
   staples: spending and budgets, staffing, contracts and consultants, policy
   advice, and ministerial briefings — about 44% of a committed sample of
@@ -93,11 +106,18 @@ complete and a human steward needs to decide where it goes next.
   because measuring it properly needs request *text*, which contains personal
   data and needs the archive operator's consent to process safely.
 - **There is a tension between the headline cost and where open data can
-  help.** The $184m baseline is dominated by a few high-volume bodies whose
-  requests may be mostly personal records that no published dataset would
-  replace — but that explanation is a hypothesis inferred from one indirect
-  signal. If those bodies actually field many policy requests, the
-  addressable savings picture changes materially, in either direction.
+  help — now sharper, but still unresolved.** The $184m baseline is dominated
+  by three high-volume bodies. A dedicated follow-up tested whether their
+  requests are mostly personal records no published dataset would replace:
+  the answer is yes-in-direction for the Natural Hazards Commission (by its
+  own account), unknowable for Corrections (the agency doesn't collect
+  request-type data — its own oversight review calls that a lost
+  opportunity), and unknown for Police (whose residual OIA mix is visibly
+  varied and unpublished). If those bodies in fact field many policy
+  requests, the addressable savings picture changes materially, in either
+  direction — and the one reliable way to settle it is now clear: asking the
+  agencies themselves for their internal request-category counts, since the
+  answer exists nowhere in public.
 - **No per-dataset saving can be stated.** Every shortlisted candidate
   carries a mechanism ("this kind of release avoids this kind of request")
   but no measured count of avoidable requests; the government's own follow-up
@@ -105,7 +125,9 @@ complete and a human steward needs to decide where it goes next.
 - **Several load-bearing numbers are single-sourced:** the $183.6m baseline
   and its forecast come from one commissioned model; the exact 42%/66%
   concentration shares come from one official dataset (though the direction
-  is corroborated); the topic-mix percentages come from one committed sample.
+  is corroborated); the topic-mix percentages come from one committed sample;
+  and the Natural Hazards Commission's "most common request type" is the
+  agency's own self-description, with no published percentage behind it.
 - **Nobody has asked fyi.org.nz yet.** Permission for a larger pull, the
   site's preferred limits, and even who can grant approval are all unknown —
   a human conversation, not more desk research.
@@ -129,15 +151,22 @@ complete and a human steward needs to decide where it goes next.
   (confidence: Medium). Would need: careful wording so unmeasured savings are
   never presented as measured, and a human review before anything is
   published externally.
-- **Ask the fyi.org.nz volunteers for permission, then run a consented,
-  de-identified analysis of the full archive to actually measure repetition.**
-  Helps: this stream (it replaces the weakest number) and the archive
-  operators themselves. Effort: Medium. Supported by the
+- **Measure the two numbers everything else depends on: ask the fyi.org.nz
+  volunteers for permission to run a consented, de-identified analysis of the
+  full archive (how much repetition exists), and ask Police, Corrections and
+  the Natural Hazards Commission — using the OIA itself — for their internal
+  request-category counts (how much of their volume is personal-record
+  work).** Helps: this stream (it replaces its two weakest numbers) and the
+  archive operators themselves. Effort: Medium. Supported by the
   [feasibility study](../research/findings/civic-transparency/fyi-oia-corpus-feasibility.md)
   (confidence: Medium), which sets out the metadata-first method, the privacy
-  pipeline, and the contact route. Would need: the operators' agreement, and
-  the privacy safeguards already designed (aggregate-only, no names or
-  request text stored).
+  pipeline, and the contact route, and by the
+  [request-type check](../research/findings/civic-transparency/oia-request-types-police-corrections-nhc.md)
+  (confidence: Medium), which found no agency publishes the split and names
+  asking the agencies as the one reliable way to get it. Would need: the
+  archive operators' agreement, the privacy safeguards already designed
+  (aggregate-only, no names or request text stored), and a human to make and
+  sign the requests to the agencies.
 - **Champion one shortlist candidate — a central, machine-readable index of
   OIA responses agencies have already published — as a concrete proposal to
   government.** Helps: requesters (find answers before asking), agencies
@@ -163,8 +192,8 @@ complete and a human steward needs to decide where it goes next.
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
-Signal: the findings are mutually consistent — no contradictions between them — but the stream's central quantity (how much repetition proactive release would remove) is still unmeasured, and every finding sits at Medium overall confidence.
-Signal: two things only a human can do next — contacting the fyi.org.nz volunteers, and any external-facing recommendation — are prerequisites for most deeper work.
+Signal: the findings are mutually consistent — the newest one refines rather than contradicts the earlier round — but the stream's two central quantities (how much repetition exists, and how much of the high-volume agencies' work is personal records) remain unmeasured, and every finding sits at Medium overall confidence.
+Signal: the newest finding shows the remaining unknowns cannot be closed by more desk research — they need human actions: contacting the fyi.org.nz volunteers, and OIA requests to the agencies themselves for their internal request-category counts.
 Signal: the government's own 2026 follow-up cost research (surveying ~40 agencies) may soon answer the repeat-request question for free; timing a decision around it may matter.
 
 ## Feedback log
