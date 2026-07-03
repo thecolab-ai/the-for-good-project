@@ -34,7 +34,7 @@ The authority CSV is not a request corpus export: its header is `Name, Short nam
 
 For the request `.json` surface, a direct fetch of one public request returned top-level request keys `id`, `url_title`, `title`, `created_at`, `updated_at`, `described_state`, `display_status`, `awaiting_description`, `prominence`, `law_used`, `tags`, `public_body`, `user`, and `info_request_events` [request 34872 JSON](https://fyi.org.nz/request/34872-appointment-of-members-of-the-electoral-commission.json).
 
-To test whether that shape holds across requests rather than for one lucky sample, I took the five most recent requests visible on FYI's public successful-request list on 2026-07-03 and fetched each `.json` [FYI successful-request list](https://fyi.org.nz/list/successful). The check is reproducible with:
+To test whether that shape holds across requests rather than for one lucky sample, I took a convenience sample of five recent requests visible on FYI's public successful-request list on 2026-07-03 — not the strict top-five by date, since the list is reordered as requests update — and fetched each `.json` [FYI successful-request list](https://fyi.org.nz/list/successful). The check is reproducible with:
 
 ```
 for id in 34692 34820 34868 34872 34994; do
