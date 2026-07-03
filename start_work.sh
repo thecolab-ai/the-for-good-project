@@ -209,6 +209,16 @@ claim_issue() {  # $1 = issue number; returns 0 if we hold the claim
   # Re-check it's still available (best-effort lock via the label + assignee).
   local labels; labels="$(issue_labels "$n")"
   case ",$labels," in *",status: available,"*) : ;; *) warn "#$n no longer available — skipping."; return 1 ;; esac
+  # Never start FRESH work on an issue that already has an open PR: a claim
+  # race that slips past the tie-break can otherwise produce two PRs for one
+  # issue (#305 + #307 both closed #234), and the loser's stale PR wedges the
+  # rework automation. The label is wrong in that state (should be in-review,
+  # not available) — leave that to a human/reconciler; just don't pile on.
+  local existing; existing="$(pr_for_issue "$n" || true)"
+  if [ -n "$existing" ]; then
+    warn "#$n already has open PR #$existing — skipping instead of opening a duplicate."
+    return 1
+  fi
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would claim #$n (assign @$ME, status: available → claimed)"; return 0; fi
   gh issue edit "$n" --repo "$REPO" --add-assignee "@me" \
      --add-label "status: claimed" --remove-label "status: available" >/dev/null
@@ -319,14 +329,40 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
     fi
     return 0
   fi
+  # Only rework a CURRENT changes-request. A review is tied to the commit it
+  # judged: commits pushed AFTER the last CHANGES_REQUESTED review mean the
+  # rework already happened and the PR is waiting on a fresh review — feeding
+  # the same superseded feedback to another agent run just burns budget and
+  # spams the PR (this fed #307's agents the same addressed review 30+ times).
+  # ISO-8601 timestamps compare lexically, same as reconcile_rework.
+  local lastcr headdate
+  lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
+  headdate="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
+  if [ -n "$lastcr" ] && [ -n "$headdate" ] && [[ "$headdate" > "$lastcr" ]]; then
+    log "#$n's last changes-request predates PR #$pr's head commit — already reworked; parking at in-review to await a fresh review (no agent run)."
+    [ "$DRY_RUN" = 0 ] && set_status_label "$n" "in-review" "changes-requested"
+    return 0
+  fi
   branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName)"
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would rework PR #$pr (branch $branch) against the review feedback, push, and move #$n → in-review"
     return 0
   fi
+  # Claim the rework (changes-requested → claimed) so ANOTHER loop of the same
+  # account doesn't pick it up mid-run — rework_issues() filters on the label,
+  # so this shrinks the duplicate-pick window from a full agent run (~40 min,
+  # which produced back-to-back duplicate reworks of #307) to seconds. Re-check
+  # the label first: a second loop working from an older queue snapshot bails
+  # here instead of double-claiming. A crash after the flip leaves the issue
+  # 'claimed' + assigned; reap.sh TTL-frees it as usual.
+  case ",$(issue_labels "$n")," in
+    *",status: changes-requested,"*) : ;;
+    *) log "#$n is no longer changes-requested — another loop got there first. Skipping."; return 0 ;;
+  esac
+  set_status_label "$n" "claimed" "changes-requested" || true
   local before after
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
-  make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
+  make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; set_status_label "$n" "changes-requested" "claimed" || true; return 1; }
   info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
@@ -336,6 +372,7 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   if was_usage_limited "$tmp"; then
     warn "Rework of #$n hit an API usage/rate limit — leaving it 'changes-requested' and backing off ${USAGE_LIMIT_SLEEP}s (no failure posted)."
     rm -f "$tmp"; remove_worktree
+    set_status_label "$n" "changes-requested" "claimed" || true
     sleep "$USAGE_LIMIT_SLEEP"
     return 0
   fi
@@ -344,10 +381,11 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   remove_worktree
   after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   if [ "$after" != "$before" ]; then
-    set_status_label "$n" "in-review" "changes-requested"
+    set_status_label "$n" "in-review" "claimed" "changes-requested"
     gh issue comment "$n" --repo "$REPO" --body "🔁 Rework pushed to PR #$pr — moving back to **in review** for a fresh adversarial review." >/dev/null || true
     ok "#$n → in-review (rework pushed to PR #$pr)"
   else
+    set_status_label "$n" "changes-requested" "claimed" || true
     warn "Agent pushed no new commits to PR #$pr — leaving #$n as 'changes-requested' for a future loop."
   fi
 }
@@ -377,6 +415,13 @@ reconcile_rework() {
     [ -n "$headcommit" ] && [[ "$headcommit" > "$lastcr" ]] && continue
     iss="$(issue_addressed_by_pr "$pr" || true)"
     [ -z "$iss" ] && continue
+    # A duplicate-claim race can leave TWO open PRs addressing one issue
+    # (#305/#307 both closed #234). Every rework loop pushes to the CANONICAL
+    # PR — the one pr_for_issue resolves to — so a stale sibling PR must never
+    # route the issue: its changes-request stays current forever (nobody pushes
+    # to it) and it would flip the issue back to changes-requested every cycle.
+    # FAIL CLOSED: an empty lookup (rate limit) also skips.
+    [ "$(pr_for_issue "$iss" || true)" = "$pr" ] || continue
     labels="$(issue_labels "$iss" 2>/dev/null || true)"
     case ",$labels," in
       *",status: changes-requested,"*) continue ;;   # already routed
