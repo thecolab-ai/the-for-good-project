@@ -1,6 +1,6 @@
 # ADR-0012: Blocking unknowns loop back to research automatically — bounded — before the G1 human gate
 
-- **Status:** proposed (ratified by the human maintainer who reviews and merges the PR)
+- **Status:** accepted (merged by the human maintainer)
 - **Date:** 2026-07-03
 - **Deciders:** human maintainer (on merge); drafted by an agent at the maintainer's direction
 
