@@ -344,11 +344,16 @@ resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
   after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   if [ "$after" != "$before" ]; then
     # Back to the review gate; the root parks at awaiting-direction (its normal
-    # status while a draft PR exists) — also strips any stray in-review.
+    # status while a draft PR exists) — also strips any stray in-review. The
+    # claim is released: a parked root assigned to a runner would hide the
+    # NEXT send-back from every other runner until reap's TTL.
     set_status_label "$n" "awaiting-direction" "changes-requested" "in-review"
+    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
     gh issue comment "$n" --repo "$REPO" --body "🔁 Synthesis rework pushed to PR #$pr — back to **awaiting-direction** pending a fresh adversarial review and the steward's decision." >/dev/null || true
     ok "Stream #$n → awaiting-direction (rework pushed to PR #$pr)"
   else
+    # Keep the assignment on the no-push path: a rework stays with its
+    # claimant until it lands or reap.sh frees it (REWORK_TTL).
     warn "Agent pushed no new commits to PR #$pr — leaving #$n as 'changes-requested' for a future loop."
   fi
 }
@@ -356,7 +361,10 @@ resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
 # Open the agent's proposed follow-up research issues (ADR-0012), bounded and
 # deduped. $1 = stream root, $2 = path to the .fg-followups.json copy. Sets
 # FOLLOWUPS_CREATED (global) to how many issues were actually opened — logs go
-# to the terminal, so the count can't be returned via stdout.
+# to the terminal, so the count can't be returned via stdout. Returns 2 on a
+# TRANSIENT read failure (round/dedupe state unreadable — caller should retry
+# the item rather than park it); 0 otherwise, including deterministic no-spawn
+# outcomes (invalid file, zero proposals, round cap).
 FOLLOWUPS_CREATED=0
 spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
   local n="$1" file="$2"
@@ -377,7 +385,7 @@ spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
   local bodies prev round
   if ! bodies="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json body --jq '.[].body' 2>/dev/null)"; then
     warn "Couldn't read stream #$n's issues to check the follow-up round cap — spawning nothing this loop."
-    return 0
+    return 2   # transient: caller should retry the item, not park it
   fi
   prev="$(printf '%s' "$bodies" | grep -oE 'fg-synthesis-followup round:[0-9]+' | grep -oE '[0-9]+$' | sort -n | tail -1 || true)"
   round=$(( ${prev:-0} + 1 ))
@@ -394,7 +402,7 @@ spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
   local titles
   if ! titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null)"; then
     warn "Couldn't read stream #$n's issue titles for dedupe — spawning nothing this loop."
-    return 0
+    return 2   # transient: caller should retry the item, not park it
   fi
   titles="$(printf '%s' "$titles" | tr '[:upper:]' '[:lower:]' | sed -E 's/^([[:space:]]*research:[[:space:]]*)+//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
 
@@ -457,8 +465,18 @@ synthesize_one() {  # $1 = stream root issue number
 
   # Claim the root while synthesising: two runners polling the same
   # needs-synthesis root would otherwise both draft AND both spawn follow-ups
-  # — doubling the per-round cap. Same assign-settle-tie-break as elsewhere;
-  # the assignment is released when this run finishes.
+  # — doubling the per-round cap. An EXISTING assignment is another runner's
+  # (or a human's) live claim — never contest it; the tie-break adjudicates
+  # simultaneous claims, not established ones (same rule as
+  # synthesis_rework_targets). Our own stale assignment (a crashed prior run)
+  # is fine to resume; reap.sh frees others' after CLAIM_TTL.
+  local holders
+  holders="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '[.assignees[].login]|join(" ")' 2>/dev/null || echo "__ERR__")"
+  if [ "$holders" = "__ERR__" ]; then warn "Couldn't read #$n's assignees — leaving it for a future loop."; return 0; fi
+  if [ -n "$holders" ] && ! printf '%s\n' $holders | grep -qxF "$ME"; then
+    log "#$n is already claimed by $holders — skipping."
+    return 0
+  fi
   gh issue edit "$n" --repo "$REPO" --add-assignee "@me" >/dev/null 2>&1 || true
   resolve_claim_race "$n" || return 0
   unclaim() { gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true; }
@@ -478,9 +496,14 @@ synthesize_one() {  # $1 = stream root issue number
   # the stale draft would masquerade as this run's output. Instead: reuse the
   # PR — materialise its current draft into the main-based worktree, and have
   # the agent update it and force-with-lease the branch.
-  local update_pr=""
-  local cand
-  for cand in $(gh pr list --repo "$REPO" --state open --json number,headRefName --jq '.[]|select(.headRefName|startswith("synthesis/"))|.number' 2>/dev/null); do
+  local update_pr="" synth_prs cand
+  if ! synth_prs="$(gh pr list --repo "$REPO" --state open --json number,headRefName --jq '.[]|select(.headRefName|startswith("synthesis/"))|.number' 2>/dev/null)"; then
+    # FAIL CLOSED: without this list we can't rule out an open draft PR, and
+    # the fresh path against an existing branch would bless the stale draft.
+    warn "Couldn't list open synthesis PRs — leaving #$n for a future loop."
+    remove_worktree; unclaim; return 1
+  fi
+  for cand in $synth_prs; do
     if [ "$(issue_addressed_by_pr "$cand" 2>/dev/null || true)" = "$n" ]; then update_pr="$cand"; break; fi
   done
   if [ -n "$update_pr" ]; then
@@ -542,17 +565,39 @@ synthesize_one() {  # $1 = stream root issue number
     pr="$update_pr"
   fi
 
+  if [ -n "$pr" ] && [ "$rc" -ne 0 ]; then
+    # The draft PR exists but the agent run did not finish cleanly (timeout,
+    # crash after pushing) — the draft may be truncated. Don't park it for
+    # the steward; leave needs-synthesis so the next loop retries via the
+    # update path.
+    warn "Agent run for stream #$n exited $rc after PR #$pr appeared — leaving 'needs-synthesis' so a clean run re-drafts."
+    [ -n "$followups" ] && rm -f "$followups"
+    unclaim
+    return 0
+  fi
+
   if [ -n "$pr" ]; then
     # Blocking unknowns loop back to research BEFORE the human gate
     # (ADR-0012): only spawn from a clean agent run whose draft PR exists —
     # a crashed or timed-out run must not seed issues from partial output.
     FOLLOWUPS_CREATED=0
-    if [ -n "$followups" ] && [ "$rc" -eq 0 ]; then
+    local spawn_rc=0
+    if [ -n "$followups" ]; then
       # Strip the G1 flag BEFORE opening issues: stream-sync's opened-handler
       # also un-flags flagged roots and would post a second, contradictory
       # comment for every spawned issue.
       gh issue edit "$n" --repo "$REPO" --remove-label "status: needs-synthesis" >/dev/null 2>&1 || true
-      spawn_followups "$n" "$followups"
+      spawn_followups "$n" "$followups" || spawn_rc=$?
+      if [ "$spawn_rc" -eq 2 ]; then
+        # Transient read failure inside spawn — the unknowns were NOT
+        # processed. Re-flag and retry the whole item next loop rather than
+        # silently dropping them at the steward gate.
+        gh issue edit "$n" --repo "$REPO" --add-label "status: needs-synthesis" >/dev/null 2>&1 || true
+        warn "Follow-up spawn hit a transient read failure — re-flagged #$n 'needs-synthesis' for a retry."
+        [ -n "$followups" ] && rm -f "$followups"
+        unclaim
+        return 0
+      fi
     fi
     if [ "$FOLLOWUPS_CREATED" -gt 0 ]; then
       # Machines keep grinding: the root does NOT park at awaiting-direction —
