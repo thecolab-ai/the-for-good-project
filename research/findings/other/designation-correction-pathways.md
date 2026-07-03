@@ -1,0 +1,77 @@
+---
+title: "NZ councils can and do update flood-map and LIM designations, but most channels are request-and-appeal, not automatic"
+domain: "other"
+issue: "#373"
+confidence: "Medium"
+author: "codex"
+agent: "codex"
+model: "gpt-5.3-codex-spark"
+date: "2026-07-04"
+status: "draft"
+---
+
+# Do flood map / hazard overlay updates and LIM notations get updated after site works or better data?
+
+## Executive answer
+- Councils with multiple documented pathways usually require a **new LIM/PIM request or a separate plan-change process** to reflect updated hazard knowledge; automatic remapping after individual site works is rarely guaranteed. [Auckland Council, 2026](https://ourauckland.aucklandcouncil.govt.nz/news/2026/03/understanding-auckland-s-regional-flood-maps/), [Hastings District Council LIM page](https://www.hastingsdc.govt.nz/services/building-consents-information/lim/)
+- For **map/overlay changes**, the main pathway is still **district-plan change** (e.g., Whangārei PC1 Natural Hazards), with public notifications, hearings and a published legal-effect date. [Whangarei District Council PC1](https://www.wdc.govt.nz/Services/Planning/District-Plan/District-Plan-changes/Current-plan-changes/PC1), [Whangarei PC1 notification page](https://www.wdc.govt.nz/Services/Planning/District-Plan/District-Plan-changes/Current-plan-changes/PC1)
+- For **LIM wording/notation corrections**, councils are currently using a practical correction route: lodge/update request, then escalate to complaints/Ombudsman when councils have included (or omitted) incorrect known hazards. [Hastings LIM](https://www.hastingsdc.govt.nz/services/building-consents-information/lim/), [Local Authority fails to include relevant information on LIM](https://www.ombudsman.parliament.nz/resources/local-authority-fails-include-relevant-information-land-information-memorandum)
+- Cost is usually modest (one report fee each way; sometimes urgent surcharge), but duration can stretch: e.g., standard LIMs often 7–10 working days, with stated delays possible when volumes are high. [Auckland fees PDF](https://www.aucklandcouncil.govt.nz/building-and-consents/resource-consents/Documents/consenting-property-information-fees-charges.pdf), [Hastings LIM fees](https://www.hastingsdc.govt.nz/services/building-consents-information/lim/), [Whangarei LIM fees page](https://www.wdc.govt.nz/Council/Council-documents/Fees-and-Charges/Land-Information-Memorandum-LIM-Fees), [Dunedin LIM request page](https://www.dunedin.govt.nz/do-it-online/pay-online/request-lim)
+- **Success rate estimate from published sources is limited**: 4 of 4 identified recent formal challenge examples show council action (refunds, notation removal, or wording adjustments), but this is a non-representative sample and does not establish a numeric success rate for all councils. [Ombudsman cases](https://www.ombudsman.parliament.nz/resources/local-authority-fails-include-relevant-information-land-information-memorandum), [coastal hazards LIM changes](https://www.ombudsman.parliament.nz/resources/local-authority-unreasonable-note-requirement-fencing-lim-without-inspection), [neighboring-property case](https://www.ombudsman.parliament.nz/resources/councils-required-add-to-lim-matters-neighbouring-property-if-relevant), [Kāpiti coast judicial review line](https://coastalsystems.co.nz/downloads/kapiti-erosion/2015_30%20January%20High%20Court%20Final%20DECISION%20%20Weir%20vs%20KCDC.pdf)
+
+**Overall confidence:** Medium — the routes are clearly documented, but fee tables and processing details differ by service and council and we do not have a complete outcomes dataset for all councils.
+
+## Evidence by pathway
+
+### 1) Request-driven updates (Auckland, Hamilton, Dunedin, Hastings, Whangarei)
+- **Auckland LIMs are snapshot-based and regional-flood-layer-driven.** They are described as a “snapshot in time” using regional/catchment maps overlaid onto a property boundary and explicitly not site-specific or mitigation-specific; this means site works may need separate technical evidence rather than expecting the LIM itself to auto-update as “ground truth.” [Auckland Council - Understanding flood maps](https://ourauckland.aucklandcouncil.govt.nz/news/2026/03/understanding-auckland-s-regional-flood-maps/) (High confidence).
+- **Auckland provides fee and service tiers**, including standard (10 working days) and urgent (3 working days), with no refund on urgent service. [Auckland Council fees PDF](https://www.aucklandcouncil.govt.nz/building-and-consents/resource-consents/Documents/consenting-property-information-fees-charges.pdf) (High).
+- **Hamilton requires documentary inputs and notes no site inspections in LIM preparation** (title/legal owner data plus form, then processing time of up to 10 days; express in 3 days). [Hamilton LIM request page](https://hamilton.govt.nz/do-it-online/request-it/request-a-land-information-memorandum-lim/), [Hamilton LIM application form](https://hamilton.govt.nz/assets/Uploads/Documents/Property-rates-and-building/HCC_LIM-Application-Form-Editable-1-july-2025.pdf) (High).
+- **Dunedin explicitly requires site-specific information to be sourced from local reports in a LIM context** and states LIMs include hazards and consent-related history; pricing page indicates paid service options (5-day and 3-day variants). [Dunedin LIM scope](https://www.dunedin.govt.nz/home-and-property/lims-pims), [Dunedin online request fees](https://www.dunedin.govt.nz/do-it-online/pay-online/request-lim) (Medium).
+- **Hastings states LIMs are based on records they hold and confirms a contact path when conflicting info is found**, with cancellation and fee notes plus processing timing published. [Hastings LIM](https://www.hastingsdc.govt.nz/services/building-consents-information/lim/) (Medium).
+- **Whangarei explicitly says LIMs reflect council records only, not site visits; no urgent LIM option is offered; and unconsented works may be missing.** This weakens “auto-update” for site works and makes the process dependent on records lodged with council. [Whangarei Apply for a LIM](https://www.wdc.govt.nz/Services/My-property-and-rates/Apply-for-a-LIM), [Whangarei LIM fees and charges](https://www.wdc.govt.nz/Council/Council-documents/Fees-and-Charges/Land-Information-Memorandum-LIM-Fees) (Medium).
+
+### 2) Map/overlay update pathways (Whangarei PC1 and Christchurch coastal assessment updates)
+- **Whangarei PC1 is a dedicated Natural Hazards plan-change path**: maps are shown via GIS, with consultations, hearing, legal-effect timing and explicit “maps updated” orientation. [Whangarei PC1 page](https://www.wdc.govt.nz/Services/Planning/District-Plan/District-Plan-changes/Current-plan-changes/PC1), [Whangarei PC1 timeline page](https://www.wdc.govt.nz/Whats-new/Have-your-say/Closed-Consultations/PC1-Notification) (High).
+- **Christchurch describes LIM updates linked to coastal-hazard assessment updates** and states it is legally obliged to update LIMs when needed; newer assessment information supersedes prior assessment-derived LIM content. [Christchurch coastal hazards LIM FAQ](https://ccc.govt.nz/assets/Documents/Environment/Coast/Factsheets/STR5913-Coastal-Hazards-LIM-notifications-fact-sheet-WEB.pdf) (High).
+
+### 3) Adjudication signals and practical success signal
+- **Ombudsman and court cases show correction pressure works when omission is clear**: the Weir judicial review line confirms legal duty to include known potential hazard on LIMs, including coastal hazard predictions; later review/mediation removed the challenged notations after further technical review. [Weir judicial review final judgment](https://coastalsystems.co.nz/downloads/kapiti-erosion/2015_30%20January%20High%20Court%20Final%20DECISION%20%20Weir%20vs%20KCDC.pdf) (High).
+- **Formal complaints findings include refunds or removal directives** when omissions are unreasonable; these outcomes indicate routes beyond a fresh LIM request: complain to Ombudsman when the first pass is wrong. [Ombudsman findings 1](https://www.ombudsman.parliament.nz/resources/local-authority-fails-include-relevant-information-land-information-memorandum), [Ombudsman findings 2](https://www.ombudsman.parliament.nz/resources/local-authority-unreasonable-note-requirement-lim-without-inspection), [Ombudsman neighboring-property case](https://www.ombudsman.parliament.nz/resources/councils-required-add-to-lim-matters-neighbouring-property-if-relevant) (High).
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| LIMs are record-based and not site-inspection products in several councils; therefore site works mitigation alone may not immediately appear in LIM. | [Whangarei LIM page](https://www.wdc.govt.nz/Services/My-property-and-rates/Apply-for-a-LIM) | [Hamilton LIM form](https://hamilton.govt.nz/assets/Uploads/Documents/Property-rates-and-building/HCC_LIM-Application-Form-Editable-1-july-2025.pdf) | High |
+| Updated hazard science can drive legal notation change (not just administrative policy choice). | [NZQA? Ombudsman on hazard omission](https://www.ombudsman.parliament.nz/resources/local-authority-fails-include-relevant-information-land-information-memorandum) | [Weir v KCDC](https://coastalsystems.co.nz/downloads/kapiti-erosion/2015_30%20January%20High%20Court%20Final%20DECISION%20%20Weir%20vs%20KCDC.pdf) | High |
+| “Responsive” change is possible outside emergency periods through plan-change and complaint mechanisms. | [Whangarei PC1 (non-emergency RMA route)](https://www.wdc.govt.nz/Services/Planning/District-Plan/District-Plan-changes/Current-plan-changes/PC1) | [Christchurch coastal hazards updates in LIMs](https://ccc.govt.nz/assets/Documents/Environment/Coast/Factsheets/STR5913-Coastal-Hazards-LIM-notifications-fact-sheet-WEB.pdf) | Medium |
+
+## What would change this conclusion
+- **What would change it:** a consistent, council-by-council public dashboard showing statutory SLAs for hazard overlay revisions, plus published records of accepted/rejected correction submissions, would materially change certainty around success rates.
+- **What could not be verified from sources reviewed:** full nationwide outcome data (denied requests, average correction timelines, and number of applications rejected) and a direct Wellington LIM fee/service page from public HTML without dynamic-page fetch.
+- **What a practitioner should verify:** for high-value disputes, confirm the legal framing with a resource-management/risk practitioner before strategy choice, especially whether the needed change is a LIM metadata correction, consent-linked technical condition, or district plan amendment.
+
+## Open follow-up questions
+- Can each council publish a machine-readable LIM revision log with request type, reason, processing time, and whether notation changed?
+- Which councils have approved/recorded a template for correcting hazard layers outside emergency recovery, and are there published statistics by year?
+- Are flood overlay updates ever tied to new consents alone, or only to planned periodic assessment reviews plus formal plan changes?
+
+## Sources
+1. Auckland Council fees and charges (2025/26): https://www.aucklandcouncil.govt.nz/building-and-consents/resource-consents/Documents/consenting-property-information-fees-charges.pdf (accessed 2026-07-04)
+2. Auckland Council OurAuckland flood map guide: https://ourauckland.aucklandcouncil.govt.nz/news/2026/03/understanding-auckland-s-regional-flood-maps/ (accessed 2026-07-04)
+3. Hamilton LIM request page: https://hamilton.govt.nz/do-it-online/request-it/request-a-land-information-memorandum-lim/ (accessed 2026-07-04)
+4. Hamilton LIM application form: https://hamilton.govt.nz/assets/Uploads/Documents/Property-rates-and-building/HCC_LIM-Application-Form-Editable-1-july-2025.pdf (accessed 2026-07-04)
+5. Hastings LIM page: https://www.hastingsdc.govt.nz/services/building-consents-information/lim/ (accessed 2026-07-04)
+6. Dunedin LIM page: https://www.dunedin.govt.nz/home-and-property/lims-pims (accessed 2026-07-04)
+7. Dunedin LIM request page: https://www.dunedin.govt.nz/do-it-online/pay-online/request-lim (accessed 2026-07-04)
+8. Whangarei LIM fees: https://www.wdc.govt.nz/Council/Council-documents/Fees-and-Charges/Land-Information-Memorandum-LIM-Fees (accessed 2026-07-04)
+9. Whangarei LIM application page: https://www.wdc.govt.nz/Services/My-property-and-rates/Apply-for-a-LIM (accessed 2026-07-04)
+10. Whangarei PC1 page: https://www.wdc.govt.nz/Services/Planning/District-Plan/District-Plan-changes/Current-plan-changes/PC1 (accessed 2026-07-04)
+11. Whangarei PC1 timeline page: https://www.wdc.govt.nz/Whats-new/Have-your-say/Closed-Consultations/PC1-Notification (accessed 2026-07-04)
+12. Christchurch coastal hazards LIM FAQ: https://ccc.govt.nz/assets/Documents/Environment/Coast/Factsheets/STR5913-Coastal-Hazards-LIM-notifications-fact-sheet-WEB.pdf (accessed 2026-07-04)
+13. Christchurch LIM fast-track service details (search snippet mirrored in municipal docs): https://ccc.govt.nz/assets/Documents/Consents-and-Licences/building-consents/LIM1FT.pdf (accessed 2026-07-04)
+14. Ombudsman: local authority failed to include relevant LIM information: https://www.ombudsman.parliament.nz/resources/local-authority-fails-include-relevant-information-land-information-memorandum (accessed 2026-07-04)
+15. Ombudsman: unjustified LIM warning removal: https://www.ombudsman.parliament.nz/resources/local-authority-unreasonable-note-requirement-fencing-lim-without-inspection (accessed 2026-07-04)
+16. Ombudsman: neighboring-property omission case: https://www.ombudsman.parliament.nz/resources/councils-required-add-to-lim-matters-neighbouring-property-if-relevant (accessed 2026-07-04)
+17. Weir judicial review final judgment: https://coastalsystems.co.nz/downloads/kapiti-erosion/2015_30%20January%20High%20Court%20Final%20DECISION%20%20Weir%20vs%20KCDC.pdf (accessed 2026-07-04)
