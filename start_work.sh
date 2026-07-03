@@ -257,8 +257,21 @@ work_one() {  # $1 = issue number
   fi
   make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
   info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
-  set +e; run_agent "$(work_prompt "$n")" "$WORKTREE"; local rc=$?; set -e
-  was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run, don't roll to the next issue
+  local tmp; tmp="$(mktemp)"
+  set +e; run_agent "$(work_prompt "$n")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
+  was_interrupted "$rc" && { rm -f "$tmp"; release_on_interrupt; }   # Ctrl-C the agent → stop the whole run, don't roll to the next issue
+  # Usage/rate limit: back off and release the issue quietly (no "finished
+  # without a PR" comment — that's a false failure), so a later loop retries it.
+  if was_usage_limited "$tmp"; then
+    warn "#$n hit an API usage/rate limit — releasing quietly and backing off ${USAGE_LIMIT_SLEEP}s (no failure posted)."
+    rm -f "$tmp"; remove_worktree
+    set_status_label "$n" "available" "claimed"
+    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    CLAIMED_ISSUE=""
+    sleep "$USAGE_LIMIT_SLEEP"
+    return 0
+  fi
+  rm -f "$tmp"
   if [ "$rc" -eq 0 ]; then ok "Agent run complete for #$n"; else err "Agent run failed/aborted for #$n (exit $rc)"; fi
   remove_worktree
   finish_issue "$n"
@@ -315,8 +328,18 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
   info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
-  set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE"; local rc=$?; set -e
-  was_interrupted "$rc" && release_on_interrupt   # Ctrl-C the agent → stop the whole run
+  local tmp; tmp="$(mktemp)"
+  set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
+  was_interrupted "$rc" && { rm -f "$tmp"; release_on_interrupt; }   # Ctrl-C the agent → stop the whole run
+  # Usage/rate limit: back off and leave #$n as 'changes-requested' for a future
+  # loop (no commits pushed, no status churn, no failure posted).
+  if was_usage_limited "$tmp"; then
+    warn "Rework of #$n hit an API usage/rate limit — leaving it 'changes-requested' and backing off ${USAGE_LIMIT_SLEEP}s (no failure posted)."
+    rm -f "$tmp"; remove_worktree
+    sleep "$USAGE_LIMIT_SLEEP"
+    return 0
+  fi
+  rm -f "$tmp"
   if [ "$rc" -eq 0 ]; then ok "Rework agent run complete for #$n"; else err "Rework agent run failed/aborted for #$n (exit $rc)"; fi
   remove_worktree
   after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
