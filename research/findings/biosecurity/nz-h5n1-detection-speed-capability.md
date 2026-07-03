@@ -1,5 +1,5 @@
 ---
-title: "NZ's surveillance can detect severe H5N1 cases fast, but has gaps for mild cases and early warning — ICU subtyping is nationwide and effective, GP sentinel and hospital surveillance are partial, wastewater targets COVID-19 not influenza, and genomic capacity is time-limited research rather than standing infrastructure"
+title: "NZ can detect severe H5N1 cases faster than mild community spread"
 domain: "biosecurity"
 issue: "#247"
 confidence: "Medium"
@@ -50,7 +50,7 @@ The MoH briefing describes a specific enhancement: "all ICU patients nationwide 
 
 **Strength:** If a human H5N1 case presents with severe enough illness to reach ICU, it will be detected. The geographic coverage is national because all NZ ICUs are included. Turnaround depends on standard influenza-A testing speed plus subtyping — likely 1–3 days from sample to result, consistent with standard ESR/PHF Science turnaround for seasonal influenza genotyping.
 
-**Limitation:** This channel only catches the severe tail. The US 2.3.4.4b human cases were predominantly mild — 70 of the first 71 cases (March 2024–May 2025) were mild or moderate, mostly among dairy and poultry workers, with no human-to-human transmission and the vast majority never reaching hospital or ICU ([Garg et al., Nature Medicine, 2025](https://www.nature.com/articles/s41591-025-03905-2); [CDC live counter](https://www.cdc.gov/bird-flu/situation-summary/index.html)). If the same mild-dominant pattern holds in NZ, ICU subtyping catches only the worst-case presentations, missing the occupational exposure events that would otherwise signal the virus is circulating locally.
+**Limitation:** This channel only catches the severe tail. The US 2.3.4.4b human cases were predominantly mild and occupational: Garg et al. reported 70 US cases during March 2024–May 2025, described most human cases as mild, reported all cases as occupational except one, and found no human-to-human transmission ([Garg et al., Nature Medicine, 2025](https://www.nature.com/articles/s41591-025-03905-2)). CDC now reports 71 total US A(H5) cases since February 2024, with 64 detected through human monitoring and seven through national flu surveillance, and separately reported one fatal Louisiana H5N1 case in January 2025 ([CDC live counter](https://www.cdc.gov/bird-flu/situation-summary/index.html); [CDC newsroom, 6 Jan 2025](https://www.cdc.gov/media/releases/2025/m0106-h5-birdflu-death.html)). If the same mild-dominant pattern holds in NZ, ICU subtyping catches only the worst-case presentations, missing the occupational exposure events that would otherwise signal the virus is circulating locally.
 
 **Confidence: High** on the ICU enhancement existence; **Medium** on the assumption that US mild-case patterns would replicate in NZ.
 
@@ -113,11 +113,11 @@ The WHO Global Influenza Surveillance and Response System (GISRS) provides the i
 - Candidate vaccine viruses (CVVs) are prepared before a pandemic, enabling rapid vaccine manufacturing.
 - The International Health Regulations (IHR) require countries to report potential public health emergencies within 24 hours.
 
-NZ participates in GISRS through ESR/PHF Science, which serves as a WHO collaborating centre for reference and research. If a pandemic-enabling mutation were detected in NZ (or globally), it would flow through GISRS channels to WHO and back to NZ decision-makers.
+NZ participates in GISRS through ESR/PHF Science's National Influenza Centre, which WHO lists under New Zealand's GISRS National Influenza Centres and PHF Science describes as the laboratory receiving sentinel GP respiratory swabs for testing ([WHO National Influenza Centres](https://www.who.int/initiatives/global-influenza-surveillance-and-response-system/national-influenza-centres); [PHF Science sentinel practice information](https://www.phfscience.nz/expertise/infectious-disease/infectious-disease-intelligence-surveillance/respiratory-surveillance-sentinel-practice-information/)). If a pandemic-enabling mutation were detected in NZ (or globally), it would flow through GISRS channels to WHO and back to NZ decision-makers.
 
 However, there is a timing question: the CVV and IHR pathways are **international** early warning. They tell NZ that a threat exists somewhere, not that it is already circulating here. The domestic detection channels (ICU subtyping, GP surveillance, wastewater) are what matter for the "Stamp It Out" trigger — detecting the virus in NZ before it establishes community transmission.
 
-**Confidence: High** on the GISRS/IHR structure; **Medium** on the exact role of PHF Science as a WHO collaborating centre (confirmed by PHF Science's involvement in Te Niwha and published influenza surveillance, but the specific collaborating centre designation is not explicitly stated on public pages).
+**Confidence: High** on the GISRS/IHR structure and on ESR/PHF Science's National Influenza Centre role; **Medium** on the practical timing of information flow from international GISRS channels back into NZ domestic decision-making.
 
 ### Detection-to-response timeline analysis
 
@@ -133,7 +133,7 @@ However, there is a timing question: the CVV and IHR pathways are **internationa
 
 **Scenario C: Mild community case without obvious exposure**
 - Detection: GP presents with flu-like symptoms. No reason to suspect avian influenza. No subtyping ordered. Case not detected as H5N1.
-- Assessment: **Significant gap.** This is the most dangerous detection failure — mild cases that are the first wave of community spread. The US pattern showed 70+ cases before any were identified, and even then only because occupational exposure triggered testing.
+- Assessment: **Significant gap.** This is the most dangerous detection failure — mild cases that are the first wave of community spread. The US pattern produced 70+ identified cases, most found through occupational exposure monitoring or national flu surveillance rather than ICU presentation.
 
 **Scenario D: Pandemic-enabling mutation detected globally (before NZ case)**
 - Detection: International GISRS channels identify a strain with sustained H2H transmission.
@@ -146,7 +146,7 @@ However, there is a timing question: the CVV and IHR pathways are **internationa
 |---|---|---|---|
 | All ICU patients with influenza-A positive now undergo subtyping for H5N1 (nationwide) | [MoH briefing, paras 29–32](https://www.health.govt.nz/system/files/2025-10/H2025068297-Briefing-Introduction-to-High-Pathogenic-Avian-Influenza-HPAI.pdf) | *Single primary source — the MoH briefing is the only public document that explicitly describes this enhancement* | Medium (one source, but authoritative) |
 | Routine hospital respiratory surveillance is Auckland-only | [Vaccine Framework, p3, footnote 4](https://www.health.govt.nz/system/files/2026-02/pre-pandemic-influenza-vaccine-framework.pdf) | *Single primary source — no independent public document corroborates the Auckland-only scope* | Medium (one source, but authoritative MoH framework) |
-| US 2.3.4.4b human cases were predominantly mild (70/71 mild-moderate), mostly occupational | [Garg et al., Nature Medicine, 2025](https://www.nature.com/articles/s41591-025-03905-2) | [CDC live counter data](https://www.cdc.gov/bird-flu/situation-summary/index.html) | High |
+| US 2.3.4.4b human cases were predominantly mild and occupational; one US H5N1 case in the period was fatal | [Garg et al., Nature Medicine, 2025](https://www.nature.com/articles/s41591-025-03905-2) | [CDC live counter data](https://www.cdc.gov/bird-flu/situation-summary/index.html); [CDC Louisiana death release](https://www.cdc.gov/media/releases/2025/m0106-h5-birdflu-death.html) | High for the qualitative pattern; no precise mild/moderate fraction claimed |
 | Te Niwha avian flu genomics project is completed (2024–2026, $1.229M) and describes "very limited surveillance and resources" as the baseline | [Te Niwha project page](https://www.teniwha.com/research-projects/genomics-informed-detection-surveillance-and-capacity-building-to-prepare-aotearoa-for-the-existential-threat-of-highly-pathogenic-avian-influenza-virus) | [PHF Science news article](https://www.phfscience.nz/news-publications/genomics-research-to-boost-aotearoa-new-zealand-s-defences-against-highly-pathogenic-bird-flu/) | High |
 | NZ's COVID-19 wastewater surveillance exists but no influenza wastewater programme is publicly listed | [PHF Science dashboards](https://phfscience.nz/dashboards/) | *Could not verify whether influenza is tested non-publicly — flagged* | Low–Medium |
 | Pandemic Plan "Stamp It Out" triggers on first NZ case or cluster | [NZ Pandemic Plan, Table 7, p58](https://www.health.govt.nz/system/files/2024-07/interim_nz_pandemic_plan_v2.pdf) | [MoH briefing, para 28](https://www.health.govt.nz/system/files/2025-10/H2025068297-Briefing-Introduction-to-High-Pathogenic-Avian-Influenza-HPAI.pdf) | High |
@@ -201,3 +201,9 @@ However, there is a timing question: the CVV and IHR pathways are **internationa
 13. Baker M, Potter JD, French N, Geoghegan JL, Wilson N, Mansoor O, Huang S, Webby R. *Potential for an avian influenza pandemic: Time for NZ to ramp up preparedness*. Public Health Communication Centre briefing, 15 May 2024. https://www.phcc.org.nz/briefing/potential-avian-influenza-pandemic-time-nz-ramp-preparedness (accessed 3 Jul 2026)
 
 14. World Health Organization. *Cumulative number of confirmed human cases for avian influenza A(H5N1) reported to WHO* (table to May 2026). https://cdn.who.int/media/docs/default-source/influenza/h5n1-human-case-cumulative-table/2026_table_h5n1_may.pdf (accessed 3 Jul 2026)
+
+15. World Health Organization. *National Influenza Centres*. https://www.who.int/initiatives/global-influenza-surveillance-and-response-system/national-influenza-centres (accessed 3 Jul 2026)
+
+16. PHF Science. *Respiratory surveillance sentinel practice information*. https://www.phfscience.nz/expertise/infectious-disease/infectious-disease-intelligence-surveillance/respiratory-surveillance-sentinel-practice-information/ (accessed 3 Jul 2026)
+
+17. US Centers for Disease Control and Prevention. *First H5 Bird Flu Death Reported in United States*. 6 January 2025. https://www.cdc.gov/media/releases/2025/m0106-h5-birdflu-death.html (accessed 3 Jul 2026)
