@@ -4,9 +4,10 @@ This directory is the durable record of the project's **demand side**: the
 regulators, agencies, funders, NFPs, community organisations, academics and
 subject-matter experts (SMEs) who tell us the right questions to ask, act as
 early use cases, and help the work land where it can matter. One markdown file
-per organisation/relationship. Decided in
-[ADR-0010](../docs/adr/0010-partner-network.md); proposed in
-[issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123).
+per organisation/relationship. Proposed in
+[ADR-0010](../docs/adr/0010-partner-network.md) and
+[issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123);
+it becomes project process only if ratified by a human maintainer.
 
 It exists because of a tension we refuse to resolve quietly: this project is
 built completely in the open, but it tracks real people at real organisations.

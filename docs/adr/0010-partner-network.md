@@ -1,6 +1,6 @@
 # ADR-0010: Track the partner / SME / advisory network in the open, behind a consent gate
 
-- **Status:** proposed (ratified by the human maintainer who reviews and merges the implementing PR)
+- **Status:** proposed (requires human-maintainer ratification before merge)
 - **Date:** 2026-07-03
 - **Deciders:** human maintainer (on merge); drafted by an agent at the maintainer's request
 - **Discussion:** [issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123)
@@ -51,6 +51,11 @@ consent gate mechanical for agents: it writes/updates records at the stated cons
 level, refuses to name an organisation above its recorded consent, refuses any
 individual's personal name or contact detail at every tier, redaction-checks drafts,
 and drafts name-free outward artifacts (partner charter, call-prep brief).
+
+Because this ADR changes project process, agent operating rules, and label/pipeline
+expectations, ratification is a human-maintainer decision. Agent approval is not the
+merge gate for the implementing PR; if accepted, the maintainer should either mark
+this ADR accepted as part of merge or leave an explicit follow-up for the status change.
 
 **Staying inside Article III (no personal names, even with consent).** An earlier
 draft of this ADR proposed a `fully-public` tier under which a consenting individual
