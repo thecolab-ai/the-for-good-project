@@ -4,8 +4,8 @@ domain: "grant-access"
 issue: "#110"
 confidence: "Medium"
 author: "adam91holt"
-agent: "claude"
-model: "claude-opus-4-8"
+agent: "codex"
+model: "gpt-5-codex"
 date: "2026-07-03"
 status: "draft"
 ---
@@ -45,7 +45,7 @@ Two narrower things still follow. First, the tracked angel-group averages are in
 
 ### The current discovery infrastructure: a matchability gap, not a void
 
-The issue's strongest claim — that AANZ "doesn't offer founder-facing, machine-readable discovery" — is *imprecise* and I am correcting it in the founders' favour of accuracy. AANZ's own site describes a searchable member database and a founder-facing route to "find pitch nights and connect with investors", and AANZ is the umbrella for formal angel networks whose memberships range roughly 20–200 individuals [Angel Association NZ](https://www.angelassociation.co.nz/). NZGCP separately publishes a start-up investor list [NZGCP start-up investors](https://www.nzgcp.co.nz/start-up-resources/start-up-investors). Enterprise Angels (Tauranga) runs **AngelEquity**, an online platform launched October 2016, open to wholesale investors, and reports facilitating over $50m into ~100 companies since 2008 [Enterprise Angels](https://www.enterpriseangels.co.nz/), [AngelEquity](https://www.enterpriseangels.co.nz/angelequity/) (note: one third-party company-data site lists AngelEquity as inactive — activity level should be verified before it is relied on, assigned to [#142](https://github.com/thecolab-ai/the-for-good-project/issues/142)). So discovery infrastructure exists. What appears *not* to exist is a maintained, open, machine-readable dataset a founder can filter by **stage × region × cheque size** — i.e. the difference between "a list of networks exists" and "I can see who invests at my stage, in my region, at my cheque size, and how to approach them." Whether that gap is the real bottleneck (versus distribution, trust, or investment-readiness) is the counter-hypothesis carried into [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141) and [#144](https://github.com/thecolab-ai/the-for-good-project/issues/144).
+The issue's strongest claim — that AANZ "doesn't offer founder-facing, machine-readable discovery" — is *imprecise* and I am correcting it in the founders' favour of accuracy. AANZ's own site describes a searchable member database and a founder-facing route to "find pitch nights and connect with investors", and AANZ is the umbrella for formal angel networks whose memberships range roughly 20–200 individuals [Angel Association NZ](https://www.angelassociation.co.nz/). NZGCP separately publishes a start-up investor list [NZGCP start-up investors](https://www.nzgcp.co.nz/start-up-resources/start-up-investors). Enterprise Angels (Tauranga) is another visible pathway: its homepage says it connects early-stage companies with angel investors and facilitates funding for companies, while its AngelEquity page says the AngelEquity site launched in October 2016, was consolidated into the Enterprise Angels brand after a three-year period, and saw about $3m invested via AngelEquity while Enterprise Angels investors invested $22m in 40 startups over the same period [Enterprise Angels](https://www.enterpriseangels.co.nz/), [AngelEquity](https://www.enterpriseangels.co.nz/angelequity/). So discovery infrastructure exists. What appears *not* to exist is a maintained, open, machine-readable dataset a founder can filter by **stage × region × cheque size** — i.e. the difference between "a list of networks exists" and "I can see who invests at my stage, in my region, at my cheque size, and how to approach them." Whether that gap is the real bottleneck (versus distribution, trust, or investment-readiness) is the counter-hypothesis carried into [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141) and [#144](https://github.com/thecolab-ai/the-for-good-project/issues/144).
 
 ### The visible co-investment infrastructure presumes the founder has already found private investors
 
@@ -59,7 +59,7 @@ The Startup Advisors Council's **2023 Upstart Nation** report (published via MBI
 
 ### Recommended research fan-out
 
-I opened the following research children under stream #110 (all `status: available`, depth-1):
+I opened the following depth-1 research children under stream #110:
 
 | Issue | Research question | Why this is chunky enough |
 |---|---|---|
@@ -82,7 +82,7 @@ I opened the following research children under stream #110 (all `status: availab
 ## What would change this conclusion
 
 - **The whole stream's premise fails if [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141) finds capital scarcity or investment-readiness — not discovery/access — is what actually stops sub-$250k founders raising.** A founder who can't be found is a different problem from a founder who is found and declined, or one who isn't yet fundable. No source in this memo distinguishes those; the high-capital / narrowing-pipeline data is consistent with *any* of them.
-- **The build case weakens to a distribution/trust problem, not an information gap, if [#142](https://github.com/thecolab-ai/the-for-good-project/issues/142)/[#144](https://github.com/thecolab-ai/the-for-good-project/issues/144) find existing infrastructure (AANZ directory, NGCP list, AngelEquity, equity-crowdfunding platforms) already covers discovery** and founders simply don't use or trust it. AANZ *does* offer a member directory — so "there's nowhere to look" is already partly false.
+- **The build case weakens to a distribution/trust problem, not an information gap, if [#142](https://github.com/thecolab-ai/the-for-good-project/issues/142)/[#144](https://github.com/thecolab-ai/the-for-good-project/issues/144) find existing infrastructure (AANZ directory, NZGCP list, Enterprise Angels / its consolidated AngelEquity pathway, equity-crowdfunding platforms) already covers discovery** and founders simply don't use or trust it. AANZ *does* offer a member directory — so "there's nowhere to look" is already partly false.
 - **The supply side may not show up.** If NZ investors won't participate in open all-founders/all-investors formats or won't maintain directory entries (adverse selection, time, wholesale-investor marketing rules), an open marketplace is dead regardless of founder demand. This likely needs investor-side human validation, not desk research alone ([#144](https://github.com/thecolab-ai/the-for-good-project/issues/144)).
 - **Unverified specifics I could not pin down:** the exact "1 December 2025" Callaghan cessation date; the current live/active status of AngelEquity; the issue's "~400 startups through the door for ~6 funded" figure for a named pathway (a founder-observed number I did not attempt to source — it belongs in [#141](https://github.com/thecolab-ai/the-for-good-project/issues/141)).
 - **Lived-experience dependency:** the distributional access claims (who is locked out) and the "even insiders can't articulate how a founder gets connected" observation come from the issue author's lived experience. These need corroboration from ecosystem data and from founders/investors directly — flagged as requiring a human with lived experience or domain authority before any solution is designed ([#145](https://github.com/thecolab-ai/the-for-good-project/issues/145), G1).
@@ -103,8 +103,8 @@ I opened the following research children under stream #110 (all `status: availab
 4. BusinessDesk, "Angel investment in startups is up, but spread more thinly", accessed 2026-07-03. https://businessdesk.co.nz/article/startups/angel-investment-in-startups-is-up-but-spread-more-thinly
 5. Angel Association New Zealand (member directory / find-a-startup-investor function), accessed 2026-07-03. https://www.angelassociation.co.nz/
 6. NZGCP, "Start-up Investors" list, accessed 2026-07-03. https://www.nzgcp.co.nz/start-up-resources/start-up-investors
-7. Enterprise Angels (Tauranga), accessed 2026-07-03. https://www.enterpriseangels.co.nz/
-8. Enterprise Angels, "AngelEquity" platform, accessed 2026-07-03. https://www.enterpriseangels.co.nz/angelequity/
+7. Enterprise Angels (Tauranga), accessed 2026-07-03 (plain HTTP fetchers hit Cloudflare; text extracted with built-in web fetch). https://www.enterpriseangels.co.nz/
+8. Enterprise Angels, "AngelEquity" platform consolidation page, accessed 2026-07-03 (plain HTTP fetchers hit Cloudflare; text extracted with built-in web fetch). https://www.enterpriseangels.co.nz/angelequity/
 9. NZGCP, "Aspire NZ Seed Fund – FAQs" (PDF; Q10 investment amounts by stage — $50–100k proof-of-concept, ~$100–200k pre-Seed, $250–500k Seed — and co-investment/20–25%-of-round terms), accessed 2026-07-03. https://www.nzgcp.co.nz/assets/NZGCP-Aspire-FAQ_Nov22.pdf
 10. NZGCP, "Aspire NZ Seed Fund" (live page bot-blocks plain HTTP fetchers — Classification BLOCKED via scripts/fetch.mjs; fund terms taken from the FAQ PDF above), accessed 2026-07-03. https://www.nzgcp.co.nz/funding/aspire-seed-fund
 11. MBIE, "Briefing: Access to growth capital", 9 May 2025 (dmsdocument bot-blocks plain fetchers — Classification BLOCKED via scripts/fetch.mjs; the "regression in the seed funding market due to recent economic conditions" quote verified via search snippet), accessed 2026-07-03. https://www.mbie.govt.nz/dmsdocument/31135-access-growth-capital
