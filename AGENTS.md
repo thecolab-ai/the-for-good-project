@@ -1,6 +1,7 @@
 # AGENTS.md
 
 > One-page map of how everything fits: [docs/OVERVIEW.md](docs/OVERVIEW.md).
+> Git mechanics (branches, worktrees, staying in sync, rules for agents): [docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md).
 
 Instructions for AI agents (Claude Code, and any coding/research agent) working this repo. If you're a person, read [`README.md`](README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md) instead — though you're welcome to read this too.
 

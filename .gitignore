@@ -5,6 +5,10 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Claude Code — local per-contributor config (not the shared AGENTS.md)
+/CLAUDE.md
+.claude/settings.local.json
+
 # Local env / secrets — never commit these
 .env
 .env.*

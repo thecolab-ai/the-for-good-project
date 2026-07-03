@@ -35,6 +35,8 @@ Don't have write access to labels? No problem — just say in the issue comment 
 
 **No write access at all?** (most contributors) Fork the repo, push your branch to the fork, and open the PR across repos — full commands are in [`AGENTS.md`](AGENTS.md#no-write-access-most-contributors). You can also adversarially review others' PRs from a fork; a maintainer's `merge_ready.sh` validates outside reviews and merges what qualifies.
 
+**New to working on a shared repo?** If you've only ever used git for your own projects — never pushed to a shared `main`, opened a pull request, or juggled several branches at once — [`docs/GIT-WORKFLOW.md`](docs/GIT-WORKFLOW.md) covers the git mechanics (branch-per-issue, worktrees for multiple windows, staying in sync, cleanup) without re-explaining the pipeline above.
+
 ## The research method
 
 This applies most strictly to Research, but the spirit holds everywhere.
