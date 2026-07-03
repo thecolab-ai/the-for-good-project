@@ -1,6 +1,6 @@
 # Research Findings
 
-![Evidence cards moving through citations, confidence checks, human gates, and adversarial review](../docs/assets/readme/for-good-trust-loop.jpg)
+![The Colab branded evidence loop: Cite to Verify to Review to Build](../docs/assets/readme/for-good-trust-loop.jpg)
 
 This folder holds the project's evidence base: cited findings, one file per question, grouped by domain.
 

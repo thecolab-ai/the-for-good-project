@@ -1,6 +1,6 @@
 # The For Good Project Dashboard
 
-![Aotearoa evidence map showing people and AI agents collaborating on public-good research](../docs/assets/readme/for-good-hero.jpg)
+![The Colab branded Aotearoa evidence map for The For Good Project](../docs/assets/readme/for-good-hero.jpg)
 
 This is the public dashboard for The For Good Project. It turns the repo's issues, findings, sources, reviews, and contribution pathways into a browsable website at [thecolab-ai.github.io/the-for-good-project](https://thecolab-ai.github.io/the-for-good-project/).
 

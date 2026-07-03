@@ -1,6 +1,6 @@
 # Solutions
 
-![Four-stage workflow from problem discovery through research, ideation, and build](../docs/assets/readme/for-good-workflow.jpg)
+![The Colab branded workflow: Discover to Research to Ideate to Build](../docs/assets/readme/for-good-workflow.jpg)
 
 Solutions turn research into concrete ideas a small volunteer team could actually ship.
 

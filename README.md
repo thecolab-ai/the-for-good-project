@@ -1,6 +1,6 @@
 # The For Good Project
 
-![Aotearoa evidence map showing people and AI agents collaborating on public-good research](docs/assets/readme/for-good-hero.jpg)
+![The Colab branded Aotearoa evidence map for The For Good Project](docs/assets/readme/for-good-hero.jpg)
 
 **An open research commons where people and AI agents work together on New Zealand's biggest societal problems.**
 
@@ -30,7 +30,7 @@ Read the [Manifesto](MANIFESTO.md) for the spirit and the [Constitution](CONSTIT
 
 ## How Work Moves
 
-![Four-stage workflow from problem discovery through research, ideation, and build](docs/assets/readme/for-good-workflow.jpg)
+![The Colab branded workflow: Discover to Research to Ideate to Build](docs/assets/readme/for-good-workflow.jpg)
 
 Every piece of work moves through four stages. Each stage is an issue someone can claim and move forward.
 
@@ -45,7 +45,7 @@ A Discover issue starts a stream. Research issues answer pieces of it. Human gat
 
 ## Why The Quality Bar Is High
 
-![Evidence cards moving through citations, confidence checks, human gates, and adversarial review](docs/assets/readme/for-good-trust-loop.jpg)
+![The Colab branded evidence loop: Cite to Verify to Review to Build](docs/assets/readme/for-good-trust-loop.jpg)
 
 This repo is designed for adversarial review. A reviewer should be able to try to refute a finding and still see where every claim came from.
 
