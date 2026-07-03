@@ -1,16 +1,17 @@
 ---
 title: "NZ electricity affordability and dry-year risk need five focused research tracks"
-domain: "other"
+type: "analysis"
 issue: "#256"
-confidence: "Medium"
 author: "adam91holt"
 agent: "codex"
 model: "gpt-5-codex"
 date: "2026-07-03"
-status: "draft"
+status: "proposal"
 ---
 
 # NZ electricity affordability and dry-year risk need five focused research tracks
+
+This is the discover framing note for Stream #256, which is a `stage: discover` root issue about NZ electricity affordability and dry-year risk [Issue #256](https://github.com/thecolab-ai/the-for-good-project/issues/256). It separates household bill components, dry-year wholesale mechanics, market-structure questions, hardship exposure, and the generation/flexibility pipeline into five child research questions. It is deliberately a survey and fan-out baseline, not a completed research finding.
 
 ## Executive answer
 
@@ -20,7 +21,17 @@ status: "draft"
 - The market-structure question is legitimate but not answered by this baseline: the Electricity Authority says most generation is from Contact, Genesis, Meridian, and Mercury, while the wholesale market includes about 80 generators, 62 retailers, and four gentailers [Electricity Authority, "New Zealand's electricity sector"](https://www.ea.govt.nz/your-power/new-zealands-electricity-sector/).
 - The stream should fan out into five research questions: real residential price trends, measured dry-year price effects, gentailer concentration and margins, energy hardship/disconnections, and the new generation/flexibility pipeline [#277](https://github.com/thecolab-ai/the-for-good-project/issues/277), [#279](https://github.com/thecolab-ai/the-for-good-project/issues/279), [#281](https://github.com/thecolab-ai/the-for-good-project/issues/281), [#282](https://github.com/thecolab-ai/the-for-good-project/issues/282), [#283](https://github.com/thecolab-ai/the-for-good-project/issues/283).
 
-**Overall confidence:** Medium - official sources support the framing and the research split, but this discover finding deliberately does not quantify real household price changes, spot-price spikes, or gentailer margins.
+**Overall confidence:** Medium - official sources support the framing and the research split, but this discover framing deliberately does not quantify real household price changes, spot-price spikes, or gentailer margins.
+
+## Confidence & limits
+
+**Overall confidence:** Medium - official sources support the bill-component, dry-year, spot-market, sector-structure, energy-hardship, disconnections, and generation-capacity baseline, while several household-facing effects are intentionally left for child research [Electricity Authority, "Your power bill"](https://www.ea.govt.nz/your-power/bill/); [Electricity Authority, 2024](https://www.ea.govt.nz/news/eye-on-electricity/the-difference-between-winter-peak-capacity-and-dry-year-risk/); [MBIE, Energy in New Zealand 2025](https://www.mbie.govt.nz/building-and-energy/energy-and-natural-resources/energy-statistics-and-modelling/energy-publications-and-technical-papers/energy-in-new-zealand/energy-in-new-zealand-2025/electricity).
+
+**What is fact:** the cited Electricity Authority bill components, dry-year mechanism, nodal spot-market mechanics, sector counts, MBIE 2024 generation figures, MBIE energy-hardship definition, Electricity Authority disconnection figures, the Lake Pukaki approval reporting, and the existence of the five child research issues [Electricity Authority, "Spot market"](https://www.ea.govt.nz/industry/wholesale/spot-market/); [Electricity Authority, "New Zealand's electricity sector"](https://www.ea.govt.nz/your-power/new-zealands-electricity-sector/); [RNZ, 3 July 2026](https://www.rnz.co.nz/news/business/658613/meridian-gets-go-ahead-to-access-reserve-water-promises-price-hikes-will-end-soon); [#277](https://github.com/thecolab-ai/the-for-good-project/issues/277); [#279](https://github.com/thecolab-ai/the-for-good-project/issues/279); [#281](https://github.com/thecolab-ai/the-for-good-project/issues/281); [#282](https://github.com/thecolab-ai/the-for-good-project/issues/282); [#283](https://github.com/thecolab-ai/the-for-good-project/issues/283).
+
+**What is interpretation:** that those facts form one researchable stream about household electricity affordability rather than five unrelated electricity-sector topics [Issue #256](https://github.com/thecolab-ai/the-for-good-project/issues/256).
+
+**Main limits:** this note does not quantify CPI-adjusted household prices, dry-year spot-price effects, hedge-price movements, retailer pass-through into fixed household rates, gentailer margins, household-level hardship burden, or the practical dry-year contribution of individual generation and flexibility projects. Those are the explicit jobs of the child research issues [#277](https://github.com/thecolab-ai/the-for-good-project/issues/277); [#279](https://github.com/thecolab-ai/the-for-good-project/issues/279); [#281](https://github.com/thecolab-ai/the-for-good-project/issues/281); [#282](https://github.com/thecolab-ai/the-for-good-project/issues/282); [#283](https://github.com/thecolab-ai/the-for-good-project/issues/283).
 
 ## Evidence
 
@@ -52,7 +63,7 @@ Meridian's claim that access to contingent storage will put downward pressure on
 
 The Electricity Authority says most electricity generation is produced by four companies, Contact Energy, Genesis Energy, Meridian Energy, and Mercury Energy, while the wholesale market includes about 80 generation companies, 62 retailers, and four gentailers [Electricity Authority, "New Zealand's electricity sector"](https://www.ea.govt.nz/your-power/new-zealands-electricity-sector/).
 
-The same Electricity Authority page says retailers and large industrial users buy electricity through the spot market and can use financial hedges to smooth some or all spot-price volatility by fixing electricity prices for a period [Electricity Authority, "New Zealand's electricity sector"](https://www.ea.govt.nz/your-power/new-zealands-electricity-sector/). The household pass-through question should therefore be treated as a research question, not as established here: the cited Electricity Authority pages support spot-price volatility and hedging as market mechanisms, but this discover finding did not verify how dry-year spot prices change retailer hedge costs or fixed household rates.
+The same Electricity Authority page says retailers and large industrial users buy electricity through the spot market and can use financial hedges to smooth some or all spot-price volatility by fixing electricity prices for a period [Electricity Authority, "New Zealand's electricity sector"](https://www.ea.govt.nz/your-power/new-zealands-electricity-sector/). The household pass-through question should therefore be treated as a research question, not as established here: the cited Electricity Authority pages support spot-price volatility and hedging as market mechanisms, but this discover framing did not verify how dry-year spot prices change retailer hedge costs or fixed household rates.
 
 The market-structure research issue should test whether gentailer concentration changes wholesale margins, hedge availability, or retail pass-through, rather than treating "four gentailers dominate" as enough to prove excess margins [#281](https://github.com/thecolab-ai/the-for-good-project/issues/281).
 
@@ -93,7 +104,7 @@ The dry-year solution question should not assume that more solar and wind automa
 ## Open follow-up questions
 
 - [#277](https://github.com/thecolab-ai/the-for-good-project/issues/277) - What have residential electricity prices actually done in real, CPI-adjusted terms, by region and retailer?
-- [#279](https://github.com/thecolab-ai/the-for-good-project/issues/279) - How much do wholesale spot prices and hedge prices actually move during dry years or low-hydro periods? **NOTE:** Issue #279's original body described the mechanism as "dry hydro -> thermal marginal pricing -> uniform high price for all generators". That single-national-price framing is incorrect. NZ uses nodal pricing. The issue body has been corrected, but researchers should still use the nodal-pricing explanation from this finding.
+- [#279](https://github.com/thecolab-ai/the-for-good-project/issues/279) - How much do wholesale spot prices and hedge prices actually move during dry years or low-hydro periods? **NOTE:** Issue #279's original body described the mechanism as "dry hydro -> thermal marginal pricing -> uniform high price for all generators". That single-national-price framing is incorrect. NZ uses nodal pricing. The issue body has been corrected, but researchers should still use the nodal-pricing explanation from this framing note.
 - [#281](https://github.com/thecolab-ai/the-for-good-project/issues/281) - How concentrated are generation, retail, hedge supply, and margins across the four gentailers?
 - [#282](https://github.com/thecolab-ai/the-for-good-project/issues/282) - Which households bear the cost through higher shares of income, arrears, disconnections, or self-rationing?
 - [#283](https://github.com/thecolab-ai/the-for-good-project/issues/283) - Which new generation, storage, and demand-response projects could reduce dry-year exposure, and on what timeline?
@@ -111,3 +122,4 @@ The dry-year solution question should not assume that more solar and wind automa
 9. MBIE, "Defining energy hardship", last updated 12 December 2025, accessed 3 July 2026. Fetched by WebSearch/WebFetch. https://www.mbie.govt.nz/building-and-energy/energy-and-natural-resources/energy-hardship/defining-energy-hardship
 10. Electricity Authority, "Strengthening visibility of disconnections in the retail electricity market", 15 December 2025, accessed 3 July 2026. Fetched by WebSearch/WebFetch. https://www.ea.govt.nz/news/general-news/strengthening-visibility-of-disconnections-in-the-retail-electricity-market/
 11. Electricity Authority, "Disconnections for non-payment", accessed 3 July 2026. Fetched by WebSearch/WebFetch. https://www.ea.govt.nz/data-and-insights/charts-and-dashboards/disconnections-for-non-payment/
+12. GitHub issue #256, "discover: electricity affordability & dry-year risk - why NZ power prices keep rising", accessed 3 July 2026. https://github.com/thecolab-ai/the-for-good-project/issues/256
