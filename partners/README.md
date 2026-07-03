@@ -9,6 +9,9 @@ per organisation/relationship. Proposed in
 [issue #123](https://github.com/thecolab-ai/the-for-good-project/issues/123);
 it becomes project process only if ratified by a human maintainer.
 
+For the demand-side playbook that sits above these records — what we ask of each
+kind of partner and what they get back — see [ASKS.md](ASKS.md).
+
 It exists because of a tension we refuse to resolve quietly: this project is
 built completely in the open, but it tracks real people at real organisations.
 [CONSTITUTION.md](../CONSTITUTION.md) Article III (protect people) wins, and it
