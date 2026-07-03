@@ -1,16 +1,16 @@
 ---
-title: "NZ's mandatory Consumer Care Obligations raised the floor for postpay customers but leave prepay self-disconnection — the largest source of harm — structurally outside their core protections"
+title: "NZ's mandatory Consumer Care Obligations raised the floor for postpay customers but leave prepay self-disconnection — the largest source of disconnection events — structurally outside their core protections"
 domain: "other"
 issue: "#328"
 confidence: "Medium"
 author: "richard.fortune (Claude Code)"
 agent: "claude"
-model: "opus"
+model: "claude-opus-4-8"
 date: "2026-07-04"
 status: "draft"
 ---
 
-# NZ's mandatory Consumer Care Obligations raised the floor for postpay customers but leave prepay self-disconnection — the largest source of harm — structurally outside their core protections
+# NZ's mandatory Consumer Care Obligations raised the floor for postpay customers but leave prepay self-disconnection — the largest source of disconnection events — structurally outside their core protections
 
 ## Executive answer
 
@@ -51,7 +51,7 @@ Concretely, the report states **enforcement action has been undertaken** in rela
 
 The Obligations *do* impose prepay-specific duties — retailers must warn a prepay customer when their balance falls below roughly two days' usage, **monitor the frequency and duration of self-disconnections** and proactively offer help to customers who frequently run out, and reconnect within 30 minutes of a top-up (Part 7 clause 45) [Consumer NZ, "Consumer Care Obligations: what you need to know"](https://www.consumer.org.nz/articles/electricity-authority-s-consumer-care-obligations-what-you-need-to-know); [EA compliance report, 2026, Appendix D (Glo-Bug, cl 45)](https://www.ea.govt.nz/documents/9266/2025_Consumer_Care_Obligations_Annual_Compliance_Report.pdf). But they **do not prohibit self-disconnection when credit runs out, and do not extend the MDC no-disconnect protection to prepay**. The Authority's own consumer guidance is explicit: postpay MDCs "cannot be disconnected for non-payment," but "on prepay plans, electricity supply will stop if/when the account runs out of credit," and it advises that "it's safer for households with medically dependent consumers to be on postpay" [EA, "If you rely on electricity for medical reasons"](https://www.ea.govt.nz/your-power/consumer-care-obligations/if-you-rely-on-electricity-for-medical-reasons/).
 
-This distinction is not incidental — it is the reason the harm is concentrated where the rules are weakest. The Authority's December 2025 disconnections dashboard (its first, covering Jan–Oct 2025) shows:
+This distinction is not incidental — it is the reason disconnection events are concentrated where the rules are weakest (the sources measure disconnection exposure, not downstream harm to households, which remains unquantified — see confidence note and "what would change this conclusion"). The Authority's December 2025 disconnections dashboard (its first, covering Jan–Oct 2025) shows:
 
 | Measure | Postpay (contract) | Prepay |
 |---|---|---|
@@ -68,7 +68,7 @@ Crucially, the Authority frames prepay disconnections as automatic-on-credit-dep
 
 Prepay is disproportionately a low-income, poor-credit, last-resort product, and it is more expensive: prepay customers are charged on average about **14% more than the cheapest available plan**, and roughly 6% of households end up on prepay because of payment difficulty [Consumer NZ, 24 Jan 2024](https://www.consumer.org.nz/articles/electricity-disconnection-an-unregulated-threat-for-households). Payment pressure is unevenly distributed — around 26% of Pasifika and 15% of Māori households report it, versus ~10% overall [Consumer NZ, 24 Jan 2024](https://www.consumer.org.nz/articles/electricity-disconnection-an-unregulated-threat-for-households).
 
-FinCap's Jake Lilley offered a pointed international comparison: **Victoria, Australia — which prohibits prepay automatic disconnection — recently averaged just over a thousand disconnections a *month* despite a larger population**, against New Zealand's ~27,000 prepay disconnections a month [RNZ, 17 Dec 2025](https://www.rnz.co.nz/news/national/582029/1000-customers-each-weekday-have-power-disconnected). Consumer NZ's Jessica Walker noted "many households do not actively choose pre-pay; they end up on it as a last resort" [RNZ, 17 Dec 2025](https://www.rnz.co.nz/news/national/582029/1000-customers-each-weekday-have-power-disconnected). The **Everyone Connected** campaign's asks are: ban disconnection/reconnection fees; require that prepay is never priced above a retailer's cheapest plan; publish prepay disconnection data; and make the (then-voluntary) guidelines mandatory and properly enforced [Everyone Connected](https://www.everyoneconnectednz.com/winter-2025). The mandate ask has been met and the data-publication ask is partly met (the new dashboard); the **prepay pricing and self-disconnection asks remain open**.
+FinCap's Jake Lilley offered a pointed international comparison: **Victoria, Australia — which prohibits prepay automatic disconnection — recently averaged just over a thousand disconnections a *month* despite a larger population**, against New Zealand's ~27,000 prepay disconnections a month [RNZ, 17 Dec 2025](https://www.rnz.co.nz/news/national/582029/1000-customers-each-weekday-have-power-disconnected). Consumer NZ's Jessica Walker noted "many households do not actively choose pre-pay; they end up on it as a last resort" [RNZ, 17 Dec 2025](https://www.rnz.co.nz/news/national/582029/1000-customers-each-weekday-have-power-disconnected). The **Everyone Connected** campaign's asks are: ban disconnection/reconnection fees; require that companies "never charge their prepay customers higher prices than those paying by other means"; publish prepay disconnection data; and make the (then-voluntary) guidelines mandatory and properly enforced [Everyone Connected](https://www.everyoneconnectednz.com/winter-2025). The mandate ask has been met and the data-publication ask is partly met (the new dashboard); the **prepay pricing and self-disconnection asks remain open**.
 
 ### The Authority itself has flagged policy/Code gaps
 
