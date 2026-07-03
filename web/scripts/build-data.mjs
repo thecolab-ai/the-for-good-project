@@ -74,10 +74,11 @@ async function main() {
   // reviewer is not the PR author. Counted once per (reviewer, PR).
   const reviewsGiven = new Map();  // login -> Set(prNumbers)
   const reviewLast = new Map();    // login -> most recent review ISO timestamp
+  const reviewPeopleByPr = new Map(); // pr number -> Map(login -> Person)
   try {
     let after = null;
     for (let i = 0; i < 10; i++) {
-      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login} state submittedAt}}}}}}`;
+      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login avatarUrl url} state submittedAt}}}}}}`;
       const gres = await fetch(`${API}/graphql`, { method: "POST", headers, body: JSON.stringify({ query: q, variables: { cursor: after } }) });
       if (!gres.ok) { console.warn("reviews graphql:", gres.status); break; }
       const data = (await gres.json())?.data?.repository?.pullRequests;
@@ -90,6 +91,8 @@ async function main() {
           if (rv.state !== "APPROVED" && rv.state !== "CHANGES_REQUESTED") continue;
           if (!reviewsGiven.has(who)) reviewsGiven.set(who, new Set());
           reviewsGiven.get(who).add(pr.number);
+          if (!reviewPeopleByPr.has(pr.number)) reviewPeopleByPr.set(pr.number, new Map());
+          reviewPeopleByPr.get(pr.number).set(who, { login: who, avatar: rv.author?.avatarUrl || "", url: rv.author?.url || `https://github.com/${who}` });
           const at = rv.submittedAt;
           if (at && (!reviewLast.has(who) || new Date(at) > new Date(reviewLast.get(who)))) reviewLast.set(who, at);
         }
@@ -271,6 +274,7 @@ async function main() {
     if (p.merged) a.mergedPRs++;
     if (p.updatedAt > a.updated) a.updated = p.updatedAt;
     addStreamPerson(a, p.author);
+    for (const reviewer of reviewPeopleByPr.get(p.number)?.values() ?? []) addStreamPerson(a, reviewer);
   }
   for (const f of findings) {
     const s = f.issue ? issueStream.get(f.issue) : null; if (!s) continue;
@@ -282,7 +286,17 @@ async function main() {
     const login = String(f.author || "").replace(/^@/, "");
     if (login && login !== "unknown" && !a.people.has(login)) a.people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
   }
-  for (const d of streamDocs) { const a = ensureStream(d.stream); if (d.title) a.title = d.title; if (d.state) a.state = d.state; if (d.steward) a.steward = d.steward; if (!a.domain && d.domain) a.domain = d.domain; }
+  for (const d of streamDocs) {
+    const a = ensureStream(d.stream);
+    if (d.title) a.title = d.title;
+    if (d.state) a.state = d.state;
+    if (d.steward) {
+      a.steward = d.steward;
+      const login = String(d.steward).replace(/^@/, "");
+      if (login) addStreamPerson(a, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
+    }
+    if (!a.domain && d.domain) a.domain = d.domain;
+  }
   const streamsSummary = [...streamAgg.values()].map((a) => ({
     stream: a.stream, title: a.title || `Stream #${a.stream}`, domain: a.domain, state: a.state, steward: a.steward, updated: a.updated,
     issues: a.issues, openIssues: a.openIssues, mergedPRs: a.mergedPRs, findings: a.findings,

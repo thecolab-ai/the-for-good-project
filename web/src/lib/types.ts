@@ -113,6 +113,11 @@ export interface StreamSummary {
   hasOverview: boolean;
 }
 
+export interface StreamsSummaryData {
+  generatedAt: string;
+  streams: StreamSummary[];
+}
+
 export interface SourceRef {
   url: string;
   host: string;
