@@ -166,6 +166,7 @@ export interface Snapshot {
   activeActors: ActiveActor[];
   adrs?: Adr[];
   streamDocs?: StreamDoc[];
+  streamBriefs?: StreamBrief[];
   streamsSummary?: StreamSummary[];
 }
 
@@ -178,6 +179,12 @@ export interface StreamDoc {
   updated: string;
   body: string;
   url: string;
+}
+
+export interface StreamBrief {
+  stream: number;
+  title: string;
+  body: string;
 }
 
 export interface Adr {

@@ -54,6 +54,143 @@ function person(u) {
   return u ? { login: u.login, avatar: u.avatar_url, url: u.html_url } : null;
 }
 
+function stripMarkdown(md) {
+  return String(md || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_>`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function excerptText(md, max = 520) {
+  const text = stripMarkdown(md);
+  return text.length > max ? `${text.slice(0, max).trimEnd()}...` : text;
+}
+
+function extractSection(md, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^|\\n)##[ \\t]+${escaped}[ \\t]*(?:\\r?\\n)+([\\s\\S]*?)(?=\\n##[ \\t]+|$)`, "i");
+  return (String(md || "").replace(/<!--[\s\S]*?-->/g, "").match(re)?.[1] || "").trim();
+}
+
+function firstListItems(md, max = 5) {
+  const items = [];
+  let current = null;
+  for (const line of String(md || "").split(/\r?\n/)) {
+    const start = line.match(/^\s*-\s+(.*)$/);
+    if (start) {
+      if (current) items.push(current.trim());
+      current = start[1];
+      continue;
+    }
+    if (current && /^\s{2,}\S/.test(line)) current += ` ${line.trim()}`;
+    else if (current && line.trim() === "") continue;
+    else if (current) { items.push(current.trim()); current = null; }
+    if (items.length >= max) break;
+  }
+  if (current && items.length < max) items.push(current.trim());
+  return items.slice(0, max);
+}
+
+function absoluteMarkdownLinks(md, repoUrl, defaultBranch) {
+  return String(md || "").replace(/\[([^\]]+)\]\(([^)]+)\)/g, (all, label, href) => {
+    if (/^https?:\/\//i.test(href) || href.startsWith("#")) return all;
+    const normalized = path.posix.normalize(href.replace(/^\.?\//, "").replace(/^\.\.\//, ""));
+    const repoPath = normalized.replace(/^streams\//, "").startsWith("research/")
+      ? normalized
+      : normalized.replace(/^.*?(research\/|solutions\/|streams\/|docs\/)/, "$1");
+    return `[${label}](${repoUrl}/blob/${defaultBranch}/${repoPath})`;
+  });
+}
+
+function confidenceRollup(findings) {
+  if (!findings.length) return "Low";
+  const counts = findings.reduce((acc, f) => {
+    const c = ["High", "Medium", "Low"].includes(f.confidence) ? f.confidence : "Low";
+    acc[c] = (acc[c] || 0) + 1;
+    return acc;
+  }, {});
+  if (counts.Low && !counts.High && !counts.Medium) return "Low";
+  if (counts.Low || counts.Medium) return "Medium";
+  return "High";
+}
+
+function buildStreamBrief({ stream, title, rootIssue, doc, findings, repoUrl, defaultBranch }) {
+  const problem = extractSection(doc?.body, "The problem, in plain language") || rootIssue?.body || "";
+  const learned = extractSection(doc?.body, "What we've learned so far");
+  const unsure = extractSection(doc?.body, "What we're not sure about yet");
+  const openFromFindings = findings
+    .map((f) => extractSection(f.body, "What would change this conclusion"))
+    .filter(Boolean)
+    .map((s) => firstListItems(s, 1)[0] || excerptText(s, 220))
+    .filter(Boolean)
+    .slice(0, 4);
+  const confidence = confidenceRollup(findings);
+  const lines = [
+    `# ${title || `Stream #${stream}`}`,
+    "",
+    "## What we know now",
+    "",
+    problem ? excerptText(problem, 700) : "This stream does not yet have a plain-language problem summary.",
+    "",
+  ];
+
+  const learnedItems = firstListItems(learned, 5).map((item) => absoluteMarkdownLinks(item, repoUrl, defaultBranch));
+  if (learnedItems.length) {
+    for (const item of learnedItems) lines.push(`- ${item}`);
+  } else if (findings.length) {
+    for (const f of findings.slice(0, 5)) {
+      lines.push(`- **${f.title}** (${f.confidence || "Unknown"} confidence): ${f.summary || "No summary available."} [Read the finding](${f.url})`);
+    }
+  } else {
+    lines.push("- No research findings are published for this stream yet.");
+  }
+
+  lines.push(
+    "",
+    "## Key cited findings",
+    "",
+  );
+
+  if (findings.length) {
+    for (const f of findings.slice(0, 8)) {
+      lines.push(`- **${f.title}** (${f.confidence || "Unknown"} confidence): ${f.summary || "No summary available."} [Finding](${f.url})`);
+    }
+  } else {
+    lines.push("- No cited findings are available yet.");
+  }
+
+  lines.push(
+    "",
+    "## Confidence",
+    "",
+    `Overall confidence: **${confidence}**. Treat the individual confidence labels above as the guide for specific claims.`,
+    "",
+    "## What is still open",
+    "",
+  );
+
+  const openItems = firstListItems(unsure, 6).map((item) => absoluteMarkdownLinks(item, repoUrl, defaultBranch));
+  if (openItems.length) {
+    for (const item of openItems) lines.push(`- ${item}`);
+  } else if (openFromFindings.length) {
+    for (const item of openFromFindings) lines.push(`- ${item}`);
+  } else {
+    lines.push("- No open questions have been summarised yet.");
+  }
+
+  lines.push(
+    "",
+    "## What would change this conclusion",
+    "",
+    "A newer official dataset, direct feedback from people affected by this problem, or expert review that contradicts the cited findings above would change this brief. Where the current evidence is single-sourced or marked Low confidence, it should be treated as a lead for checking, not a settled fact.",
+  );
+
+  return lines.join("\n");
+}
+
 async function main() {
   console.log(`Building snapshot for ${REPO}${TOKEN ? " (authenticated)" : " (unauthenticated)"}`);
 
@@ -253,6 +390,7 @@ async function main() {
   const issueStream = new Map();
   for (const it of issues) { const s = streamLabelOf(it); if (s) issueStream.set(it.number, s); }
   const streamAgg = new Map();
+  const streamRoots = new Map();
   const ensureStream = (s) => {
     if (!streamAgg.has(s)) streamAgg.set(s, { stream: s, title: "", domain: "", state: "", steward: "", updated: "",
       issues: 0, openIssues: 0, mergedPRs: 0, findings: 0, agents: {}, models: {}, people: new Map() });
@@ -264,7 +402,11 @@ async function main() {
     const a = ensureStream(s);
     a.issues++; if (it.state === "open") a.openIssues++;
     if (it.updatedAt > a.updated) a.updated = it.updatedAt;
-    if (it.stage === "discover") { if (!a.title) a.title = it.title.replace(/^\[[^\]]+\]\s*/, ""); if (!a.state) a.state = it.status; }
+    if (it.stage === "discover") {
+      if (!a.title) a.title = it.title.replace(/^\[[^\]]+\]\s*/, "");
+      if (!a.state) a.state = it.status;
+      if (!streamRoots.has(s) || it.number === s) streamRoots.set(s, it);
+    }
     if (!a.domain && it.domain) a.domain = it.domain;
     addStreamPerson(a, it.author); (it.assignees || []).forEach((p) => addStreamPerson(a, p));
   }
@@ -303,6 +445,32 @@ async function main() {
     agents: a.agents, models: a.models, people: [...a.people.values()],
     hasOverview: streamDocs.some((d) => d.stream === a.stream && (d.body || "").trim().length > 0),
   })).sort((x, y) => (y.updated || "").localeCompare(x.updated || "") || x.stream - y.stream);
+
+  const findingsByStream = new Map();
+  for (const f of findings) {
+    const s = f.issue ? issueStream.get(f.issue) : null;
+    if (!s) continue;
+    const list = findingsByStream.get(s) ?? [];
+    list.push(f);
+    findingsByStream.set(s, list);
+  }
+  for (const list of findingsByStream.values()) {
+    list.sort((a, b) => (b.date || "").localeCompare(a.date || "") || a.title.localeCompare(b.title));
+  }
+  const docsByStream = new Map(streamDocs.map((d) => [d.stream, d]));
+  const streamBriefs = streamsSummary.map((s) => ({
+    stream: s.stream,
+    title: s.title,
+    body: buildStreamBrief({
+      stream: s.stream,
+      title: s.title,
+      rootIssue: streamRoots.get(s.stream),
+      doc: docsByStream.get(s.stream),
+      findings: findingsByStream.get(s.stream) ?? [],
+      repoUrl: repoMeta.html_url,
+      defaultBranch: repoMeta.default_branch,
+    }),
+  }));
 
   // --- leaderboard ---
   const people = new Map();
@@ -466,6 +634,7 @@ async function main() {
     activeActors,
     adrs,
     streamDocs,
+    streamBriefs,
     streamsSummary,
   };
 

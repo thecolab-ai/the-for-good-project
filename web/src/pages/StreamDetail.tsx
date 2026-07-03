@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck } from "lucide-react";
+import { ArrowLeft, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck, Copy, Check } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -58,6 +58,7 @@ export default function StreamDetail() {
   const { stream } = useParams();
   const streamNum = Number(stream);
   const { data, error, loading } = useSnapshot();
+  const [copiedBrief, setCopiedBrief] = useState(false);
 
   const group = useMemo(() => (data ? buildStreamChains(data.issues).find((g) => g.stream === streamNum) : undefined), [data, streamNum]);
 
@@ -66,6 +67,7 @@ export default function StreamDetail() {
 
   const summary = data.streamsSummary?.find((s) => s.stream === streamNum);
   const doc = data.streamDocs?.find((d) => d.stream === streamNum);
+  const brief = data.streamBriefs?.find((b) => b.stream === streamNum);
   const findings = findingsForStream(streamNum, data.findings, data.issues);
 
   if (!summary && !group && !doc) {
@@ -93,6 +95,13 @@ export default function StreamDetail() {
   const people = summary?.people ?? [];
   const steward = doc?.steward?.replace(/^@/, "") || summary?.steward?.replace(/^@/, "") || "";
   const hasOverview = !!doc?.body?.trim();
+  const briefBody = brief?.body?.trim() || "";
+  const copyBrief = async () => {
+    if (!briefBody) return;
+    await navigator.clipboard.writeText(briefBody);
+    setCopiedBrief(true);
+    window.setTimeout(() => setCopiedBrief(false), 1800);
+  };
 
   return (
     <div>
@@ -170,9 +179,35 @@ export default function StreamDetail() {
             )}
           </section>
 
+          {/* Copyable partner-facing brief */}
+          <section>
+            <StepHeader n={2} icon={Copy} label="Forwardable brief" />
+            {briefBody ? (
+              <Card className="border-l-2 border-l-brand-cyan p-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+                  <div>
+                    <div className="font-serif text-lg font-semibold">What we know now</div>
+                    <p className="mt-1 text-sm text-muted-foreground">Plain-English stream brief.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyBrief}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-brand-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-navy/90 dark:bg-brand-cyan-dark dark:hover:bg-brand-cyan-dark/90"
+                  >
+                    {copiedBrief ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedBrief ? "Copied" : "Copy brief"}
+                  </button>
+                </div>
+                <Markdown>{briefBody}</Markdown>
+              </Card>
+            ) : (
+              <Card className="p-6 text-sm text-muted-foreground">No brief can be generated until this stream has a problem statement or findings.</Card>
+            )}
+          </section>
+
           {/* 2 — the research */}
           <section>
-            <StepHeader n={2} icon={ScrollText} label="The research" />
+            <StepHeader n={3} icon={ScrollText} label="The research" />
             {findings.length > 0 ? (
               <Card className="p-5">
                 <div className="space-y-3">
@@ -204,7 +239,7 @@ export default function StreamDetail() {
 
           {/* 3 — the synthesis */}
           <section id="synthesis" className="scroll-mt-20">
-            <StepHeader n={3} icon={Lightbulb} label="The synthesised stream" />
+            <StepHeader n={4} icon={Lightbulb} label="The synthesised stream" />
             {hasOverview ? (
               <Card className="border-l-2 border-l-brand-cyan p-6">
                 <Markdown>{doc?.body ?? ""}</Markdown>
