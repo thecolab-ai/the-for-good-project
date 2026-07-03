@@ -217,7 +217,8 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                   <TableCell className="text-right tabular-nums" title="open / total"><span className="text-foreground">{s.openIssues}</span><span className="text-muted-foreground">/{s.issues}</span></TableCell>
                   <TableCell className="text-right tabular-nums">{s.findings}</TableCell>
                   <TableCell className="text-right tabular-nums">{s.mergedPRs}</TableCell>
-                  <TableCell><PeopleStrip people={s.people} size={20} max={4} /></TableCell>
+                  {/* Avatars are external profile links; stop clicks bubbling to the row's navigate. */}
+                  <TableCell><span className="inline-flex" onClick={(e) => e.stopPropagation()}><PeopleStrip people={s.people} size={20} max={4} /></span></TableCell>
                   <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{s.updated ? relativeTime(s.updated) : "—"}</TableCell>
                 </TableRow>
                 {isOpen ? (
