@@ -3,7 +3,7 @@ stream: 110
 title: "Early-stage founders in New Zealand struggle to find and reach angel and seed investors"
 state: needs-synthesis
 steward: ""
-domain: other
+domain: grant-access
 updated: 2026-07-03
 ---
 
