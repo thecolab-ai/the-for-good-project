@@ -276,6 +276,23 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
     fi
     return 0
   fi
+  # A SYNTHESIS draft (branch synthesis/*) is reworked by synthesize_work.sh
+  # ONLY (ADR-0011): this generic loop would feed it the research rework prompt
+  # (no steward-preservation rules) and then park the stream root at
+  # "in-review" — a status a root must never hold. Unassign so the synthesis
+  # runner can claim it; drop it from MY queue. FAIL CLOSED: if we can't read
+  # the head branch (rc 2), do NOT rework — leave the issue for a future loop.
+  local synth_rc; pr_is_synthesis "$pr" && synth_rc=0 || synth_rc=$?
+  if [ "$synth_rc" -eq 0 ]; then
+    log "#$n's PR #$pr is a synthesis draft — its rework belongs to synthesize_work.sh. Unassigning @me."
+    if [ "$DRY_RUN" = 0 ]; then
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    fi
+    return 0
+  elif [ "$synth_rc" -eq 2 ]; then
+    warn "Couldn't read PR #$pr's head branch — leaving #$n for a future loop."
+    return 0
+  fi
   # A fork PR's branch lives on the contributor's fork, not origin — we can
   # neither check it out as origin/$branch nor push a rework to it (only its
   # author can). Drop it from MY rework queue so the loop doesn't spin on it
@@ -321,10 +338,14 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
 # pushed after it — so a freshly reworked PR awaiting re-review is left alone.
 reconcile_rework() {
   [ "$DRY_RUN" = 1 ] && return 0
-  local prs pr iss labels lastcr headcommit
+  local prs pr iss labels lastcr headcommit synth_rc
   prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
           --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"
   for pr in $prs; do
+    # Routed by synthesize_work.sh's own reconciler (ADR-0011). FAIL CLOSED:
+    # rc 2 (couldn't read the head branch) also skips this loop.
+    pr_is_synthesis "$pr" && synth_rc=0 || synth_rc=$?
+    [ "$synth_rc" -ne 1 ] && continue
     lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
     [ -z "$lastcr" ] && continue
     headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
@@ -348,9 +369,13 @@ reconcile_rework() {
 # a branch we can actually push the rework to. Fork-branch PRs are skipped (only
 # their owner can push). Claims it to @me and echoes its number, else nothing.
 take_unassigned_rework() {  # $1 = optional queue snapshot (from fetch_open_issues)
-  local n pr owner
+  local n pr owner synth_rc
   for n in $(unassigned_reworks "${1:-}"); do
     pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
+    # Synthesis reworks belong to synthesize_work.sh (ADR-0011). FAIL CLOSED:
+    # rc 2 (couldn't read the head branch) also skips — never adopt blind.
+    pr_is_synthesis "$pr" && synth_rc=0 || synth_rc=$?
+    [ "$synth_rc" -ne 1 ] && continue
     owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
     [ "$owner" = "$OWNER" ] || continue
     if [ "$DRY_RUN" = 1 ]; then echo "$n"; return 0; fi

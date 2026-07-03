@@ -220,6 +220,26 @@ pr_review_kind() {  # $1 = pr number
   fi
 }
 
+# Is a PR a SYNTHESIS DRAFT? synthesize_work.sh always creates its branch as
+# synthesis/<slug>, so the head branch is the marker. Synthesis rework belongs
+# to synthesize_work.sh ONLY: the generic start_work.sh rework path uses the
+# research rework prompt (no steward-preservation rules) and parks the stream
+# root at "in-review" — a status a root must never hold, because a synthesis
+# PR has no closing ref so nothing ever clears it.
+# Returns 0 = synthesis, 1 = not synthesis, 2 = UNKNOWN (gh failed). Callers
+# guarding the generic path must fail CLOSED: treat 2 as "don't touch it this
+# loop", never as "not synthesis" — or a transient API blip re-opens the very
+# routing bug this helper exists to prevent (ADR-0011).
+pr_is_synthesis() {  # $1 = pr number
+  local head
+  head="$(gh pr view "$1" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null)" || head=""
+  [ -z "$head" ] && return 2
+  case "$head" in
+    synthesis/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Issue closed by a PR (first closing ref). Use this ONLY when you specifically
 # mean "the issue merging this PR will CLOSE" (e.g. marking it done) — discover
 # PRs have no closing ref by design, so this is empty for them.

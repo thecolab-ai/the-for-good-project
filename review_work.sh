@@ -400,14 +400,20 @@ review_one() {  # $1 = PR number
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" failure "Adversarial review found problems" "$url"
     # Route the rework back to the author: flip the linked issue to
-    # "changes-requested" so THEIR next start_work.sh loop picks it up. Use
+    # "changes-requested" so THEIR next work loop picks it up. Use
     # issue_addressed_by_pr (not issue_for_pr) so DISCOVER PRs — which have no
     # closing ref, only "Part of #n" — are routed too, instead of silently
-    # dropping the hand-off.
+    # dropping the hand-off. A SYNTHESIS draft's root parks at
+    # "awaiting-direction" (not "in-review") while under review, so for
+    # synthesis PRs — and ONLY those; a generic PR that body-links a parked
+    # root must not yank it out of G1 — that label is stripped instead, and
+    # the rework belongs to synthesize_work.sh (ADR-0011).
     local iss; iss="$(issue_addressed_by_pr "$pr" || true)"
     if [ -n "$iss" ]; then
-      if set_status_label "$iss" "changes-requested" "in-review" 2>/dev/null; then
-        gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`start_work.sh\` loop will pick this up." >/dev/null || true
+      local picker="start_work.sh" old_park="in-review"
+      if pr_is_synthesis "$pr"; then picker="synthesize_work.sh"; old_park="awaiting-direction"; fi
+      if set_status_label "$iss" "changes-requested" "in-review" "$old_park" 2>/dev/null; then
+        gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`$picker\` loop will pick this up." >/dev/null || true
         ok "Issue #$iss → changes-requested (back to @$author)"
       else
         warn "Couldn't flip issue #$iss to changes-requested (needs triage/write access) — the review itself is recorded."
