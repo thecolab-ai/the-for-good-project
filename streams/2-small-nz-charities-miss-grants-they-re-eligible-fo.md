@@ -1,7 +1,7 @@
 ---
 stream: 2
 title: "Small charities miss grants they're eligible for"
-state: needs-synthesis
+state: awaiting-direction
 steward: ""
 domain: grant-access
 updated: 2026-07-02

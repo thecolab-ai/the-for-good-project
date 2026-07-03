@@ -1,7 +1,7 @@
 ---
 stream: 0                      # the root Discover issue number
 title: ""                      # plain-language name, e.g. "Small charities miss grants they qualify for"
-state: researching             # framing | researching | needs-synthesis | ideating | building | shipped
+state: researching             # framing | researching | needs-synthesis | awaiting-direction | ideating | building | shipped
 steward: ""                    # GitHub handle of the human who owns direction
 domain: ""                     # child-welfare | grant-access | civic-transparency | ai-policy | biosecurity | other
 updated: YYYY-MM-DD

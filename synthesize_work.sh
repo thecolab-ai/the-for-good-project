@@ -142,8 +142,10 @@ exactly. Rules:
   wish, up to three one-line, clearly non-binding signals the steward may
   weigh, prefixed "Signal:"):
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
-- Frontmatter: stream: $n, title (plain-language), state: needs-synthesis,
-  domain: ${domain:-other}, updated: $today. ${resynth:+Preserve the existing steward value.}
+- Frontmatter: stream: $n, title (plain-language), state: awaiting-direction
+  (this draft IS the synthesis — once it merges the stream is waiting on the
+  human steward, and the overview must say so), domain: ${domain:-other},
+  updated: $today. ${resynth:+Preserve the existing steward value, and if the steward already advanced state past awaiting-direction (ideating/building/shipped), keep THEIR value.}
 - Do NOT touch ANY file other than $path. Do NOT open issues, close anything,
   change labels, or merge. Direction is not yours to set.
 
