@@ -11,6 +11,7 @@ PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes on
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
+CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
 REVIEW_CHECK_CONTEXT="for-good/adversarial-review"
 RUNS_AGENT="${RUNS_AGENT:-0}"             # scripts that call run_agent set this to 1
@@ -239,6 +240,32 @@ issue_addressed_by_pr() {  # $1 = pr number
   gh pr view "$1" --repo "$REPO" --json body --jq .body 2>/dev/null \
     | grep -oiE '(closes|fixes|resolves|part of)[[:space:]]*#[0-9]+' \
     | grep -oE '[0-9]+' | head -1
+}
+
+# Jittered settle window: after a racy claim, wait long enough that every
+# competing claimant's `--add-assignee` is visible to all of them, so the
+# deterministic tie-break sees the same assignee set everywhere. The jitter
+# keeps two lock-stepped workers from reading at the exact same tick.
+claim_settle_secs() { echo $(( CLAIM_SETTLE + (RANDOM % 5) )); }
+
+# resolve_claim_race <issue> — call right after adding @me as assignee to claim
+# or adopt an issue. `--add-assignee` is a set-union, not a lock, so two workers
+# (different accounts) that both slipped past the pre-check end up co-assigned.
+# We settle, then break the tie deterministically: the smallest login wins.
+# It's a pure function of the observed assignee set, so every racer computes the
+# SAME winner with no coordination. Returns 0 if THIS worker holds the claim;
+# otherwise un-assigns @me and returns 1 so the caller yields.
+resolve_claim_race() {  # $1 = issue number
+  local n="$1" assignees winner
+  sleep "$(claim_settle_secs)"
+  assignees="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '[.assignees[].login]|sort|join(" ")')"
+  winner="${assignees%% *}"
+  if [ -n "$winner" ] && [ "$winner" != "$ME" ]; then
+    warn "#$n was claimed concurrently (assignees: $assignees) — @$winner wins, yielding."
+    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    return 1
+  fi
+  return 0
 }
 
 set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old statuses to remove
