@@ -15,22 +15,21 @@
 //                   no keyword there — a WEAK negative, not conclusive,
 //   BLOCKED       = neither homepage nor sitemap yielded scannable content
 //                   (tooling or IP per ADR-0006, NOT evidence of absence),
-// the matched keyword groups, up to a few sample matched URLs, and the HTTP
-// status + byte size of each fetch so a "NO-HIT" is auditable and distinct from
-// a blocked fetch.
+// the matched keyword groups, the full matched URL set, structured-file URL
+// hits, up to a few sample matched URLs, and the HTTP status + byte size of each
+// fetch so a "NO-HIT" is auditable and distinct from a blocked fetch.
 //
 // This is deliberately a FRONT-DOOR census: homepage + root sitemap only. It is
 // not a full crawl, a document-library search, or a JS-rendered fetch, and it
 // cannot see search-only endpoints, ArcGIS services, or files without matching
 // URL tokens. Those limits are stated in the finding.
 //
-// Fetch ladder (ADR-0006): each fetch tries a direct browser-shaped HTTP request
+// Implemented fetch path: each fetch tries a direct browser-shaped HTTP request
 // first; if that is WAF-blocked (403/405/406/bot-challenge) it retries through the
-// r.jina.ai reader proxy, which egresses from a different IP and returns the real
-// current page/sitemap. This matters because a datacenter IP often gets a blanket
-// WAF block on NZ council sites that no local browser fingerprint can clear, and
-// counting those as "no data" would be a false negative. Every fetch records HOW
-// it was obtained (direct vs reader) so the artifact is auditable.
+// r.jina.ai reader proxy, which egresses from a different IP and often returns
+// the current page/sitemap. This is not the full ADR-0006 browser ladder. Every
+// fetch records HOW it was obtained (direct vs reader) so the artifact is
+// auditable and WAF/tooling failures are not counted as "no data".
 //
 // Usage:
 //   node scripts/council-spending-census.mjs councils.tsv > audit.tsv
@@ -78,6 +77,7 @@ const CHALLENGE =
 
 const TIMEOUT_MS = 25000;
 const MAX_SAMPLES = 5;
+const STRUCTURED_EXT = /\.(csv|tsv|xls|xlsx|json|geojson)(?:[?#].*)?$/i;
 
 async function httpGet(url, timeout = TIMEOUT_MS) {
   try {
@@ -157,21 +157,29 @@ function extractLocs(xml) {
 }
 
 // Pull anchor hrefs + link text out of homepage HTML.
-function extractAnchors(html) {
+function extractAnchors(html, base) {
   const out = [];
   const re = /<a\b[^>]*href=["']([^"'#?]+)[^>]*>([\s\S]*?)<\/a>/gi;
   let m;
   while ((m = re.exec(html))) {
     const text = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    out.push(m[1] + " " + text);
+    let href = m[1];
+    try {
+      href = new URL(href, base).href;
+    } catch {
+      // Keep the raw href; it can still contribute text-token evidence.
+    }
+    out.push(href + " " + text);
   }
   return out;
 }
 
-// Given a set of candidate strings, return the matched groups + sample URLs.
+// Given a set of candidate strings, return matched groups, all matched URLs and
+// representative samples. matchedUrls is intentionally complete for review.
 function scan(strings) {
   const groups = new Set();
   const samples = new Map(); // group -> [urls]
+  const matchedUrls = new Set();
   for (const s of strings) {
     const n = norm(s);
     for (const [tok, group] of TOKEN_GROUP) {
@@ -180,6 +188,9 @@ function scan(strings) {
         const arr = samples.get(group) || [];
         // Keep the raw URL portion (before the first space) as the sample.
         const url = s.split(/\s/)[0];
+        if (/^https?:\/\//.test(url)) {
+          matchedUrls.add(url);
+        }
         if (/^https?:\/\//.test(url) && arr.length < MAX_SAMPLES && !arr.includes(url)) {
           arr.push(url);
           samples.set(group, arr);
@@ -187,7 +198,13 @@ function scan(strings) {
       }
     }
   }
-  return { groups: [...groups], samples };
+  const matchedUrlList = [...matchedUrls].sort();
+  return {
+    groups: [...groups],
+    samples,
+    matchedUrls: matchedUrlList,
+    structuredUrlHits: matchedUrlList.filter((u) => STRUCTURED_EXT.test(u)).sort(),
+  };
 }
 
 async function auditCouncil(name, homepage) {
@@ -208,7 +225,7 @@ async function auditCouncil(name, homepage) {
   const hp = await get(homepage);
   let hpStrings = [];
   if (hp.ok) {
-    hpStrings = hp.via === "reader" ? extractLocs(hp.body) : extractAnchors(hp.body);
+    hpStrings = hp.via === "reader" ? extractLocs(hp.body) : extractAnchors(hp.body, homepage);
     if (hp.via === "reader") hpStrings = hpStrings.concat(hp.body.split(/\n+/).map((s) => s.trim()).filter((s) => s.length > 2 && s.length < 200));
   }
   notes.push(`homepage ${homepage} -> HTTP ${hp.status} ${tag(hp)}${hp.ok ? ` [${hpStrings.length} link/text lines]` : ""}`);
@@ -240,7 +257,7 @@ async function auditCouncil(name, homepage) {
     }
   }
 
-  const { groups, samples } = scan(strings);
+  const { groups, samples, matchedUrls, structuredUrlHits } = scan(strings);
 
   // Classification, in decreasing evidential strength:
   //   HIT      — a keyword matched (positive; strong regardless of coverage).
@@ -248,8 +265,8 @@ async function auditCouncil(name, homepage) {
   //              (the strong negative: sitemap is the comprehensive URL list).
   //   PARTIAL  — only the homepage could be scanned (sitemap absent/blocked) and
   //              no keyword matched there — a WEAK negative, not conclusive.
-  //   BLOCKED  — neither homepage nor sitemap yielded scannable content (WAF/IP
-  //              through the whole ladder; tooling, NOT evidence of absence).
+  //   BLOCKED  — neither homepage nor sitemap yielded scannable content through
+  //              the direct+reader fetch path; tooling, NOT evidence of absence.
   let classification;
   if (groups.length > 0) classification = "HIT";
   else if (sitemapPresent) classification = "NO-HIT";
@@ -269,6 +286,8 @@ async function auditCouncil(name, homepage) {
     classification,
     groups,
     urlsScanned: strings.length,
+    matchedUrls,
+    structuredUrlHits,
     sampleUrls: sampleUrls.slice(0, 6),
     fetchNotes: notes,
   };
@@ -301,7 +320,7 @@ async function worker() {
     try {
       results[i] = await auditCouncil(name.trim(), url.trim());
     } catch (e) {
-      results[i] = { council: name.trim(), homepage: url.trim(), classification: "BLOCKED", groups: [], urlsScanned: 0, sampleUrls: [], fetchNotes: [`error: ${e?.message || e}`] };
+      results[i] = { council: name.trim(), homepage: url.trim(), classification: "BLOCKED", groups: [], urlsScanned: 0, matchedUrls: [], structuredUrlHits: [], sampleUrls: [], fetchNotes: [`error: ${e?.message || e}`] };
     }
     console.error(`[${i + 1}/${rows.length}] ${results[i].classification}  ${name.trim()}`);
   }
@@ -315,10 +334,10 @@ if (asJson) {
 } else {
   console.log("# Bounded homepage + root-sitemap council spending/procurement keyword census");
   console.log("# Method: scripts/council-spending-census.mjs — homepage anchors + root sitemap.xml (index expanded), bounded keyword list.");
-  console.log("# Classification: HIT / NO-HIT (sitemap scanned) / PARTIAL (homepage only) / BLOCKED (WAF/IP per ADR-0006, not evidence of absence).");
+  console.log("# Classification: HIT / NO-HIT (sitemap scanned) / PARTIAL (homepage only) / BLOCKED (direct+reader fetch path did not yield scannable content; not evidence of absence).");
   console.log(`# Counts: ${JSON.stringify(counts)}`);
   console.log("#");
-  console.log(["council", "classification", "matched_groups", "urls_scanned", "sample_urls", "fetch_notes"].join("\t"));
+  console.log(["council", "classification", "matched_groups", "urls_scanned", "matched_urls", "structured_url_hits", "sample_urls", "fetch_notes"].join("\t"));
   for (const r of results) {
     console.log(
       [
@@ -326,6 +345,8 @@ if (asJson) {
         r.classification,
         r.groups.join("; ") || "-",
         r.urlsScanned,
+        r.matchedUrls.join(" ") || "-",
+        r.structuredUrlHits.join(" ") || "-",
         r.sampleUrls.join(" ") || "-",
         r.fetchNotes.join(" | "),
       ].join("\t"),
