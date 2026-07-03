@@ -323,6 +323,21 @@ review_one() {  # $1 = PR number
     return "$agent_status"
   fi
 
+  # The REVIEWER ran out of API budget (usage cap / provider rate limit). That's
+  # a temporary tooling condition, not a defect in this PR — so do NOT post a
+  # diagnostic or touch the merge check (that's the false "failure" we were
+  # spamming onto PRs like #174). Release the claim, back off, and let a later
+  # loop re-review once the limit resets.
+  if was_usage_limited "$tmp"; then
+    warn "Review of PR #$pr hit an API usage/rate limit — NOT posting a failure. Backing off ${USAGE_LIMIT_SLEEP}s before continuing."
+    rm -f "$tmp" "$fallback_review_file"
+    release_pr "$pr"; CLAIMED_PR=""
+    remove_worktree
+    git -C "$REPO_DIR" update-ref -d "refs/fg/pr-$pr" 2>/dev/null || true
+    sleep "$USAGE_LIMIT_SLEEP"
+    return 75   # temporary failure — loop just retries; PR state untouched
+  fi
+
   local body_file=""
   if [ -s "$REVIEW_FILE" ]; then
     body_file="$REVIEW_FILE"

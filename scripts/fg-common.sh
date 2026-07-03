@@ -13,6 +13,7 @@ AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
 CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
+USAGE_LIMIT_SLEEP="${USAGE_LIMIT_SLEEP:-3600}"  # secs to back off when an agent hits an API usage/rate limit (60 min)
 REVIEW_CHECK_CONTEXT="for-good/adversarial-review"
 RUNS_AGENT="${RUNS_AGENT:-0}"             # scripts that call run_agent set this to 1
 
@@ -310,6 +311,18 @@ set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. old
 # run_agent to stop reliably.
 was_interrupted() {  # $1 = exit status
   case "$1" in 130|143) return 0 ;; *) return 1 ;; esac
+}
+
+# An agent that ran out of API budget (usage cap / provider rate limit) is a
+# TEMPORARY tooling condition, NOT a defect in the work — so callers must back
+# off and retry later instead of posting a failure or mangling issue/PR state.
+# Only the TAIL of the captured output is inspected: a real limit surfaces as a
+# fatal message at the very end of the run, so a finding that merely *discusses*
+# rate limits in its body won't trip this.
+was_usage_limited() {  # $1 = path to captured agent stdout+stderr
+  [ -s "${1:-}" ] || return 1
+  tail -n 40 "$1" | grep -qiE \
+    'usage limit|rate[ _-]?limit|too many requests|\b429\b|quota|overloaded|resource[_ ]exhausted|insufficient_quota|limit reached|try again later|retry after|resets? (at|in)'
 }
 
 # ---- agent runner ----
