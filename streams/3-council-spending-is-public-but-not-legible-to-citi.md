@@ -36,18 +36,27 @@ secrecy, which is what makes this worth working on.
 - **What people actually ask councils clusters into recognisable question
   types: how rates and fees will change, what projects cost, who won contracts,
   what documents explain a decision, whether services and assets are performing,
-  and how staff and elected members are behaving.** These types recur across
-  public information requests and local journalism, but nobody has measured
-  which matters most. (confidence: Medium) —
+  and how staff and elected members are behaving.** The 200 sampled request
+  titles behind this are now preserved in full, with each title's category,
+  so anyone can audit the coding. Two honest caveats travel with it: about a
+  quarter of titles were too vague to classify (Low confidence, one coder's
+  judgement), and a distinct cluster of CCTV-and-camera surveillance requests
+  recurs across five of the eight councils sampled — a demand type the six main
+  categories don't capture. Nobody has measured which question type matters
+  most. (confidence: Medium) —
   [demand finding](../research/findings/civic-transparency/council-data-questions.md)
-- **Machine-readable finance data exists nationally, but only in aggregate:
-  Stats NZ and the Department of Internal Affairs publish spreadsheet-format
-  finance data covering all councils, while the three big-city open-data
-  portals checked (Auckland, Wellington, Christchurch) are mostly maps and
-  geography, with only two spending-related datasets found — one useful
-  (Christchurch's capital works programme), one stale (a Wellington grants
-  spreadsheet last updated in 2018).** (confidence: Medium for what was found;
-  Low for what wasn't — only three of 78 councils were checked) —
+- **Machine-readable finance data exists nationally, but only in aggregate or
+  fragments: Stats NZ publishes spreadsheet-format actual finances for all
+  councils, the Department of Internal Affairs publishes all councils'
+  long-term-plan budget tables (though the series stops at 2018–28), and MBIE
+  publishes contract award notices from the government tender system as
+  spreadsheets — with an official warning not to treat those as consolidated
+  financial data. The three big-city open-data portals checked (Auckland,
+  Wellington, Christchurch) are mostly maps and geography, with only two
+  spending-related datasets found — one useful (Christchurch's capital works
+  programme, openly licensed), one stale (a Wellington grants spreadsheet last
+  updated in 2018, no stated licence).** (confidence: Medium for what was
+  found; Low for what wasn't — only three of 78 councils were checked) —
   [data census finding](../research/findings/civic-transparency/council-spending-data-census.md)
 
 ## What we're not sure about yet
@@ -69,7 +78,14 @@ secrecy, which is what makes this worth working on.
   journalism — a self-selecting slice. There is no representative survey, and
   the question types are deliberately not ranked. The one Low-confidence data
   point (roughly a quarter to a third of sampled request titles were too vague
-  to classify) is single-coder judgement.
+  to classify) is single-coder judgement — though the full coded sample is now
+  published inside the finding, so anyone can check the coding rather than
+  take it on trust.
+- **Whether national procurement data actually covers councils.** MBIE's
+  contract award notices only include councils that use the central tender
+  system, nobody has checked how consistently they do, and the publisher
+  itself warns the data must not be treated as consolidated financial
+  records.
 - **What has already been tried.** The framing finding notes existing efforts
   (the Taxpayers' Union's Ratepayers' Report, FYI.org.nz, Figure.NZ, a UK
   transaction-disclosure law as overseas context), but the planned research on
@@ -92,10 +108,15 @@ secrecy, which is what makes this worth working on.
   source documents. Helps: residents and local journalists. Effort: Large.
   Supported by the [demand finding](../research/findings/civic-transparency/council-data-questions.md)
   (confidence: Medium; the "answers beat document dumps" framing is a
-  hypothesis, not user research) and the
+  hypothesis, not user research), the
   [comparability finding](../research/findings/civic-transparency/council-spending-comparability.md)
-  (confidence: Medium). Would need: evidence that the questions are answerable
-  from published data, and expert review of any cross-council comparisons.
+  (confidence: Medium), and the
+  [data census finding](../research/findings/civic-transparency/council-spending-data-census.md)
+  for the raw material — national aggregate finances, budget tables, and
+  contract award notices (confidence: High that these exist; Medium on the
+  procurement data, which its publisher warns is incomplete). Would need:
+  evidence that the questions are answerable from published data, and expert
+  review of any cross-council comparisons.
 - **Pilot with the data that's already good** — for example, a project-cost
   view built on Christchurch's openly licensed capital-works dataset, testing
   whether its structure could seed a cross-council standard. Helps: residents
