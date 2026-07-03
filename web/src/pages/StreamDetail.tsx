@@ -12,6 +12,7 @@ import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
 import { findingsForStream, streamStateStyle, harnessLabel } from "@/lib/streams";
+import { cleanTitle } from "@/lib/format";
 
 const alwaysMatches = () => true;
 
@@ -86,7 +87,7 @@ export default function StreamDetail() {
     [...roots].sort((a, b) => a.issue.number - b.issue.number)[0]
   )?.issue;
   const rootExcerpt = rootIssue ? excerpt(rootIssue.body) : "";
-  const title = doc?.title || summary?.title || rootIssue?.title.replace(/^\[[^\]]+\]\s*/, "") || `Stream #${streamNum}`;
+  const title = doc?.title || summary?.title || (rootIssue ? cleanTitle(rootIssue.title) : "") || `Stream #${streamNum}`;
   const state = doc?.state || summary?.state || "";
   const domain = summary?.domain || doc?.domain || rootIssue?.domain || null;
   const people = summary?.people ?? [];
@@ -118,7 +119,7 @@ export default function StreamDetail() {
             {rootIssue ? (
               <Card className="border-l-2 border-l-brand-cyan p-6">
                 <Link to={`/issue/${rootIssue.number}`} className="font-serif text-lg font-semibold leading-snug hover:text-brand-cyan-dark">
-                  {rootIssue.title.replace(/^\[[^\]]+\]\s*/, "")}
+                  {cleanTitle(rootIssue.title)}
                 </Link>
                 {rootExcerpt ? <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{rootExcerpt}</p> : null}
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-xs">
@@ -214,23 +215,6 @@ export default function StreamDetail() {
                   <a key={p.login} href={p.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm hover:text-brand-cyan-dark">
                     <PersonAvatar login={p.login} avatar={p.avatar} size={20} /> @{p.login}
                   </a>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ScrollText className="h-3 w-3" /> Findings ({findings.length})</div>
-              <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                {findings.length === 0 ? <p className="text-xs text-muted-foreground">No merged findings yet.</p> : findings.map((f) => (
-                  <div key={f.path} className="border-t border-border/60 pt-3 first:border-t-0 first:pt-0">
-                    <a href={f.url} target="_blank" rel="noreferrer" className="text-sm font-medium leading-snug hover:text-brand-cyan-dark">{f.title}</a>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">{harnessLabel(f.agent)}</span>
-                      {f.model ? <span className="rounded-full bg-brand-indigo/10 px-2 py-0.5 text-brand-indigo">{f.model}</span> : null}
-                      {f.author && f.author !== "unknown" ? <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">@{f.author.replace(/^@/, "")}</span> : null}
-                      {f.confidence ? <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">{f.confidence}</span> : null}
-                    </div>
-                  </div>
                 ))}
               </div>
             </div>

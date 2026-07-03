@@ -19,6 +19,11 @@ export function initials(login: string): string {
   return (login || "?").replace(/\[bot\]/, "").slice(0, 2).toUpperCase();
 }
 
+// Strip a leading "[stage]" prefix from an issue/PR title for display.
+export function cleanTitle(title: string): string {
+  return (title || "").replace(/^\[[^\]]+\]\s*/, "");
+}
+
 export function pct(n: number, total: number): number {
   return total > 0 ? Math.round((n / total) * 100) : 0;
 }
