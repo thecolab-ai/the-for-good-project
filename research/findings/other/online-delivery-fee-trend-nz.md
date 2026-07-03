@@ -1,12 +1,12 @@
 ---
-title: "NZ online free-shipping thresholds rose over the past 2–3 years (clearest case: Woolworths +25%); the direct delivery-fee trend is documented only for a single year (2025→2026, one vendor's survey), showing express fees up ~24%"
+title: "NZ free-shipping thresholds rose over the past 2–3 years; NZ delivery-fee rise is directly evidenced only for one year (2025→2026, one vendor's survey)"
 domain: "other"
 issue: "#295"
 confidence: "Medium"
 author: "claude"
 agent: "claude"
 model: "claude-opus-4-8"
-date: "2026-07-04"
+date: "2026-07-03"
 status: "draft"
 ---
 
@@ -103,13 +103,13 @@ So the wholesale last-mile cost that retailers pass on rose in **two consecutive
 
 ## Sources
 
-1. RNZ, "Online shoppers facing higher delivery costs, returns fees", 2 Jul 2026 — https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees (accessed 2026-07-04)
-2. RNZ, "Woolworths increases subscription fee, minimum spend for free delivery", 1 Sep 2025 — https://www.rnz.co.nz/news/business/571681/woolworths-increases-subscription-fee-minimum-spend-for-free-delivery (accessed 2026-07-04)
-3. 1News, "Online shoppers facing higher delivery costs, returns fees", 2 Jul 2026 — https://www.1news.co.nz/2026/07/02/online-shoppers-facing-higher-delivery-costs-returns-fees/ (accessed 2026-07-04)
+1. RNZ, "Online shoppers facing higher delivery costs, returns fees", 2 Jul 2026 — https://www.rnz.co.nz/news/business/653038/online-shoppers-facing-higher-delivery-costs-returns-fees (accessed 2026-07-03)
+2. RNZ, "Woolworths increases subscription fee, minimum spend for free delivery", 1 Sep 2025 — https://www.rnz.co.nz/news/business/571681/woolworths-increases-subscription-fee-minimum-spend-for-free-delivery (accessed 2026-07-03)
+3. 1News, "Online shoppers facing higher delivery costs, returns fees", 2 Jul 2026 — https://www.1news.co.nz/2026/07/02/online-shoppers-facing-higher-delivery-costs-returns-fees/ (accessed 2026-07-03)
 4. Woolworths NZ, Terms & Conditions "September 2023 – Unlimited FREE Delivery, minimum spend $80" — https://www.woolworths.co.nz/info/terms-and-conditions/september-2023-unlimited-free-delivery-minimum-spend-80 (URL/slug records the $80 Sept-2023 baseline; page body timed out to plain fetchers — bot protection, per ADR-0006)
-5. Shippit, "2026 State of Shipping Report" — https://www.shippit.com/state-of-shipping-report (accessed 2026-07-04)
-6. Shippit, "2024 State of Shipping Report" (AU figures) — https://www.shippit.com/press-and-media/the-state-of-shipping-report (accessed 2026-07-04)
-7. Inside Retail Australia, "The state of shipping in 2026: Three things retailers must act on", Jun 2026 — https://insideretail.com.au/business/the-state-of-shipping-in-2026-three-things-retailers-must-act-on-202606 (accessed 2026-07-04)
-8. NZ Post, "Changes to our products and services from 1 July 2024" — https://www.nzpost.co.nz/about-us/july-2024 (accessed 2026-07-04)
-9. NZ Post, "Business pricing and product changes from 1 July 2025" — https://www.nzpost.co.nz/about-us/july-2025 (accessed 2026-07-04)
-10. b2bnews.co.nz, "Free delivery ends as NZ retailers claw back costs", 1 Jul 2026 — https://b2bnews.co.nz/news/free-delivery-ends-as-nz-retailers-claw-back-costs/ (accessed 2026-07-04)
+5. Shippit, "2026 State of Shipping Report" — https://www.shippit.com/state-of-shipping-report (accessed 2026-07-03)
+6. Shippit, "2024 State of Shipping Report" (AU figures) — https://www.shippit.com/press-and-media/the-state-of-shipping-report (accessed 2026-07-03)
+7. Inside Retail Australia, "The state of shipping in 2026: Three things retailers must act on", Jun 2026 — https://insideretail.com.au/business/the-state-of-shipping-in-2026-three-things-retailers-must-act-on-202606 (accessed 2026-07-03)
+8. NZ Post, "Changes to our products and services from 1 July 2024" — https://www.nzpost.co.nz/about-us/july-2024 (accessed 2026-07-03)
+9. NZ Post, "Business pricing and product changes from 1 July 2025" — https://www.nzpost.co.nz/about-us/july-2025 (accessed 2026-07-03)
+10. b2bnews.co.nz, "Free delivery ends as NZ retailers claw back costs", 1 Jul 2026 — https://b2bnews.co.nz/news/free-delivery-ends-as-nz-retailers-claw-back-costs/ (accessed 2026-07-03)
