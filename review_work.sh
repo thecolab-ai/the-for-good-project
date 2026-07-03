@@ -40,7 +40,7 @@
 #                                                             # (default: poll every 60s and never exit)
 #
 # REVIEW-ROUND CAP (#287 / ADR-0013): a PR gets at most MAX_REVIEW_ROUNDS
-# (default 3) change-requesting review rounds from this loop. After that the
+# (default 10) change-requesting review rounds from this loop. After that the
 # PR is PARKED FOR A HUMAN: the merge check is set to `pending` ("Awaiting
 # human maintainer"), a one-time summary of the unresolved points is posted,
 # and later loops skip the PR instead of re-reviewing — no more ping-pong,
@@ -71,7 +71,7 @@ CLAIMED_PR=""
 REVIEW_CLAIMING_LABEL="review: claimed"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
-MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-3}"   # change-requesting rounds before the PR is parked for a human (#287)
+MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-10}"  # change-requesting rounds before the PR is parked for a human (#287)
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
 # exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
@@ -383,13 +383,15 @@ review_one() {  # $1 = PR number
     if [ "$st" = failure ]; then
       log "#$pr already reviewed at this revision (NEEDS_WORK) — waiting on the author's rework. Skipping (FORCE=1 to redo)."; return 0
     fi
-    if [ "$st" = pending ]; then
-      log "#$pr is parked for a human maintainer (merge check pending) — skipping (FORCE=1 to review anyway)."; return 0
-    fi
     # REVIEW-ROUND CAP (#287): never start an (N+1)th change-requesting round —
     # park the PR for a human instead. Checked per PR (not per revision), so a
     # capped PR stays parked across pushes until a human decides or FORCE=1.
+    # A PR parked (check=pending) UNDER a since-RAISED cap is freed automatically:
+    # it only stays skipped while its round count is still >= the current cap.
     local rounds; rounds="$(review_rounds "$pr")"
+    if [ "$st" = pending ] && [ "$rounds" -ge "$MAX_REVIEW_ROUNDS" ]; then
+      log "#$pr is parked for a human maintainer (merge check pending, $rounds/$MAX_REVIEW_ROUNDS rounds) — skipping (FORCE=1 to review anyway)."; return 0
+    fi
     if [ "$rounds" -ge "$MAX_REVIEW_ROUNDS" ]; then
       park_for_human "$pr" "$sha" "$url" "$rounds"
       return 0
