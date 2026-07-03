@@ -2,11 +2,19 @@
 # This uses ZERO model tokens (no AI); it's just `gh` label calls on free
 # GitHub Actions minutes. It does NOT do the adversarial review (that's the
 # collective's job via review_work.sh, paid with their own tokens).
+#
+# It also RECONCILES the single-status invariant (#289 / ADR-0013): an issue
+# must never hold two "status: " labels at once. Whenever a status label is
+# added, the reconcile job strips every other status label — most-recent wins
+# — and logs the conflict, so concurrent runners' races converge instead of
+# leaving contradictory state that misroutes the queue.
 name: Issue status sync
 
 on:
   pull_request_target:
     types: [opened, reopened, ready_for_review, closed]
+  issues:
+    types: [labeled]
 
 permissions:
   issues: write
@@ -15,6 +23,7 @@ permissions:
 
 jobs:
   sync:
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
       - name: Sync linked issue status to PR state
@@ -32,15 +41,15 @@ jobs:
             --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number')
           [ -z "$issues" ] && { echo "No linked issues."; exit 0; }
           for n in $issues; do
-            # Sweep EVERY other status when setting one: an issue carrying two
-            # status labels at once (e.g. in-review + awaiting-direction) is
-            # the soup that confused reviewers and the website.
+            # ATOMIC set-one-clear-others (#289): replace the whole label set in
+            # ONE call — every non-status label the issue carries, plus exactly
+            # one status. The old add+remove sweep left a window where an issue
+            # held two status labels at once.
             sweep() {  # $1 = issue, $2 = status to set
-              local args=(--add-label "status: $2") st
-              for st in available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done; do
-                [ "$st" = "$2" ] || args+=(--remove-label "status: $st")
-              done
-              gh issue edit "$1" --repo "$REPO" "${args[@]}" || true
+              gh issue view "$1" --repo "$REPO" --json labels \
+                --jq '[.labels[].name | select(startswith("status: ") | not)]' \
+              | jq --arg s "status: $2" '{labels: (. + [$s])}' \
+              | gh api -X PUT "repos/$owner/$name/issues/$1/labels" --input - >/dev/null || true
             }
             if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
               echo "PR #$PR merged → issue #$n → done"
@@ -53,3 +62,32 @@ jobs:
               sweep "$n" in-review
             fi
           done
+
+  # Single-status invariant (#289): whenever a "status: " label lands on an
+  # issue, strip every OTHER status label it still carries. The label from
+  # THIS event is the most recent transition, so it wins; whatever it
+  # displaced is logged as a conflict. Removals fire 'unlabeled' (not
+  # 'labeled'), so this job can never re-trigger itself into a loop.
+  reconcile:
+    if: "github.event_name == 'issues' && startsWith(github.event.label.name, 'status: ')"
+    runs-on: ubuntu-latest
+    concurrency:
+      group: issue-status-reconcile-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Enforce exactly one status label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+          KEEP: ${{ github.event.label.name }}
+        run: |
+          set -euo pipefail
+          owner="${REPO%%/*}"; name="${REPO##*/}"
+          labels="$(gh issue view "$NUM" --repo "$REPO" --json labels --jq '[.labels[].name]')"
+          extras="$(printf '%s' "$labels" | jq -r --arg k "$KEEP" '.[] | select(startswith("status: ")) | select(. != $k)')"
+          if [ -z "$extras" ]; then echo "#$NUM holds a single status ('$KEEP') — nothing to reconcile."; exit 0; fi
+          echo "::warning::issue #$NUM held conflicting status labels — keeping '$KEEP' (most recent), stripping: $(printf '%s' "$extras" | tr '\n' ' ')"
+          printf '%s' "$labels" \
+            | jq --arg k "$KEEP" '{labels: ([.[] | select(startswith("status: ") | not)] + [$k])}' \
+            | gh api -X PUT "repos/$owner/$name/issues/$NUM/labels" --input - >/dev/null

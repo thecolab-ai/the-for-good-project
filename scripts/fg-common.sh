@@ -299,20 +299,24 @@ resolve_claim_race() {  # $1 = issue number
   return 0
 }
 
-# The closed set of issue lifecycle statuses. set_status_label sweeps ALL of
-# them (minus the one being set) so an issue can never carry two status
-# labels at once — the "in-review + awaiting-direction" soup that confused
-# both reviewers and the website is impossible by construction. Callers may
-# still pass explicit old statuses; they're harmless no-ops now.
-ALL_STATUSES=(available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done)
-
+# Set an issue's lifecycle status ATOMICALLY (#289 / ADR-0013): compute the
+# full label set — everything the issue carries except the "status: "
+# namespace, plus the ONE new status — and replace the labels in a single
+# PUT call. The previous add-label + N remove-label form (even in one gh
+# invocation) applied adds and removes as separate mutations, leaving a
+# window where an issue held two status labels at once; interleaved
+# concurrent transitions could leave that soup behind permanently.
+# A read-modify-write can still race a concurrent edit of OTHER labels
+# (rare, self-limiting); the issue-status.yml reconciler and reap.sh's
+# conflict sweep converge any residue back to exactly one status label.
+# The closed set of statuses lives in .github/labels.yml.
 set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. ignored (legacy)
   local n="$1" new="$2"; shift 2
-  local args=(--add-label "status: $new") old
-  for old in "${ALL_STATUSES[@]}"; do
-    [ "$old" = "$new" ] || args+=(--remove-label "status: $old")
-  done
-  gh issue edit "$n" --repo "$REPO" "${args[@]}" >/dev/null
+  local keep
+  keep="$(gh issue view "$n" --repo "$REPO" --json labels \
+          --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
+  printf '%s' "$keep" | jq --arg s "status: $new" '{labels: (. + [$s])}' \
+    | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
 }
 
 # True if an exit status means the agent was INTERRUPTED by the user (Ctrl-C) or
