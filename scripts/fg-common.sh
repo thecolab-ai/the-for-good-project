@@ -61,7 +61,14 @@ preflight() {
     err "Run this from inside a clone of $REPO (or set REPO_DIR to one)."
     exit 1
   fi
-  ME="$(gh api user --jq .login)"
+  if ! ME="$(gh api user --jq .login 2>/dev/null)"; then
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+      ME="github-actions[bot]"
+    else
+      err "gh is authenticated, but couldn't resolve the current GitHub user."
+      exit 1
+    fi
+  fi
 }
 
 # ---- git worktree helpers ----
