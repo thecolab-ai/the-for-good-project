@@ -16,6 +16,7 @@ const LINKS: NavItem[] = [
   { to: "/live", label: "Live" },
   { to: "/board", label: "Board" },
   { to: "/streams", label: "Streams" },
+  { to: "/team", label: "Who we are" },
 ];
 
 const GROUPS: NavGroup[] = [

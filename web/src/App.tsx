@@ -16,6 +16,7 @@ import Review from "@/pages/Review";
 import Methodology from "@/pages/Methodology";
 import Contribute from "@/pages/Contribute";
 import Partners from "@/pages/Partners";
+import Team from "@/pages/Team";
 import Decisions from "@/pages/Decisions";
 import NotFound from "@/pages/NotFound";
 
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: "/methodology", element: <Methodology /> },
       { path: "/contribute", element: <Contribute /> },
       { path: "/partners", element: <Partners /> },
+      { path: "/team", element: <Team /> },
       { path: "/decisions", element: <Decisions /> },
       { path: "*", element: <NotFound /> },
     ],
