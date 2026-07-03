@@ -138,9 +138,10 @@ What the agent did (allowed) vs. what a human must do (gated):
 
 Until a person consents, their slot in `team.ts` keeps `name: null` /
 `photo: null` and the page renders a dignified "added with consent" placeholder
-— so the site is always **honest about who has actually signed off**. One
-contributor has now been added from PR #191 review consent; the remaining role
-slots stay gated until each person signs off. The process to add a real person
+— so the site is always **honest about who has actually signed off**. Two
+people — the founder & steward and one contributor — have now been added with
+recorded consent (PR #191); the remaining role slots stay gated until each
+person signs off. The process to add a real person
 is in
 [`CONSENT.md`](CONSENT.md) and in the header comment of `team.ts`.
 

@@ -47,8 +47,8 @@ export const TEAM: TeamMember[] = [
     id: "steward",
     role: "Founder & steward",
     focus: "Sets direction, makes the human gate calls, and carries the relationships.",
-    name: null,
-    photo: null,
+    name: "Adam Holt",
+    photo: "team/adam91holt.jpg",
   },
   {
     id: "research-lead",
