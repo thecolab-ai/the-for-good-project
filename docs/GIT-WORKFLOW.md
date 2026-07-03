@@ -38,8 +38,10 @@ are the same everywhere; only the buttons differ.
    You can't approve or merge your own work.
 6. **Want several things open at once?** Use **worktrees**, not several clones —
    one repo, many folders, each on a different branch.
-7. **Keep local config out of commits** — your `CLAUDE.md` and
-   `.claude/settings.local.json` are personal and already gitignored.
+7. **The shared `CLAUDE.md` is committed; keep your *personal* config out.** `CLAUDE.md`
+   is a tiny tracked bridge (`@AGENTS.md`) so Claude Code — which loads `CLAUDE.md`, not
+   `AGENTS.md` — picks up this repo's guidance. Your personal `CLAUDE.local.md` and
+   `.claude/settings.local.json` are gitignored; never stage them.
 8. **Merges are squash-merges**, so don't agonise over tidy branch history — it
    collapses to one commit on merge.
 9. **After your PR merges, delete the branch and clean up any worktree.**
@@ -228,20 +230,24 @@ own branch, force-pushing your own rework (`git push --force-with-lease`) is fin
 
 ---
 
-## Local, uncommitted config — keep it out of git
+## Agent config: shared `CLAUDE.md` vs. personal files
 
-Working on this repo with an AI agent creates **personal** files that must never
-be committed:
+Claude Code auto-loads **`CLAUDE.md`**, not `AGENTS.md`
+([claude-code#34235](https://github.com/anthropics/claude-code/issues/34235);
+[memory docs](https://code.claude.com/docs/en/memory)). So this repo commits a tiny
+**shared bridge** and keeps everything personal out of git:
 
-- **`/CLAUDE.md`** (root) — a local pointer so Claude Code loads this repo's
-  `AGENTS.md`. Yours, not shared.
-- **`.claude/settings.local.json`** — your local tool/permission settings.
+- **`/CLAUDE.md`** (root, **committed — leave it tracked**) — one `@AGENTS.md` import, so
+  every contributor's Claude Code loads the canonical [`AGENTS.md`](../AGENTS.md) with zero
+  setup. It's shared, not personal — don't gitignore or delete it.
+- **`CLAUDE.local.md`** (root, **gitignored**) — your private per-project notes. Claude
+  Code loads it alongside `CLAUDE.md`, for you only. Personal overrides go here.
+- **`.claude/settings.local.json`** (**gitignored**) — your local tool/permission settings.
 
-Both are gitignored at the repo level, so a normal `git add -A` won't pick them
-up. If you ever see them in `git status` staged, unstage them — don't commit your
-personal agent config into the shared repo. (Shared, checked-in agent config
-lives in `AGENTS.md` and the tracked `.claude/skills/` — those *are* meant to be
-in git; your per-machine config is not.)
+The two personal files won't be caught by `git add -A`. If you ever see them staged,
+unstage them — don't commit personal agent config into the shared repo. (Shared,
+checked-in agent config lives in `CLAUDE.md` → `AGENTS.md` and the tracked
+`.claude/skills/` — those *are* meant to be in git; your per-machine config is not.)
 
 ---
 
@@ -289,8 +295,9 @@ imperative form.
    the author's own PR branch during rework.
 8. **Never create, apply, or remove the `review: human-only` label**, and never
    act on a PR that carries it — those are human-maintainer only. ([AGENTS.md](../AGENTS.md))
-9. **Keep personal config uncommitted** — never stage `CLAUDE.md` or
-   `.claude/settings.local.json`.
+9. **Never gitignore or delete the committed `CLAUDE.md` bridge** — it's how Claude Code
+   loads the repo's guidance. Keep *personal* config uncommitted instead:
+   `CLAUDE.local.md` and `.claude/settings.local.json`.
 10. **When a step needs write access you lack, escalate — don't retry the 403 or
     work around the permission.** Post the exact commands for a maintainer per
     [ADR-0009](adr/0009-maintainer-escalation-handoff.md).

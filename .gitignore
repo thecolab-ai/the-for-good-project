@@ -5,8 +5,10 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Claude Code — local per-contributor config (not the shared AGENTS.md)
-/CLAUDE.md
+# Claude Code — personal, per-contributor config (never commit these).
+# The shared bridge /CLAUDE.md (a one-line @AGENTS.md import) IS committed — leave it
+# tracked. Only these two are personal:
+CLAUDE.local.md
 .claude/settings.local.json
 
 # Local env / secrets — never commit these
