@@ -11,6 +11,16 @@
 #   - the agent NEVER merges, closes anything, or opens downstream work;
 #   - the SCRIPT owns the status move: needs-synthesis → awaiting-direction.
 #
+# Blocking unknowns loop BACK to research before the human gate (ADR-0012):
+# the agent lists unknowns that genuinely block its conclusions in a JSON
+# side-file, and the SCRIPT (never the agent) opens them as chunky research
+# issues — bounded to FOLLOWUP_PER_ROUND issues per round and FOLLOWUP_ROUNDS
+# rounds per stream, deduped against the stream's existing issues. While a
+# round is in flight the root stays in researching posture; only when nothing
+# blocking remains (or the cap is hit) does it park at awaiting-direction for
+# the steward — so the human reads the strongest synthesis the machines could
+# reach, not the first one.
+#
 # Usage:
 #   ./synthesize_work.sh                  # draft every flagged stream (default agent: claude)
 #   ./synthesize_work.sh codex            # use `codex exec` instead
@@ -23,7 +33,7 @@
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  STREAM MAX POLL_SECONDS DRY_RUN AGENT MODEL AGENT_TIMEOUT
-#       FOR_GOOD_REPO REPO_DIR
+#       FOLLOWUP_ROUNDS FOLLOWUP_PER_ROUND FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -39,6 +49,11 @@ MAX="${MAX:-0}"
 POLL_SECONDS="${POLL_SECONDS:-60}"    # keep polling when queue empty (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 ONLY_STREAM="${STREAM:-}"
+# Bounds on the automatic unknowns→research loop (ADR-0012). Per stream: at
+# most FOLLOWUP_ROUNDS research→synthesis rounds, each opening at most
+# FOLLOWUP_PER_ROUND issues. FOLLOWUP_ROUNDS=0 disables the loop entirely.
+FOLLOWUP_ROUNDS="${FOLLOWUP_ROUNDS:-2}"
+FOLLOWUP_PER_ROUND="${FOLLOWUP_PER_ROUND:-3}"
 
 # Kebab-case slug from a title, e.g. "Small NZ charities miss grants" →
 # small-nz-charities-miss-grants (capped so filenames stay sane).
@@ -148,6 +163,19 @@ exactly. Rules:
   updated: $today. ${resynth:+Preserve the existing steward value, and if the steward already advanced state past awaiting-direction (ideating/building/shipped), keep THEIR value.}
 - Do NOT touch ANY file other than $path. Do NOT open issues, close anything,
   change labels, or merge. Direction is not yours to set.
+
+Blocking unknowns (ADR-0012): if — and only if — an unknown in "What we're not
+sure about yet" genuinely BLOCKS or materially weakens the conclusions above
+(not merely nice-to-know), ALSO write it as a proposed follow-up research
+question, as JSON, to this exact path (an uncommitted side-file; the RUNNER
+opens the issues, you still must never open issues yourself):
+$WORKTREE/.fg-followups.json
+Format — an array of at most $FOLLOWUP_PER_ROUND objects:
+[{"title": "research: <chunky question>", "why": "<1-2 sentences: which unknown this resolves and why the synthesis needs it>"}]
+Each must be a CHUNKY question someone can spend hours on, never a micro-task,
+answerable from public sources by the project method. If nothing blocks the
+conclusions, write [] or nothing — zero is the common, correct answer. Do NOT
+commit this file.
 
 Then, using git and gh (already authenticated):
 1. git checkout -b $branch
@@ -298,6 +326,78 @@ resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
   fi
 }
 
+# Open the agent's proposed follow-up research issues (ADR-0012), bounded and
+# deduped. $1 = stream root, $2 = path to the .fg-followups.json copy. Sets
+# FOLLOWUPS_CREATED (global) to how many issues were actually opened — logs go
+# to the terminal, so the count can't be returned via stdout.
+FOLLOWUPS_CREATED=0
+spawn_followups() {  # $1 = stream root issue number, $2 = followups json path
+  local n="$1" file="$2"
+  FOLLOWUPS_CREATED=0
+  [ "$FOLLOWUP_ROUNDS" -gt 0 ] || { log "Follow-up loop disabled (FOLLOWUP_ROUNDS=0)."; return 0; }
+  [ -s "$file" ] || { log "Synthesis proposed no follow-up research."; return 0; }
+
+  local count
+  count="$(jq -r 'if type=="array" then length else "bad" end' "$file" 2>/dev/null || echo bad)"
+  if [ "$count" = bad ]; then warn "Follow-ups file is not a JSON array — ignoring it."; return 0; fi
+  [ "$count" -eq 0 ] && { log "Synthesis proposed no follow-up research."; return 0; }
+
+  # Round bookkeeping: every auto-spawned issue carries a round marker in its
+  # body; the next round is 1 + the highest seen. FAILS CLOSED: if we can't
+  # read the stream's issues we can't prove we're under the cap, so spawn
+  # nothing rather than risk an unbounded research loop.
+  local bodies prev round
+  if ! bodies="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json body --jq '.[].body' 2>/dev/null)"; then
+    warn "Couldn't read stream #$n's issues to check the follow-up round cap — spawning nothing this loop."
+    return 0
+  fi
+  prev="$(printf '%s' "$bodies" | grep -oE 'fg-synthesis-followup round:[0-9]+' | grep -oE '[0-9]+$' | sort -n | tail -1 || true)"
+  round=$(( ${prev:-0} + 1 ))
+  if [ "$round" -gt "$FOLLOWUP_ROUNDS" ]; then
+    warn "Stream #$n has used its $FOLLOWUP_ROUNDS automatic research round(s) — remaining unknowns go to the steward."
+    gh issue comment "$n" --repo "$REPO" --body "🔬 The synthesis still lists unknowns that limit its conclusions, but this stream has used its **$FOLLOWUP_ROUNDS automatic follow-up round(s)** (ADR-0012). The remaining unknowns are in the overview's \"What we're not sure about yet\" — chasing them further is now the **steward's** call (open research issues manually to go deeper)." >/dev/null || true
+    return 0
+  fi
+
+  # Titles across the whole stream (any state) for dedupe — normalised:
+  # lower-cased, any leading "research:" stripped, whitespace squeezed. The
+  # stream's issues carry mixed prefixes, so raw comparison misses dupes.
+  local titles
+  titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null \
+    | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]*research:[[:space:]]*//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
+
+  local i title why norm
+  for i in $(seq 0 $((count-1))); do
+    [ "$FOLLOWUPS_CREATED" -ge "$FOLLOWUP_PER_ROUND" ] && { log "Per-round cap ($FOLLOWUP_PER_ROUND) reached — dropping the rest."; break; }
+    title="$(jq -r ".[$i].title // empty" "$file" 2>/dev/null || true)"
+    why="$(jq -r ".[$i].why // empty" "$file" 2>/dev/null || true)"
+    [ -z "$title" ] && continue
+    case "$title" in research:*|Research:*) : ;; *) title="research: $title" ;; esac
+    norm="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]*research:[[:space:]]*//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    if printf '%s\n' "$titles" | grep -qxF "$norm"; then log "Skipping duplicate follow-up: $title"; continue; fi
+    if gh issue create --repo "$REPO" --title "$title" \
+         --label "stage: research" --label "status: available" --label "stream:$n" \
+         --body "Part of #$n. Stream: #$n.
+
+$why
+
+Opened automatically by \`synthesize_work.sh\` — the stream's synthesis flagged this unknown as blocking its conclusions (round $round of $FOLLOWUP_ROUNDS, ADR-0012). A steward can close it to stop this line of research.
+
+<!-- fg-synthesis-followup round:$round -->" >/dev/null 2>&1; then
+      FOLLOWUPS_CREATED=$((FOLLOWUPS_CREATED+1))
+      titles="$(printf '%s\n%s' "$titles" "$norm")"
+      ok "Opened follow-up: $title"
+    else
+      warn "Couldn't open follow-up issue: $title"
+    fi
+  done
+
+  if [ "$FOLLOWUPS_CREATED" -gt 0 ]; then
+    gh issue comment "$n" --repo "$REPO" --body "🔬 The synthesis surfaced unknowns that block firmer conclusions — opened **$FOLLOWUPS_CREATED follow-up research issue(s)** automatically (round $round of $FOLLOWUP_ROUNDS, ADR-0012). The stream goes back to research; when these close it drains to synthesis again, and only then parks for the steward. Close any of them to stop that line of inquiry." >/dev/null || true
+  fi
+  return 0
+}
+
 synthesize_one() {  # $1 = stream root issue number
   local n="$1"
   rule; info "${c_bold}Stream #$n${c_reset} — $(issue_field "$n" title)"
@@ -317,6 +417,7 @@ synthesize_one() {  # $1 = stream root issue number
     local path; path="$(overview_path "$n" "$REPO_DIR" "$(issue_field "$n" title)")"
     info "[dry-run] would draft: $path · branch synthesis/${path##*/}"
     info "[dry-run] would run $AGENT on the synthesis prompt, open a PR, and move #$n → awaiting-direction"
+    info "[dry-run] blocking unknowns would spawn up to $FOLLOWUP_PER_ROUND follow-up research issue(s) (max $FOLLOWUP_ROUNDS round(s)/stream, ADR-0012) and keep #$n in research instead"
     return 0
   fi
 
@@ -346,6 +447,12 @@ synthesize_one() {  # $1 = stream root issue number
   else
     err "Synthesis agent run failed/aborted for stream #$n (exit $rc)"
   fi
+  # The follow-ups side-file lives in the worktree — copy it out before the
+  # worktree is destroyed. Only ever read; never committed.
+  local followups=""
+  if [ -s "$WORKTREE/.fg-followups.json" ]; then
+    followups="$(mktemp)"; cp "$WORKTREE/.fg-followups.json" "$followups" 2>/dev/null || followups=""
+  fi
   remove_worktree
 
   # Find the draft PR (exact branch first, then the Part-of fallback).
@@ -354,12 +461,28 @@ synthesize_one() {  # $1 = stream root issue number
   [ -z "$pr" ] && pr="$(pr_for_issue "$n" || true)"
 
   if [ -n "$pr" ]; then
-    set_status_label "$n" "awaiting-direction" "needs-synthesis"
-    gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — a human **steward** now reviews the rollup, fixes any overreach, writes the direction decision (go deeper / pivot / proceed / park), and merges. This is gate **G1** (docs/STREAMS.md); the stream stays parked at **awaiting-direction** until then." >/dev/null || true
-    ok "Stream #$n → awaiting-direction (draft PR #$pr)"
+    # Blocking unknowns loop back to research BEFORE the human gate
+    # (ADR-0012): only spawn when the draft PR actually exists, so a failed
+    # synthesis can't seed issues from an unreliable run.
+    FOLLOWUPS_CREATED=0
+    [ -n "$followups" ] && spawn_followups "$n" "$followups"
+    if [ "$FOLLOWUPS_CREATED" -gt 0 ]; then
+      # Machines keep grinding: the root leaves the G1 queue but does NOT park
+      # at awaiting-direction — the drain gate re-flags needs-synthesis when
+      # the follow-ups close, and the re-synthesis integrates their answers.
+      gh issue edit "$n" --repo "$REPO" --remove-label "status: needs-synthesis" >/dev/null 2>&1 || true
+      gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — but it flagged blocking unknowns, so the stream goes **back to research first** ($FOLLOWUPS_CREATED follow-up issue(s), ADR-0012). The steward gate comes after those answers are in." >/dev/null || true
+      ok "Stream #$n → back to research ($FOLLOWUPS_CREATED follow-up(s); draft PR #$pr)"
+    else
+      set_status_label "$n" "awaiting-direction" "needs-synthesis"
+      gh issue comment "$n" --repo "$REPO" --body "🧩 Synthesis draft ready in #$pr — a human **steward** now reviews the rollup, fixes any overreach, writes the direction decision (go deeper / pivot / proceed / park), and merges. This is gate **G1** (docs/STREAMS.md); the stream stays parked at **awaiting-direction** until then." >/dev/null || true
+      ok "Stream #$n → awaiting-direction (draft PR #$pr)"
+    fi
   else
     warn "No draft PR found for stream #$n — leaving 'needs-synthesis' for a retry."
   fi
+  [ -n "$followups" ] && rm -f "$followups"
+  return 0
 }
 
 main() {
