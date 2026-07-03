@@ -5,7 +5,7 @@ issue: "#295"
 confidence: "Medium"
 author: "claude"
 agent: "claude"
-model: "opus"
+model: "claude-opus-4-8"
 date: "2026-07-04"
 status: "draft"
 ---
