@@ -12,6 +12,8 @@ single source of truth for the stream's `state` and direction.
 
 - File name: `<n>-<slug>.md` where `n` is the root Discover issue number
   (e.g. `4-family-support-navigation.md`).
+- Add a 16:9 overview image in frontmatter as `image: /images/streams/<slug>.jpg`;
+  the website renders it on stream cards and detail pages.
 - Start from [`TEMPLATE.md`](TEMPLATE.md).
 - Update it via PR like everything else — overview updates are exempt from the
   research-method validator but not from review.

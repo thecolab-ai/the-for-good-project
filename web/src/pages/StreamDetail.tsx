@@ -13,7 +13,7 @@ import { StreamProgress } from "@/components/shared/StreamProgress";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
 import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection, stripEditorialDebris, buildStreamBrief } from "@/lib/streams";
 import { statusLabel } from "@/lib/meta";
-import { cleanTitle } from "@/lib/format";
+import { cleanTitle, publicAsset } from "@/lib/format";
 import type { StreamDoc } from "@/lib/types";
 
 const alwaysMatches = () => true;
@@ -115,6 +115,7 @@ export default function StreamDetail() {
   const people = summary?.people ?? [];
   const steward = doc?.steward?.replace(/^@/, "") || summary?.steward?.replace(/^@/, "") || "";
   const hasOverview = !!doc?.body?.trim();
+  const image = doc?.image || summary?.image || "";
 
   return (
     <div>
@@ -126,6 +127,12 @@ export default function StreamDetail() {
         {state ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{statusLabel(state)}</span> : null}
         <DomainBadge domain={domain} />
       </div>
+
+      {image ? (
+        <figure className="mb-6 overflow-hidden rounded-lg border border-border bg-secondary">
+          <img src={publicAsset(image)} alt={`Overview illustration for ${title}`} className="aspect-[16/9] w-full object-cover" />
+        </figure>
+      ) : null}
 
       {/* Lifecycle stepper — where this stream is in its journey */}
       <Card className="mb-6 overflow-x-auto p-5">

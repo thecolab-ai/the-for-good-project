@@ -5,6 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: grant-access
 updated: 2026-07-03
+image: /images/streams/stream-2-small-charities-grants.jpg
 ---
 
 # Small charities miss grants they're eligible for

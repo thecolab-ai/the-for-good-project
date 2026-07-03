@@ -5,6 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-03
+image: /images/streams/stream-60-credit-costs.jpg
 ---
 
 <!--

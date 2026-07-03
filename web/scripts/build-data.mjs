@@ -236,6 +236,7 @@ async function main() {
         steward: data.steward || "",
         domain: data.domain || "",
         updated: data.updated ? String(data.updated) : "",
+        image: data.image || "",
         body: content,
         url: `${repoMeta.html_url}/blob/${repoMeta.default_branch}/streams/${entry}`,
       });
@@ -254,7 +255,7 @@ async function main() {
   for (const it of issues) { const s = streamLabelOf(it); if (s) issueStream.set(it.number, s); }
   const streamAgg = new Map();
   const ensureStream = (s) => {
-    if (!streamAgg.has(s)) streamAgg.set(s, { stream: s, title: "", domain: "", state: "", steward: "", updated: "",
+    if (!streamAgg.has(s)) streamAgg.set(s, { stream: s, title: "", domain: "", state: "", steward: "", updated: "", image: "",
       issues: 0, openIssues: 0, mergedPRs: 0, findings: 0, agents: {}, models: {}, people: new Map() });
     return streamAgg.get(s);
   };
@@ -296,9 +297,10 @@ async function main() {
       if (login) addStreamPerson(a, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
     }
     if (!a.domain && d.domain) a.domain = d.domain;
+    if (d.image) a.image = d.image;
   }
   const streamsSummary = [...streamAgg.values()].map((a) => ({
-    stream: a.stream, title: a.title || `Stream #${a.stream}`, domain: a.domain, state: a.state, steward: a.steward, updated: a.updated,
+    stream: a.stream, title: a.title || `Stream #${a.stream}`, domain: a.domain, state: a.state, steward: a.steward, updated: a.updated, image: a.image,
     issues: a.issues, openIssues: a.openIssues, mergedPRs: a.mergedPRs, findings: a.findings,
     agents: a.agents, models: a.models, people: [...a.people.values()],
     hasOverview: streamDocs.some((d) => d.stream === a.stream && (d.body || "").trim().length > 0),

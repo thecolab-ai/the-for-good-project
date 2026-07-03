@@ -5,6 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: civic-transparency
 updated: 2026-07-03
+image: /images/streams/stream-3-council-spending.jpg
 ---
 
 # Council spending is public but not legible to citizens

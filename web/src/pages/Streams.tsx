@@ -14,7 +14,7 @@ import { DomainBadge, StageBadge, StatusBadge } from "@/components/shared/Badges
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { streamStateStyle, harnessLabel, isStreamShipped, isAwaitingDirection, streamStageIndex, subtasksByStream } from "@/lib/streams";
 import { statusLabel } from "@/lib/meta";
-import { relativeTime, cleanTitle } from "@/lib/format";
+import { relativeTime, cleanTitle, publicAsset } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary, IssueLite } from "@/lib/types";
 
@@ -109,42 +109,49 @@ function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }
   const needsHuman = isAwaitingDirection(s.state);
   return (
     <Link to={`/streams/${s.stream}`}>
-      <Card className={cn("group flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md", needsHuman && "border-amber-500/40 ring-1 ring-amber-500/30")}>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xs text-muted-foreground">#{s.stream}</span>
-          {needsHuman ? <DecisionPill /> : <StatePill state={s.state} />}
-          <DomainBadge domain={s.domain || null} />
-          {s.hasOverview ? <FileText className="ml-auto h-3.5 w-3.5 text-brand-cyan-dark" aria-label="Has overview" /> : null}
-        </div>
-        <div className="mt-2 line-clamp-2 font-serif text-base font-semibold leading-snug group-hover:text-brand-cyan-dark">{s.title}</div>
-
-        <div className="mt-3">
-          <StreamProgress state={s.state} compact />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
-          <span className="inline-flex items-center gap-1" title="Accepted work"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
-          <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
-        </div>
-
-        {(harnesses.length > 0 || models.length > 0) ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {harnesses.map((h) => <span key={h} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{harnessLabel(h)}</span>)}
-            {models.length > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-brand-indigo/10 px-2 py-0.5 text-[10px] font-medium text-brand-indigo"><Cpu className="h-3 w-3" />{models.length} model{models.length === 1 ? "" : "s"}</span> : null}
+      <Card className={cn("group flex h-full flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md", needsHuman && "border-amber-500/40 ring-1 ring-amber-500/30")}>
+        {s.image ? (
+          <div className="aspect-[16/9] overflow-hidden bg-secondary">
+            <img src={publicAsset(s.image)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
           </div>
         ) : null}
-
-        {subtasks.length > 0 ? (
-          <div className="mt-3 border-t border-border/60 pt-3">
-            <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ListTree className="h-3 w-3" /> Subtasks ({subtasks.length})</div>
-            <SubtaskList items={subtasks} max={3} />
+        <div className="flex flex-1 flex-col p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">#{s.stream}</span>
+            {needsHuman ? <DecisionPill /> : <StatePill state={s.state} />}
+            <DomainBadge domain={s.domain || null} />
+            {s.hasOverview ? <FileText className="ml-auto h-3.5 w-3.5 text-brand-cyan-dark" aria-label="Has overview" /> : null}
           </div>
-        ) : null}
+          <div className="mt-2 line-clamp-2 font-serif text-base font-semibold leading-snug group-hover:text-brand-cyan-dark">{s.title}</div>
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          {s.people.length > 0 ? <PeopleStrip people={s.people} steward={s.steward} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
-          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+          <div className="mt-3">
+            <StreamProgress state={s.state} compact />
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
+            <span className="inline-flex items-center gap-1" title="Accepted work"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
+            <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
+          </div>
+
+          {(harnesses.length > 0 || models.length > 0) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {harnesses.map((h) => <span key={h} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{harnessLabel(h)}</span>)}
+              {models.length > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-brand-indigo/10 px-2 py-0.5 text-[10px] font-medium text-brand-indigo"><Cpu className="h-3 w-3" />{models.length} model{models.length === 1 ? "" : "s"}</span> : null}
+            </div>
+          ) : null}
+
+          {subtasks.length > 0 ? (
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ListTree className="h-3 w-3" /> Subtasks ({subtasks.length})</div>
+              <SubtaskList items={subtasks} max={3} />
+            </div>
+          ) : null}
+
+          <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+            {s.people.length > 0 ? <PeopleStrip people={s.people} steward={s.steward} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+          </div>
         </div>
       </Card>
     </Link>
@@ -227,8 +234,13 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{s.stream}</TableCell>
                   <TableCell className="min-w-[240px] max-w-[380px]">
-                    <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
-                    <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
+                    <div className="flex items-center gap-3">
+                      {s.image ? <img src={publicAsset(s.image)} alt="" loading="lazy" className="h-10 w-16 shrink-0 rounded-md border border-border/60 object-cover" /> : null}
+                      <div className="min-w-0">
+                        <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
+                        <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>{isAwaitingDirection(s.state) ? <DecisionPill /> : <StatePill state={s.state} />}</TableCell>
                   <TableCell><DomainBadge domain={s.domain || null} /></TableCell>

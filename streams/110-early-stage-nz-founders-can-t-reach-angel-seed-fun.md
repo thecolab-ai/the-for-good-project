@@ -5,6 +5,7 @@ state: needs-synthesis
 steward: ""
 domain: grant-access
 updated: 2026-07-03
+image: /images/streams/stream-110-founder-funding.jpg
 ---
 
 # Early-stage founders in New Zealand struggle to find and reach angel and seed investors
