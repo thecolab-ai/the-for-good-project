@@ -1,25 +1,40 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2, LayoutGrid, Rows3, Users, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { StatCard } from "@/components/shared/StatCard";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
-import { streamStateStyle, harnessLabel, isStreamShipped } from "@/lib/streams";
+import { streamStateStyle, harnessLabel, isStreamShipped, streamStageIndex } from "@/lib/streams";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary } from "@/lib/types";
 
 type Filter = "all" | "progress" | "shipped";
+type View = "cards" | "table";
+type SortKey = "stream" | "state" | "issues" | "findings" | "merged" | "updated";
+const VIEW_KEY = "fgp-streams-view";
 
 function StatePill({ state }: { state: string }) {
   if (!state) return null;
   return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{state}</span>;
+}
+
+function PeopleStrip({ people, size = 22, max = 5 }: { people: StreamSummary["people"]; size?: number; max?: number }) {
+  if (people.length === 0) return <span className="text-[11px] text-muted-foreground">—</span>;
+  return (
+    <div className="flex -space-x-2">
+      {people.slice(0, max).map((p) => <PersonAvatar key={p.login} login={p.login} avatar={p.avatar} size={size} />)}
+      {people.length > max ? <span className="flex items-center pl-3 text-[11px] text-muted-foreground" style={{ height: size }}>+{people.length - max}</span> : null}
+    </div>
+  );
 }
 
 function StreamCard({ s }: { s: StreamSummary }) {
@@ -54,12 +69,7 @@ function StreamCard({ s }: { s: StreamSummary }) {
         ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          {s.people.length > 0 ? (
-            <div className="flex -space-x-2">
-              {s.people.slice(0, 5).map((p) => <PersonAvatar key={p.login} login={p.login} avatar={p.avatar} size={22} />)}
-              {s.people.length > 5 ? <span className="flex h-[22px] items-center pl-3 text-[11px] text-muted-foreground">+{s.people.length - 5}</span> : null}
-            </div>
-          ) : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
+          {s.people.length > 0 ? <PeopleStrip people={s.people} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
         </div>
       </Card>
@@ -75,6 +85,65 @@ function CardGrid({ streams }: { streams: StreamSummary[] }) {
   );
 }
 
+function SortHead({ label, sortKey, active, dir, onSort, className, numeric }: { label: string; sortKey: SortKey; active: boolean; dir: "asc" | "desc"; onSort: (k: SortKey) => void; className?: string; numeric?: boolean }) {
+  return (
+    <TableHead className={className}>
+      <button type="button" onClick={() => onSort(sortKey)} className={cn("inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-foreground", numeric && "flex-row-reverse", active && "text-foreground")}>
+        {label}
+        {active ? (dir === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />) : <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />}
+      </button>
+    </TableHead>
+  );
+}
+
+function StreamTable({ streams, sort, onSort }: { streams: StreamSummary[]; sort: { key: SortKey; dir: "asc" | "desc" }; onSort: (k: SortKey) => void }) {
+  const navigate = useNavigate();
+  const head = { active: (k: SortKey) => sort.key === k, dir: sort.dir, onSort };
+  return (
+    <Card className="overflow-hidden p-0">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <SortHead label="#" sortKey="stream" active={head.active("stream")} dir={sort.dir} onSort={onSort} className="w-14" />
+            <TableHead>Stream</TableHead>
+            <SortHead label="State" sortKey="state" active={head.active("state")} dir={sort.dir} onSort={onSort} />
+            <TableHead>Domain</TableHead>
+            <SortHead label="Issues" sortKey="issues" active={head.active("issues")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
+            <SortHead label="Findings" sortKey="findings" active={head.active("findings")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
+            <SortHead label="Merged" sortKey="merged" active={head.active("merged")} dir={sort.dir} onSort={onSort} numeric className="text-right" />
+            <TableHead>Team</TableHead>
+            <SortHead label="Updated" sortKey="updated" active={head.active("updated")} dir={sort.dir} onSort={onSort} className="text-right" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {streams.map((s) => (
+            <TableRow
+              key={s.stream}
+              className="cursor-pointer"
+              onClick={() => navigate(`/streams/${s.stream}`)}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/streams/${s.stream}`); }}
+            >
+              <TableCell className="font-mono text-xs text-muted-foreground">{s.stream}</TableCell>
+              <TableCell className="min-w-[240px] max-w-[380px]">
+                <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
+                <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
+              </TableCell>
+              <TableCell><StatePill state={s.state} /></TableCell>
+              <TableCell><DomainBadge domain={s.domain || null} /></TableCell>
+              <TableCell className="text-right tabular-nums" title="open / total"><span className="text-foreground">{s.openIssues}</span><span className="text-muted-foreground">/{s.issues}</span></TableCell>
+              <TableCell className="text-right tabular-nums">{s.findings}</TableCell>
+              <TableCell className="text-right tabular-nums">{s.mergedPRs}</TableCell>
+              <TableCell><PeopleStrip people={s.people} size={20} max={4} /></TableCell>
+              <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{s.updated ? relativeTime(s.updated) : "—"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 function SectionHeader({ icon: Icon, label, count, tint }: { icon: typeof Loader2; label: string; count: number; tint: string }) {
   return (
     <div className="mb-3 flex items-center gap-2">
@@ -85,16 +154,13 @@ function SectionHeader({ icon: Icon, label, count, tint }: { icon: typeof Loader
   );
 }
 
-function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Segmented({ children }: { children: React.ReactNode }) {
+  return <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">{children}</div>;
+}
+
+function SegButton({ active, onClick, title, children }: { active: boolean; onClick: () => void; title?: string; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-        active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
+    <button type="button" onClick={onClick} title={title} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
       {children}
     </button>
   );
@@ -104,7 +170,24 @@ export default function Streams() {
   const { data, error, loading } = useSnapshot();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<View>(() => (localStorage.getItem(VIEW_KEY) as View) || "cards");
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "updated", dir: "desc" });
   const streams = useMemo(() => data?.streamsSummary ?? [], [data]);
+
+  const setViewPersist = (v: View) => { setView(v); localStorage.setItem(VIEW_KEY, v); };
+  const onSort = (k: SortKey) => setSort((prev) => prev.key === k ? { key: k, dir: prev.dir === "asc" ? "desc" : "asc" } : { key: k, dir: k === "updated" ? "desc" : "asc" });
+
+  // Cross-stream rollup for the header stats.
+  const totals = useMemo(() => {
+    const people = new Set<string>();
+    let findings = 0, merged = 0, inProgress = 0, shipped = 0;
+    for (const s of streams) {
+      findings += s.findings; merged += s.mergedPRs;
+      if (isStreamShipped(s.state)) shipped++; else inProgress++;
+      for (const p of s.people) people.add(p.login);
+    }
+    return { count: streams.length, inProgress, shipped, findings, merged, people: people.size };
+  }, [streams]);
 
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
@@ -112,9 +195,26 @@ export default function Streams() {
   const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || String(s.stream).includes(q);
   const inProgress = streams.filter((s) => !isStreamShipped(s.state) && matchesText(s));
   const shipped = streams.filter((s) => isStreamShipped(s.state) && matchesText(s));
+
+  const rank: Record<SortKey, (s: StreamSummary) => number | string> = {
+    stream: (s) => s.stream,
+    state: (s) => streamStageIndex(s.state),
+    issues: (s) => s.issues,
+    findings: (s) => s.findings,
+    merged: (s) => s.mergedPRs,
+    updated: (s) => s.updated || "",
+  };
+  const sortStreams = (list: StreamSummary[]) => [...list].sort((a, b) => {
+    const av = rank[sort.key](a), bv = rank[sort.key](b);
+    const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
+  // Table view respects the filter but renders a single sorted list.
+  const tableRows = sortStreams(filter === "shipped" ? shipped : filter === "progress" ? inProgress : [...inProgress, ...shipped]);
   const showProgress = filter !== "shipped" && inProgress.length > 0;
   const showShipped = filter !== "progress" && shipped.length > 0;
-  const nothing = !showProgress && !showShipped;
+  const nothing = view === "table" ? tableRows.length === 0 : (!showProgress && !showShipped);
 
   return (
     <div>
@@ -126,20 +226,37 @@ export default function Streams() {
         <EmptyState icon={Network} title="No streams yet">Submit a problem to start the first one.</EmptyState>
       ) : (
         <>
+          {/* Stats */}
+          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <StatCard label="Streams" value={totals.count} icon={Network} accent="#2E4057" />
+            <StatCard label="In progress" value={totals.inProgress} icon={Loader2} accent="#0EA5E9" />
+            <StatCard label="Shipped" value={totals.shipped} icon={CheckCircle2} accent="#0E8A16" />
+            <StatCard label="Findings" value={totals.findings} icon={FileText} accent="#8B5CF6" />
+            <StatCard label="Merged outputs" value={totals.merged} icon={GitMerge} accent="#C2410C" />
+            <StatCard label="Contributors" value={totals.people} icon={Users} accent="#1D76DB" />
+          </section>
+
+          {/* Controls */}
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <div className="relative min-w-[180px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Search streams…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
             </div>
-            <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">
-              <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>All <span className="tabular-nums opacity-60">{inProgress.length + shipped.length}</span></FilterButton>
-              <FilterButton active={filter === "progress"} onClick={() => setFilter("progress")}><Loader2 className="h-3.5 w-3.5" /> In progress <span className="tabular-nums opacity-60">{inProgress.length}</span></FilterButton>
-              <FilterButton active={filter === "shipped"} onClick={() => setFilter("shipped")}><CheckCircle2 className="h-3.5 w-3.5" /> Shipped <span className="tabular-nums opacity-60">{shipped.length}</span></FilterButton>
-            </div>
+            <Segmented>
+              <SegButton active={filter === "all"} onClick={() => setFilter("all")}>All <span className="tabular-nums opacity-60">{inProgress.length + shipped.length}</span></SegButton>
+              <SegButton active={filter === "progress"} onClick={() => setFilter("progress")}><Loader2 className="h-3.5 w-3.5" /> In progress <span className="tabular-nums opacity-60">{inProgress.length}</span></SegButton>
+              <SegButton active={filter === "shipped"} onClick={() => setFilter("shipped")}><CheckCircle2 className="h-3.5 w-3.5" /> Shipped <span className="tabular-nums opacity-60">{shipped.length}</span></SegButton>
+            </Segmented>
+            <Segmented>
+              <SegButton active={view === "cards"} onClick={() => setViewPersist("cards")} title="Card grid"><LayoutGrid className="h-4 w-4" /> Cards</SegButton>
+              <SegButton active={view === "table"} onClick={() => setViewPersist("table")} title="Table view"><Rows3 className="h-4 w-4" /> Table</SegButton>
+            </Segmented>
           </div>
 
           {nothing ? (
             <EmptyState icon={Network} title="Nothing matches">Clear the search or filter to see all streams.</EmptyState>
+          ) : view === "table" ? (
+            <StreamTable streams={tableRows} sort={sort} onSort={onSort} />
           ) : (
             <div className="space-y-10">
               {showProgress ? (
