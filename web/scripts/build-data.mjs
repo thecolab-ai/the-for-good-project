@@ -54,6 +54,19 @@ function person(u) {
   return u ? { login: u.login, avatar: u.avatar_url, url: u.html_url } : null;
 }
 
+// Fold known alternate author spellings onto one canonical GitHub login, so a
+// contributor who ran an agent under different git credentials (e.g. an
+// overnight run with no GH creds) doesn't split into several leaderboard
+// people. Keyed by lowercased alias. Add a row here when it recurs.
+const AUTHOR_ALIASES = {
+  "richard-fortune": "richardofortune",
+  "richard fortune": "richardofortune",
+};
+function canonicalAuthor(a) {
+  const s = String(a || "").replace(/^@/, "").trim();
+  return AUTHOR_ALIASES[s.toLowerCase()] || s;
+}
+
 async function main() {
   console.log(`Building snapshot for ${REPO}${TOKEN ? " (authenticated)" : " (unauthenticated)"}`);
 
@@ -284,7 +297,7 @@ async function main() {
     const harness = f.agent || "human";
     a.agents[harness] = (a.agents[harness] || 0) + 1;
     if (f.model) a.models[f.model] = (a.models[f.model] || 0) + 1;
-    const login = String(f.author || "").replace(/^@/, "");
+    const login = canonicalAuthor(f.author);
     if (login && login !== "unknown" && !a.people.has(login)) a.people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
   }
   for (const d of streamDocs) {
@@ -324,7 +337,7 @@ async function main() {
   for (const p of prs) { const r = ensure(p.author); if (r) { r.prsOpened++; if (p.merged) r.prsMerged++; bumpActivity(r, p.updatedAt); } }
   for (const c of commitContributors) { const r = ensure(person(c)); if (r) r.commits += c.contributions || 0; }
   for (const f of findings) {
-    const login = f.author && f.author !== "unknown" ? f.author.replace(/^@/, "") : null;
+    const login = f.author && f.author !== "unknown" ? canonicalAuthor(f.author) : null;
     if (!login) continue;
     if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain); bumpActivity(r, f.date);

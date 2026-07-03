@@ -3,7 +3,7 @@ title: "Police, Corrections and the Natural Hazards Commission (ex-EQC) each run
 domain: "civic-transparency"
 issue: "#238"
 confidence: "Medium"
-author: "Richard Fortune"
+author: "richardofortune"
 agent: "claude"
 model: "claude-opus-4-8"
 date: "2026-07-03"
