@@ -1,5 +1,5 @@
 ---
-title: "Limited desk scan: the strongest machine-readable NZ council finance baseline is central aggregation, not the council open-data portals checked (Auckland/Wellington/Christchurch)"
+title: "Limited desk scan of national NZ council finance datasets and three council open-data portals"
 domain: "civic-transparency"
 issue: "#22"
 confidence: "Medium"
@@ -10,7 +10,7 @@ date: "2026-07-03"
 status: "draft"
 ---
 
-# Limited desk scan: the strongest machine-readable NZ council finance baseline is central aggregation, not the council open-data portals checked (Auckland/Wellington/Christchurch)
+# Limited desk scan of national NZ council finance datasets and three council open-data portals
 
 ## Scope and status
 
@@ -20,12 +20,12 @@ This is a **limited desk scan, not a completed 78-council census.** Issue #22 as
 
 - **Scope caveat first:** the negative/comparative claims below are limited to the national official datasets, data.govt.nz-visible sources, and the Auckland/Wellington/Christchurch portals actually checked. They are **not** a national audit of all 78 councils. [Issue #22](https://github.com/thecolab-ai/the-for-good-project/issues/22)
 - New Zealand has 78 local authorities: 11 regional councils and 67 territorial authorities, according to the Local Government Commission. [Local Government Commission](https://www.lgc.govt.nz/about-us/about-local-government-in-new-zealand/)
-- For **all-council** machine-readable finance data, the datasets found in this pass are central-government aggregations, not council-by-council portals: Stats NZ publishes local authority income and expenditure as CSV/XLSX, and DIA's Local Councils site publishes LTP financial tables for all councils through 2018-28 as CSV/XLSX. This says central aggregation is the strongest baseline *found here*; it is not evidence that council portals nationally lack the data. [Stats NZ, March 2026 quarter](https://www.stats.govt.nz/information-releases/local-authority-statistics-march-2026-quarter/) [DIA Local Councils download page](http://www.localcouncils.govt.nz/lgip.nsf/wpg_url/Resources-Download-Data-Index) [DIA LTP downloads](http://www.localcouncils.govt.nz/lgip.nsf/wpg_URL/Resources-Download-Data-Local-Authority-Long-Term-Plans?OpenDocument)
+- For **all-council** machine-readable finance data, this pass directly verified central-government aggregations: Stats NZ publishes local authority income and expenditure as CSV/XLSX, and DIA's Local Councils site publishes LTP financial tables for all councils through 2018-28 as CSV/XLSX. This is not evidence that council portals nationally lack equivalent or better data. [Stats NZ, March 2026 quarter](https://www.stats.govt.nz/information-releases/local-authority-statistics-march-2026-quarter/) [DIA Local Councils download page](http://www.localcouncils.govt.nz/lgip.nsf/wpg_url/Resources-Download-Data-Index) [DIA LTP downloads](http://www.localcouncils.govt.nz/lgip.nsf/wpg_URL/Resources-Download-Data-Local-Authority-Long-Term-Plans?OpenDocument)
 - The three council open-data portals checked (Auckland, Wellington, Christchurch) present themselves primarily as geospatial portals. [Auckland Council Open Data](https://data-aucklandcouncil.opendata.arcgis.com/) [Data.govt.nz WCC case study](https://data.govt.nz/catalogue-guide/showcase/wellington-city-council-geospatial-open-data) [Christchurch geospatial services](https://ccc.govt.nz/environment/land/geospatial-services)
 - Within those three portals I found two council-published, spending-adjacent machine-readable datasets, of differing quality: Christchurch City Council's ArcGIS "Capital Works Programme (OpenData)" with project, activity, budget-band and date fields (item metadata modified 22 January 2024, CC BY 4.0); and Wellington City Council's ArcGIS-hosted Excel "FundingDataWCCbyfund" grants workbook — but the WCC item is **stale (item metadata modified 30 April 2018, sample rows from FY2012/13) and its own metadata states no licence**, so it is a weak, dated example rather than a current spending source. [Christchurch ArcGIS item metadata](https://www.arcgis.com/sharing/rest/content/items/a96f3f9e87c84608b164557d87874ecb?f=json) [WCC FundingDataWCCbyfund item metadata](https://www.arcgis.com/sharing/rest/content/items/eef4e55911fe40e39a9ec0c0d2640479?f=json)
 - Procurement is partly machine-readable through MBIE's GETS award-notice CSV files, updated quarterly, but this is a central GETS publication, not a complete council-spending ledger. [MBIE procurement open data](https://www.mbie.govt.nz/cross-government-functions/new-zealand-government-procurement-and-property/open-data) [NZ Government Procurement data and reporting](https://www.procurement.govt.nz/data-and-reporting/)
 
-**Overall confidence:** Medium for the existence/format claims about the named datasets (directly sourced); **Low** for the comparative/negative claims ("central aggregation is the strongest baseline", "council portals are not a route to spending data"), because the corpus searched is three portals plus central sources, not a full audit.
+**Overall confidence:** Medium for the existence/format claims about the named datasets and three checked portals (directly sourced); **Low** for any comparative/negative claim about what council portals do not publish nationally, because the corpus searched is three portals plus central sources, not a full audit.
 
 ## Evidence
 
@@ -97,7 +97,7 @@ Existence claims (that a named dataset exists with named fields) are separated f
 | Claim | Type | Source 1 | Source 2 | Confidence |
 |---|---|---|---|---|
 | Stats NZ and DIA publish all-council machine-readable finance data (CSV/XLSX). | Existence | [Stats NZ local authority statistics as CSV/XLSX](https://www.stats.govt.nz/information-releases/local-authority-statistics-march-2026-quarter/) | [DIA publishes LTP financial tables as CSV/XLSX](http://www.localcouncils.govt.nz/lgip.nsf/wpg_URL/Resources-Download-Data-Local-Authority-Long-Term-Plans?OpenDocument) | High |
-| Central aggregation is the *strongest* all-council machine-readable finance baseline, *rather than* council portals. | Comparative/negative — corpus not fully searched | [Stats NZ/DIA prove central datasets exist](https://www.stats.govt.nz/information-releases/local-authority-statistics-march-2026-quarter/) | Only three council portals searched (Auckland/Wellington/Christchurch); **no source directly establishes that council portals nationally lack the data** — single-sided evidence, flagged | Low |
+| In this limited pass, the only directly verified all-council machine-readable finance baselines were central aggregations. This does **not** establish that council portals nationally lack equivalent data. | Search result from a limited corpus, not a national comparative conclusion | [Stats NZ proves an all-council central dataset exists](https://www.stats.govt.nz/information-releases/local-authority-statistics-march-2026-quarter/) | [DIA proves all-council LTP tables exist](http://www.localcouncils.govt.nz/lgip.nsf/wpg_URL/Resources-Download-Data-Local-Authority-Long-Term-Plans?OpenDocument); only three council portals were checked | Low |
 | The three council open-data portals checked (Auckland/Wellington/Christchurch) are primarily spatial/geospatial. | Existence (about those three) | [Auckland portal says "geospatial datasets"](https://data-aucklandcouncil.opendata.arcgis.com/) | [Christchurch describes a spatial open-data portal](https://ccc.govt.nz/environment/land/geospatial-services) | Medium |
 | Procurement open data exists nationally, but it should not be treated as consolidated council financial data. | Existence + sourced caveat | [MBIE publishes GETS award-notice CSVs](https://www.mbie.govt.nz/cross-government-functions/new-zealand-government-procurement-and-property/open-data) | [NZ Government Procurement warns GETS dashboard data should not be used to consolidate financial data](https://www.procurement.govt.nz/data-and-reporting/) | Medium |
 | Christchurch's Capital Works Programme dataset exists and exposes `Project`, `Activity`, `Budget` (banded), phase and date fields. | Existence | [Christchurch Capital Works item metadata](https://www.arcgis.com/sharing/rest/content/items/a96f3f9e87c84608b164557d87874ecb?f=json) | [Christchurch ArcGIS REST layer fields](https://gis.ccc.govt.nz/arcgis/rest/services/CorporateData/Administrative/MapServer/23?f=pjson) | High |
@@ -106,8 +106,8 @@ Existence claims (that a named dataset exists with named fields) are separated f
 ## What would change this conclusion
 
 - **The full census.** A council-by-council table for all 78 local authorities (format, currency, licence/open terms, searched source and date) would replace this three-portal sample and could overturn every comparative/negative claim above. This is the primary outstanding work for #22.
-- A reproducible, corpus-wide portal/website audit — with search terms, query URLs, dates, hit/no-hit results and counterexamples — is needed before "central aggregation is the strongest baseline" or "Christchurch is clearest" can rise above Low confidence.
-- The five negative rows in the council table are manual, non-reproducible searches for six keywords; a dataset published under other filenames, or outside the open-data portal (e.g. attached to an annual plan/LTP/annual report page), would be missed.
+- A reproducible, corpus-wide portal/website audit — with search terms, query URLs, dates, hit/no-hit results and counterexamples — is needed before any claim like "central aggregation is the strongest baseline" or "Christchurch is clearest" can rise above Low confidence.
+- The three portal-level negative rows in the council table are manual, non-reproducible searches for six keywords; a dataset published under other filenames, or outside the open-data portal (e.g. attached to an annual plan/LTP/annual report page), would be missed.
 - LGOIMA responses from councils asking specifically for published structured finance exports, chart-of-accounts extracts, supplier payment reports, or procurement registers could show council-published machine-readable spending data is more common than this sample suggests.
 - A current DIA replacement for the decommissioned Local Councils website with 2021-31 or 2024-34 LTP financial tables would change the currency assessment for LTP budget data.
 - I could not verify a permissive licence on MBIE's GETS CSV files beyond Crown copyright on the page, and the WCC Excel item's own ArcGIS metadata states no licence.
@@ -144,5 +144,3 @@ Existence claims (that a named dataset exists with named fields) are separated f
 16. ArcGIS item metadata. "FundingDataWCCbyfund." Item `eef4e55911fe40e39a9ec0c0d2640479`. Modified 30 April 2018; licence field null. Accessed 2 July 2026. https://www.arcgis.com/sharing/rest/content/items/eef4e55911fe40e39a9ec0c0d2640479?f=json
 17. ArcGIS item download. "FundingDataWCCbyfund." Item `eef4e55911fe40e39a9ec0c0d2640479`. Accessed 2 July 2026. https://www.arcgis.com/sharing/rest/content/items/eef4e55911fe40e39a9ec0c0d2640479/data
 18. Data.govt.nz. "Infoshare." Accessed 2 July 2026. https://data.govt.nz/catalogue-guide/showcase/infoshare
-</content>
-</invoke>
