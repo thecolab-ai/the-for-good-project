@@ -37,7 +37,7 @@ Point the dashboard at it: set `VITE_LIVE_SERVER_URL=http://localhost:8787` when
 
 **Streamed logs are broadcast-only** — the server retains nothing: no log lines are stored in memory or on disk, they only fan out live to connected watchers (and only when `BROADCAST_LOGS=1`).
 
-**Log streaming is default-OFF at both ends** (per #398): a worker must opt in (`STREAM_LOGS=1`) *and* the server must allow it (`ALLOW_LOG_STREAM=1`), and even then logs are redacted twice (worker-side and server-side, `src/redact.ts`) and only reach the public dashboard if `BROADCAST_LOGS=1` is *also* set. Heartbeats carry counts and rates, never content.
+**Log streaming is default-OFF at both ends** (per #398): a worker must opt in (`STREAM_LOGS=1`) *and* the server must allow it (`ALLOW_LOG_STREAM=1`), and even then logs are redacted twice — worker-side and server-side, both from the ONE shared pattern library ([`clients/redact-patterns.mjs`](clients/redact-patterns.mjs)) so the two passes can never drift. Coverage: URL credentials (Postgres/MySQL/MongoDB/Redis/AMQP/any `scheme://user:pass@`), private-key/PGP/age blocks, AWS key ids + secret assignments, GitHub/GitLab/Slack/Discord/Telegram tokens and webhook URLs, OpenAI/Anthropic/HF/Stripe/Google/Azure/SendGrid/Twilio/npm/PyPI/Shopify/DigitalOcean/Databricks/Linear/Notion/Airtable token shapes, JWTs, auth headers, and any `NAME=value` where the name looks secret-bearing (quoted values included) — tested by `npm test` (`test/redact.test.mjs`), which deliberately accepts over-redaction. Logs only reach the public dashboard if `BROADCAST_LOGS=1` is *also* set. Heartbeats carry counts and rates, never content — and redaction remains best-effort harm reduction, not a guarantee.
 
 ## Protocol
 

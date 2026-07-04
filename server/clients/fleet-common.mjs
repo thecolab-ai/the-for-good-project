@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { redactText } from "./redact-patterns.mjs";
 
 export const FLEET_SERVER = (process.env.FLEET_SERVER ?? "").replace(/\/+$/, "");
 export const STREAM_LOGS = process.env.STREAM_LOGS === "1";
@@ -67,32 +68,14 @@ export function saveState(sessionKey, state) {
 }
 
 // ---------------------------------------------------------------------------
-// Client-side redaction — mirrors server/src/redact.ts (the server redacts
-// again; this keeps secrets from ever leaving the machine). Harm-reduction,
-// not a guarantee: the real protection is that log streaming is default-off.
-
-const REDACTED = "[redacted]";
-const PATTERNS = [
-  /\bgh[pousr]_[A-Za-z0-9_]{16,}\b/g,
-  /\bgithub_pat_[A-Za-z0-9_]{16,}\b/g,
-  /\bsk-[A-Za-z0-9_-]{16,}\b/g,
-  /\bAKIA[0-9A-Z]{16}\b/g,
-  /\baws_secret_access_key\s*[=:]\s*\S+/gi,
-  /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g,
-  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}\b/g,
-  /\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{16,}/gi,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
-  /\b[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|API_?KEY|PRIVATE_?KEY)[A-Z0-9_]*"?\s*[=:]\s*("[^"]*"|'[^']*'|\S+)/gi,
-];
-
-// URL userinfo credentials ("postgres://user:s3cr3t@host") — keep the scheme
-// and user, scrub the password.
-const URL_CREDS = /\b([a-z][a-z0-9+.-]*:\/\/[^\s/:@]+):([^\s/@]+)@/gi;
+// Client-side redaction — the pattern library is shared with the server
+// (./redact-patterns.mjs), so both sides always scrub identically. This pass
+// keeps secrets from ever leaving the machine; the server redacts again.
+// Harm-reduction, not a guarantee: the real protection is that log streaming
+// is default-off.
 
 export function redact(text) {
-  let out = String(text).replace(URL_CREDS, `$1:${REDACTED}@`);
-  for (const re of PATTERNS) out = out.replace(re, REDACTED);
-  return out;
+  return redactText(text);
 }
 
 /** Trim a block of session text into a small, redacted set of lines. */
