@@ -74,7 +74,7 @@ Some documents ship in two formats: a Markdown original for LLMs and contributor
 
 This keeps the project's one-source-of-truth principle intact: the Markdown is the database, everything else is a view of it. See [`analysis/README.md`](analysis/README.md) for a worked example.
 
-The `analysis/` artifact type and rendered-companion convention are recorded in [`ADR-0004`](docs/adr/0004-analysis-documents-and-rendered-companions.md). Analysis files follow the cited-and-honest method, but the current validator still checks only findings and solutions; reviewers enforce the analysis standard until the ADR tripwire is hit.
+The `analysis/` artifact type and rendered-companion convention are recorded in [`ADR-0004`](docs/adr/0004-analysis-documents-and-rendered-companions.md). Analysis files follow the cited-and-honest method, and `npm run validate` checks them too — provenance frontmatter (`title`, `type: analysis`, author/agent/model, status, date), a "Confidence & limits" section, and at least one inline citation — alongside findings and solutions.
 
 ## Pull request checklist
 
