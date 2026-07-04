@@ -21,7 +21,9 @@ flood-proofs it faces a hard, costly consent process, and that even after doing
 the work, the risk label doesn't change and no one — council or insurer —
 rewards the effort. This round of research tested that hypothesis against
 public evidence. The short version: the system is less of a one-way door than
-the hypothesis assumed, but the "no reward" part largely holds.
+the hypothesis assumed, and councils' hazard maps are usually drawn finer than
+whole properties — but the paperwork buyers see can still make a whole
+property look risky, and the "no reward" part largely holds.
 
 ## What we've learned so far
 
@@ -33,6 +35,19 @@ the hypothesis assumed, but the "no reward" part largely holds.
   (the only figure found is roughly 4,100 in Auckland, from a single source)
   or of how many have ever been removed. (confidence: Medium) —
   [finding](../research/findings/other/s73-s74-title-tags.md)
+- **Council hazard maps usually show the actual at-risk area — finer than
+  whole properties — but the property report buyers see can still turn a
+  partly-exposed section into a whole-property warning.** Across the six
+  councils checked, flood and hazard zones are drawn as mapped extents, and
+  consent rules often apply to specific buildings or activities rather than
+  the whole parcel. Yet the buyer's property report (the LIM) is issued for
+  the whole property, the law doesn't require councils to do fresh
+  site-specific analysis when preparing one, and one regional council openly
+  warns that some hazard information passed into these reports was never
+  designed for property-scale use. No actual property reports were inspected
+  (deliberately, to avoid identifying properties), so how the wording lands
+  with real buyers is unconfirmed. (confidence: Medium) —
+  [finding](../research/findings/other/hazard-designation-granularity.md)
 - **Raising a house in a flood zone is a six-figure job wrapped in a real
   consent process — but the evidence does not show councils refusing these
   applications often.** Lifting a typical home costs roughly $130,000–$357,000
@@ -85,19 +100,24 @@ the hypothesis assumed, but the "no reward" part largely holds.
 
 **How this bears on the founder's hypothesis:** the evidence *partly refutes*
 "the label never moves" — legal removal routes exist and the post-Gabrielle
-recovery actually used them. It *supports* "adaptation is unrewarded": labels
-move only when the owner pushes, and no council or insurer mechanism reliably
-pays back the cost of mitigation. The claims that consent is often *refused*,
-and that whole properties get labelled when only part is at risk, remain
-untested — see below.
+recovery actually used them. It *corrects* "whole properties get labelled when
+only a corner is at risk" — the maps themselves are usually finer than that;
+the over-broad impression comes from the buyer-facing paperwork, which can
+blur a partial exposure into a whole-property warning. It *supports*
+"adaptation is unrewarded": labels move only when the owner pushes, and no
+council or insurer mechanism reliably pays back the cost of mitigation. The
+claim that consent is often *refused* remains untested — see below.
 
 ## What we're not sure about yet
 
-- **One of the four original hypotheses was not researched at all:** whether
-  hazard labels are applied to whole properties when only a corner of the
-  land is actually exposed (the "granularity" question). No finding in this
-  round examined how finely designations are drawn, so the synthesis can say
-  nothing about it.
+- **The "whole property labelled" question now has an answer on paper, but
+  not on the ground.** The new granularity finding worked from council policy
+  documents and law; it deliberately examined no actual property reports, to
+  avoid identifying properties. So whether the wording buyers really see says
+  "part of this land" or reads as "this whole property is risky" is
+  unconfirmed — and nobody knows whether any council applies a minimum
+  overlap threshold before a hazard map appears in a property report, or
+  includes it on any overlap at all.
 - **The size of the problem is unknown.** Nobody can currently say how many
   NZ homes carry a hazard title tag, how many removal requests succeed, or how
   often councils refuse flood-zone house-raising consents — all the key
@@ -124,15 +144,20 @@ untested — see below.
 ## What we could do about it
 
 - **Get the missing numbers via official information requests** — ask LINZ for
-  aggregate counts of hazard title tags and removals, and ask a sample of
-  councils for house-raising consent outcomes in flood zones, all
-  de-identified. Helps: everyone downstream — it turns "we can't tell" into
-  evidence. Effort: Small.
+  aggregate counts of hazard title tags and removals, ask a sample of
+  councils for house-raising consent outcomes in flood zones, and ask the
+  same councils for a handful of anonymised property reports where only part
+  of the land is mapped as at risk (plus whether any overlap threshold
+  applies), all de-identified. Helps: everyone downstream — it turns "we
+  can't tell" into evidence. Effort: Small.
   Supported by [the title-tags finding](../research/findings/other/s73-s74-title-tags.md)
-  (confidence: Medium, includes suggested request wording) and
+  (confidence: Medium, includes suggested request wording),
   [the consent-economics finding](../research/findings/other/house-raising-consent-economics.md)
-  (confidence: Medium). Would need: agencies to hold the data in countable
-  form, and care to keep every response aggregate and anonymous.
+  (confidence: Medium) and
+  [the granularity finding](../research/findings/other/hazard-designation-granularity.md)
+  (confidence: Medium, lists what a de-identified sample would settle).
+  Would need: agencies to hold the data in countable form, and care to keep
+  every response aggregate and anonymous.
 - **Write a plain-language homeowner guide to the correction routes that
   already exist** — how to seek removal of a title tag, correction of a LIM
   note or flood-map entry, and where to escalate (Ombudsman, determinations)
@@ -170,9 +195,9 @@ untested — see below.
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
-Signal: one of the root's four hypotheses (whole-property labelling of partly-exposed land) has no evidence either way yet.
-Signal: all six findings are Medium confidence and each flags the need for a planner/lawyer/practitioner review before proposals are treated as sound.
-Signal: the key quantitative gaps (tag counts, removal rates, consent refusal rates) look answerable by aggregate official-information requests rather than more desk research.
+Signal: all four of the root's hypotheses now have at least first-pass evidence — the remaining gaps are quantitative (tag counts, removal rates, refusal rates, real property-report wording), not conceptual.
+Signal: all seven findings are Medium confidence and each flags the need for a planner/lawyer/practitioner review before proposals are treated as sound.
+Signal: the key quantitative gaps look answerable by aggregate, de-identified official-information requests rather than more desk research.
 
 ## Feedback log
 
