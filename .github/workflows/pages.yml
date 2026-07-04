@@ -1,26 +1,35 @@
-# Build the site's data snapshot from the repo's issues/PRs/findings, build the
-# Vite app, and deploy to GitHub Pages. Runs on every push to the site or
-# research, whenever an issue or comment changes, on a 30-minute schedule, and
-# on demand — so the public dashboard (and its live feed) stays fresh without
-# any client-side API calls.
+# Deploy the site to GitHub Pages.
+#
+# Two paths, one job:
+#   • Every 15 min (cron) → refresh ONLY the data snapshot (the JSON the board
+#     reads) and redeploy. The built site is restored from cache, so the slow
+#     Vite build is SKIPPED — a quick, data-only refresh.
+#   • When the web SOURCE changes (push to web/src, public, config…) → the cache
+#     misses, so the full Vite build runs and the fresh bundle is cached for the
+#     next data-only refresh.
+#
+# We deliberately do NOT trigger on issues / issue_comment / research changes:
+# that fired a deploy on every label flip and comment across a busy pipeline
+# (dozens an hour). The 15-minute cron keeps the board fresh instead — findings,
+# issues and the leaderboard are re-read from the repo + API each run.
 name: Deploy site
 
 on:
+  schedule:
+    - cron: "*/15 * * * *"        # data-only refresh (fast path)
   push:
     branches: [main]
-    paths: ["web/**", "research/**", ".github/workflows/pages.yml"]
-  issues:
-    types: [opened, edited, deleted, closed, reopened, labeled, unlabeled, assigned, unassigned]
-  # Rebuild when someone comments so the live feed stays near-real-time.
-  issue_comment:
-    types: [created, edited, deleted]
-  # NOTE: deliberately NOT triggering on pull_request_review /
-  # pull_request_review_comment — those run in the PR branch's context, and the
-  # deploy job targets the branch-protected `github-pages` environment (main
-  # only), so it's rejected instantly and shows a spurious red X. Reviews don't
-  # change the board data anyway; issues/comments + the schedule keep it fresh.
-  schedule:
-    - cron: "*/30 * * * *"
+    paths:                        # full rebuild only when the site itself changes
+      - "web/src/**"
+      - "web/public/**"
+      - "web/index.html"
+      - "web/package.json"
+      - "web/package-lock.json"
+      - "web/vite.config.*"
+      - "web/tsconfig*.json"
+      - "web/tailwind.config.*"
+      - "web/postcss.config.*"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -28,10 +37,8 @@ permissions:
   pages: write
   id-token: write
 
-# cancel-in-progress must stay FALSE: with it true, every comment during a busy
-# spell cancels the in-progress build before deploy, so the site only updates
-# when the repo goes quiet. False lets the current run finish and coalesces the
-# burst into one queued rebuild — fresher AND cheaper.
+# Stay FALSE: let an in-progress deploy finish and coalesce a burst into one
+# queued rebuild, rather than cancelling before publish.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -49,18 +56,53 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: Install
+
+      # Cache key = a content hash of everything that affects the BUILT site,
+      # excluding the generated data snapshot (web/public/data/*), so a data
+      # change alone never busts the cache — only real source/config/public
+      # changes do. A cache hit means the site bundle is unchanged.
+      - name: Compute site-source hash
+        id: srchash
+        run: |
+          h=$(git ls-files web | grep -v '^web/public/data/' | xargs sha1sum | sha1sum | cut -c1-32)
+          echo "hash=$h" >> "$GITHUB_OUTPUT"
+      - name: Restore built site (skip Vite build on a data-only refresh)
+        id: distcache
+        uses: actions/cache@v4
+        with:
+          path: web/dist
+          key: pages-dist-${{ steps.srchash.outputs.hash }}
+
+      # gray-matter etc. are needed by build-data even on the fast path; npm ci
+      # is itself cached by setup-node, so this stays quick.
+      - name: Install deps
         working-directory: web
         run: npm ci
+
+      # Always regenerate the data snapshot (this IS the 15-min refresh).
       - name: Build data snapshot
         working-directory: web
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FOR_GOOD_REPO: ${{ github.repository }}
         run: node scripts/build-data.mjs
+
+      # Full build ONLY when the source changed (cache miss). Vite copies
+      # web/public (incl. the fresh data snapshot) into web/dist.
       - name: Build site
+        if: steps.distcache.outputs.cache-hit != 'true'
         working-directory: web
         run: npm run build
+
+      # Fast path (cache hit): the cached dist already has the built bundle —
+      # just drop the freshly-generated JSON into it, no Vite build.
+      - name: Refresh data in cached site
+        if: steps.distcache.outputs.cache-hit == 'true'
+        working-directory: web
+        run: |
+          mkdir -p dist/data
+          cp public/data/*.json dist/data/
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
