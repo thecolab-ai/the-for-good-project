@@ -188,8 +188,7 @@ skill you add makes the next contributor's research faster.
 
 ## Run it on autopilot
 
-Six scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work — `frame_work.sh` (frame new streams, capability-floored), `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [docs/AUTOMATION.md](docs/AUTOMATION.md)
-without babysitting each step — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
+Six scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work without babysitting each step — `frame_work.sh` (frame new streams, capability-floored), `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
 - **`./frame_work.sh`** — claims discover roots only (the general fleet never
   does), writes the framing analysis as a PR, and opens the child research
