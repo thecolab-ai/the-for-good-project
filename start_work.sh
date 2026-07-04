@@ -511,12 +511,14 @@ pick_available() {  # $1 = queue snapshot
   local snap="$1" n labels
   for n in $(available_issues "$snap"); do
     labels="$(printf '%s' "$snap" | jq -r --argjson n "$n" '.[] | select(.number==$n) | [.labels[].name] | join(",")')"
+    # POSITIVE ALLOWLIST: this runner only claims research / ideate / build work.
+    # Discover roots are frame_work.sh's (ADR-0014); an available issue missing a
+    # workable stage label is skipped SILENTLY rather than selected-then-rejected
+    # (which spammed "skipping #N" on every pass and left the item churning).
     case ",$labels," in
-      *",stage: discover,"*)
-        log "#$n is a discover root — framing is reserved for frame_work.sh (ADR-0014); skipping."
-        continue ;;
+      *",stage: research,"*|*",stage: ideate,"*|*",stage: build,"*) echo "$n"; return 0 ;;
+      *) continue ;;
     esac
-    echo "$n"; return 0
   done
   return 0
 }
