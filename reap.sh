@@ -50,7 +50,7 @@ reap_reworks() {
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would free stale rework #$n (unassign)"; continue; fi
     who="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '.assignees[].login' 2>/dev/null || true)"
     for a in $who; do gh issue edit "$n" --repo "$REPO" --remove-assignee "$a" >/dev/null 2>&1 || true; done
-    gh issue comment "$n" --repo "$REPO" --body "⏱ Rework untouched for over $(hrs "$REWORK_TTL")h — unassigned and released to the pool; any worker's \`start_work.sh\` (or \`synthesize_work.sh\`, for a synthesis draft) can pick it up." >/dev/null 2>&1 || true
+    gh issue comment "$n" --repo "$REPO" --body "⏱ Rework untouched for over $(hrs "$REWORK_TTL")h — unassigned and released to the pool; any worker's \`start_work.sh\` (or \`synthesize_work.sh\` for a synthesis draft — ADR-0011, or \`frame_work.sh\` for a discover framing — ADR-0014) can pick it up." >/dev/null 2>&1 || true
     ok "Freed stale rework #$n (unassigned)"
   done
 }

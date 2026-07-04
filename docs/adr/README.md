@@ -50,5 +50,6 @@ routine fixes, copy changes, or web styling.
 | [0011](0011-synthesis-rework-routing.md) | Synthesis draft rework belongs to synthesize_work.sh; generic runners must not touch synthesis PRs | Accepted |
 | [0012](0012-synthesis-followup-research-loop.md) | Blocking unknowns loop back to research automatically — bounded — before the G1 human gate | Accepted |
 | [0013](0013-pipeline-guardrails.md) | Pipeline guardrails: bounded agent loops, one status at a time, human-held levers | Accepted |
+| [0014](0014-discover-framing-capability-floor.md) | Discover framing is reserved for a capability-floored runner (frame_work.sh) that also opens the fan-out | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

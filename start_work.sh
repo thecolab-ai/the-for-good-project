@@ -18,6 +18,8 @@
 #   ./start_work.sh --model <name>  # override the agent model
 #   ./start_work.sh codex --model gpt-5.5
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
+#                                    # (stage: discover is NEVER picked up here —
+#                                    # framing is frame_work.sh's, ADR-0014)
 #   MAX=1 ./start_work.sh           # do a single issue and stop
 #   ISSUE=390 ./start_work.sh       # work THIS issue first (one shot), then fall
 #                                    # back into the normal queue loop
@@ -64,6 +66,10 @@ work_prompt() {  # $1 = issue number
   # Discover issues are stream ROOTS: their PR must NOT close them (the root
   # anchors the stream's lifecycle until the steward ends it). Children close
   # via their PRs as normal — that's what fires the drain→synthesis trigger.
+  # (Since ADR-0014 the queue never hands a discover issue to this prompt —
+  # frame_work.sh owns them — but the branch is kept so a mislabelled or
+  # hand-forced discover run still links its PR correctly rather than
+  # closing a stream root.)
   local link_ref link_why
   if [ "$stage" = "discover" ]; then
     link_ref="Part of"
@@ -356,6 +362,22 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
     warn "Couldn't read PR #$pr's head branch — leaving #$n for a future loop."
     return 0
   fi
+  # A DISCOVER FRAMING PR (branch discover/*) is reworked by frame_work.sh
+  # ONLY (ADR-0014): the capability floor on setting a stream's direction
+  # applies to rework too — this generic loop must never rewrite a framing
+  # with the research rework prompt. Unassign so a framing runner can claim
+  # it. FAIL CLOSED: rc 2 (couldn't read the head branch) → don't touch it.
+  local frame_rc; pr_is_framing "$pr" && frame_rc=0 || frame_rc=$?
+  if [ "$frame_rc" -eq 0 ]; then
+    log "#$n's PR #$pr is a discover framing — its rework belongs to frame_work.sh (ADR-0014). Unassigning @me."
+    if [ "$DRY_RUN" = 0 ]; then
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    fi
+    return 0
+  elif [ "$frame_rc" -eq 2 ]; then
+    warn "Couldn't read PR #$pr's head branch — leaving #$n for a future loop."
+    return 0
+  fi
   # A fork PR's branch lives on the contributor's fork, not origin — we can
   # neither check it out as origin/$branch nor push a rework to it (only its
   # author can). Drop it from MY rework queue so the loop doesn't spin on it
@@ -439,7 +461,7 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
 # pushed after it — so a freshly reworked PR awaiting re-review is left alone.
 reconcile_rework() {
   [ "$DRY_RUN" = 1 ] && return 0
-  local prs pr iss labels lastcr headcommit synth_rc
+  local prs pr iss labels lastcr headcommit synth_rc frame_rc
   prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
           --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"
   for pr in $prs; do
@@ -447,6 +469,10 @@ reconcile_rework() {
     # rc 2 (couldn't read the head branch) also skips this loop.
     pr_is_synthesis "$pr" && synth_rc=0 || synth_rc=$?
     [ "$synth_rc" -ne 1 ] && continue
+    # Framing PRs are routed by frame_work.sh's reconciler (ADR-0014) — same
+    # fail-closed contract.
+    pr_is_framing "$pr" && frame_rc=0 || frame_rc=$?
+    [ "$frame_rc" -ne 1 ] && continue
     lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
     [ -z "$lastcr" ] && continue
     headcommit="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
@@ -473,27 +499,22 @@ reconcile_rework() {
   done
 }
 
-# Pick the next available issue, holding back NEW stream roots when the
-# active-streams cap is reached (#292): a discover root may only be claimed
-# while fewer than MAX_ACTIVE_STREAMS streams are active — unless its own
-# stream is already among them (e.g. a re-triaged root with open children).
-# Children of active streams, rework, and non-stream work are never held
-# back; held roots stay `status: available` and simply wait for a slot, so
-# the human G0 decision is sequenced, not overridden.
+# Pick the next available issue. DISCOVER ROOTS ARE NEVER CLAIMABLE HERE
+# (ADR-0014 / #379): framing a stream — the highest-leverage step in the
+# pipeline — is frame_work.sh territory, reserved for a powerful model under
+# a trusted identity, so a general-fleet model can't set a stream's
+# direction. frame_work.sh also carries the active-streams backlog gate
+# (#292) that used to live in this loop, since it's the only claimer of new
+# roots now. Children of active streams, rework, and non-stream work are
+# unaffected.
 pick_available() {  # $1 = queue snapshot
-  local snap="$1" n labels active count=""
+  local snap="$1" n labels
   for n in $(available_issues "$snap"); do
     labels="$(printf '%s' "$snap" | jq -r --argjson n "$n" '.[] | select(.number==$n) | [.labels[].name] | join(",")')"
     case ",$labels," in
       *",stage: discover,"*)
-        if [ -z "$count" ]; then
-          active="$(active_streams "$snap")"
-          count="$(printf '%s\n' "$active" | grep -c . || true)"
-        fi
-        if [ "$count" -ge "$MAX_ACTIVE_STREAMS" ] && ! printf '%s\n' "$active" | grep -qx "$n"; then
-          log "#$n is a new stream root but $count stream(s) are already active (MAX_ACTIVE_STREAMS=$MAX_ACTIVE_STREAMS) — leaving it in the backlog."
-          continue
-        fi ;;
+        log "#$n is a discover root — framing is reserved for frame_work.sh (ADR-0014); skipping."
+        continue ;;
     esac
     echo "$n"; return 0
   done
@@ -504,13 +525,17 @@ pick_available() {  # $1 = queue snapshot
 # a branch we can actually push the rework to. Fork-branch PRs are skipped (only
 # their owner can push). Claims it to @me and echoes its number, else nothing.
 take_unassigned_rework() {  # $1 = optional queue snapshot (from fetch_open_issues)
-  local n pr owner synth_rc
+  local n pr owner synth_rc frame_rc
   for n in $(unassigned_reworks "${1:-}"); do
     pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
     # Synthesis reworks belong to synthesize_work.sh (ADR-0011). FAIL CLOSED:
     # rc 2 (couldn't read the head branch) also skips — never adopt blind.
     pr_is_synthesis "$pr" && synth_rc=0 || synth_rc=$?
     [ "$synth_rc" -ne 1 ] && continue
+    # Framing reworks belong to frame_work.sh (ADR-0014) — same fail-closed
+    # contract: never adopt a discover/* PR here.
+    pr_is_framing "$pr" && frame_rc=0 || frame_rc=$?
+    [ "$frame_rc" -ne 1 ] && continue
     owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
     [ "$owner" = "$OWNER" ] || continue
     if [ "$DRY_RUN" = 1 ]; then echo "$n"; return 0; fi
@@ -526,6 +551,12 @@ take_unassigned_rework() {  # $1 = optional queue snapshot (from fetch_open_issu
 
 main() {
   preflight
+  # Discover is not this runner's stage at all (ADR-0014) — refuse loudly
+  # rather than poll an empty queue forever.
+  if [ "${STAGE:-}" = "discover" ]; then
+    err "STAGE=discover is frame_work.sh territory (ADR-0014) — start_work.sh never claims discover roots. Run ./frame_work.sh instead."
+    exit 1
+  fi
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   # One-shot priority pick: if ISSUE is set, work that specific issue FIRST

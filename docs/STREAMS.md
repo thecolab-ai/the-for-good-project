@@ -64,7 +64,10 @@ spend hours on, never micro-tasks. But fan-out is depth-limited so it can't
 recurse forever:
 
 ```
-depth 0 (root)      — the Discover issue. Its agent MAY open sub-issues.
+depth 0 (root)      — the Discover issue. Its children are opened by
+                      frame_work.sh from the framing agent's proposed
+                      questions (ADR-0014) — the framing agent itself never
+                      opens issues.
 depth 1             — those sub-issues. Their agents MAY open one more level.
 depth 2             — leaf issues. NO further sub-issues, full stop.
 ```
@@ -89,9 +92,18 @@ discover framing PR links with **`Part of #<root>`, never `Closes`** (the
 runner prompts this automatically and can still find the PR). Child issues
 are the opposite: their PRs **must** use `Closes #<n>` — the child closing on
 merge is exactly what fires the drain check. The root is closed by the
-steward, by hand, when the stream ships or is parked. (After a framing PR
-merges, clear the root's `status: in-review` label by hand — the root then
-has no work-status until the drain flags it `needs-synthesis`.)
+steward, by hand, when the stream ships or is parked.
+
+Discover roots are worked **only by `frame_work.sh`** (ADR-0014) — a
+capability-floored runner driven by a powerful model under a trusted
+identity (the `framers` list in `.github/trusted-reviewers.json`), never by
+the general fleet. One framing run writes the framing analysis as a PR,
+**opens the child research issues itself** (the script, not the agent —
+3–6 chunky questions, each `Part of #<root>` and `status: available`), and
+strips the root's status label — the *researching* posture — so there is no
+manual fan-out step and nothing to clear by hand after the framing PR
+merges. The root then has no work-status until the drain flags it
+`needs-synthesis`.
 
 ### The drain → synthesis trigger
 
@@ -125,10 +137,11 @@ bounded (#292 / ADR-0013):
   A stream is *active* while it has open child issues or its root is being
   worked (`claimed` / `in-review` / `changes-requested`). A G0-approved root
   that is merely `status: available` is a stream **waiting in the backlog**:
-  `start_work.sh` holds new discover roots while the cap is reached and picks
-  them up as slots free — a stream releases its slot when it drains to
-  `needs-synthesis` / `awaiting-direction` or ends. The human G0 decision is
-  sequenced, never overridden.
+  `frame_work.sh` — the only claimer of discover roots (ADR-0014) — holds
+  new roots while the cap is reached and picks them up as slots free — a
+  stream releases its slot when it drains to `needs-synthesis` /
+  `awaiting-direction` or ends. The human G0 decision is sequenced, never
+  overridden.
 - **Drained streams always arrive at G1 pre-drafted.** `synthesize_work.sh`
   drafts every `needs-synthesis` root (ADR-0003/0007/0012) — run it on a
   loop or cron alongside the workers so the steward always starts from a
@@ -158,7 +171,7 @@ Two kinds of review get conflated unless we name them:
 
 | Gate | Transition | What the human does | Mechanics |
 |---|---|---|---|
-| **G0** — framing | Discover → Research fans out | A maintainer confirms the problem is real and tractable before tokens are spent on it | Discover issues open with **no status label** — invisible to every runner. A maintainer applying `status: available` **is** G0. Once the root has passed G0, *research* children within the fan-out depth bound inherit that approval and may open as `status: available` directly |
+| **G0** — framing | Discover → Research fans out | A maintainer confirms the problem is real and tractable before tokens are spent on it | Discover issues open with **no status label** — invisible to every runner. A maintainer applying `status: available` **is** G0. The root is then framed by `frame_work.sh` only — a powerful model under a trusted identity (ADR-0014) — which also opens the child research issues. Once the root has passed G0, *research* children within the fan-out depth bound inherit that approval and may open as `status: available` directly |
 | **G1** — synthesis | Research → Ideate | The steward reads (and corrects) the drafted rollup, picks/edits/rejects its candidate outcomes, then answers: is this meaningful? is the evidence good enough? go deeper, pivot, or proceed? | Root gets `status: needs-synthesis` when the stream drains; `synthesize_work.sh` drafts the overview as a PR — if the draft flags **blocking unknowns**, the script first loops the stream back to research automatically (bounded: ≤3 issues/round, ≤2 rounds/stream, ADR-0012) so the steward reads the strongest synthesis — then moves the root to `status: awaiting-direction`; the steward's edits + **direction decision** + merge clear the gate. **No ideate issue in a stream becomes `status: available` before G1.** |
 | **G2** — build approval | Ideate → Build | A human approves one specific solution — impact, feasibility, ethics — before anything is built | Same pattern: `status: awaiting-direction` on the root; the steward records the decision in the overview. **No build issue becomes `status: available` before G2.** |
 
