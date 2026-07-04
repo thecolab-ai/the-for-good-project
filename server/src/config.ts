@@ -18,6 +18,7 @@ export const config = {
   // persistence at all.
   stateFile: process.env.STATE_FILE || undefined,
   stateSaveSeconds: num(process.env.STATE_SAVE_SECONDS, 30),
+  historyDbFile: process.env.HISTORY_DB_FILE || (process.env.STATE_FILE ? `${process.env.STATE_FILE}.sqlite` : undefined),
 
   // Comma-separated list of allowed origins, or "*" (default) for any.
   corsOrigin: process.env.CORS_ORIGIN ?? "*",

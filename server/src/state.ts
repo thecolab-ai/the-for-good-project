@@ -15,6 +15,7 @@ import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { config } from "./config.js";
+import type { HistoryStore } from "./history.js";
 import type {
   AgentPresence,
   EventItem,
@@ -100,7 +101,7 @@ export class FleetStore extends EventEmitter {
   private dirty = false;
   private agentsFlushTimer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly stateFile?: string) {
+  constructor(private readonly stateFile?: string, private readonly history?: HistoryStore) {
     super();
     this.setMaxListeners(0);
     if (stateFile) this.load(stateFile);
@@ -190,6 +191,7 @@ export class FleetStore extends EventEmitter {
     }
 
     this.recordThroughput(rec, hb, tokens);
+    this.history?.record({ agentId: id, handle: rec.handle, harness: rec.harness, model: rec.model, task: rec.task, heartbeat: hb });
     this.emitMilestones(rec, hb);
     this.publishAgents();
     return rec;
@@ -446,6 +448,18 @@ export class FleetStore extends EventEmitter {
       fleet: this.fleetMetrics(),
       events: this.recentEvents(),
     };
+  }
+
+  historyTotals() {
+    return this.history?.totals() ?? null;
+  }
+
+  tpsHistory(minutes?: number, bucketSeconds?: number) {
+    return this.history?.tpsHistory(minutes, bucketSeconds) ?? [];
+  }
+
+  close(): void {
+    this.history?.close();
   }
 
   // -------------------------------------------------- optional persistence

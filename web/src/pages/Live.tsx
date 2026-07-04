@@ -47,8 +47,9 @@ function FleetSection() {
   const live = useLiveFleet();
   if (live.status === "unconfigured") return null;
 
-  const totals = live.fleet?.totals;
-  const fetchTotal = (totals?.fetchesOk ?? 0) + (totals?.fetchesError ?? 0);
+  const totals = live.historyTotals ?? live.fleet?.totals;
+  const liveTotals = live.fleet?.totals;
+  const fetchTotal = (liveTotals?.fetchesOk ?? 0) + (liveTotals?.fetchesError ?? 0);
 
   return (
     <section className="mb-10">
@@ -59,13 +60,13 @@ function FleetSection() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <FleetPulse fleet={live.fleet} history={live.tpsHistory} />
+          <FleetPulse fleet={live.fleet} history={live.historicalTps.length ? live.historicalTps : live.tpsHistory} />
         </div>
         <div className="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
           <StatCard label="Workers online" value={live.agents.length} icon={Bot} accent="#0284C7"
             hint={live.agents.length ? `${live.agents.filter((a) => a.task?.kind === "review").length} reviewing` : "waiting for the fleet"} />
           <StatCard label="Tool calls" value={compactNumber(totals?.toolCalls ?? 0)} icon={Wrench} accent="#2E4057"
-            hint={fetchTotal > 0 ? `${Math.round(((totals?.fetchesOk ?? 0) / fetchTotal) * 100)}% of ${compactNumber(fetchTotal)} fetches ok` : "all time"} />
+            hint={fetchTotal > 0 ? `${Math.round(((liveTotals?.fetchesOk ?? 0) / fetchTotal) * 100)}% of ${compactNumber(fetchTotal)} fetches ok` : "all time"} />
         </div>
       </div>
 
