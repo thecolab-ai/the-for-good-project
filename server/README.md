@@ -73,6 +73,29 @@ curl -s -X POST http://host:8787/api/v1/telemetry -H 'content-type: application/
 
 Presence expires ~90s after the last heartbeat; heartbeat every ~30s.
 
+### Harness hooks — plug a real session in ([`clients/`](clients/))
+
+Self-contained Node scripts (no npm install) that bridge a live harness session to the server. Both **no-op instantly unless `FLEET_SERVER` is set**, never block the session (3s timeouts, every failure swallowed, always exit 0), and only stream session *content* when `STREAM_LOGS=1` is also set — with client-side redaction before send and server-side redaction again.
+
+**Claude Code** — merge [`clients/claude-settings.example.json`](clients/claude-settings.example.json) into `~/.claude/settings.json` (or the project's `.claude/settings.local.json`), then run with `FLEET_SERVER` set:
+
+```bash
+FLEET_SERVER=http://host:8787 FLEET_HANDLE=<you> claude
+# add STREAM_LOGS=1 to also stream redacted session excerpts (loud consent warning printed)
+```
+
+Hook events → telemetry: `SessionStart` → hello/presence (model id from the payload); `PostToolUse` → tool-call counts by tool + WebFetch/WebSearch ok/error; `Stop` → token deltas parsed from the session transcript (cache reads excluded so the TPS gauge reflects fresh work) and, when opted in, a redacted excerpt of the assistant's latest message; `SessionEnd` → goodbye. Note the transcript format is internal to Claude Code and can change between versions — the parser fails soft to zero deltas if it does.
+
+**Codex** — point Codex's notify hook at the bridge in `~/.codex/config.toml`:
+
+```toml
+notify = ["node", "/path/to/the-for-good-project/server/clients/codex-notify.mjs"]
+```
+
+Codex only fires notify per completed turn, so its telemetry is coarser (presence + heartbeat + opt-in excerpt of the last assistant message; no per-tool or token counts). Set `FLEET_SERVER`, `FLEET_HANDLE`, `FLEET_MODEL` in the environment Codex runs in.
+
+**Log ingestion endpoint:** hook processes are one-shot, so they POST `{agentId, lines}` to `/api/v1/logs` instead of holding a WebSocket; it 403s unless the server runs with `ALLOW_LOG_STREAM=1`.
+
 ### Watchers ← server
 
 **WebSocket** `ws://host:8787/ws/watch` — receive `{ type: "snapshot", state }` on connect, then deltas: `agents` (full presence list), `fleet` (TPS + totals, ticked every 2s), `watchers`, `event`, and optionally `log`. Polling fallback: `GET /api/v1/state`, `GET /api/v1/metrics`, `GET /healthz`.
@@ -94,4 +117,4 @@ Presence expires ~90s after the last heartbeat; heartbeat every ~30s.
 
 - **Dispatch (Phases 2–3)** — soft hints then push assignment. The watcher/agent split and the `welcome` handshake leave room for a `hint`/`assign` message type.
 - **Auth** — parked, designs on file in #398.
-- **Autopilot wiring** — `autopilot.sh`/runner integration lands as its own change; `examples/agent-heartbeat.sh` is the shape of it.
+- **Autopilot wiring** — `autopilot.sh`/runner integration lands as its own change; `examples/agent-heartbeat.sh` is the shape of it, and the `clients/` hook scripts already cover any Claude Code / Codex session run inside this repo once configured.

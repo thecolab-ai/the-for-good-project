@@ -3,7 +3,9 @@
  * for bash workers (autopilot.sh) that don't want to hold a WebSocket open.
  */
 import type { FastifyInstance } from "fastify";
-import { telemetryPostSchema } from "./protocol.js";
+import { config } from "./config.js";
+import { logPostSchema, telemetryPostSchema } from "./protocol.js";
+import { redactLines } from "./redact.js";
 import type { FleetStore } from "./state.js";
 
 export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): void {
@@ -32,6 +34,27 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
     const id = store.upsertAgent({ type: "hello", ...hello }, "http", knownId);
     if (heartbeat) store.applyHeartbeat(id, heartbeat);
     return { ok: true, agentId: id };
+  });
+
+  /**
+   * Opt-in session-log ingestion for hook-based workers (Claude Code hooks,
+   * Codex notify) — one-shot processes that can't hold a WebSocket. Same
+   * gates as the WS `log` message: the server must allow it, the worker must
+   * have opted in, and lines are redacted AGAIN here as defence in depth.
+   */
+  app.post("/api/v1/logs", async (req, reply) => {
+    if (!config.allowLogStream) {
+      return reply.code(403).send({ ok: false, error: "log streaming disabled on this server" });
+    }
+    const parsed = logPostSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
+    }
+    const rec = store.getAgent(parsed.data.agentId);
+    if (!rec) return reply.code(404).send({ ok: false, error: "unknown agentId" });
+    store.appendLogs(rec.id, rec.handle, redactLines(parsed.data.lines));
+    store.touchAgent(rec.id);
+    return { ok: true };
   });
 
   /** Clean sign-off for HTTP workers (optional — TTL handles the rest). */

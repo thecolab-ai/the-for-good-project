@@ -91,6 +91,13 @@ export const agentMessageSchema = z.discriminatedUnion("type", [
 ]);
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 
+/** HTTP log ingestion for hook-based workers (one-shot processes that can't
+ *  hold a WebSocket). Same opt-in gates as the WS `log` message. */
+export const logPostSchema = z.object({
+  agentId: z.string().uuid(),
+  lines: z.array(z.string().max(2000)).min(1).max(50),
+});
+
 /** HTTP fallback body for curl-based workers: hello fields + optional
  *  heartbeat fields in one POST. `agentId` keeps the session stable across
  *  posts — the server issues one on the first post if omitted. */
