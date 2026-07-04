@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>The For Good Project — How the workflow works</title>
+<style>
+  :root{
+    --bg:#faf8f3; --ink:#1b1b22; --muted:#5b5b66; --line:#e4ded2;
+    --card:#ffffff; --navy:#1e3a5f; --blue:#2563eb; --blue-soft:#eaf1fe;
+    --gate:#ea580c; --gate-soft:#fdeee3; --agent:#eef6f0; --agent-line:#bfe0cb;
+    --human:#f1ecfb; --human-line:#d9caf5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;padding:28px 16px 80px}
+  .wrap{max-width:1040px;margin:0 auto}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:30px;line-height:1.15;margin:0 0 6px;color:var(--navy)}
+  .sub{color:var(--muted);margin:0 0 26px;max-width:70ch}
+  h2{font-family:Georgia,serif;font-size:20px;margin:34px 0 12px;color:var(--navy)}
+  .pill{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.03em;
+    text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin-bottom:14px;background:#fff}
+
+  /* pipeline */
+  .pipe{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+  .stage{flex:1 1 190px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;position:relative}
+  .stage .emoji{font-size:22px}
+  .stage h3{margin:6px 0 3px;font-size:16px}
+  .stage p{margin:0;color:var(--muted);font-size:13.5px}
+  .arrow{align-self:center;color:var(--blue);font-weight:700;font-size:20px;padding:0 2px}
+  .gate{display:block;margin-top:9px;font-size:12px;font-weight:600;color:var(--gate);
+    background:var(--gate-soft);border:1px solid #f6d6bd;border-radius:8px;padding:5px 8px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 17px}
+  .box h3{margin:0 0 8px;font-size:15px}
+  ol,ul{margin:8px 0 0;padding-left:20px}
+  li{margin:5px 0;color:#33333d;font-size:14px}
+  code{background:#f3efe6;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;margin-right:5px;vertical-align:middle}
+  .t-agent{background:var(--agent);border:1px solid var(--agent-line);color:#1f7a45}
+  .t-human{background:var(--human);border:1px solid var(--human-line);color:#5b3fa0}
+
+  /* loop */
+  .loop{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 4px}
+  .steps{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:14px}
+  .step{background:var(--agent);border:1px solid var(--agent-line);border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:600;color:#1f5c3a;max-width:210px}
+  .step small{display:block;font-weight:400;color:#3c6b4e;font-size:12px;margin-top:2px}
+  .step.review{background:var(--blue-soft);border-color:#c7dbfb;color:#1e3a8a}
+  .step.review small{color:#2b4a86}
+  .step.human{background:var(--human);border-color:var(--human-line);color:#4c3391}
+  .branch{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 14px 14px}
+  .branch .step{max-width:320px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:13px;height:13px;border-radius:4px;display:inline-block}
+  .guard{background:#12261b;color:#eafff2;border-radius:14px;padding:16px 18px;margin-top:14px}
+  .guard h3{margin:0 0 8px;color:#fff;font-size:15px}
+  .guard ul{columns:2;column-gap:26px}
+  @media(max-width:600px){.guard ul{columns:1}}
+  .guard li{color:#cde7d8}
+  .foot{margin-top:34px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+  a{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="pill">The For Good Project · how it works</span>
+  <h1>A problem goes in. Cited, human-checked evidence comes out.</h1>
+  <p class="sub">People and AI agents work a shared, open pipeline on GitHub. Agents do the volume — gathering, drafting, cross-checking — and humans make every judgement call. Nothing reaches a conclusion without a person steering it, and nothing is taken on faith without a source.</p>
+
+  <h2>The pipeline — four stages, three human gates</h2>
+  <div class="pipe">
+    <div class="stage">
+      <div class="emoji">🔍</div><h3>Discover</h3>
+      <p>Turn a raw problem into sharp, testable research questions.</p>
+      <span class="gate">Gate G0 · a human triages the idea in</span>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="emoji">📚</div><h3>Research</h3>
+      <p>Answer one question, cited and honest. This is the core.</p>
+      <span class="gate">Gate G1 · a human synthesises &amp; sets direction</span>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="emoji">💡</div><h3>Ideate</h3>
+      <p>Turn findings into feasible, ranked solutions.</p>
+      <span class="gate">Gate G2 · a human picks what to build</span>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="emoji">🔨</div><h3>Build</h3>
+      <p>Ship a small, working tool for a real problem.</p>
+    </div>
+  </div>
+
+  <h2>The engine — how one piece of work actually moves</h2>
+  <div class="loop">
+    <div class="steps">
+      <div class="step">1 · Claim<small>a runner claims an <em>available</em> issue</small></div>
+      <div class="arrow">→</div>
+      <div class="step">2 · Work<small>agent researches &amp; cites, opens a PR</small></div>
+      <div class="arrow">→</div>
+      <div class="step review">3 · Adversarial review<small>a <strong>different identity</strong> tries to <em>refute</em> it</small></div>
+    </div>
+    <div class="branch">
+      <div class="step review">✅ PASS → merge<small>trust gate: reviewer is whitelisted or has earned credit; sensitive domains need 2 approvals</small></div>
+      <div class="step">🔁 NEEDS&nbsp;WORK → rework<small>author fixes &amp; pushes; re-reviewed (up to 10 rounds)</small></div>
+      <div class="step human">🧑‍⚖️ Can't converge → parked for a human<small>after the round cap, a maintainer decides</small></div>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--agent-line)"></span> AI agent does it</span>
+      <span><span class="dot" style="background:#c7dbfb"></span> Review gate (non-author)</span>
+      <span><span class="dot" style="background:var(--human-line)"></span> Human decides</span>
+    </div>
+  </div>
+
+  <h2>Streams — how a big problem fans out and comes back together</h2>
+  <div class="grid">
+    <div class="box">
+      <h3><span class="tag t-human">human</span> One idea → a Discover root</h3>
+      <ul>
+        <li>A person brings a problem. A powerful model <strong>frames</strong> it and opens the child research questions.</li>
+        <li>Everything descending from one Discover issue is a <strong>stream</strong> (max 2 levels deep — no runaway fan-out).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3><span class="tag t-agent">agents</span> Children research in parallel</h3>
+      <ul>
+        <li>Runners pick up the available children and answer them one at a time, each cited and reviewed.</li>
+        <li>When every child closes, the stream <strong>drains</strong> and queues for synthesis.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3><span class="tag t-agent">agent</span> Synthesis draft</h3>
+      <ul>
+        <li>An agent drafts a plain-English overview of what the stream found — and flags candidate options.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3><span class="tag t-human">human · G1</span> Steward sets direction</h3>
+      <ul>
+        <li>A person reads the synthesis and decides what (if anything) is worth turning into a solution. Only then does ideation start.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>What keeps it honest &amp; running</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>🛠️ The runners <span class="tag t-agent">agents</span></h3>
+      <ul>
+        <li><code>start_work.sh</code> — do the work</li>
+        <li><code>review_work.sh</code> — adversarial review + merge gate</li>
+        <li><code>synthesize_work.sh</code> — draft a stream's overview</li>
+        <li><code>merge_ready.sh</code> — merge what's passed the trust model</li>
+        <li><code>reap.sh</code> — free stale claims</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>📊 The Colab skills — live NZ data</h3>
+      <ul>
+        <li>~70 read-only tools wrapping official NZ sources (Stats NZ, councils, GeoNet, LINZ…).</li>
+        <li>Research pulls clean, citable data from them. A missing source becomes a <strong>skill request</strong> — the toolbox grows itself.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>🏅 Reputation, earned</h3>
+      <ul>
+        <li>Every contribution (findings, merges, reviews) earns credit on the leaderboard.</li>
+        <li>Earned credit can let a trusted reviewer's verdict gate a merge — trust with receipts, never self-declared.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>🔒 The integrity rule</h3>
+      <ul>
+        <li>An adversarial review <strong>can't be done by the author</strong> — branch protection enforces a non-author approval.</li>
+        <li>Governance/pipeline changes are <em>human-only</em>: agents never merge the rules they run under.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="guard">
+    <h3>The non-negotiables — the whole thing only works if it can be trusted</h3>
+    <ul>
+      <li>Cite every claim with a real, working source.</li>
+      <li>Two independent sources for anything surprising or load-bearing.</li>
+      <li>A party's statement about itself is a <em>claim</em>, not confirmation.</li>
+      <li>Mark confidence honestly — High / Medium / Low.</li>
+      <li>No personal or identifying data, ever.</li>
+      <li>A human decides at every gate; agents grind, people steer.</li>
+    </ul>
+  </div>
+
+  <p class="foot">A living map of how The For Good Project turns a problem into trustworthy, cited evidence — people + AI agents, working in the open on GitHub. Unlisted diagram; the full work is at <a href="https://github.com/thecolab-ai/the-for-good-project">github.com/thecolab-ai/the-for-good-project</a>.</p>
+</div>
+</body>
+</html>
