@@ -68,8 +68,8 @@ export const TEAM: TeamMember[] = [
     id: "partnerships",
     role: "Partnerships & field",
     focus: "Brings charities, councils and agencies the real problems worth working on.",
-    name: null,
-    photo: null,
+    name: "Rachel McBride",
+    photo: "team/rachelmcbride.jpg",
   },
   {
     id: "ethics",

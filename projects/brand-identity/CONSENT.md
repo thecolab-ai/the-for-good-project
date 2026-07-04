@@ -35,6 +35,7 @@ when — they have consented.
 |---|---|---|---|---|
 | `gligorkot` | Contributor | 2026-07-03 | PR #191 requested changes from @gligorkot: "we should add real people's photos and names" and "I'd be happy to put my name towards this project"; name and avatar source checked against the public GitHub profile for @gligorkot. | Name: Gligor Kotushevski. Photo: public GitHub avatar copied to `web/public/team/gligorkot.jpg` in direct response to the review request for real photos and names. |
 | `steward` | Founder & steward | 2026-07-03 | @adam91holt (project founder) directed it explicitly on PR #191: posted his own GitHub avatar URL with "this one for me, use my name" and instructed the page be merged. | Name: Adam Holt. Photo: his own public GitHub avatar copied to `web/public/team/adam91holt.jpg`, supplied and consented by Adam himself. |
+| `partnerships` | Partnerships & field | 2026-07-03 | @rachel-rowanadvisory (the project's demand-side/partnerships connector) asked to fill her own team slot with her name and photo — a self-directed consent, made after taking the collaborator role on the project. | Name: Rachel McBride. Photo: her own professional headshot (hers to publish), cropped to spec and saved to `web/public/team/rachelmcbride.jpg`. |
 
 ## To remove someone
 
