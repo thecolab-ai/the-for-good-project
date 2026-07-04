@@ -77,4 +77,3 @@ The dollar range is **my derivation, not an official statistic.** The input fact
 4. Ministry of Social Development (hosted on the Social Investment Agency Hub), *Estimates of take-up of the Best Start tax credit* (~96.9% take-up), published 01 Dec 2022. https://thehub.sia.govt.nz/sitemap/estimates-of-take-up-of-the-best-start-tax-credit (accessed 4 July 2026)
 5. Inland Revenue, *End-of-year assessments* (WFF square-up; unpaid entitlement refunded after year end). https://www.ird.govt.nz/working-for-families/yearly-review-and-assessment-processes/end-of-year-assessments (accessed 4 July 2026)
 6. Ministry of Social Development, *Income Support Survey — Findings Pack 7: Accommodation Supplement self-reported take-up and other findings*. https://www.msd.govt.nz/documents/about-msd-and-our-work/work-programmes/income-support-survey/findings-pack-7-accommodation-supplement-self-reported-take-up-and-other-findings.pdf (accessed 4 July 2026)
-</content>
