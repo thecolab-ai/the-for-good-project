@@ -42,6 +42,12 @@ MAX_CYCLES="${MAX_CYCLES:-0}"             # 0 = run forever
 PULL="${PULL:-1}"                         # git-pull latest main each cycle (0 to disable)
 MAIN_BRANCH="${MAIN_BRANCH:-main}"
 
+# Fingerprint this script so we can hot-reload it if a pull changes autopilot.sh
+# itself (see the exec below). $PWD is the script dir — we cd'd here above.
+SELF="$PWD/$(basename "$0")"
+self_hash() { sha1sum "$SELF" 2>/dev/null | cut -d' ' -f1 || true; }
+SELF_HASH="$(self_hash)"
+
 trap 'rule; warn "autopilot stopping."; exit 130' INT TERM
 
 if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
@@ -73,10 +79,19 @@ while :; do
   # pipeline improvements without a manual git pull. git swaps files by atomic
   # rename, so the RUNNING autopilot keeps executing its current (open) inode —
   # no mid-run corruption — while the runner subprocesses launched below read the
-  # freshly-updated code immediately; autopilot's own update applies next restart.
+  # freshly-updated code immediately.
   if [ "$PULL" = 1 ]; then
     if git fetch --quiet origin "$MAIN_BRANCH" 2>/dev/null && git merge --ff-only --quiet FETCH_HEAD 2>/dev/null; then
       log "Pulled latest origin/$MAIN_BRANCH."
+      # If the pull updated autopilot.sh ITSELF, hot-reload onto the new version
+      # by re-exec'ing at the top of the cycle — so autopilot-level improvements
+      # apply with no manual restart. The hash guard makes this fire only on a
+      # real change (the re-exec'd process re-fingerprints the current file), so
+      # there's no exec loop.
+      if [ "$(self_hash)" != "$SELF_HASH" ]; then
+        info "autopilot.sh changed on origin/$MAIN_BRANCH — reloading onto the new version…"
+        exec "$SELF" "$@"
+      fi
     else
       warn "Couldn't fast-forward to origin/$MAIN_BRANCH (local changes / not on $MAIN_BRANCH / offline) — staying on current code."
     fi
