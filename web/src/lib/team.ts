@@ -61,8 +61,9 @@ export const TEAM: TeamMember[] = [
     id: "engineering",
     role: "Engineering",
     focus: "Builds the open workspace, the agent runners, and this site.",
-    name: null,
-    photo: null,
+    name: "Muhammad Asim",
+    photo: "team/muhammadasim.jpg",
+    location: "Pakistan",
   },
   {
     id: "partnerships",
