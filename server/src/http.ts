@@ -4,11 +4,16 @@
  */
 import type { FastifyInstance } from "fastify";
 import { config } from "./config.js";
+import { IpRateLimiter } from "./guards.js";
 import { logPostSchema, telemetryPostSchema } from "./protocol.js";
 import { redactLines } from "./redact.js";
 import type { FleetStore } from "./state.js";
 
 export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): void {
+  // The WS routes get a per-connection limiter; the plain-HTTP ingestion
+  // routes need the same budget per source IP or they're a free flood path.
+  const limiter = new IpRateLimiter();
+  const rateLimited = (ip: string) => !limiter.allow(ip);
   app.get("/healthz", async () => ({ ok: true, agents: store.listAgents().length }));
 
   /** Full current state — same shape as the WS `snapshot` message body. */
@@ -23,6 +28,7 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
    * posts to keep the session stable. Presence expires by TTL if posts stop.
    */
   app.post("/api/v1/telemetry", async (req, reply) => {
+    if (rateLimited(req.ip)) return reply.code(429).send({ ok: false, error: "slow down" });
     const parsed = telemetryPostSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
@@ -32,6 +38,7 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
     // session rather than erroring the worker.
     const knownId = agentId && store.getAgent(agentId) ? agentId : undefined;
     const id = store.upsertAgent({ type: "hello", ...hello }, "http", knownId);
+    if (!id) return reply.code(503).send({ ok: false, error: "fleet full" });
     if (heartbeat) store.applyHeartbeat(id, heartbeat);
     return { ok: true, agentId: id };
   });
@@ -43,6 +50,7 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
    * have opted in, and lines are redacted AGAIN here as defence in depth.
    */
   app.post("/api/v1/logs", async (req, reply) => {
+    if (rateLimited(req.ip)) return reply.code(429).send({ ok: false, error: "slow down" });
     if (!config.allowLogStream) {
       return reply.code(403).send({ ok: false, error: "log streaming disabled on this server" });
     }

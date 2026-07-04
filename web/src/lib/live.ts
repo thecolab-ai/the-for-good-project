@@ -46,7 +46,6 @@ export interface AgentPresence {
 
 export interface RoughLocation {
   city?: string;
-  region?: string;
   country?: string;
   lat?: number;
   lon?: number;

@@ -4,9 +4,10 @@
  * Identity is assumed-trust for now (auth is parked per the decision on #398);
  * the transport is designed so a challenge step can slot in after `hello`.
  */
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { config } from "./config.js";
+import { originAllowed, RateLimiter } from "./guards.js";
 import { agentMessageSchema } from "./protocol.js";
 import { redactLines } from "./redact.js";
 import type { FleetStore } from "./state.js";
@@ -14,26 +15,12 @@ import type { FleetStore } from "./state.js";
 const HELLO_TIMEOUT_MS = 10_000;
 const PING_INTERVAL_MS = 25_000;
 
-/** Cheap per-connection flood guard: allow a burst, refill per second. */
-class RateLimiter {
-  private allowance: number = config.maxMessagesPerSecond;
-  private last = Date.now();
-
-  allow(): boolean {
-    const now = Date.now();
-    this.allowance = Math.min(
-      config.maxMessagesPerSecond,
-      this.allowance + ((now - this.last) / 1000) * config.maxMessagesPerSecond,
-    );
-    this.last = now;
-    if (this.allowance < 1) return false;
-    this.allowance -= 1;
-    return true;
-  }
-}
-
 export function registerAgentSocket(app: FastifyInstance, store: FleetStore): void {
-  app.get("/ws/agent", { websocket: true }, (socket: WebSocket) => {
+  app.get("/ws/agent", { websocket: true }, (socket: WebSocket, req: FastifyRequest) => {
+    if (!originAllowed(req)) {
+      socket.close(4403, "origin not allowed");
+      return;
+    }
     let agentId: string | null = null;
     let alive = true;
     const limiter = new RateLimiter();
@@ -72,7 +59,13 @@ export function registerAgentSocket(app: FastifyInstance, store: FleetStore): vo
 
       switch (msg.type) {
         case "hello": {
-          agentId = store.upsertAgent(msg, "ws", agentId ?? undefined);
+          const id = store.upsertAgent(msg, "ws", agentId ?? undefined);
+          if (!id) {
+            socket.send(JSON.stringify({ type: "error", error: "fleet full" }));
+            socket.close(1013, "fleet full");
+            return;
+          }
+          agentId = id;
           clearTimeout(helloTimer);
           socket.send(JSON.stringify({ type: "welcome", agentId }));
           break;

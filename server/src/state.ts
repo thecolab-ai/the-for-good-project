@@ -93,9 +93,8 @@ export class FleetStore extends EventEmitter {
   private readonly tpsBuckets = new Map<number, TpsBucket>();
   private totals: SessionCounters = emptyCounters();
   private events: EventItem[] = [];
-  /** Short-lived opt-in log tail per agent, pruned when the agent goes. */
-  private readonly logs = new Map<string, Array<{ at: number; line: string }>>();
   private dirty = false;
+  private agentsFlushTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly stateFile?: string) {
     super();
@@ -109,9 +108,13 @@ export class FleetStore extends EventEmitter {
 
   // -------------------------------------------------------------- agents
 
-  upsertAgent(hello: Hello, transport: "ws" | "http", id?: string): string {
+  /** Returns null when the fleet is at maxAgents and this would be a NEW
+   *  agent — presence is unauthenticated until auth lands, so allocation from
+   *  a flood of hellos has to be bounded. */
+  upsertAgent(hello: Hello, transport: "ws" | "http", id?: string): string | null {
     const agentId = id ?? randomUUID();
     const existing = this.agents.get(agentId);
+    if (!existing && this.agents.size >= config.maxAgents) return null;
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
     const rec: AgentRecord = existing ?? {
@@ -226,7 +229,6 @@ export class FleetStore extends EventEmitter {
     const rec = this.agents.get(id);
     if (!rec) return;
     this.agents.delete(id);
-    this.logs.delete(id);
     this.addEvent("agent_offline", `@${rec.handle} went offline (${reason})`, {
       handle: rec.handle,
       harness: rec.harness,
@@ -250,8 +252,16 @@ export class FleetStore extends EventEmitter {
       .sort((a, b) => a.connectedAt.localeCompare(b.connectedAt));
   }
 
+  /** Coalesced: heartbeats arrive per tool call once the harness hooks are
+   *  wired, so publishing the whole fleet per heartbeat would be an
+   *  O(agents × watchers) storm. Mark dirty, flush at most once per window. */
   private publishAgents(): void {
-    this.publish({ type: "agents", agents: this.listAgents() });
+    if (this.agentsFlushTimer) return;
+    this.agentsFlushTimer = setTimeout(() => {
+      this.agentsFlushTimer = null;
+      this.publish({ type: "agents", agents: this.listAgents() });
+    }, config.agentsFlushMs);
+    this.agentsFlushTimer.unref?.();
   }
 
   // ---------------------------------------------------------- throughput
@@ -347,11 +357,16 @@ export class FleetStore extends EventEmitter {
   }
 
   watcherSummary(): WatcherSummary {
-    // Only the rough location and a random id leave the server — never an IP,
-    // never anything derived from one beyond city/country/rounded coords.
-    const locations = [...this.watchers.values()]
-      .slice(0, 100)
-      .map((rec) => ({ id: rec.id, connectedAt: rec.connectedAt, ...(rec.location ?? {}) }));
+    // Only these explicit fields leave the server about a watcher — never an
+    // IP, never anything derived from one beyond city/country/rounded coords.
+    const locations = [...this.watchers.values()].slice(0, 100).map((rec) => ({
+      id: rec.id,
+      connectedAt: rec.connectedAt,
+      city: rec.location?.city,
+      country: rec.location?.country,
+      lat: rec.location?.lat,
+      lon: rec.location?.lon,
+    }));
     return { count: this.watchers.size, locations };
   }
 
@@ -378,18 +393,33 @@ export class FleetStore extends EventEmitter {
     return event;
   }
 
+  /** Broadcast-only, NOT stored in the capped feed: high-churn notices (like
+   *  watcher joins) would otherwise evict real fleet events and persist to
+   *  STATE_FILE via the snapshot. Live watchers still see them. */
+  ephemeralEvent(kind: EventKind, text: string, meta: { handle?: string; harness?: string }): void {
+    this.publish({
+      type: "event",
+      event: {
+        id: randomUUID(),
+        at: new Date().toISOString(),
+        kind,
+        text,
+        ...(meta.handle ? { handle: meta.handle } : {}),
+        ...(meta.harness ? { harness: meta.harness } : {}),
+      },
+    });
+  }
+
   recentEvents(limit = 50): EventItem[] {
     return this.events.slice(0, limit);
   }
 
   // ---------------------------------------------------------------- logs
 
+  /** Logs are broadcast-only — nothing is retained server-side. Retention was
+   *  considered and dropped: the stream is theatre/debugging, and keeping
+   *  transcript excerpts in RAM that nothing reads is pure liability. */
   appendLogs(agentId: string, handle: string, lines: string[]): void {
-    const now = Date.now();
-    const tail = this.logs.get(agentId) ?? [];
-    tail.unshift(...lines.map((line) => ({ at: now, line })));
-    if (tail.length > config.logLinesPerAgent) tail.length = config.logLinesPerAgent;
-    this.logs.set(agentId, tail);
     if (config.broadcastLogs) this.publish({ type: "log", agentId, handle, lines });
   }
 

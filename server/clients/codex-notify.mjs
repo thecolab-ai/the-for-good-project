@@ -45,10 +45,10 @@ const hello = {
     : {}),
 };
 
+// Hello-only upsert: refreshes presence without a no-op heartbeat frame.
 const resp = await post("/api/v1/telemetry", {
   ...(state.agentId ? { agentId: state.agentId } : {}),
   ...hello,
-  heartbeat: { tasksCompleted: 0 },
 });
 if (resp?.agentId) state.agentId = resp.agentId;
 

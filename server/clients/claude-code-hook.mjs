@@ -79,7 +79,14 @@ function readTranscriptDelta() {
   } catch {
     return out;
   }
-  const offset = Number.isFinite(state.offset) && state.offset <= raw.length ? state.offset : 0;
+  if (Number.isFinite(state.offset) && state.offset > raw.length) {
+    // Transcript shrank (truncated/rotated) — re-parsing from 0 would
+    // double-count every prior token into this delta. Skip this tick and
+    // resume counting from the new end.
+    state.offset = raw.length;
+    return out;
+  }
+  const offset = Number.isFinite(state.offset) ? state.offset : 0;
   state.offset = raw.length;
   for (const line of raw.slice(offset).split("\n")) {
     if (!line.trim()) continue;

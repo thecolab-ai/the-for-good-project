@@ -82,11 +82,15 @@ const PATTERNS = [
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}\b/g,
   /\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{16,}/gi,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
-  /\b[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|API_?KEY|PRIVATE_?KEY)[A-Z0-9_]*\s*[=:]\s*[^\s"']+/gi,
+  /\b[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|API_?KEY|PRIVATE_?KEY)[A-Z0-9_]*"?\s*[=:]\s*("[^"]*"|'[^']*'|\S+)/gi,
 ];
 
+// URL userinfo credentials ("postgres://user:s3cr3t@host") — keep the scheme
+// and user, scrub the password.
+const URL_CREDS = /\b([a-z][a-z0-9+.-]*:\/\/[^\s/:@]+):([^\s/@]+)@/gi;
+
 export function redact(text) {
-  let out = String(text);
+  let out = String(text).replace(URL_CREDS, `$1:${REDACTED}@`);
   for (const re of PATTERNS) out = out.replace(re, REDACTED);
   return out;
 }

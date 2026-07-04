@@ -27,7 +27,6 @@ export function roughLocate(ip: string | undefined): RoughLocation | null {
   const [lat, lon] = hit.ll ?? [];
   return {
     city: hit.city || undefined,
-    region: hit.region || undefined,
     country: hit.country || undefined,
     lat: typeof lat === "number" ? rough(lat) : undefined,
     lon: typeof lon === "number" ? rough(lon) : undefined,

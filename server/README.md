@@ -31,9 +31,11 @@ Point the dashboard at it: set `VITE_LIVE_SERVER_URL=http://localhost:8787` when
 
 **In-memory state, no database, no Redis.** Considered and rejected for now: every piece of state here is ephemeral by design — presence with 90s TTLs, a 60s sliding token window, a capped event feed. It all rebuilds from heartbeats within seconds of a restart, and #398 explicitly says *"keep it small and stateless where possible (GitHub holds state)"*. Redis would only earn its keep with multiple server replicas, which the fleet's realistic scale (tens of workers/watchers ≪ one Node process's capacity) doesn't justify — and it would double the ops burden of a project whose ethos is "clone it and run one script". The single thing worth keeping across restarts — lifetime totals + the event feed — is snapshotted to `STATE_FILE` on a volume. If we ever scale out, `FleetStore` is the seam: swap in a shared-store implementation behind the same interface.
 
-**Auth is parked** (maintainer decision on #398): connecting workers are assumed to be who they claim. The `hello` handshake is shaped so a challenge step (SSH-key signature or GitHub device flow — both designed in the issue) can slot in later without protocol changes.
+**Auth is parked** (maintainer decision on #398): connecting workers are assumed to be who they claim. The `hello` handshake is shaped so a challenge step (SSH-key signature or GitHub device flow — both designed in the issue) can slot in later without protocol changes. **Known exposure until then:** anyone who can reach the server can report presence/metrics under any handle. Cheap guards bound the blast radius — per-connection and per-IP rate limits, a `MAX_AGENTS` cap, and a WebSocket origin check (when `CORS_ORIGIN` isn't `*`) so a malicious web page can't use a visitor's browser to inject spoofed presence — but the telemetry itself is honour-system until auth lands. GitHub remains the source of truth for anything that matters.
 
-**Watcher privacy:** a watcher's IP is used once, in-process, to derive a rough location (city/country + coordinates rounded to ~11 km) via an offline GeoLite2 lookup (`geoip-lite` — the IP never leaves the process, no third-party geo API). The IP is never stored, never logged, and never sent to any client. Watchers appear to others only as `{ random id, city, country, rough coords, connectedAt }`.
+**Watcher privacy:** a watcher's IP is used once, in-process, to derive a rough location (city/country + coordinates rounded to ~11 km) via an offline GeoLite2 lookup (`geoip-lite` — the IP never leaves the process, no third-party geo API). The IP is never stored, never logged (request logging is scrubbed to method + url — Fastify's default serializer would otherwise emit `remoteAddress`), and never sent to any client. Watchers appear to others only as `{ random id, city, country, rough coords, connectedAt }`, and watcher-join notices are broadcast-only — they're never written to the persisted event feed.
+
+**Streamed logs are broadcast-only** — the server retains nothing: no log lines are stored in memory or on disk, they only fan out live to connected watchers (and only when `BROADCAST_LOGS=1`).
 
 **Log streaming is default-OFF at both ends** (per #398): a worker must opt in (`STREAM_LOGS=1`) *and* the server must allow it (`ALLOW_LOG_STREAM=1`), and even then logs are redacted twice (worker-side and server-side, `src/redact.ts`) and only reach the public dashboard if `BROADCAST_LOGS=1` is *also* set. Heartbeats carry counts and rates, never content.
 
@@ -112,6 +114,7 @@ Codex only fires notify per completed turn, so its telemetry is coarser (presenc
 | `BROADCAST_LOGS` | `0` | Also forward (redacted) logs to watchers |
 | `CORS_ORIGIN` | `*` | Comma-separated allowed origins |
 | `AGENT_TTL_SECONDS` | `90` | Presence timeout without a heartbeat |
+| `MAX_AGENTS` | `500` | Hard cap on tracked agents (anti-flood while auth is parked) |
 
 ## What's deliberately NOT here yet
 

@@ -46,11 +46,16 @@ export const config = {
   maxEventFeed: num(process.env.MAX_EVENT_FEED, 200),
 
   // Per-connection inbound limits — telemetry is small; anything bigger is a bug
-  // or abuse.
+  // or abuse. The same per-second budget applies per-IP on the HTTP routes.
   maxMessageBytes: 64 * 1024,
   maxMessagesPerSecond: 20,
 
-  // Streamed logs: keep at most this many recent lines per agent, short-lived.
-  logLinesPerAgent: 500,
-  logTtlSeconds: 3600,
+  // Hard ceiling on tracked agents — presence is unauthenticated until the
+  // parked auth lands, so cap what a flood of hellos can allocate.
+  maxAgents: num(process.env.MAX_AGENTS, 500),
+
+  // Coalesce agent-presence broadcasts: heartbeats mark the list dirty and a
+  // flush follows within this window, instead of one whole-fleet frame per
+  // heartbeat (per-tool-call hooks make those very frequent).
+  agentsFlushMs: 750,
 } as const;

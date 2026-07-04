@@ -11,6 +11,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { config } from "./config.js";
 import { describeLocation, roughLocate } from "./geo.js";
+import { originAllowed } from "./guards.js";
 import type { ServerMessage } from "./protocol.js";
 import type { FleetStore } from "./state.js";
 
@@ -41,14 +42,20 @@ export function registerWatchSocket(app: FastifyInstance, store: FleetStore): vo
   });
 
   app.get("/ws/watch", { websocket: true }, (socket: WebSocket, req: FastifyRequest) => {
+    if (!originAllowed(req)) {
+      socket.close(4403, "origin not allowed");
+      return;
+    }
     // req.ip honours X-Forwarded-For when trustProxy is on. Used once, here,
     // for the rough lookup — never retained.
     const location = config.watcherGeo ? roughLocate(req.ip) : null;
     const watcher = store.addWatcher(location);
     sockets.add(socket);
 
+    // Ephemeral: watcher joins are fun live but would crowd real fleet events
+    // out of the capped, persisted feed.
     if (location?.city || location?.country) {
-      store.addEvent("watcher_joined", `someone from ${describeLocation(location)} is watching`, {});
+      store.ephemeralEvent("watcher_joined", `someone from ${describeLocation(location)} is watching`, {});
     }
 
     socket.send(JSON.stringify({ type: "snapshot", state: store.snapshot() } satisfies ServerMessage));

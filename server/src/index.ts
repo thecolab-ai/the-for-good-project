@@ -20,7 +20,17 @@ async function main(): Promise<void> {
   const store = new FleetStore(config.stateFile);
 
   const app = Fastify({
-    logger: { level: process.env.LOG_LEVEL ?? "info" },
+    // The privacy contract says client IPs are NEVER logged — Fastify's
+    // default request serializer would emit remoteAddress (the real viewer IP
+    // once trustProxy resolves X-Forwarded-For), so scrub request logs down
+    // to method + url and log nothing per-response.
+    logger: {
+      level: process.env.LOG_LEVEL ?? "info",
+      serializers: {
+        req: (req) => ({ method: req.method, url: req.url }),
+      },
+    },
+    disableRequestLogging: true,
     trustProxy: config.trustProxy,
     bodyLimit: config.maxMessageBytes,
   });

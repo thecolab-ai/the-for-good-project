@@ -145,7 +145,6 @@ export interface AgentPresence {
 
 export interface RoughLocation {
   city?: string;
-  region?: string;
   country?: string;
   /** Rounded to ~0.1 degree (≈11 km) — deliberately imprecise. */
   lat?: number;
