@@ -1,0 +1,22 @@
+# Run the fleet server:  docker compose up -d
+# State is in-memory by design (presence rebuilds from heartbeats); the volume
+# only preserves lifetime totals + the event feed across restarts.
+services:
+  fleet-server:
+    build: .
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      STATE_FILE: /data/fleet-state.json
+      TRUST_PROXY: "1"
+      WATCHER_GEO: "1"
+      # Log streaming stays default-OFF (issue #398): flip both deliberately.
+      ALLOW_LOG_STREAM: "0"
+      BROADCAST_LOGS: "0"
+      CORS_ORIGIN: "*"
+    volumes:
+      - fleet-state:/data
+    restart: unless-stopped
+
+volumes:
+  fleet-state:

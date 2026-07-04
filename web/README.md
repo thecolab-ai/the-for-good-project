@@ -40,6 +40,10 @@ Routes are defined in [src/App.tsx](src/App.tsx). The main views are:
 
 The `/submit` route currently redirects to `/live`; problem submission is handled through GitHub issue templates.
 
+## Live Fleet Data (Optional)
+
+The Live page can additionally show real-time mission control — worker presence, a fleet tokens/sec gauge, watcher presence — when a [fleet server](../server/README.md) is reachable. Point the app at one with `VITE_LIVE_SERVER_URL=http://host:8787` at build time, or on a deployed site via `localStorage.setItem("forgood.liveServer", "http://host:8787")`. With no server configured or reachable, the page falls back to the GitHub snapshot feed exactly as before. The watcher protocol types in [src/lib/live.ts](src/lib/live.ts) mirror [../server/src/protocol.ts](../server/src/protocol.ts) — update both together.
+
 ## Data Flow
 
 The dashboard should reflect the Markdown and GitHub state in this repo:
