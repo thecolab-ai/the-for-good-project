@@ -19,12 +19,15 @@
 #   ./start_work.sh codex --model gpt-5.5
 #   STAGE=research ./start_work.sh  # only pick up research-stage issues
 #   MAX=1 ./start_work.sh           # do a single issue and stop
+#   ISSUE=390 ./start_work.sh       # work THIS issue first (one shot), then fall
+#                                    # back into the normal queue loop
+#   ISSUE=390 MAX=1 ./start_work.sh # work only that one issue, then stop
 #   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
 #   POLL_SECONDS=0 ./start_work.sh  # exit instead of polling when queue empty
 #                                    # (default: poll every 3 min and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
-# Env:  AGENT MODEL MAX STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
+# Env:  AGENT MODEL MAX ISSUE STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
 #       PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -33,6 +36,7 @@ RUNS_AGENT=1
 parse_agent_args "$@"
 
 MAX="${MAX:-0}"                       # 0 = no limit
+ISSUE="${ISSUE:-}"                    # one-shot: work THIS issue first, then fall into the normal loop
 POLL_SECONDS="${POLL_SECONDS:-180}"   # keep polling when queue empty every 3 min (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 CLAIMED_ISSUE=""
@@ -524,6 +528,21 @@ main() {
   preflight
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
+  # One-shot priority pick: if ISSUE is set, work that specific issue FIRST
+  # (a changes-requested rework of mine is reworked; anything else is worked as
+  # new), then fall through into the normal queue loop below. Lets a contributor
+  # get one particular issue done without hand-claiming outside the runner.
+  if [ -n "$ISSUE" ]; then
+    rule; info "One-shot: working requested issue #${c_bold}$ISSUE${c_reset} first, then the normal queue."
+    local snap0; snap0="$(fetch_open_issues)" || snap0='[]'
+    if printf '%s' "$snap0" | jq -e --arg n "$ISSUE" '.[]|select((.number|tostring)==$n)|select(.labels|map(.name)|index("status: changes-requested"))|select(.assignees|map(.login)|index("'"$ME"'"))' >/dev/null 2>&1; then
+      rework_one "$ISSUE" || warn "Requested rework #$ISSUE didn't complete — continuing with the normal queue."
+    else
+      work_one "$ISSUE" || warn "Requested issue #$ISSUE could not be claimed/worked — continuing with the normal queue."
+    fi
+    done=$((done+1))
+    if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX issue(s). Stopping."; return; fi
+  fi
   while :; do
     reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
     # ONE GraphQL query snapshots the whole open-issue queue; every check below
