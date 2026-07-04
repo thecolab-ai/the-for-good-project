@@ -45,10 +45,16 @@ the hypothesis assumed, but the "no reward" part largely holds.
   categories once mitigation was real — proof the system *can* credit
   mitigation — but only inside a special recovery programme.** Five Hawke's
   Bay communities (over 200 homes) had their risk category lowered or removed
-  as flood works progressed. Outside recovery programmes, no standing process
-  exists for an ordinary homeowner to get a label reassessed and funded this
-  way, though new national planning rules now require mitigation to be
-  considered when assessing new development. (confidence: Medium) —
+  once protection projects had a sound plan, consents, land access and
+  confirmed funding — in several cases before construction was finished. Yet
+  even in Auckland's funded scheme, a home that completes its mitigation gets
+  the works *noted* on the buyer's report while the flood-event history stays
+  on the property file, and if consent for the mitigation is declined the
+  home drops into the buyout category. Outside recovery programmes, no
+  standing process exists for an ordinary homeowner to get a label reassessed
+  and funded this way, though new national planning rules now require
+  mitigation to be considered when assessing new development.
+  (confidence: Medium) —
   [finding](../research/findings/other/gabrielle-responsive-designation.md)
 - **Councils can and do correct flood maps and LIM notes — but the routes are
   request-and-appeal, not automatic.** A homeowner who does protective works
@@ -58,11 +64,15 @@ the hypothesis assumed, but the "no reward" part largely holds.
   [finding](../research/findings/other/designation-correction-pathways.md)
 - **NZ insurers increasingly price flood risk address-by-address, but none
   publishes a pathway that turns completed flood-proofing into a cheaper
-  premium.** One insurer (via Consumer NZ) said home adaptations are "not
+  premium.** Address-level pricing can cut premiums — one insurer reported
+  about 90% of its home customers got a small flood-premium reduction when it
+  switched on — but that rewards *living in a lower-risk spot*, not *doing
+  the works*. One insurer (via Consumer NZ) said home adaptations are "not
   currently reflected in our standard pricing"; the closest thing found is an
-  invitation to "contact us" about alterations. So the penalty side of
-  risk-based pricing is live, while the reward side is absent or invisible.
-  (confidence: Medium) —
+  invitation to "contact us" about alterations; and the public natural-hazard
+  levy every insured home pays has no mitigation variable at all. So the
+  penalty side of risk-based pricing is live, while the reward side is absent
+  or invisible. (confidence: Medium) —
   [finding](../research/findings/other/insurance-mitigation-premiums.md)
 - **Overseas schemes that do reward adaptation share a three-part design:
   visible property-level risk information, a trusted certificate for completed
@@ -102,8 +112,11 @@ untested — see below.
 - **Two findings pull in different directions on how sticky labels are:** the
   Hawke's Bay recovery removed categories proactively, hand-delivering letters
   to owners, while business-as-usual council processes put the burden entirely
-  on the homeowner. Whether the recovery approach could work outside a
-  disaster programme is an open question the evidence only gestures at.
+  on the homeowner. Those recovery categories were also released on the
+  strength of funded, consented plans rather than finished works — the full
+  technical sign-off behind each release isn't public. Whether the recovery
+  approach could work outside a disaster programme is an open question the
+  evidence only gestures at.
 - Every finding in this round flags that a planner, resource-management lawyer
   or council practitioner needs to review conclusions before they inform any
   proposal — none has had that review yet.
