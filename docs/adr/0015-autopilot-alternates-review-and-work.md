@@ -41,8 +41,11 @@ command:
 4. **Pull latest main each cycle.** So operators automatically pick up script and
    pipeline improvements without a manual `git pull`. git's atomic-rename means
    the running autopilot keeps its open inode (no mid-run corruption) while the
-   freshly-launched runner subprocesses read the new code immediately; a change
-   to autopilot itself applies on the next restart. `PULL=0` disables it.
+   freshly-launched runner subprocesses read the new code immediately. If the pull
+   changes `autopilot.sh` itself, the script **hot-reloads** by re-exec'ing onto
+   the new version at the top of the cycle (guarded by a self-hash so it only
+   fires on a real change — no exec loop), so autopilot-level improvements apply
+   with no manual restart. `PULL=0` disables the per-cycle pull.
 5. **Preserve the integrity rule.** The review side runs under a **distinct
    identity** via `REVIEW_GITHUB_TOKEN`; the work side runs as the operator's
    normal `gh` identity. Without the token, autopilot runs **work-only and
