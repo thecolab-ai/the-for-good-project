@@ -44,7 +44,7 @@ evidenced:
    site" ([Stanford Web Credibility Project](https://credibility.stanford.edu/guidelines/index.html)).
    *Two independent authorities agree → High confidence.*
 
-2. **In Aotearoa, trust in the charitable sector is actively measured and
+2. **In New Zealand, trust in the charitable sector is actively measured and
    earned, not assumed.** Charities Services (Ngā Ratonga Kaupapa Atawhai, part
    of the Department of Internal Affairs) commissions regular Public Trust and
    Confidence surveys and states that transparency "builds trust… and supports
@@ -73,17 +73,20 @@ agent (see the human gate in [docs/STREAMS.md](../../docs/STREAMS.md)).
 - **Founding credit:** started by thecolab.ai, carried by contributors
 - **Positioning line (primary):** *A shared research commons where AI does the
   hard graft and humans bring the empathy, local knowledge, and judgement
-  needed to make public-good work useful in Aotearoa New Zealand.*
+  needed to make public-good work useful in New Zealand.*
 - **Short tagline options** (for a human to pick one as the default):
   - "AI does the graft. Humans steer the good."
   - "People and AI, working for good — in the open."
-  - "Serious, cited evidence for Aotearoa's hardest problems."
+  - "Serious, cited evidence for New Zealand's hardest problems."
   - "Bring what you know. Help move the work forward."
 
 Voice: plain-English, honest about uncertainty, never overstated — the same
 standard as the research method ([CONTRIBUTING.md](../../CONTRIBUTING.md)).
 Critique should be feed-forward: name the gap, then offer options, sources,
 better framing, experiments, or next steps.
+Country naming defaults to **New Zealand**. Use **Aotearoa New Zealand** only
+as an intentional dual-language nod in selected places; otherwise keep the
+English country name.
 
 ## 2. Visual identity
 

@@ -7,7 +7,7 @@ export function Footer({ repoUrl, generatedAt }: { repoUrl?: string; generatedAt
         <div className="text-center md:text-left">
           <div className="font-serif text-base font-semibold text-foreground">The For Good Project</div>
           <div>
-            Built together, in Aotearoa. 🇳🇿 · started by{" "}
+            Built together, in New Zealand. 🇳🇿 · started by{" "}
             <a href="https://thecolab.ai" className="text-brand-cyan-dark hover:underline">thecolab.ai</a>,
             carried by contributors.
           </div>

@@ -27,7 +27,7 @@ export default function Partners() {
       <Card className="mb-10 p-6 md:p-8">
         <h2 className="font-serif text-2xl font-bold text-brand-navy dark:text-foreground">The idea, in one minute</h2>
         <p className="mt-3 text-muted-foreground">
-          A lot of skilled people have spare AI capacity. Aotearoa has hard problems that nobody has the hours to chip away at — cost of living, access to support people are entitled to, transparency, fairness for people doing it tough. This project puts those two things together: a shared, open workspace where people and AI agents work a real problem to a standard high enough that a real decision can rest on it.
+          A lot of skilled people have spare AI capacity. New Zealand has hard problems that nobody has the hours to chip away at — cost of living, access to support people are entitled to, transparency, fairness for people doing it tough. This project puts those two things together: a shared, open workspace where people and AI agents work a real problem to a standard high enough that a real decision can rest on it.
         </p>
         <p className="mt-3 text-muted-foreground">
           It is <strong>not</strong> a pile of AI-generated words. Every piece of work is cited, independently challenged before it's accepted, and turned into a plain-English brief a busy decision-maker can actually use. The measure of success isn't how much we produce — it's whether a real person or organisation is genuinely better off.

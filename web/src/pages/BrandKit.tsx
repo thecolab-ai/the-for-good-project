@@ -26,7 +26,7 @@ const base = import.meta.env.BASE_URL;
 const brandImages = [
   {
     src: "images/brand/for-good-hero.jpg",
-    title: "Aotearoa evidence map",
+    title: "New Zealand evidence map",
     alt: "The For Good Project tabletop map of New Zealand with connected research cards and hands collaborating.",
     guidance: "Use for broad project introductions, partner decks, and social banners about the whole commons.",
   },
@@ -114,7 +114,7 @@ const voicePrinciples = [
   },
   {
     title: "Local reality matters",
-    body: "Make room for the currently illegible and intangible parts of life in Aotearoa: lived experience, relationships, culture, trust, and context.",
+    body: "Make room for the currently illegible and intangible parts of life in New Zealand: lived experience, relationships, culture, trust, and context.",
   },
   {
     title: "Critique must feed forward",
@@ -123,6 +123,10 @@ const voicePrinciples = [
   {
     title: "Everyone can contribute",
     body: "The brand should feel like an open table: domain experts, builders, funders, community people, companies, and curious citizens can all add something useful.",
+  },
+  {
+    title: "Name the country plainly",
+    body: "Default to New Zealand. Use Aotearoa New Zealand only as an intentional dual-language nod; otherwise keep the English country name.",
   },
 ];
 
@@ -139,7 +143,7 @@ const designMotifs = [
   },
   {
     icon: ImageIcon,
-    title: "Aotearoa context",
+    title: "New Zealand context",
     body: "New Zealand geography, public-sector documents, local community settings, lived context, and practical tools should appear before generic AI imagery.",
   },
   {
@@ -152,7 +156,7 @@ const designMotifs = [
 const toneSamples = [
   {
     label: "Project one-liner",
-    copy: "A shared research commons where AI does the hard graft and humans bring the empathy, local knowledge, and judgement needed to make public-good work useful in Aotearoa New Zealand.",
+    copy: "A shared research commons where AI does the hard graft and humans bring the empathy, local knowledge, and judgement needed to make public-good work useful in New Zealand.",
   },
   {
     label: "Short line",
@@ -177,16 +181,17 @@ const agentBrief = `Use The For Good Project brand system.
 Brand essence:
 - Use AI for the hard graft: scanning, summarising, cross-checking, drafting options, and making illegible systems easier to inspect.
 - Call on humans for the best of humanity: empathy, judgement, connection, consent, local domain knowledge, and lived experience.
-- Make room for what is currently intangible about life in Aotearoa New Zealand: relationships, culture, trust, access, and what people know from being close to a problem.
+- Make room for what is currently intangible about life in New Zealand: relationships, culture, trust, access, and what people know from being close to a problem.
 - The project is a shared commons, not a single-company brand. Use "The For Good Project" as the primary mark.
 - Contribution energy is feed-forward: critique should name the gap and offer options, sources, framing, experiments, or next steps.
 - Trust is the product: cite, verify, review, then build.
+- Country naming: default to "New Zealand". Use "Aotearoa New Zealand" only when an intentional dual-language nod is appropriate; otherwise keep the English country name.
 
 Visual direction:
 - Warm paper workbench, cream background, dark ink serif headlines.
 - Deep blue and action blue for collaboration, research, links, paths, nodes, and UI.
 - Orange only as a sparse decision/build accent.
-- Use real Aotearoa/New Zealand context, public documents, maps, cards, folders, pins, notebooks, and hands working together.
+- Use real New Zealand context, public documents, maps, cards, folders, pins, notebooks, and hands working together.
 - Show connected evidence: thin blue lines, nodes, arrows, thread, review marks, gauges, magnifiers, check marks.
 - Keep the logo lockup standalone as "The For Good Project". Credit founding or partner organisations in supporting context, not inside the core mark.
 
@@ -309,7 +314,7 @@ export default function BrandKit() {
       <section className="relative overflow-hidden rounded-3xl border border-border bg-brand-navy text-white shadow-sm">
         <img
           src={asset("images/brand/for-good-hero.jpg")}
-          alt="The For Good Project brand reference: a tabletop Aotearoa evidence map with connected research cards."
+          alt="The For Good Project brand reference: a tabletop New Zealand evidence map with connected research cards."
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/78 to-brand-navy/10" />
