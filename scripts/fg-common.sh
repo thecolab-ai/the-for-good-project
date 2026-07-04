@@ -457,9 +457,16 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
-      $tmo codex exec --cd "$dir" --skip-git-repo-check \
-        ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
-        ${MODEL:+-m "$MODEL"} "$prompt"
+      if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
+        $tmo codex exec --json --cd "$dir" --skip-git-repo-check \
+          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          ${MODEL:+-m "$MODEL"} "$prompt" \
+          | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
+      else
+        $tmo codex exec --cd "$dir" --skip-git-repo-check \
+          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          ${MODEL:+-m "$MODEL"} "$prompt"
+      fi
       ;;
     claude)
       ( cd "$dir" && $tmo claude -p "$prompt" \
