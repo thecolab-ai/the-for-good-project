@@ -20,6 +20,8 @@ function AgentCard({ agent, trail }: { agent: AgentPresence; trail: number[] }) 
   const kind = KIND_META[agent.task?.kind ?? "idle"] ?? KIND_META.idle;
   const KindIcon = kind.icon;
   const s = agent.session;
+  const displayTps = agent.tps > 0 ? agent.tps : agent.lastTps;
+  const showingLast = agent.tps <= 0 && agent.lastTps > 0;
   const fetches = s.fetchesOk + s.fetchesError;
   const trailData = trail.map((tps, i) => ({ i, tps }));
 
@@ -43,8 +45,8 @@ function AgentCard({ agent, trail }: { agent: AgentPresence; trail: number[] }) 
             </span>
           </a>
           <div className="shrink-0 text-right">
-            <div className="text-lg font-semibold tabular-nums leading-tight">{compactNumber(agent.tps)}</div>
-            <div className="text-[10px] text-muted-foreground">tok/s</div>
+            <div className="text-lg font-semibold tabular-nums leading-tight">{compactNumber(displayTps)}</div>
+            <div className="text-[10px] text-muted-foreground">{showingLast ? "last tok/s" : "tok/s"}</div>
           </div>
         </div>
 

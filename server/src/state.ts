@@ -69,6 +69,8 @@ interface TpsBucket {
 interface PersistedState {
   totals: SessionCounters;
   events: EventItem[];
+  lastTps?: number;
+  lastTpsAt?: string | null;
 }
 
 function agentTps(rec: AgentRecord, now: number): number {
@@ -93,6 +95,8 @@ export class FleetStore extends EventEmitter {
   private readonly tpsBuckets = new Map<number, TpsBucket>();
   private totals: SessionCounters = emptyCounters();
   private events: EventItem[] = [];
+  private lastTps = 0;
+  private lastTpsAt: string | null = null;
   private dirty = false;
   private agentsFlushTimer: NodeJS.Timeout | null = null;
 
@@ -127,6 +131,8 @@ export class FleetStore extends EventEmitter {
       lastSeen: nowIso,
       task: hello.task ?? null,
       session: emptyCounters(),
+      lastTps: 0,
+      lastTpsAt: null,
       recent: [],
       expiresAt: 0,
     };
@@ -268,6 +274,12 @@ export class FleetStore extends EventEmitter {
 
   private recordThroughput(rec: AgentRecord, hb: Omit<Heartbeat, "type">, tokens: number): void {
     if (tokens > 0) {
+      const nowIso = new Date().toISOString();
+      const burstTps = rate(tokens);
+      rec.lastTps = burstTps;
+      rec.lastTpsAt = nowIso;
+      this.lastTps = burstTps;
+      this.lastTpsAt = nowIso;
       const bucketId = Math.floor(Date.now() / 1000 / config.tpsBucketSeconds);
       let bucket = this.tpsBuckets.get(bucketId);
       if (!bucket) {
@@ -312,6 +324,8 @@ export class FleetStore extends EventEmitter {
     }
     return {
       tps: rate(total),
+      lastTps: this.lastTps,
+      lastTpsAt: this.lastTpsAt,
       tpsByModel: Object.fromEntries(Object.entries(byModel).map(([k, v]) => [k, rate(v)])),
       tpsByHarness: Object.fromEntries(Object.entries(byHarness).map(([k, v]) => [k, rate(v)])),
       activeAgents: this.agents.size,
@@ -441,6 +455,8 @@ export class FleetStore extends EventEmitter {
       const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<PersistedState>;
       if (parsed.totals) this.totals = { ...emptyCounters(), ...parsed.totals };
       if (Array.isArray(parsed.events)) this.events = parsed.events.slice(0, config.maxEventFeed);
+      if (typeof parsed.lastTps === "number") this.lastTps = parsed.lastTps;
+      if (typeof parsed.lastTpsAt === "string" || parsed.lastTpsAt === null) this.lastTpsAt = parsed.lastTpsAt ?? null;
     } catch {
       // First boot (no file yet) or corrupt snapshot — start fresh; this is
       // vanity-counter state, never correctness state.
@@ -452,7 +468,7 @@ export class FleetStore extends EventEmitter {
   save(): void {
     if (!this.stateFile || !this.dirty) return;
     try {
-      const state: PersistedState = { totals: this.totals, events: this.events };
+      const state: PersistedState = { totals: this.totals, events: this.events, lastTps: this.lastTps, lastTpsAt: this.lastTpsAt };
       const tmp = `${this.stateFile}.tmp`;
       writeFileSync(tmp, JSON.stringify(state));
       renameSync(tmp, this.stateFile);

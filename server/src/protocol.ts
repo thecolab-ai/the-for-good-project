@@ -141,6 +141,9 @@ export interface AgentPresence {
   session: SessionCounters;
   /** Current tokens/sec for this agent over the sliding window. */
   tps: number;
+  /** Last non-zero token burst observed for this agent, retained for idle display. */
+  lastTps: number;
+  lastTpsAt: string | null;
 }
 
 export interface RoughLocation {
@@ -159,6 +162,9 @@ export interface WatcherSummary {
 export interface FleetMetrics {
   /** Fleet-wide tokens/sec over the sliding window. */
   tps: number;
+  /** Last non-zero fleet throughput burst, retained so idle dashboards don't look dead. */
+  lastTps: number;
+  lastTpsAt: string | null;
   tpsByModel: Record<string, number>;
   tpsByHarness: Record<string, number>;
   activeAgents: number;

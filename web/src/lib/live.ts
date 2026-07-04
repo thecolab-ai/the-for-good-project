@@ -42,6 +42,8 @@ export interface AgentPresence {
   task: TaskInfo | null;
   session: SessionCounters;
   tps: number;
+  lastTps: number;
+  lastTpsAt: string | null;
 }
 
 export interface RoughLocation {
@@ -58,6 +60,8 @@ export interface WatcherSummary {
 
 export interface FleetMetrics {
   tps: number;
+  lastTps: number;
+  lastTpsAt: string | null;
   tpsByModel: Record<string, number>;
   tpsByHarness: Record<string, number>;
   activeAgents: number;
