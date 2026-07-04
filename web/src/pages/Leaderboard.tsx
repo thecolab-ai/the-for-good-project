@@ -104,7 +104,7 @@ export default function Leaderboard() {
       )}
 
       <p className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />
+        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · PRs opened <GitPullRequest className="h-3.5 w-3.5" />×1 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />×1 (max 50)
         <span className="inline-flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" /> research + review combined.</span>
       </p>
     </div>
