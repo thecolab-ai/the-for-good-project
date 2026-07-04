@@ -157,6 +157,10 @@ run_pass() {  # $1 = task kind, rest = command to run
   out="$(mktemp)"
   set +e; "$@" 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}; set -e
   fleet_logs "$out"
+  if was_usage_limited "$out" || grep -qE "API rate limit|rate limit already exceeded|usage limit" "$out"; then
+    fleet_send "$kind" "" "${kind} pass hit API/rate limit" 0 0 0 0 0 0 1
+    rm -f "$out"; return 1
+  fi
   if grep -qE "No open PRs needing review\.|Queue empty|nothing available" "$out"; then
     fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
     rm -f "$out"; return 1
@@ -173,6 +177,7 @@ run_pass() {  # $1 = task kind, rest = command to run
 }
 
 cycle=0
+review_disabled_reported=0
 while :; do
   cycle=$((cycle + 1))
   rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → work×1)"
@@ -207,6 +212,9 @@ while :; do
       info "review pass…"
       run_pass review env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
     done
+  elif [ "$review_disabled_reported" = 0 ]; then
+    fleet_send "idle" "" "review disabled: REVIEW_GITHUB_TOKEN missing" 0 0 0 0 0 0 0
+    review_disabled_reported=1
   fi
 
   # Work side (your normal identity).
