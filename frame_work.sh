@@ -48,7 +48,9 @@
 # Env:  AGENT MODEL MAX POLL_SECONDS DRY_RUN AGENT_TIMEOUT FANOUT_MAX
 #       FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
-cd "$(dirname "$0")"
+# BASH_SOURCE (not $0) so the test hook can source this file: identical when
+# executed, but still this script's own directory when sourced by a test.
+cd "$(dirname "${BASH_SOURCE[0]}")"
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"
@@ -86,25 +88,40 @@ slugify() {
     | sed -E 's/\[[^]]*\]//g; s/[^a-z0-9]+/-/g; s/^discover-+//; s/^-+//; s/-+$//' | cut -c1-50 | sed 's/-$//'
 }
 
-# Does stream $1 have OPEN child issues (any open issue carrying stream:<n>
-# other than the root itself)? Decides the root's post-rework posture: with
-# children the root is "researching" (no status); without, it parks at
-# in-review so a human sees the fan-out never happened.
-stream_has_open_children() {  # $1 = root issue number
-  local kids
-  kids="$(gh issue list --repo "$REPO" --state open --label "stream:$1" \
-          --json number --jq "[.[].number | select(. != $1)] | length" 2>/dev/null)" || return 1
-  [ -n "$kids" ] && [ "$kids" -gt 0 ]
+# The open framing PR for root $1 (expected branch discover/$2): exact-branch
+# lookup FIRST — the "Part of #n" body search that pr_for_issue falls back to
+# for closing-ref-less discover PRs rides GitHub's search index, which can lag
+# PR creation by seconds to minutes and misread a just-opened framing as "no
+# PR" (synthesize_work.sh uses the same --head fix for its draft PRs). Falls
+# back to pr_for_issue for a framing whose branch deviated from the prompt.
+framing_pr_for() {  # $1 = root issue number, $2 = slug
+  local pr
+  pr="$(gh pr list --repo "$REPO" --state open --head "discover/$2" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+  [ -n "$pr" ] && { echo "$pr"; return 0; }
+  pr_for_issue "$1"
 }
 
-framing_prompt() {  # $1 = root issue number
-  local n="$1"
-  local title body labels domain slug today
+# Child-issue counts for stream $1, excluding the root: echoes "<open> <total>".
+# FAILS CLOSED: a transient gh error returns 1 with no output — callers must
+# leave the root's status alone rather than guess (a mis-park from a fail-open
+# read here is exactly the stranded-root class ADR-0014 exists to prevent).
+stream_child_counts() {  # $1 = root issue number
+  local open total
+  open="$(gh issue list --repo "$REPO" --state open --label "stream:$1" \
+          --json number --jq "[.[].number | select(. != $1)] | length" 2>/dev/null)" || return 1
+  total="$(gh issue list --repo "$REPO" --state all --label "stream:$1" --limit 200 \
+          --json number --jq "[.[].number | select(. != $1)] | length" 2>/dev/null)" || return 1
+  [ -n "$open" ] && [ -n "$total" ] || return 1
+  printf '%s %s\n' "$open" "$total"
+}
+
+framing_prompt() {  # $1 = root issue number, $2 = slug (shared with the PR-lookup helpers)
+  local n="$1" slug="$2"
+  local title body labels domain today
   title="$(issue_field "$n" title)"
   body="$(issue_field "$n" body)"
   labels="$(issue_labels "$n")"
   domain="$(label_field "$labels" "domain: ")"
-  slug="$(slugify "$title")"
   today="$(date +%Y-%m-%d)"
   local prov_model
   if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
@@ -310,15 +327,24 @@ Opened automatically by \`frame_work.sh\` from the stream's framing (PR #$pr, fr
   return 0
 }
 
-claim_root() {  # $1 = root issue number; returns 0 if we hold the claim
-  local n="$1"
+claim_root() {  # $1 = root issue number, $2 = expected branch slug; returns 0 if we hold the claim
+  local n="$1" slug="$2"
   local labels; labels="$(issue_labels "$n")"
   case ",$labels," in *",status: available,"*) : ;; *) warn "#$n no longer available — skipping."; return 1 ;; esac
   # Never start a fresh framing on a root that already has an open PR — same
-  # duplicate-PR guard as start_work.sh's claim_issue.
-  local existing; existing="$(pr_for_issue "$n" || true)"
+  # duplicate-PR guard as start_work.sh's claim_issue, but exact-branch first
+  # (search-index lag must not let a second framer double-frame). An
+  # available root WITH an open framing PR is a wedged state (a crashed or
+  # falsely-released earlier run) that nothing else repairs — no closing ref
+  # means issue-status.yml never touches it — so repair it here instead of
+  # skipping it forever.
+  local existing; existing="$(framing_pr_for "$n" "$slug" || true)"
   if [ -n "$existing" ]; then
-    warn "#$n already has open PR #$existing — skipping instead of opening a duplicate."
+    warn "#$n is 'available' but already has open framing PR #$existing — repairing to in-review instead of double-framing."
+    if [ "$DRY_RUN" = 0 ]; then
+      set_status_label "$n" "in-review" "available" || true
+      gh issue comment "$n" --repo "$REPO" --body "🔧 \`frame_work.sh\` found this root **available** with framing PR #$existing already open — moving it to **in-review** instead of framing it again. If no child research issues exist yet, a human should open them from the framing doc's proposed questions (the fan-out step didn't complete)." >/dev/null 2>&1 || true
+    fi
     return 1
   fi
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would claim #$n (assign @$ME, status: available → claimed)"; return 0; fi
@@ -331,12 +357,14 @@ claim_root() {  # $1 = root issue number; returns 0 if we hold the claim
 }
 
 frame_one() {  # $1 = root issue number
-  local n="$1"
-  rule; info "${c_bold}Root #$n${c_reset} — $(issue_field "$n" title)"
-  claim_root "$n" || return 1
+  local n="$1" title slug
+  title="$(issue_field "$n" title)"
+  slug="$(slugify "$title")"
+  rule; info "${c_bold}Root #$n${c_reset} — $title"
+  claim_root "$n" "$slug" || return 1
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would run: AGENT=$AGENT in a fresh origin/main worktree on the framing prompt,"
-    info "[dry-run] open the framing PR, open up to $FANOUT_MAX child research issues from the side-file,"
+    info "[dry-run] open the framing PR (branch discover/$slug), open up to $FANOUT_MAX child research issues from the side-file,"
     info "[dry-run] and move #$n out of the queue (no status — researching posture)."
     CLAIMED_ISSUE=""
     return 0
@@ -344,14 +372,25 @@ frame_one() {  # $1 = root issue number
   make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
   info "Handing root #$n to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
-  set +e; run_agent "$(framing_prompt "$n")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
+  set +e; run_agent "$(framing_prompt "$n" "$slug")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
   was_interrupted "$rc" && { rm -f "$tmp"; release_on_interrupt; }
-  # Usage/rate limit: back off and release the root quietly, like start_work.sh.
+  # Usage/rate limit: a TEMPORARY tooling condition — back off quietly, like
+  # start_work.sh. But the limit can bite AFTER the agent already pushed and
+  # opened the framing PR: releasing the root to 'available' then would wedge
+  # it in the available-with-open-PR state, so check for the PR first and
+  # park at in-review (with the fan-out callout) when one exists.
   if was_usage_limited "$tmp"; then
-    warn "#$n hit an API usage/rate limit — releasing quietly and backing off ${USAGE_LIMIT_SLEEP}s (no failure posted)."
     rm -f "$tmp"; remove_worktree
-    set_status_label "$n" "available" "claimed"
-    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    local pr_ul; pr_ul="$(framing_pr_for "$n" "$slug" || true)"
+    if [ -n "$pr_ul" ]; then
+      warn "#$n hit an API usage/rate limit AFTER opening PR #$pr_ul — parking at in-review (children not opened) and backing off ${USAGE_LIMIT_SLEEP}s."
+      set_status_label "$n" "in-review" "claimed"
+      gh issue comment "$n" --repo "$REPO" --body "⚠️ The framing run hit an API usage limit after opening PR #$pr_ul, so \`frame_work.sh\` did **not** open child issues from its output. A human should open the child research issues from the framing doc's proposed questions (or re-run the framing)." >/dev/null 2>&1 || true
+    else
+      warn "#$n hit an API usage/rate limit — releasing quietly and backing off ${USAGE_LIMIT_SLEEP}s (no failure posted)."
+      set_status_label "$n" "available" "claimed"
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    fi
     CLAIMED_ISSUE=""
     sleep "$USAGE_LIMIT_SLEEP"
     return 0
@@ -366,7 +405,7 @@ frame_one() {  # $1 = root issue number
   fi
   remove_worktree
 
-  local pr; pr="$(pr_for_issue "$n" || true)"
+  local pr; pr="$(framing_pr_for "$n" "$slug" || true)"
   if [ -z "$pr" ]; then
     # No framing PR → nothing to fan out from. Release, same as start_work.sh.
     set_status_label "$n" "available" "claimed"
@@ -468,12 +507,28 @@ framing_rework_targets() {
       done
 }
 
-# Restore a root's posture after rework lands: researching (no status) when
-# the stream has open children, in-review when the fan-out never happened.
+# Restore a root's posture after rework lands. Three real states, told apart
+# by the stream's children:
+#   open children        → researching (no status);
+#   children, all closed → the stream had DRAINED — the changes-requested flip
+#                          displaced its needs-synthesis flag (review_work's
+#                          atomic set replaces whatever status the root held),
+#                          so put it BACK: nothing else ever would — the drain
+#                          gate only fires on child close/reopen events, which
+#                          are already spent — and the stream would strand
+#                          before G1 with no callout;
+#   no children at all   → the fan-out never happened — park at in-review so a
+#                          human sees it.
+# Returns 1 on a transient read failure WITHOUT touching the status (the root
+# stays changes-requested; the next loop's currency check repairs it).
 restore_root_posture() {  # $1 = root
-  local n="$1"
-  if stream_has_open_children "$n"; then
+  local n="$1" counts open total
+  counts="$(stream_child_counts "$n")" || { warn "Couldn't read stream #$n's children — leaving its status for a future loop."; return 1; }
+  open="${counts%% *}"; total="${counts##* }"
+  if [ "$open" -gt 0 ]; then
     clear_status_label "$n"
+  elif [ "$total" -gt 0 ]; then
+    set_status_label "$n" "needs-synthesis"
   else
     set_status_label "$n" "in-review" "changes-requested"
   fi
@@ -588,7 +643,11 @@ main() {
       fi
       rule; ok "Queue empty — no discover roots to frame."; break
     fi
-    frame_one "$next" || true
+    if ! frame_one "$next"; then
+      # A failed claim or worktree would re-pick the same root immediately —
+      # back off a poll interval instead of hot-spinning API calls on it.
+      [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ] && sleep "$POLL_SECONDS"
+    fi
     done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX root(s). Stopping."; break; fi
     # A dry run changes nothing, so the same root would be picked forever —
@@ -596,4 +655,8 @@ main() {
     [ "$DRY_RUN" = 1 ] && { rule; ok "DRY_RUN pass complete."; break; }
   done
 }
+# Test hook: sourcing with FG_TEST_SOURCE_ONLY=1 loads the functions without
+# running main — scripts/test-frame-work.sh stubs gh on PATH and exercises
+# spawn_children / restore_root_posture directly.
+if [ "${FG_TEST_SOURCE_ONLY:-0}" = 1 ]; then return 0 2>/dev/null || exit 0; fi
 main "$@"

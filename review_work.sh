@@ -560,6 +560,10 @@ review_one() {  # $1 = PR number
       # A framing PR's rework belongs to frame_work.sh (ADR-0014): its root
       # may sit at in-review or at no-status (researching posture) — the
       # atomic set replaces either — but only the framing runner may rework.
+      # If the stream had already DRAINED, this flip displaces the root's
+      # needs-synthesis flag; frame_work.sh's restore_root_posture puts it
+      # back once the rework lands (the drain gate's close events are spent
+      # and would never re-fire).
       if pr_is_framing "$pr"; then picker="frame_work.sh"; fi
       if set_status_label "$iss" "changes-requested" "in-review" "$old_park" 2>/dev/null; then
         gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`$picker\` loop will pick this up." >/dev/null || true

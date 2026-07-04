@@ -63,7 +63,13 @@ capability floor, and lock discover out of the general fleet:
    `frame_work.sh`'s own reconcile/rework loop, exactly as synthesis drafts
    route to `synthesize_work.sh` (ADR-0011). The capability floor applies to
    rework of a framing too. `review_work.sh` names `frame_work.sh` as the
-   picker when it sends a framing back.
+   picker when it sends a framing back. Because that send-back flip replaces
+   whatever status the root held, the post-rework restore is
+   children-aware: open children → no status (researching); children all
+   closed → `needs-synthesis` is put back (the drain gate's close events are
+   spent and would never re-fire — without this a framing sent back after
+   its stream drained would strand the stream before G1); no children →
+   `in-review` with a human callout.
 6. **Provenance is recorded three times**: agent + exact model in the
    framing doc's frontmatter (already enforced by `npm run validate` for
    `analysis/`), in the root's hand-off comment, and in every spawned
@@ -89,7 +95,13 @@ is running; the children go `available` while the framing PR is still under
 adversarial review, so a framing that review later overturns may have
 already spent research tokens on its questions (bounded by the fan-out cap,
 and judged worth it to keep streams moving); one more runner to operate.
-Tripwires for revisiting: discover roots sitting `available` for days
-because no framer ran (widen the list or schedule the runner), or a pattern
-of framings overturned in review after their children were worked (hold
-children until the framing PR merges instead).
+One honest limit: like every runner
+contract in this repo, the floor is **cooperative client-side enforcement**
+— `frame_work.sh` checks the list in its own working tree, and nothing
+server-side stops an identity with repo access from framing a root with raw
+`gh`. The guard is against accident and default behaviour, not malice; the
+audit trail (provenance in the doc, root comment, and children) is what
+makes a bypass visible. Tripwires for revisiting: discover roots sitting
+`available` for days because no framer ran (widen the list or schedule the
+runner), or a pattern of framings overturned in review after their children
+were worked (hold children until the framing PR merges instead).
