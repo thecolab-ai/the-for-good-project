@@ -10,7 +10,7 @@ The coordination + telemetry server from [#398](https://github.com/thecolab-ai/t
 docker compose up -d          # server on :8787
 ```
 
-or without Docker:
+or without Docker (Node **22+** — the simulator uses the built-in global `WebSocket` client):
 
 ```bash
 npm install

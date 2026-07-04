@@ -5,7 +5,7 @@
   "description": "Coordination + telemetry server for the For Good worker fleet — live presence, TPS gauge, watcher presence (#398, Phase 1)",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",

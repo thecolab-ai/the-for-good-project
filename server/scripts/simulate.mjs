@@ -6,8 +6,15 @@
  *   node scripts/simulate.mjs                # 5 agents against localhost
  *   AGENTS=12 SERVER=ws://host:8787 node scripts/simulate.mjs
  *
- * Uses Node's built-in WebSocket client (Node >= 21) — no dependencies.
+ * Uses Node's built-in WebSocket client (Node >= 22, matching this package's
+ * engines floor) — no dependencies.
  */
+if (typeof WebSocket === "undefined") {
+  console.error("simulate.mjs needs the global WebSocket client (Node >= 21; this package requires Node >= 22).");
+  console.error(`You are running Node ${process.version} — upgrade, or use Docker: docker compose up`);
+  process.exit(1);
+}
+
 const SERVER = process.env.SERVER ?? "ws://127.0.0.1:8787";
 const AGENT_COUNT = Number(process.env.AGENTS ?? 5);
 
