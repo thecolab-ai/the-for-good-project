@@ -13,6 +13,12 @@ confidence: High
 partner (a charity GM, a policy analyst) meets a named, credible, human team
 rather than an anonymous AI experiment.
 
+**Live brand kit:** the reusable brand, design-system, tone, imagery, and agent
+brief surface now lives in the dashboard at
+[`/brand-kit`](https://thecolab-ai.github.io/the-for-good-project/brand-kit).
+Use it as the source of truth when creating web pages, product UI, campaign
+graphics, media, decks, T-shirts, or agent prompts for new brand material.
+
 **Who it's for:** anyone deciding whether to trust or partner with the project,
 and any contributor who needs to keep the look, name, and voice consistent.
 

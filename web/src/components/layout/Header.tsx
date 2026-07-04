@@ -34,6 +34,7 @@ const GROUPS: NavGroup[] = [
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/contribute", label: "Contribute" },
       { to: "/methodology", label: "Method" },
+      { to: "/brand-kit", label: "Brand kit" },
       { to: "/decisions", label: "Decisions" },
     ],
   },

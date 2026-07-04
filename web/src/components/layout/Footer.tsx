@@ -11,6 +11,7 @@ export function Footer({ repoUrl, generatedAt }: { repoUrl?: string; generatedAt
         <div className="flex items-center gap-4">
           <Link to="/live" className="hover:text-foreground">Live</Link>
           <Link to="/methodology" className="hover:text-foreground">Method</Link>
+          <Link to="/brand-kit" className="hover:text-foreground">Brand kit</Link>
           {repoUrl ? <a href={repoUrl} className="hover:text-foreground">GitHub</a> : null}
         </div>
       </div>
