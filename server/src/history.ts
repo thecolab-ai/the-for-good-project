@@ -64,6 +64,16 @@ export class HistoryStore {
         reviews_completed INTEGER NOT NULL DEFAULT 0,
         errors INTEGER NOT NULL DEFAULT 0
       );
+      CREATE TABLE IF NOT EXISTS fleet_totals (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        updated_at TEXT NOT NULL,
+        tokens_in INTEGER NOT NULL DEFAULT 0,
+        tokens_out INTEGER NOT NULL DEFAULT 0,
+        tool_calls INTEGER NOT NULL DEFAULT 0,
+        tasks_completed INTEGER NOT NULL DEFAULT 0,
+        prs_opened INTEGER NOT NULL DEFAULT 0,
+        reviews_completed INTEGER NOT NULL DEFAULT 0
+      );
       CREATE INDEX IF NOT EXISTS idx_token_samples_at ON token_samples(at_ms);
       CREATE INDEX IF NOT EXISTS idx_token_samples_agent_at ON token_samples(agent_id, at_ms);
       CREATE INDEX IF NOT EXISTS idx_token_samples_harness_at ON token_samples(harness, at_ms);
@@ -109,7 +119,47 @@ export class HistoryStore {
       );
   }
 
+  setTotals(totals: SessionCounters): void {
+    this.db
+      .prepare(`
+        INSERT INTO fleet_totals (id, updated_at, tokens_in, tokens_out, tool_calls, tasks_completed, prs_opened, reviews_completed)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          updated_at = excluded.updated_at,
+          tokens_in = excluded.tokens_in,
+          tokens_out = excluded.tokens_out,
+          tool_calls = excluded.tool_calls,
+          tasks_completed = excluded.tasks_completed,
+          prs_opened = excluded.prs_opened,
+          reviews_completed = excluded.reviews_completed
+      `)
+      .run(
+        new Date().toISOString(),
+        totals.tokensIn,
+        totals.tokensOut,
+        totals.toolCalls,
+        totals.tasksCompleted,
+        totals.prsOpened,
+        totals.reviewsCompleted,
+      );
+  }
+
   totals(): HistoryTotals {
+    const stored = this.db.prepare("SELECT * FROM fleet_totals WHERE id = 1").get() as Record<string, unknown> | undefined;
+    if (stored) {
+      const sampleRow = this.db.prepare("SELECT COUNT(*) AS samples, MIN(at_iso) AS firstAt, MAX(at_iso) AS lastAt FROM token_samples").get() as Record<string, unknown>;
+      return {
+        tokensIn: Number(stored.tokens_in ?? 0),
+        tokensOut: Number(stored.tokens_out ?? 0),
+        toolCalls: Number(stored.tool_calls ?? 0),
+        tasksCompleted: Number(stored.tasks_completed ?? 0),
+        prsOpened: Number(stored.prs_opened ?? 0),
+        reviewsCompleted: Number(stored.reviews_completed ?? 0),
+        samples: Number(sampleRow.samples ?? 0),
+        firstAt: typeof sampleRow.firstAt === "string" ? sampleRow.firstAt : null,
+        lastAt: typeof sampleRow.lastAt === "string" ? sampleRow.lastAt : null,
+      };
+    }
     const row = this.db
       .prepare(`
         SELECT

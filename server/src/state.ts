@@ -105,6 +105,7 @@ export class FleetStore extends EventEmitter {
     super();
     this.setMaxListeners(0);
     if (stateFile) this.load(stateFile);
+    this.history?.setTotals(this.totals);
   }
 
   private publish(msg: ServerMessage): void {
@@ -304,6 +305,7 @@ export class FleetStore extends EventEmitter {
     t.reviewsCompleted += hb.reviewsCompleted ?? 0;
     for (const [tool, n] of Object.entries(hb.tools ?? {})) t.tools[tool] = (t.tools[tool] ?? 0) + n;
     for (const [skill, n] of Object.entries(hb.skills ?? {})) t.skills[skill] = (t.skills[skill] ?? 0) + n;
+    this.history?.setTotals(this.totals);
     this.dirty = true;
   }
 
