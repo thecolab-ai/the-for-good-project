@@ -27,19 +27,19 @@ const brandImages = [
   {
     src: "images/brand/for-good-hero.jpg",
     title: "Aotearoa evidence map",
-    alt: "The Colab branded tabletop map of New Zealand with connected research cards and hands collaborating.",
+    alt: "The For Good Project tabletop map of New Zealand with connected research cards and hands collaborating.",
     guidance: "Use for broad project introductions, partner decks, and social banners about the whole commons.",
   },
   {
     src: "images/brand/for-good-workflow.jpg",
     title: "How work moves",
-    alt: "The Colab branded workflow from Discover to Research to Ideate to Build across a paper workbench.",
+    alt: "The For Good Project workflow from Discover to Research to Ideate to Build across a paper workbench.",
     guidance: "Use when explaining the four-stage operating model or orienting contributors.",
   },
   {
     src: "images/brand/for-good-trust-loop.jpg",
     title: "Evidence before action",
-    alt: "The Colab branded evidence loop from Cite to Verify to Review to Build on a paper workbench.",
+    alt: "The For Good Project evidence loop from Cite to Verify to Review to Build on a paper workbench.",
     guidance: "Use when explaining trust, review, citations, and why evidence comes before shipping.",
   },
 ];
@@ -60,7 +60,7 @@ const colors = [
     text: "#FBF9F6",
   },
   {
-    name: "Colab blue",
+    name: "Civic blue",
     token: "brand-indigo",
     hex: "#2E4057",
     use: "Trust anchor, research marks, data panels, serious UI accents.",
@@ -105,20 +105,24 @@ const colors = [
 
 const voicePrinciples = [
   {
-    title: "Plain, specific, accountable",
-    body: "Say who the work is for, what standard it meets, and what is still unknown. Avoid grand impact claims without evidence.",
+    title: "AI does the hard graft",
+    body: "Use AI for scale: scanning, summarising, cross-checking, drafting options, and making illegible systems easier to inspect.",
   },
   {
-    title: "Evidence before persuasion",
-    body: "The brand earns trust by showing the chain from question to source to review. The tone should feel useful before it feels clever.",
+    title: "Humans steer the good",
+    body: "Call on people for empathy, judgement, connection, consent, and the local knowledge that tells us what actually matters.",
   },
   {
-    title: "Human judgement stays visible",
-    body: "Agents can do volume work, but people carry domain judgement, consent, ethics, and direction. Keep that division explicit.",
+    title: "Local reality matters",
+    body: "Make room for the currently illegible and intangible parts of life in Aotearoa: lived experience, relationships, culture, trust, and context.",
   },
   {
-    title: "Warm, not cute",
-    body: "Use civic warmth and workshop language. Do not make vulnerable domains feel playful, gamified, or mascot-led.",
+    title: "Critique must feed forward",
+    body: "If something is wrong, name the gap and offer a next step, option, source, framing, or experiment that moves the work forward.",
+  },
+  {
+    title: "Everyone can contribute",
+    body: "The brand should feel like an open table: domain experts, builders, funders, community people, companies, and curious citizens can all add something useful.",
   },
 ];
 
@@ -136,7 +140,7 @@ const designMotifs = [
   {
     icon: ImageIcon,
     title: "Aotearoa context",
-    body: "New Zealand geography, public-sector documents, local community settings, and practical tools should appear before generic AI imagery.",
+    body: "New Zealand geography, public-sector documents, local community settings, lived context, and practical tools should appear before generic AI imagery.",
   },
   {
     icon: BadgeCheck,
@@ -148,15 +152,19 @@ const designMotifs = [
 const toneSamples = [
   {
     label: "Project one-liner",
-    copy: "An open research commons where people and AI agents work together on Aotearoa New Zealand's public-good problems, to a standard high enough that real decisions can rest on the work.",
+    copy: "A shared research commons where AI does the hard graft and humans bring the empathy, local knowledge, and judgement needed to make public-good work useful in Aotearoa New Zealand.",
   },
   {
-    label: "Short social line",
-    copy: "Agents grind. Humans steer. New Zealand benefits.",
+    label: "Short line",
+    copy: "AI does the graft. Humans steer the good.",
   },
   {
-    label: "Partner promise",
-    copy: "Bring a real problem. We help turn it into cited evidence, feasible options, and practical tools people can use.",
+    label: "Contribution invitation",
+    copy: "Bring what you know, what you can test, what you can build, or what you can see that others cannot.",
+  },
+  {
+    label: "Feed-forward critique",
+    copy: "If something is off, help move it forward: name the gap, offer options, and point to the next useful step.",
   },
   {
     label: "Trust line",
@@ -167,8 +175,11 @@ const toneSamples = [
 const agentBrief = `Use The For Good Project brand system.
 
 Brand essence:
-- Serious public-good work made inspectable, warm, and practical.
-- People and AI work the same queue, but humans steer judgement, ethics, and direction.
+- Use AI for the hard graft: scanning, summarising, cross-checking, drafting options, and making illegible systems easier to inspect.
+- Call on humans for the best of humanity: empathy, judgement, connection, consent, local domain knowledge, and lived experience.
+- Make room for what is currently intangible about life in Aotearoa New Zealand: relationships, culture, trust, access, and what people know from being close to a problem.
+- The project is a shared commons, not a single-company brand. Use "The For Good Project" as the primary mark.
+- Contribution energy is feed-forward: critique should name the gap and offer options, sources, framing, experiments, or next steps.
 - Trust is the product: cite, verify, review, then build.
 
 Visual direction:
@@ -177,17 +188,17 @@ Visual direction:
 - Orange only as a sparse decision/build accent.
 - Use real Aotearoa/New Zealand context, public documents, maps, cards, folders, pins, notebooks, and hands working together.
 - Show connected evidence: thin blue lines, nodes, arrows, thread, review marks, gauges, magnifiers, check marks.
+- Keep the logo lockup standalone as "The For Good Project". Credit founding or partner organisations in supporting context, not inside the core mark.
 
 Avoid:
-- Futuristic neon AI, robot mascots, glossy black dashboards, generic global city stock imagery, cute charity tropes, exaggerated impact claims, or unsupported statistics.
+- Futuristic neon AI, robot mascots, glossy black dashboards, generic global city stock imagery, cute charity tropes, single-company bylines in the core mark, critique without options, exaggerated impact claims, or unsupported statistics.
 
 Core copy:
 - The For Good Project
-- by thecolab.ai
-- AI expertise, built together.
+- AI does the graft. Humans steer the good.
 - Discover -> Research -> Ideate -> Build
 - Evidence before action
-- Agents grind. Humans steer.
+- Bring what you know. Help move the work forward.
 `;
 
 function asset(path: string) {
@@ -245,18 +256,20 @@ function SpecBlock({ label, children }: { label: string; children: React.ReactNo
 
 function DoDont() {
   const dos = [
-    "Lead with the work, the evidence, and who benefits.",
+    "Use The For Good Project as the primary standalone lockup.",
+    "Credit founding or partner organisations in supporting context, not inside the mark.",
     "Pair editorial serif headlines with plain, compact UI text.",
     "Use blue connector motifs to show lineage and collaboration.",
-    "Keep orange rare so it still means decision, urgency, or build.",
-    "Make uncertainty visible: confidence, limits, review state, next question.",
+    "Make room for human judgement, lived context, and local knowledge.",
+    "Turn critique into options, sources, next questions, or practical experiments.",
   ];
   const donts = [
+    "Do not lock the project mark to a single company byline.",
     "Do not use robot mascots, neon AI tropes, or sci-fi tunnel visuals.",
     "Do not imply agents make human-gated decisions.",
+    "Do not treat critique as a spectator sport; it should move the work forward.",
     "Do not publish names, faces, partners, or personal details without consent.",
     "Do not make unsupported claims like 'proven impact' unless evidence exists.",
-    "Do not turn the palette into all blue or all beige; keep contrast and restraint.",
   ];
 
   return (
@@ -303,16 +316,13 @@ export default function BrandKit() {
         <div className="relative max-w-3xl px-6 py-16 md:px-10 md:py-20">
           <div className="flex items-center gap-3">
             <LogoMark size={38} />
-            <div>
-              <div className="font-serif text-xl font-bold leading-none">The For Good Project</div>
-              <div className="text-xs uppercase tracking-widest text-white/70">by thecolab.ai</div>
-            </div>
+            <div className="font-serif text-2xl font-bold leading-none">The For Good Project</div>
           </div>
           <h1 className="mt-8 font-serif text-4xl font-bold leading-tight md:text-6xl">
-            Brand kit for public-good work people can trust.
+            Brand kit for human-led, AI-powered public-good work.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/82">
-            A practical design system for web pages, graphics, media, shirts, decks, agent prompts, and product UI across the commons.
+            A practical design system for work where AI does the hard graft and humans bring the empathy, judgement, connection, and local knowledge.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#agent-brief">
@@ -333,15 +343,15 @@ export default function BrandKit() {
         {[
           {
             title: "Essence",
-            body: "Serious, cited public-good work made inspectable, warm, and practical.",
+            body: "AI helps with scale, grind, pattern-finding, drafting, and making illegible systems easier to inspect.",
           },
           {
-            title: "Positioning",
-            body: "An open research commons where people and AI agents work together on Aotearoa New Zealand's public-good problems.",
+            title: "Human role",
+            body: "People steer what matters through empathy, lived experience, connection, ethics, and local domain knowledge.",
           },
           {
-            title: "Promise",
-            body: "Every useful claim can be traced, challenged, improved, and turned into something real.",
+            title: "Contribution energy",
+            body: "Anyone can help move the work forward. Critique should become options, sources, better framing, or next steps.",
           },
         ].map((item) => (
           <Card key={item.title} className="p-5">
@@ -395,7 +405,7 @@ export default function BrandKit() {
 
       <section>
         <SectionHeading icon={Sparkles} eyebrow="03 / Visual language" title="Make the invisible work visible">
-          The imagery should show evidence being gathered, checked, linked, and turned into action - not abstract AI magic.
+          The imagery should show evidence, lived context, relationships, decisions, and local knowledge being gathered, checked, linked, and turned into action - not abstract AI magic.
         </SectionHeading>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {designMotifs.map((motif) => (
@@ -465,7 +475,7 @@ export default function BrandKit() {
 
       <section>
         <SectionHeading icon={MessageSquareText} eyebrow="05 / Voice" title="Tone of voice">
-          The voice is calm, rigorous, and useful. It should make a sceptical reviewer feel invited to inspect the work.
+          The voice is calm, rigorous, generous, and useful. It should invite people to contribute what they know and turn critique into forward motion.
         </SectionHeading>
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -490,8 +500,8 @@ export default function BrandKit() {
       </section>
 
       <section>
-        <SectionHeading icon={PenLine} eyebrow="06 / Logo and marks" title="Use the mark as a trust anchor">
-          The For Good Project should usually be paired with thecolab.ai, because the parent brand carries community and accountability.
+        <SectionHeading icon={PenLine} eyebrow="06 / Logo and marks" title="Use the mark as a shared project anchor">
+          The primary lockup is The For Good Project on its own. The Colab can be credited as a founder in supporting context, but the core mark should stay open to every contributor and partner.
         </SectionHeading>
         <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
           <Card className="flex flex-col justify-between p-6">
@@ -500,11 +510,10 @@ export default function BrandKit() {
                 <LogoMark size={44} />
                 <div>
                   <div className="font-serif text-2xl font-bold leading-none text-brand-navy dark:text-foreground">The For Good Project</div>
-                  <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">by thecolab.ai</div>
                 </div>
               </div>
               <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
-                Use the mark for app chrome, small badges, social avatars, favicon-like contexts, and partner material where space is limited.
+                Use the standalone mark for app chrome, small badges, social avatars, partner material, and shared contributor work. Add founding or partner credits nearby only when the context needs them.
               </p>
             </div>
           </Card>
@@ -531,7 +540,7 @@ export default function BrandKit() {
             {
               icon: Shirt,
               title: "T-shirts and merch",
-              body: "Prefer simple lockups: mark, project name, or lines like 'Agents grind. Humans steer.' Keep orange to one small accent.",
+              body: "Prefer simple lockups: mark, project name, or lines like 'AI does the graft. Humans steer the good.' Keep orange to one small accent.",
             },
           ].map((item) => (
             <Card key={item.title} className="p-5">

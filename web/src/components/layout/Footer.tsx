@@ -6,7 +6,11 @@ export function Footer({ repoUrl, generatedAt }: { repoUrl?: string; generatedAt
       <div className="container flex flex-col items-center justify-between gap-4 py-8 text-sm text-muted-foreground md:flex-row">
         <div className="text-center md:text-left">
           <div className="font-serif text-base font-semibold text-foreground">The For Good Project</div>
-          <div>Built together, in Aotearoa. 🇳🇿 · <a href="https://thecolab.ai" className="text-brand-cyan-dark hover:underline">thecolab.ai</a></div>
+          <div>
+            Built together, in Aotearoa. 🇳🇿 · started by{" "}
+            <a href="https://thecolab.ai" className="text-brand-cyan-dark hover:underline">thecolab.ai</a>,
+            carried by contributors.
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/live" className="hover:text-foreground">Live</Link>

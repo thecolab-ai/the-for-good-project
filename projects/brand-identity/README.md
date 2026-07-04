@@ -59,8 +59,10 @@ evidenced:
 
 ## 1. Name & positioning
 
-The project's name is **The For Good Project**, by **thecolab.ai**. It is
-already carried across the site header, footer, and metadata
+The project's name is **The For Good Project**. The project was started by
+**thecolab.ai**, but the primary brand mark stands on its own because this is a
+shared commons that many people, organisations, and companies can contribute to.
+The name is already carried across the site header, footer, and metadata
 ([`web/index.html`](../../web/index.html),
 [`web/src/components/layout/Footer.tsx`](../../web/src/components/layout/Footer.tsx)),
 so this issue **formalises the existing name rather than inventing a new one** —
@@ -68,24 +70,28 @@ a rename is a brand-level decision that belongs with a human steward, not an
 agent (see the human gate in [docs/STREAMS.md](../../docs/STREAMS.md)).
 
 - **Name:** The For Good Project
-- **By-line (always paired):** by thecolab.ai
-- **Positioning line (primary):** *An open research commons where New
-  Zealanders and AI work our hardest public problems to a standard a real
-  decision can rest on.*
+- **Founding credit:** started by thecolab.ai, carried by contributors
+- **Positioning line (primary):** *A shared research commons where AI does the
+  hard graft and humans bring the empathy, local knowledge, and judgement
+  needed to make public-good work useful in Aotearoa New Zealand.*
 - **Short tagline options** (for a human to pick one as the default):
+  - "AI does the graft. Humans steer the good."
   - "People and AI, working for good — in the open."
   - "Serious, cited evidence for Aotearoa's hardest problems."
-  - "Agents grind. Humans steer. New Zealand benefits."
+  - "Bring what you know. Help move the work forward."
 
 Voice: plain-English, honest about uncertainty, never overstated — the same
 standard as the research method ([CONTRIBUTING.md](../../CONTRIBUTING.md)).
+Critique should be feed-forward: name the gap, then offer options, sources,
+better framing, experiments, or next steps.
 
 ## 2. Visual identity
 
-Consistent with The Colab's brand — **warm off-white, editorial serif
-headings, navy/blue accents** ([thecolab.ai](https://thecolab.ai)). The system
-is already implemented as design tokens; this documents it so it stays
-consistent. Source of truth:
+Evolved from The Colab's early brand references — **warm off-white, editorial
+serif headings, navy/blue accents** ([thecolab.ai](https://thecolab.ai)) — but
+now expressed as a standalone For Good Project system. The system is already
+implemented as design tokens; this documents it so it stays consistent. Source
+of truth:
 [`web/src/index.css`](../../web/src/index.css) and
 [`web/tailwind.config.js`](../../web/tailwind.config.js).
 
@@ -108,8 +114,10 @@ A dark theme is defined in the same file (deep-navy background, cream text).
 
 **Logo** — the `LogoMark` in
 [`web/src/components/layout/Logo.tsx`](../../web/src/components/layout/Logo.tsx):
-three overlapping circles (people collaborating) in an indigo→cyan gradient,
-always paired with the wordmark and "by thecolab.ai".
+three overlapping circles (people collaborating) in an indigo→cyan gradient.
+Pair it with the standalone **The For Good Project** wordmark. Credit The Colab
+or other partner organisations in supporting context when useful, not inside
+the core mark.
 
 **Signature gradient:** indigo → cyan (`brand-gradient` utility) for hero
 panels and calls to action.

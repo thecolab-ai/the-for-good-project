@@ -56,13 +56,12 @@ export function Header({ repoUrl }: { repoUrl?: string }) {
       <div className="container flex h-16 items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />
-          <div className="leading-none">
-            <div className="font-serif text-base font-bold tracking-tight text-brand-navy dark:text-foreground">The For Good Project</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">by thecolab.ai</div>
+          <div className="font-serif text-base font-bold leading-tight tracking-tight text-brand-navy dark:text-foreground">
+            The For Good Project
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {LINKS.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={navLinkClass}>
               {n.label}
@@ -106,14 +105,14 @@ export function Header({ repoUrl }: { repoUrl?: string }) {
               <Button variant="ghost" size="icon" aria-label="GitHub"><GitHubIcon className="h-4 w-4" /></Button>
             </a>
           ) : null}
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
       {open ? (
-        <nav className="border-t border-border bg-background md:hidden">
+        <nav className="border-t border-border bg-background lg:hidden">
           <div className="container flex flex-col py-2">
             {LINKS.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setOpen(false)}
