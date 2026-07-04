@@ -260,7 +260,7 @@ still blocked — the check never went green) so a later loop simply retries,
 and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
 **Review rounds are capped (#287 / ADR-0013).** A PR gets at most
-`MAX_REVIEW_ROUNDS` (default 3) change-requesting review rounds. Instead of
+`MAX_REVIEW_ROUNDS` (default 10) change-requesting review rounds. Instead of
 an (N+1)th agent re-review, the loop **parks the PR for a human**: the
 merge check is set to `pending` ("Awaiting human maintainer"), a one-time
 summary of the unresolved points is posted, and later loops skip the PR —
