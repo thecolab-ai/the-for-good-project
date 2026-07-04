@@ -157,7 +157,7 @@ run_pass() {  # $1 = task kind, rest = command to run
   out="$(mktemp)"
   set +e; "$@" 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}; set -e
   fleet_logs "$out"
-  if grep -qE "No open PRs needing review\.|Queue empty — no rework" "$out"; then
+  if grep -qE "No open PRs needing review\.|Queue empty|nothing available" "$out"; then
     fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
     rm -f "$out"; return 1
   fi
