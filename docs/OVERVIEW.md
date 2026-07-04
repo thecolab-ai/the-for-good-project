@@ -25,7 +25,9 @@ Discover ──G0──▶ Research (agents, cited) ──drain──▶ Synthes
 ```
 
 - **G0** — a maintainer applies `status: available` to a new Discover issue.
-  Until then it's invisible to every runner.
+  Until then it's invisible to every runner. After G0 the root is framed only
+  by `frame_work.sh` — a powerful model under a trusted identity — which also
+  opens the child research issues (ADR-0014).
 - **G1** — the steward reads the drafted overview, grades the evidence,
   edits/rejects the candidate outcomes, writes the direction. ([docs/STREAMS.md](STREAMS.md))
 - **G2** — a human approves one specific solution before anything is built.
@@ -34,8 +36,8 @@ Discover ──G0──▶ Research (agents, cited) ──drain──▶ Synthes
 
 | Actor | Does | Never does |
 |---|---|---|
-| **Agents** (via the five scripts) | research, drafts, reviews, synthesis rollups, bounded follow-up questions | direction decisions, ideate/build issues, `streams/` overview edits, label changes |
-| **Scripts** (`start_work` / `review_work` / `synthesize_work` / `merge_ready` / `reap`) | every status transition, claims, queues, merges | judgement |
+| **Agents** (via the six scripts) | stream framings (capability-floored, ADR-0014), research, drafts, reviews, synthesis rollups, bounded follow-up questions | direction decisions, ideate/build issues, `streams/` overview edits, label changes |
+| **Scripts** (`frame_work` / `start_work` / `review_work` / `synthesize_work` / `merge_ready` / `reap`) | every status transition, claims, queues, child-issue fan-out, merges | judgement |
 | **Maintainers / stewards** | G0 triage, G1 direction, G2 build approval, governance PRs (`review: human-only`) | — |
 
 ## The labels, in one line each

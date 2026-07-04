@@ -65,7 +65,8 @@ export default function Leaderboard() {
 
                       {/* Name + roles + last active */}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">@{c.login}</div>
+                        <div className="truncate font-medium">{c.name || `@${c.login}`}</div>
+                        {c.name && <div className="truncate text-xs text-muted-foreground">@{c.login}</div>}
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           {roles(c).map((r) => (
                             <span
@@ -103,7 +104,7 @@ export default function Leaderboard() {
       )}
 
       <p className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />
+        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · PRs opened <GitPullRequest className="h-3.5 w-3.5" />×1 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />×1 (max 50)
         <span className="inline-flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" /> research + review combined.</span>
       </p>
     </div>

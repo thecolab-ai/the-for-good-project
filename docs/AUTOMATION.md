@@ -1,11 +1,11 @@
 # Working the project with agents
 
-Five scripts keep the work queue moving — one to *do* the work, one to
-*review* it, one to *release stale claims*, one to *draft a stream's synthesis*
-for human sign-off, and one for maintainers to *merge* what's passed. The
-worker scripts are thin, deterministic wrappers around your own `codex`,
-`claude`, or `hermes` CLI; `reap.sh` is deterministic GitHub bookkeeping with
-no model calls. **The scripts own every status change and the merge gate; the
+Six scripts keep the work queue moving — one to *frame new streams*, one to
+*do* the work, one to *review* it, one to *release stale claims*, one to
+*draft a stream's synthesis* for human sign-off, and one for maintainers to
+*merge* what's passed. The worker scripts are thin, deterministic wrappers
+around your own `codex`, `claude`, or `hermes` CLI; `reap.sh` is
+deterministic GitHub bookkeeping with no model calls. **The scripts own every status change and the merge gate; the
 agent only does the actual work.** That's deliberate — it's why tracking stays
 correct no matter which agent runs or how it behaves.
 
@@ -27,10 +27,13 @@ the `issue-status.yml` action sweep all others whenever they set one.
 ```
 
 **Stream roots** (Discover issues) never close via a PR and follow the gate
-cycle instead:
+cycle instead. Discover roots are claimed **only by `frame_work.sh`**
+(ADR-0014) — never by `start_work.sh` — and the framing run itself opens the
+child research issues and moves the root to the researching posture (no
+status), with no manual fan-out or label-clearing step:
 
 ```
-(no status) ──G0: maintainer──▶ available → claimed → in-review ──framing PR merges──▶ (no status: researching)
+(no status) ──G0: maintainer──▶ available → claimed ──framing PR opens + children opened──▶ (no status: researching)
                                                                                              │
                              children all close (the stream "drains")                       ▼
         ┌──────────────────────────────────────────────────────────────────── needs-synthesis
@@ -64,11 +67,15 @@ The full vocabulary, in one table:
 | `stage: *` / `domain: *` / `stream:<n>` | issues/PRs | template / `stream-sync.yml` | What kind of work, which problem area, which stream |
 
 `start_work.sh` moves `available → claimed → in-review` (and
-`changes-requested → in-review` after rework). `review_work.sh` records reviews
-and flips `in-review → changes-requested` on a NEEDS_WORK verdict — **except
-for synthesis draft PRs (branch `synthesis/*`), whose rework routes to
-`synthesize_work.sh` (ADR-0011)**. `merge_ready.sh` (maintainer) merges what
-qualifies → `done`. No agent is trusted to set these itself.
+`changes-requested → in-review` after rework) for research/ideate/build
+work. `frame_work.sh` does the same for discover roots, ending at *no
+status* (researching) once the fan-out is open (ADR-0014). `review_work.sh`
+records reviews and flips `in-review → changes-requested` on a NEEDS_WORK
+verdict — **except for synthesis draft PRs (branch `synthesis/*`), whose
+rework routes to `synthesize_work.sh` (ADR-0011), and discover framing PRs
+(branch `discover/*`), whose rework routes to `frame_work.sh` (ADR-0014)**.
+`merge_ready.sh` (maintainer) merges what qualifies → `done`. No agent is
+trusted to set these itself.
 
 ### Worktrees & fresh main
 
@@ -78,12 +85,69 @@ work, from the PR head for rework/review). Your clone is never checked out,
 reset, or dirtied, and every loop starts from up-to-date `main` by
 construction. Worktrees are removed when the task finishes.
 
+## `frame_work.sh` — frame new streams (discover only, capability-floored)
+
+The **first pickup of a stream root** — turning a raw problem into a framed
+set of testable questions and minting the child research issues — is the
+highest-leverage step in the pipeline, and its quality tracks model
+strength. So discover roots are **not** in the general fleet's queue at all:
+they are claimed only by this runner, which is expected to drive a powerful
+model under a **trusted identity** — the `framers` allow-list in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json). The
+script refuses to run for any other identity (fail closed; `DRY_RUN=1` is
+allowed through with a warning so anyone can inspect it). This is the
+authoring-side twin of the reviewer capability floor (#368): the two moments
+where model strength matters most — framing a stream and gating a merge —
+both get a floor (ADR-0014).
+
+```bash
+./frame_work.sh                          # frame available discover roots (default agent: claude)
+./frame_work.sh claude --model <name>    # pin the framing model explicitly
+MAX=1 ./frame_work.sh                    # one root, then stop
+DRY_RUN=1 ./frame_work.sh                # show what it would do, change nothing
+FANOUT_MAX=6 ./frame_work.sh             # cap on child issues opened per framing (default 6)
+```
+
+One framing run:
+
+- claims one `stage: discover` + `status: available` root — honouring the
+  **active-streams cap** (#292), which lives here now: a new root is only
+  claimed while fewer than `MAX_ACTIVE_STREAMS` streams are active;
+- runs the agent in a fresh `origin/main` worktree: test the root's stated
+  hypotheses against evidence, write the framing analysis to
+  `analysis/<slug>-framing.md` (validated by `npm run validate`), and open
+  it as a PR on branch `discover/<slug>` with `Part of #<root>` (a stream
+  root never closes via a PR);
+- the agent also proposes **3–6 chunky child research questions** in an
+  uncommitted JSON side-file, and **the script — never the agent — opens
+  them** as `stage: research` / `status: available` / `stream:<n>` issues
+  (capped at `FANOUT_MAX`, deduped by title against the stream) — so the
+  stream never stalls at the fan-out gap the way #370 did;
+- transitions the root out of the queue: **no status label** (the
+  researching posture) once children exist — no manual fan-out, and no
+  manual "clear `in-review` after the framing PR merges" step. If the
+  fan-out couldn't be opened, the root parks at `in-review` with a comment
+  telling a human exactly what's missing.
+
+**Sent-back framing PRs are reworked here, not by `start_work.sh`** — the
+capability floor applies to rework of a framing too, mirroring the ADR-0011
+synthesis routing: `start_work.sh` unassigns itself from any
+`changes-requested` issue whose PR head is `discover/*`, and this runner's
+own reconcile/rework loop picks it up.
+
+**Provenance is auditable per stream**: the framing doc's frontmatter
+records `agent:` + the exact `model:` (enforced by the validator), and the
+root's hand-off comment and every spawned child issue name the framing
+runner, agent, and model.
+
 ## `start_work.sh` — do the work
 
 Works your queue in priority order: **first any of your own PRs a reviewer sent
 back** (`status: changes-requested`, assigned to you), then the next available
 issue. Runs your agent on it following the project method, and moves it to
-**in review** once the agent opens (or updates) a PR.
+**in review** once the agent opens (or updates) a PR. **Discover roots are
+never picked up here** — framing is `frame_work.sh`'s alone (ADR-0014;
+`STAGE=discover` refuses to run).
 
 ```bash
 ./start_work.sh                 # work the queue until it's empty (default agent: claude)
@@ -116,7 +180,9 @@ Two bounds shape what gets picked up (#292 / #293, ADR-0013):
   `status: available` in the backlog and are picked up as streams drain —
   so ten approved streams *sequence* through the pipeline instead of all
   converging on the human synthesis gate at once (see
-  [STREAMS.md](STREAMS.md)).
+  [STREAMS.md](STREAMS.md)). Since discover roots moved to `frame_work.sh`
+  (ADR-0014), that script enforces this cap — it is the only claimer of new
+  roots.
 - **Priority discipline.** `priority: high` is a steward-curated shortlist,
   not a default. The queue honours it for at most `HIGH_PRIORITY_CAP`
   (default 5) **streams** at a time — oldest high streams first, computed
@@ -134,7 +200,10 @@ a reviewer picks it up again. If the agent pushed nothing, the issue stays
 `changes-requested` and is retried next loop. **Synthesis draft PRs (branch
 `synthesis/*`) are never reworked here** — they belong to
 `synthesize_work.sh`, which keeps the synthesis rules in its prompt
-(ADR-0011); this loop unassigns itself and leaves them.
+(ADR-0011); this loop unassigns itself and leaves them. **Discover framing
+PRs (branch `discover/*`) are never reworked here either** — they belong to
+`frame_work.sh` and its capability floor (ADR-0014), with the same
+unassign-and-leave hand-off.
 
 Each loop also **reconciles the rework queue** first (ADR-0008): any open PR
 you authored whose *current* latest review is a change-request (no commits
@@ -191,7 +260,7 @@ still blocked — the check never went green) so a later loop simply retries,
 and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
 **Review rounds are capped (#287 / ADR-0013).** A PR gets at most
-`MAX_REVIEW_ROUNDS` (default 3) change-requesting review rounds. Instead of
+`MAX_REVIEW_ROUNDS` (default 10) change-requesting review rounds. Instead of
 an (N+1)th agent re-review, the loop **parks the PR for a human**: the
 merge check is set to `pending` ("Awaiting human maintainer"), a one-time
 summary of the unresolved points is posted, and later loops skip the PR —

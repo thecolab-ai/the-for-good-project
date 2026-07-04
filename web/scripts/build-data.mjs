@@ -24,9 +24,21 @@ const headers = {
   ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
 };
 
-async function gh(url) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function gh(url, attempt = 0) {
   const res = await fetch(url.startsWith("http") ? url : `${API}${url}`, { headers });
-  if (!res.ok) throw new Error(`GitHub API ${res.status} for ${url}: ${await res.text()}`);
+  if (!res.ok) {
+    // GitHub throttling (403 secondary-rate-limit / 429) and 5xx blips are
+    // transient — retry with backoff rather than failing the whole deploy.
+    if ((res.status === 403 || res.status === 429 || res.status >= 500) && attempt < 5) {
+      const ra = Number(res.headers.get("retry-after"));
+      const wait = ra > 0 ? ra * 1000 : Math.min(60000, 2000 * 2 ** attempt);
+      console.warn(`GitHub API ${res.status} for ${url} — retry ${attempt + 1}/5 in ${Math.round(wait / 1000)}s`);
+      await sleep(wait);
+      return gh(url, attempt + 1);
+    }
+    throw new Error(`GitHub API ${res.status} for ${url}: ${await res.text()}`);
+  }
   return res;
 }
 
@@ -54,6 +66,19 @@ function person(u) {
   return u ? { login: u.login, avatar: u.avatar_url, url: u.html_url } : null;
 }
 
+// Fold known alternate author spellings onto one canonical GitHub login, so a
+// contributor who ran an agent under different git credentials (e.g. an
+// overnight run with no GH creds) doesn't split into several leaderboard
+// people. Keyed by lowercased alias. Add a row here when it recurs.
+const AUTHOR_ALIASES = {
+  "richard-fortune": "richardofortune",
+  "richard fortune": "richardofortune",
+};
+function canonicalAuthor(a) {
+  const s = String(a || "").replace(/^@/, "").trim();
+  return AUTHOR_ALIASES[s.toLowerCase()] || s;
+}
+
 async function main() {
   console.log(`Building snapshot for ${REPO}${TOKEN ? " (authenticated)" : " (unauthenticated)"}`);
 
@@ -75,16 +100,31 @@ async function main() {
   const reviewsGiven = new Map();  // login -> Set(prNumbers)
   const reviewLast = new Map();    // login -> most recent review ISO timestamp
   const reviewPeopleByPr = new Map(); // pr number -> Map(login -> Person)
+  const pathToAuthor = new Map(); // repo file path -> { login, merged, mergedAt } of the PR that added/last-touched it
+  const nameVotes = new Map();    // login -> Map(display name -> count), from commit author names
   try {
     let after = null;
     for (let i = 0; i < 10; i++) {
-      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number author{login} reviews(first:50){nodes{author{login avatarUrl url} state submittedAt}}}}}}`;
+      const q = `query($cursor:String){repository(owner:"${OWNER}",name:"${NAME}"){pullRequests(first:50,after:$cursor,states:[OPEN,MERGED,CLOSED]){pageInfo{hasNextPage endCursor} nodes{number mergedAt author{login} files(first:100){nodes{path}} commits(last:1){nodes{commit{author{name}}}} reviews(first:50){nodes{author{login avatarUrl url} state submittedAt}}}}}}`;
       const gres = await fetch(`${API}/graphql`, { method: "POST", headers, body: JSON.stringify({ query: q, variables: { cursor: after } }) });
       if (!gres.ok) { console.warn("reviews graphql:", gres.status); break; }
       const data = (await gres.json())?.data?.repository?.pullRequests;
       if (!data) break;
       for (const pr of data.nodes) {
         const prAuthor = pr.author?.login;
+        if (prAuthor) {
+          // Which GitHub user added/last-touched each file — the reliable author
+          // identity, independent of git user.name or finding frontmatter.
+          for (const fn of pr.files?.nodes || []) {
+            const p = fn.path, prev = pathToAuthor.get(p), merged = !!pr.mergedAt;
+            if (!prev || (merged && (!prev.merged || (pr.mergedAt || "") > (prev.mergedAt || "")))) {
+              pathToAuthor.set(p, { login: prAuthor, merged, mergedAt: pr.mergedAt });
+            }
+          }
+          // Vote for this user's display name from their commit's author name.
+          const nm = pr.commits?.nodes?.[0]?.commit?.author?.name;
+          if (nm) { const mv = nameVotes.get(prAuthor) || new Map(); mv.set(nm, (mv.get(nm) || 0) + 1); nameVotes.set(prAuthor, mv); }
+        }
         for (const rv of pr.reviews.nodes) {
           const who = rv.author?.login;
           if (!who || who === prAuthor) continue;
@@ -101,6 +141,17 @@ async function main() {
       after = data.pageInfo.endCursor;
     }
   } catch (e) { console.warn("reviews unavailable:", e.message); }
+
+  // Harness/agent tokens that sometimes land in a finding's `author:` field —
+  // never real people, so they must not become leaderboard entries.
+  const HARNESS = new Set(["codex", "claude", "hermes", "hermes-agent", "none", "unknown", "human"]);
+  // The most common display name a GitHub user has committed under (e.g. Adam
+  // has no GitHub profile name but commits as "Adam Holt"). Falls back to login.
+  const mostCommonName = (login) => {
+    const mv = nameVotes.get(login);
+    if (!mv || mv.size === 0) return null;
+    return [...mv.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  };
 
   // --- issues + PRs ---
   const issues = [];
@@ -284,7 +335,7 @@ async function main() {
     const harness = f.agent || "human";
     a.agents[harness] = (a.agents[harness] || 0) + 1;
     if (f.model) a.models[f.model] = (a.models[f.model] || 0) + 1;
-    const login = String(f.author || "").replace(/^@/, "");
+    const login = canonicalAuthor(f.author);
     if (login && login !== "unknown" && !a.people.has(login)) a.people.set(login, { login, avatar: `https://github.com/${login}.png`, url: `https://github.com/${login}` });
   }
   for (const d of streamDocs) {
@@ -324,7 +375,14 @@ async function main() {
   for (const p of prs) { const r = ensure(p.author); if (r) { r.prsOpened++; if (p.merged) r.prsMerged++; bumpActivity(r, p.updatedAt); } }
   for (const c of commitContributors) { const r = ensure(person(c)); if (r) r.commits += c.contributions || 0; }
   for (const f of findings) {
-    const login = f.author && f.author !== "unknown" ? f.author.replace(/^@/, "") : null;
+    // Attribute a finding to the GitHub user who OPENED THE PR that added it —
+    // the reliable identity. Fall back to the frontmatter author only if no PR
+    // maps to the file, and never credit a harness name (codex/claude/…).
+    let login = pathToAuthor.get(f.path)?.login || null;
+    if (!login && f.author && f.author !== "unknown") {
+      const c = canonicalAuthor(f.author);
+      if (c && !HARNESS.has(c.toLowerCase())) login = c;
+    }
     if (!login) continue;
     if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain); bumpActivity(r, f.date);
@@ -340,7 +398,7 @@ async function main() {
     .map((p) => {
       const researchScore = p.findingsAuthored * 5 + p.prsMerged * 3 + p.issuesAssigned * 2 + p.prsOpened + Math.min(p.commits, 50);
       const reviewScore = p.reviewsGiven * 4;
-      return { ...p, domains: [...p.domains], researchScore, reviewScore, score: researchScore + reviewScore };
+      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, reviewScore, score: researchScore + reviewScore };
     })
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);
@@ -483,4 +541,15 @@ async function main() {
   console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources, ${recentComments.length} recent comments, ${activeActors.length} active actors.`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error("build-data failed:", e?.message || e);
+  // Don't take the whole site deploy down over a transient GitHub API failure
+  // (secondary rate limits are common under heavy agent activity). If a
+  // previous snapshot exists (it's committed), keep it and let the build ship
+  // last-known-good data; only hard-fail if there's nothing to fall back to.
+  if (existsSync(path.join(OUT_DIR, "snapshot.json"))) {
+    console.warn("Keeping previous snapshot.json so the site still deploys with last-known-good data.");
+    process.exit(0);
+  }
+  process.exit(1);
+});

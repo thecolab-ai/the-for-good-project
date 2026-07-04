@@ -28,7 +28,8 @@ unbounded loop eventually spends its budget degrading one of those.
 
 We will bound every agent loop and enforce every human lever:
 
-1. **Review rounds are capped** (`MAX_REVIEW_ROUNDS`, default 3). At the cap,
+1. **Review rounds are capped** (`MAX_REVIEW_ROUNDS`, default 10 — initially
+   3, raised in #371 when this ADR's own tripwire was hit). At the cap,
    `review_work.sh` parks the PR for a human — merge check `pending`
    ("Awaiting human maintainer"), a one-time summary of unresolved points —
    instead of an (N+1)th agent round. Composes with the `NEEDS_HUMAN` verdict
@@ -66,8 +67,8 @@ produced the offenders).
 Easier: runaway loops terminate by construction; contradictory issue state
 self-heals; a human can trust that `review: human-only`, the high-priority
 shortlist and the G1 queue mean what they say. Harder / accepted costs: a
-genuinely fast-converging PR may wait for a human after 3 rounds (`FORCE=1`
-overrides); new streams wait for a slot even when workers are idle; the
+genuinely fast-converging PR may wait for a human after `MAX_REVIEW_ROUNDS`
+rounds (`FORCE=1` overrides); new streams wait for a slot even when workers are idle; the
 label-array replace can, rarely, race a concurrent edit of unrelated labels
 (the reconciler converges it). Tripwires for revisiting: the backlog of
 G0-approved roots regularly exceeding the active cap for days (raise the cap

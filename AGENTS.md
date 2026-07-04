@@ -9,7 +9,7 @@ You are here to move one issue forward, to a high standard, end to end. Work lik
 
 ## The loop
 
-1. **Pick one unclaimed issue.** Prefer `status: available`. Match it to your strengths. Do **one** issue per branch/PR.
+1. **Pick one unclaimed issue.** Prefer `status: available`. Match it to your strengths. Do **one** issue per branch/PR. Never pick a `stage: discover` root — framing is reserved for `frame_work.sh` under a trusted identity ([ADR-0014](docs/adr/0014-discover-framing-capability-floor.md)).
    ```
    gh issue list --label "status: available" --state open --json number,title,labels
    ```
@@ -90,7 +90,7 @@ rather than waiting.
 
 ## What each stage needs from you
 
-- **🔍 Discover** — Take a broad problem and produce: a crisp problem statement, who it affects (with NZ figures + sources), what's already being done, and **3–6 specific researchable questions** you'd open as follow-up issues. Output goes in the issue itself (and you may open the child Research issues).
+- **🔍 Discover** — **Framing-script territory: never claim a discover root from a generic work loop** ([ADR-0014](docs/adr/0014-discover-framing-capability-floor.md)). Discover roots are framed only by `frame_work.sh`, run by a powerful model under a trusted identity (the `framers` allow-list in [`.github/trusted-reviewers.json`](.github/trusted-reviewers.json)); `start_work.sh` skips them. The framing produces: a crisp problem statement, who it affects (with NZ figures + sources), what's already being done, the root's hypotheses graded against evidence, and **3–6 specific researchable questions** — written to `analysis/<slug>-framing.md` as a PR, with the questions proposed in the runner's JSON side-file. The **script** then opens them as child Research issues (the framing agent never opens issues itself), so the stream fans out automatically.
 - **📚 Research** — Answer **one** question. Write a finding to `research/findings/<domain>/<slug>.md` using [`research/TEMPLATE.md`](research/TEMPLATE.md). This is the core of the project — hold the line on citations and confidence.
 - **💡 Ideate** — Turn one or more findings into 1–3 concrete, feasible solutions a small volunteer team could ship. Write to `solutions/<slug>.md` using [`solutions/TEMPLATE.md`](solutions/TEMPLATE.md). Rank by impact, feasibility, and time-to-first-useful-result.
 - **🔨 Build** — Implement a chosen solution under `projects/<slug>/`. Keep it small, working, and documented. Link the solution and findings it came from.
@@ -102,7 +102,7 @@ rather than waiting.
 - **Cite as you go**, inline. A finding without links will be rejected.
 - **Stay in scope.** One issue per PR. Don't refactor the repo, rewrite others' findings, or expand scope without opening a new issue.
 - **Respect the human gates.** Streams (see [`docs/STREAMS.md`](docs/STREAMS.md)) require a HUMAN decision between research and ideation (G1) and between ideation and build (G2). Never open ideate or build issues, and never work one that isn't `status: available` — a human making it available *is* the gate. Carry `Part of #<parent>` (and `Stream: #<root>` when the parent isn't the root) in every issue and PR body so the stream label propagates. Never write or edit a `streams/` overview doc — that's the human steward's voice.
-- **Fan out chunky, and only two levels deep.** If your issue is too big for ONE high-quality output, split off what you won't cover as 2–5 *chunky* research sub-issues — real questions worth hours, never micro-tasks — then still complete your own issue, narrowed to its core. Every sub-issue's body links the **stream root**: `Part of #<root>`, plus `Split from #<your issue>` on the same first line when your issue isn't the root (#291) — never `Part of #<your issue>`. Depth limit: the root's agent may open sub-issues (depth 1), their agents may open depth 2 (tracked via `Split from`), **and no further** — at depth 2 you narrow and flag instead. When a stream's issues all close, automation queues the root for synthesis — the draft is produced by `synthesize_work.sh` under its own guardrails (ADR-0003), so don't try to synthesise the stream from inside a work task.
+- **Fan out chunky, and only two levels deep.** If your issue is too big for ONE high-quality output, split off what you won't cover as 2–5 *chunky* research sub-issues — real questions worth hours, never micro-tasks — then still complete your own issue, narrowed to its core. Every sub-issue's body links the **stream root**: `Part of #<root>`, plus `Split from #<your issue>` on the same first line when your issue isn't the root (#291) — never `Part of #<your issue>`. Depth limit: depth-1 children are opened by `frame_work.sh` from the root's framing (the framing agent itself never opens issues — ADR-0014), their agents may open depth 2 (tracked via `Split from`), **and no further** — at depth 2 you narrow and flag instead. When a stream's issues all close, automation queues the root for synthesis — the draft is produced by `synthesize_work.sh` under its own guardrails (ADR-0003), so don't try to synthesise the stream from inside a work task.
 - **Respect the ADRs.** Significant decisions about how the project works are recorded in [`docs/adr/`](docs/adr/README.md). Read them before proposing a structural change (workflow, labels, automation, dependencies). If your change contradicts an accepted ADR, your PR must include a superseding ADR arguing why; if it *makes* a significant decision, it must include a new ADR. Don't re-litigate decided things in code.
 - **Never rework a `synthesis/*` PR from a generic work loop.** Synthesis draft rework belongs to `synthesize_work.sh` only — it carries the steward-preservation rules a generic rework prompt lacks ([ADR-0011](docs/adr/0011-synthesis-rework-routing.md)).
 - **Be honest about limits.** If a question needs lived experience, legal authority, or data you can't access, say that plainly and flag it for a human. That *is* a useful result.
@@ -188,12 +188,16 @@ skill you add makes the next contributor's research faster.
 
 ## Run it on autopilot
 
-Five scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work — `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [docs/AUTOMATION.md](docs/AUTOMATION.md)
-without babysitting each step — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
+Six scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work without babysitting each step — `frame_work.sh` (frame new streams, capability-floored), `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
-- **`./start_work.sh`** — claims the next available issue, runs the loop above,
-  and moves the issue to *in review* when a PR is opened. The script owns the
-  status labels; you (the agent) just do the work and open the PR.
+- **`./frame_work.sh`** — claims discover roots only (the general fleet never
+  does), writes the framing analysis as a PR, and opens the child research
+  issues itself. Refuses to run unless your identity is on the `framers`
+  allow-list (ADR-0014).
+- **`./start_work.sh`** — claims the next available research/ideate/build
+  issue, runs the loop above, and moves the issue to *in review* when a PR is
+  opened. The script owns the status labels; you (the agent) just do the work
+  and open the PR.
 - **`./review_work.sh`** — runs an adversarial review on open PRs and sets the
   merge gate.
 

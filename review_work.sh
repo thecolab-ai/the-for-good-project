@@ -40,7 +40,7 @@
 #                                                             # (default: poll every 60s and never exit)
 #
 # REVIEW-ROUND CAP (#287 / ADR-0013): a PR gets at most MAX_REVIEW_ROUNDS
-# (default 3) change-requesting review rounds from this loop. After that the
+# (default 10) change-requesting review rounds from this loop. After that the
 # PR is PARKED FOR A HUMAN: the merge check is set to `pending` ("Awaiting
 # human maintainer"), a one-time summary of the unresolved points is posted,
 # and later loops skip the PR instead of re-reviewing — no more ping-pong,
@@ -71,7 +71,7 @@ CLAIMED_PR=""
 REVIEW_CLAIMING_LABEL="review: claimed"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
-MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-3}"   # change-requesting rounds before the PR is parked for a human (#287)
+MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-10}"  # change-requesting rounds before the PR is parked for a human (#287)
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
 # exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
@@ -383,13 +383,15 @@ review_one() {  # $1 = PR number
     if [ "$st" = failure ]; then
       log "#$pr already reviewed at this revision (NEEDS_WORK) — waiting on the author's rework. Skipping (FORCE=1 to redo)."; return 0
     fi
-    if [ "$st" = pending ]; then
-      log "#$pr is parked for a human maintainer (merge check pending) — skipping (FORCE=1 to review anyway)."; return 0
-    fi
     # REVIEW-ROUND CAP (#287): never start an (N+1)th change-requesting round —
     # park the PR for a human instead. Checked per PR (not per revision), so a
     # capped PR stays parked across pushes until a human decides or FORCE=1.
+    # A PR parked (check=pending) UNDER a since-RAISED cap is freed automatically:
+    # it only stays skipped while its round count is still >= the current cap.
     local rounds; rounds="$(review_rounds "$pr")"
+    if [ "$st" = pending ] && [ "$rounds" -ge "$MAX_REVIEW_ROUNDS" ]; then
+      log "#$pr is parked for a human maintainer (merge check pending, $rounds/$MAX_REVIEW_ROUNDS rounds) — skipping (FORCE=1 to review anyway)."; return 0
+    fi
     if [ "$rounds" -ge "$MAX_REVIEW_ROUNDS" ]; then
       park_for_human "$pr" "$sha" "$url" "$rounds"
       return 0
@@ -512,6 +514,22 @@ review_one() {  # $1 = PR number
     gh pr review "$pr" --repo "$REPO" --approve "${body_flag[@]}" >/dev/null \
       || gh pr comment "$pr" --repo "$REPO" "${body_flag[@]}" >/dev/null || true
     set_check "$sha" success "Adversarial review passed" "$url"
+    # A CHANGES_REQUESTED review from an EARLIER revision keeps the PR's
+    # reviewDecision at CHANGES_REQUESTED until its author re-reviews or it is
+    # dismissed — reviewers here never re-review their own round, so a passed,
+    # multiply-approved PR can stay unmergeable forever (#307 wedged this way
+    # with three approvals). This review just PASSED the current head, so any
+    # changes-request tied to a superseded commit is settled: dismiss it,
+    # best-effort (needs write access; the review text itself stays visible).
+    local stale_rid
+    for stale_rid in $(gh api "repos/$OWNER/$NAME/pulls/$pr/reviews" \
+        --jq ".[]|select(.state==\"CHANGES_REQUESTED\" and .commit_id!=\"$sha\")|.id" 2>/dev/null || true); do
+      gh api -X PUT "repos/$OWNER/$NAME/pulls/$pr/reviews/$stale_rid/dismissals" \
+        -f message="Superseded: rework was pushed after this review and a fresh adversarial review passed at $sha." \
+        -f event="DISMISS" >/dev/null 2>&1 \
+        && log "  dismissed stale changes-request $stale_rid (superseded revision)" \
+        || warn "  couldn't dismiss stale changes-request $stale_rid (needs write access) — merge may stay blocked."
+    done
     if [ "$AUTO_MERGE" = 1 ]; then
       info "AUTO_MERGE=1 — merging #$pr..."
       if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
@@ -539,6 +557,14 @@ review_one() {  # $1 = PR number
     if [ -n "$iss" ]; then
       local picker="start_work.sh" old_park="in-review"
       if pr_is_synthesis "$pr"; then picker="synthesize_work.sh"; old_park="awaiting-direction"; fi
+      # A framing PR's rework belongs to frame_work.sh (ADR-0014): its root
+      # may sit at in-review or at no-status (researching posture) — the
+      # atomic set replaces either — but only the framing runner may rework.
+      # If the stream had already DRAINED, this flip displaces the root's
+      # needs-synthesis flag; frame_work.sh's restore_root_posture puts it
+      # back once the rework lands (the drain gate's close events are spent
+      # and would never re-fire).
+      if pr_is_framing "$pr"; then picker="frame_work.sh"; fi
       if set_status_label "$iss" "changes-requested" "in-review" "$old_park" 2>/dev/null; then
         gh issue comment "$iss" --repo "$REPO" --body "🔁 Adversarial review of PR #$pr found problems — sending back to @$author for rework (**status: changes-requested**). Their next \`$picker\` loop will pick this up." >/dev/null || true
         ok "Issue #$iss → changes-requested (back to @$author)"

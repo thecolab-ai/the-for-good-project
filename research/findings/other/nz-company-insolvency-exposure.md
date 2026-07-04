@@ -1,0 +1,117 @@
+---
+title: "NZ company insolvency exposure is concentrated in construction, accommodation/food, and Auckland, but the public-data size cut is only a proxy"
+domain: "other"
+issue: "#273"
+confidence: "Medium"
+author: "adam91holt"
+agent: "codex"
+model: "gpt-5-codex"
+date: "2026-07-03"
+status: "draft"
+---
+
+# NZ company insolvency exposure is concentrated in construction, accommodation/food, and Auckland, but the public-data size cut is only a proxy
+
+## Executive answer
+
+- **The strongest sector signal is construction.** Deloitte's Companies Office-derived 2025 cut reports **747 construction formal appointments**, or about **24%** of 2025 company failures, while Stats NZ's February 2025 business demography workbook counts construction as **81,249 of 617,334 enterprises** (**13.2%**), so construction's appointment share is about **1.8 times** its enterprise-population share. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html); [Stats NZ workbook, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+- **Accommodation and food services looks even more concentrated after normalising.** Deloitte reports **380** accommodation and food services formal appointments in 2025; Stats NZ counts that industry as **26,070 of 617,334 enterprises** (**4.2%**), so its appointment share is about **2.9 times** its enterprise-population share. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html); [Stats NZ workbook, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+- **Auckland is concentrated; Canterbury, Wellington, and Waikato are high-count but not clearly over-represented by business-location share.** Deloitte's Q1 2026 report gives Auckland **395 of 709** insolvencies (**55.7%**), while Stats NZ counts Auckland as **229,770 of 654,465** regional business locations in table 2 (**35.1%**); the same comparison puts Canterbury at **9.4%** of Q1 insolvencies versus **12.6%** of business locations, Wellington at **8.2%** versus **9.5%**, and Waikato at **7.9%** versus **10.0%**. [Deloitte Q1 2026 report](https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf); [Stats NZ workbook, table 2](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+- **Business size cannot be cleanly reproduced from the public Companies Office schema available here.** The Companies Office bulk guide lists insolvency, BIC, core company, public address, registered office address, and trading-area fields joined by NZBN, but it does not list employee count or turnover fields for companies; Stats NZ employee-size and turnover tables are therefore denominator/proxy evidence, not a company-level appointment-size join. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/); [Stats NZ workbook, tables 1, 8, and 18](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+**Overall confidence:** Medium — the concentration direction is supported by a Deloitte report that explicitly draws on Companies Office data and by primary Stats NZ denominators, but I could not access the monthly Companies Office Box bulk-data files from this runner to independently reproduce the numerator from `companies_insolvency.csv`.
+
+## Evidence
+
+### Data scope and limits
+
+The Companies Office says its bulk data is a monthly Box.com snapshot made available as a zipped file containing 19 CSV files, with NZBN as the joining key; access is requested through a form rather than a public direct CSV link. [Companies Office request page](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/request-access-to-bulk-data/); [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/)
+
+The relevant Companies Office files would support the requested reproduction in principle: `companies_insolvency.csv` covers companies with liquidation, receivership, or voluntary-administration practitioners appointed; `companies_business_industry_classification.csv` covers registered companies that provided a public BIC code; `companies_core_data.csv` contains registration, removal, type, and status fields; and address/trading-area files contain public or registered address/trading-area fields. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/)
+
+I did not publish or inspect any individual failed company records for this finding. The numerator figures below come from Deloitte's aggregate report and article, both of which say the insolvency trend work draws on Companies Office data; the denominators are calculated from Stats NZ's February 2025 business demography workbook. [Deloitte insolvency trends page](https://www.deloitte.com/nz/en/services/consulting/perspectives/new-zealand-insolvency-trends.html); [Stats NZ business demography release](https://www.stats.govt.nz/information-releases/new-zealand-business-demography-statistics-at-february-2025/)
+
+### Sector exposure after normalising
+
+Deloitte reports that formal insolvency appointments include liquidations, receiverships, and voluntary administrations, and that appointments reached **3,080** in 2025. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html) Using that 3,080 numerator and Stats NZ's February 2025 enterprise counts gives this broad normalised view:
+
+| Sector | 2025 formal appointments | Share of appointments | Feb 2025 enterprises | Share of enterprises | Appointment-share / enterprise-share | Confidence |
+|---|---:|---:|---:|---:|---:|---|
+| Construction | 747 | 24.3% | 81,249 | 13.2% | 1.8x | Medium |
+| Accommodation and food services | 380 | 12.3% | 26,070 | 4.2% | 2.9x | Medium |
+| Rental, hiring, and real estate services | 326 | 10.6% | 129,120 | 20.9% | 0.5x | Medium |
+| Retail trade | 230 | 7.5% | 29,505 | 4.8% | 1.6x | Medium |
+| Transport, postal, and warehousing | 174 | 5.6% | 17,097 | 2.8% | 2.0x | Medium |
+
+The table uses Deloitte's 2025 appointment counts for construction, accommodation/food, rental/hiring/real estate, retail, and transport/postal/warehousing, and Stats NZ table 1 enterprise counts for the same ANZSIC06 divisions. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html); [Stats NZ workbook, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+This means construction is high both in raw appointments and after a simple enterprise-share normalisation, accommodation/food is smaller in the business population but more over-represented, and rental/hiring/real estate is a high-count sector that is under-represented relative to its very large enterprise base. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html); [Stats NZ workbook, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+Stats NZ's own enterprise-death table is not an insolvency table, but it points in the same direction for some sectors: in the February 2025 year, construction recorded **10,062 enterprise deaths** against **81,249 enterprises** (**123.8 deaths per 1,000 enterprises**), accommodation/food recorded **3,015** against **26,070** (**115.7 per 1,000**), retail recorded **3,522** against **29,505** (**119.4 per 1,000**), and transport/postal/warehousing recorded **2,499** against **17,097** (**146.2 per 1,000**). [Stats NZ workbook, tables 1 and 6](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx) This is supporting proxy evidence only because an enterprise death is not necessarily a formal insolvency appointment. [Stats NZ DataInfo+ business demography](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/bdb02aa2-866e-418f-83e8-342234867a0f)
+
+### Regional exposure after normalising
+
+Deloitte's Q1 2026 report says there were **709** total company insolvencies in Q1 2026, of which **94.4%** were liquidations, and reports Auckland **395**, Canterbury **67**, Wellington **58**, and Waikato **56** insolvencies. [Deloitte Q1 2026 report](https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf)
+
+Using Stats NZ February 2025 business-location counts as the broad regional denominator, Auckland remains over-represented while the other three high-count regions do not:
+
+| Region | Q1 2026 insolvencies | Share of Q1 insolvencies | Feb 2025 business locations | Share of listed regional business locations | Insolvency-share / location-share | Confidence |
+|---|---:|---:|---:|---:|---:|---|
+| Auckland | 395 | 55.7% | 229,770 | 35.1% | 1.6x | Medium |
+| Canterbury | 67 | 9.4% | 82,431 | 12.6% | 0.8x | Medium |
+| Wellington | 58 | 8.2% | 62,442 | 9.5% | 0.9x | Medium |
+| Waikato | 56 | 7.9% | 65,466 | 10.0% | 0.8x | Medium |
+
+The denominator in this table is Stats NZ table 2 regional geographic units, not registered-office company counts; it is a broad operating-footprint proxy and should not be read as a company-register regional rate. [Stats NZ workbook, table 2](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+Within those four regions, Deloitte reports construction shares of **24.8%** in Auckland, **37.3%** in Canterbury, **25.0%** in Waikato, and **37.9%** in Wellington, and accommodation/food shares of **12.2%**, **9.0%**, **14.3%**, and **17.2%** respectively. [Deloitte Q1 2026 report](https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf) That supports the "construction everywhere, accommodation/food also elevated" pattern, but the report does not provide the full region-by-sector denominator needed to compute region-specific rates. [Deloitte Q1 2026 report](https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf); [Stats NZ workbook, table 2](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+### Business size and proxy groups
+
+I could not verify a company-insolvency appointment distribution by employee-count size from public Companies Office fields because the bulk guide's relevant company files list NZBN, company/core status fields, BIC, insolvency appointment fields, and address/trading-area fields, but not employee counts or turnover. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/)
+
+Stats NZ's business demography workbook shows the business population is heavily small/no-employee: at February 2025, **455,730 of 617,334 enterprises** had **0 employees** (**73.8%**), **101,253** had **1-5 employees** (**16.4%**), and only **2,838** had **100+ employees** (**0.5%**). [Stats NZ workbook, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+
+Stats NZ enterprise deaths are more concentrated among zero-employee enterprises than the enterprise population: **63,639 of 67,770** February 2025 enterprise deaths were in the **0 employee** group (**93.9%**), equal to **139.6 deaths per 1,000** zero-employee enterprises, while **1-5 employee** enterprises recorded **3,135 deaths** (**31.0 per 1,000**). [Stats NZ workbook, tables 1 and 8](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx) This is a weak size proxy for company insolvency because Stats NZ enterprise deaths include exits from economic significance, not only formal insolvency appointments. [Stats NZ DataInfo+ business demography](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/bdb02aa2-866e-418f-83e8-342234867a0f)
+
+Deloitte's qualitative size signal points to smaller operators: it says construction insolvency risk is concentrated among smaller contractors and says smaller, highly leveraged accommodation/food operators are most exposed, while recovery is likely to favour larger, better-capitalised businesses. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html) I treat that as a credible practitioner signal, not a reproduced size distribution. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html)
+
+### BIC and address caveats
+
+BIC coverage is partial by design for this task: the Companies Office file is described as registered companies that have provided a public BIC code, so a missing BIC should not be interpreted as "no industry" and a reproduced sector table should report match rates before making sector claims. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/)
+
+Address coverage also needs caution: Companies Office lists public delivery/invoice/office/postal address, registered office address, and trading-area files as separate public fields, so a regional aggregation could change depending on whether it uses public address, registered office, or trading area. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/) Stats NZ business demography also warns users about data accuracy and methodology through DataInfo+, and the release says enterprise counts are influenced by births, deaths, and changes in economic-significance status. [Stats NZ business demography release](https://www.stats.govt.nz/information-releases/new-zealand-business-demography-statistics-at-february-2025/); [Stats NZ DataInfo+ business demography](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/bdb02aa2-866e-418f-83e8-342234867a0f)
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| Construction and accommodation/food are not just high-count sectors; they are over-represented after a simple enterprise-share normalisation. | [Deloitte 2025 sector counts](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html) | [Stats NZ enterprise denominators, table 1](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx) | Medium |
+| Auckland is over-represented after normalising by business locations, but Canterbury, Wellington, and Waikato are not clearly over-represented on the same broad denominator. | [Deloitte Q1 2026 regional counts](https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf) | [Stats NZ regional business-location denominators, table 2](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx) | Medium |
+| Company-level size cannot be reproduced from the public Companies Office schema alone. | [Companies Office bulk fields](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/) | [Stats NZ employee-size denominators show size exists only as aggregate denominator/proxy here](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx) | High |
+
+## What would change this conclusion
+
+- **Direct access to the Companies Office Box bulk-data snapshot would change the confidence.** A full reproduction should join `companies_insolvency.csv` to BIC and address/trading-area files by NZBN, suppress small cells, publish match rates, and compare the resulting appointment counts with Deloitte's aggregate figures. [Companies Office request page](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/request-access-to-bulk-data/); [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/)
+- **A different region denominator could change the regional conclusion.** Registered-office address, public office address, trading area, Stats NZ geographic units, and Stats NZ employee count answer different questions; a primary Companies Office reproduction should present sensitivity across at least registered office versus trading area where coverage allows. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/); [Stats NZ workbook, table 2](https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx)
+- **A company-level employee or turnover link would change the size answer.** If NZBN-linked employee-count or turnover bands are available through a permitted Stats NZ, NZBN, or Companies Office pathway, the size section should be replaced with a true appointment-rate analysis rather than Stats NZ enterprise-death and Deloitte qualitative proxies. [Companies Office bulk data help guide](https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/); [Stats NZ DataInfo+ business demography](https://datainfoplus.stats.govt.nz/item/nz.govt.stats/bdb02aa2-866e-418f-83e8-342234867a0f)
+- **Could not verify:** primary `companies_insolvency.csv` appointment counts by BIC and address; BIC match rates among insolvent companies; region-by-sector appointment rates; company appointment rates by employee-count or turnover band; whether related-company collapses materially distort 2025 accommodation/food concentration after entity-level deduplication. [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html)
+
+## Open follow-up questions
+
+- Can a maintainer or contributor with Companies Office bulk-data access reproduce the sector and region tables directly, including BIC/address match rates and small-cell suppression?
+- Can NZBN or another permitted aggregate source provide company-level turnover or employee-count bands for a privacy-safe insolvency size analysis?
+- Does the accommodation/food concentration persist after grouping known related-company appointments, given Deloitte notes one 2025 accommodation/food group of 50 related companies affected the sector count? [Deloitte, 2026](https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html)
+
+## Sources
+
+All sources accessed 3 July 2026. Fetch method: Companies Office pages, Deloitte pages/PDF, and Stats NZ pages/workbook were fetched by direct HTTP or the built-in web fetch; `catalogue.data.govt.nz` returned an Incapsula incident page by both `curl` and built-in web open, so I did not cite it as evidence except to note it was not usable from this environment.
+
+1. Companies Office. "Request access to bulk data." https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/request-access-to-bulk-data/
+2. Companies Office. "Bulk data help guide." Last updated 1 April 2026. https://www.companiesoffice.govt.nz/data-services/ways-to-get-our-data/bulk-data-help-guide/
+3. Deloitte New Zealand. "New Zealand Insolvency Trends." https://www.deloitte.com/nz/en/services/consulting/perspectives/new-zealand-insolvency-trends.html
+4. Deloitte New Zealand. "New Zealand Quarterly Insolvency Trends: 2026 Q1." May 2026. https://www.deloitte.com/content/dam/assets-zone1/nz/en/docs/services/consulting/2026/2026-q1-new-zealand-insolvency-trends.pdf
+5. Deloitte New Zealand. "Insolvency trends and the uneven road to recovery." 12 March 2026. https://www.deloitte.com/nz/en/services/tax/perspectives/insolvency-trends-and-the-uneven-road-to-recovery.html
+6. Stats NZ. "New Zealand business demography statistics: At February 2025." Released 30 October 2025. https://www.stats.govt.nz/information-releases/new-zealand-business-demography-statistics-at-february-2025/
+7. Stats NZ. "New Zealand business demography statistics: At February 2025" workbook. https://www.stats.govt.nz/assets/Uploads/New-Zealand-business-demography-statistics/New-Zealand-business-demography-statistics-At-February-2025/Download-data/new-zealand-business-demography-statistics-at-february-2025.xlsx
+8. Stats NZ DataInfo+. "Business Demography Statistics." https://datainfoplus.stats.govt.nz/item/nz.govt.stats/bdb02aa2-866e-418f-83e8-342234867a0f

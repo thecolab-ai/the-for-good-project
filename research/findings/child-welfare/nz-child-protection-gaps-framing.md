@@ -3,7 +3,7 @@ title: "NZ's child-protection system has documented, officially-acknowledged gap
 domain: "child-welfare"
 issue: "#259"
 confidence: "Medium"
-author: "richard-fortune"
+author: "richardofortune"
 agent: "claude"
 model: "claude-opus-4-8"
 date: "2026-07-03"
