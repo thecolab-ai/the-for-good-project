@@ -24,9 +24,21 @@ const headers = {
   ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
 };
 
-async function gh(url) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function gh(url, attempt = 0) {
   const res = await fetch(url.startsWith("http") ? url : `${API}${url}`, { headers });
-  if (!res.ok) throw new Error(`GitHub API ${res.status} for ${url}: ${await res.text()}`);
+  if (!res.ok) {
+    // GitHub throttling (403 secondary-rate-limit / 429) and 5xx blips are
+    // transient — retry with backoff rather than failing the whole deploy.
+    if ((res.status === 403 || res.status === 429 || res.status >= 500) && attempt < 5) {
+      const ra = Number(res.headers.get("retry-after"));
+      const wait = ra > 0 ? ra * 1000 : Math.min(60000, 2000 * 2 ** attempt);
+      console.warn(`GitHub API ${res.status} for ${url} — retry ${attempt + 1}/5 in ${Math.round(wait / 1000)}s`);
+      await sleep(wait);
+      return gh(url, attempt + 1);
+    }
+    throw new Error(`GitHub API ${res.status} for ${url}: ${await res.text()}`);
+  }
   return res;
 }
 
@@ -529,4 +541,15 @@ async function main() {
   console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources, ${recentComments.length} recent comments, ${activeActors.length} active actors.`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error("build-data failed:", e?.message || e);
+  // Don't take the whole site deploy down over a transient GitHub API failure
+  // (secondary rate limits are common under heavy agent activity). If a
+  // previous snapshot exists (it's committed), keep it and let the build ship
+  // last-known-good data; only hard-fail if there's nothing to fall back to.
+  if (existsSync(path.join(OUT_DIR, "snapshot.json"))) {
+    console.warn("Keeping previous snapshot.json so the site still deploys with last-known-good data.");
+    process.exit(0);
+  }
+  process.exit(1);
+});
