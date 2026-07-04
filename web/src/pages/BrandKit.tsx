@@ -124,10 +124,6 @@ const voicePrinciples = [
     title: "Everyone can contribute",
     body: "The brand should feel like an open table: domain experts, builders, funders, community people, companies, and curious citizens can all add something useful.",
   },
-  {
-    title: "Name the country plainly",
-    body: "Default to New Zealand. Use Aotearoa New Zealand only as an intentional dual-language nod; otherwise keep the English country name.",
-  },
 ];
 
 const designMotifs = [
@@ -185,7 +181,6 @@ Brand essence:
 - The project is a shared commons, not a single-company brand. Use "The For Good Project" as the primary mark.
 - Contribution energy is feed-forward: critique should name the gap and offer options, sources, framing, experiments, or next steps.
 - Trust is the product: cite, verify, review, then build.
-- Country naming: default to "New Zealand". Use "Aotearoa New Zealand" only when an intentional dual-language nod is appropriate; otherwise keep the English country name.
 
 Visual direction:
 - Warm paper workbench, cream background, dark ink serif headlines.
