@@ -4,7 +4,7 @@ title: "Council spending is public but not legible to citizens"
 state: awaiting-direction
 steward: ""
 domain: civic-transparency
-updated: 2026-07-03
+updated: 2026-07-04
 image: /images/streams/stream-3-council-spending.jpg
 ---
 
@@ -65,6 +65,21 @@ secrecy, which is what makes this worth working on.
   openly licensed capital-works programme, and a stale 2018 Wellington grants
   spreadsheet. (confidence: Medium for what was found; Low for what wasn't) —
   [78-council census finding](../research/findings/civic-transparency/council-spending-census-78.md)
+- **The demand and supply pictures now connect, and the split is telling. The
+  general questions — "where does my council's money go, by activity?", "is
+  the water or roads service meeting its required measures?", "what are
+  elected members paid?" — can be answered from what's already published,
+  because the law requires exactly those disclosures. The specific ones —
+  "what did this trip or rebrand cost?", "what were this contract's terms?",
+  "how is this official behaving?" — were not found in the published data
+  reviewed, and typically need a formal information request instead.** At
+  least about a quarter of the sampled request titles (45 of 200) are of that
+  specific kind — a floor, not a measure of which kind dominates. One question
+  type sits in between: the formal decision record (agendas, reports, minutes)
+  is legally open to everyone, but whether councils reliably publish the whole
+  trail online in a usable form was not verified. (confidence: Medium; the
+  "at least a quarter" share is Low) —
+  [answerability finding](../research/findings/civic-transparency/council-question-answerability.md)
 - **Nobody has already built the thing this stream contemplates, but the
   history of similar efforts carries a strong warning: publishing raw spending
   data is not enough.** In New Zealand, the existing pieces each cover a slice
@@ -82,28 +97,34 @@ secrecy, which is what makes this worth working on.
 
 ## What we're not sure about yet
 
-- **Which citizen questions can already be answered from published data.** We
-  now have a demand-side picture (what people ask) and a national supply-side
-  picture (what's published), but no finding yet connects the two — and the
-  main build option below rests on that connection.
-- **What sits behind the 18 unknown council websites and everyone's document
-  libraries.** The census scanned front doors only; 17 councils blocked the
-  scanner and one showed nothing, and structured files behind search boxes
-  would be missed everywhere. The census finding itself says its "no structured
-  spending data" result is a lead to test (for example by asking councils
-  directly), not a settled fact.
+- **Which kind of question dominates real demand.** The demand-to-supply
+  connection is made, but only as a floor: at least 45 of the 200 sampled
+  request titles are specific questions published data can't serve, and nobody
+  has measured whether that end or the answerable general end is bigger. The
+  sample is also self-selecting — people motivated enough to lodge a formal
+  request — so it may not reflect what residents at large want. A full
+  answerability recode of the sample (ideally with a second coder), or a
+  representative survey, would settle this; until then the answer-layer option
+  below rests partly on an unmeasured split.
+- **Whether the decision trail is actually online, council by council.** The
+  law guarantees anyone may inspect meeting agendas, reports, and minutes
+  without filing a request — but the answerability finding deliberately did
+  not verify whether councils publish that full trail online in usable form.
+  A tool cannot yet promise decision-trail answers.
+- **What individual councils publish beyond the national baseline.** The
+  answerability grades were made at national level. Individual councils may
+  publish more — a contract register, a proactive disclosure log, project-level
+  capital data, an online rates calculator — but those surfaces are flagged as
+  hypotheses to check, not confirmed to exist. The same blind spot covers the
+  17 council websites that blocked the census scanner and every council's
+  document library; the census itself says its "no structured spending data"
+  result is a lead to test, not a settled fact.
 - **Whether the "translation layer" is really necessary.** The claim that
   detailed cross-council comparison needs a mapping layer is a single finding's
   inference from official caveats — though the Taxpayers' Union's own
   methodology page independently concedes the same comparability problem. Both
   findings that touch it still recommend a council-finance practitioner review
   before it drives a build.
-- **What residents at large actually want.** The demand evidence comes from
-  people motivated enough to lodge formal information requests, and from local
-  journalism — a self-selecting slice. There is no representative survey, and
-  the question types are deliberately not ranked. The "quarter of titles too
-  vague to classify" data point is single-coder judgement (Low confidence),
-  though the full coded sample is published so anyone can check it.
 - **Whether the UK lesson transfers to New Zealand.** "Raw data dumps didn't
   create citizen auditors" is well evidenced for the UK, but whether New
   Zealanders would behave the same way is judgement, not evidence — the
@@ -117,38 +138,54 @@ secrecy, which is what makes this worth working on.
   contract award notices only include councils that use the central tender
   system, nobody has checked how consistently they do, and the publisher
   itself warns the data must not be treated as consolidated financial records.
+  The answerability finding therefore counts "who won the contract" as only
+  partly answerable — and contract terms and delivery monitoring as not found
+  in any published data reviewed.
 
 ## What we could do about it
 
-- **Test what the census couldn't see: ask councils directly.** Follow up the
-  front-door census with targeted confirmation — email or formal information
-  requests to a sample of councils (starting with the 17 the scanner couldn't
-  reach) asking what structured spending, procurement, or grants data they
-  publish and under what terms. Helps: everyone downstream — it turns the
-  census's Low-confidence "nothing found" into a trustworthy answer. Effort:
-  Medium. Supported by the [78-council census finding](../research/findings/civic-transparency/council-spending-census-78.md)
+- **Audit councils directly for what the desk scans couldn't see.** Follow up
+  the front-door census with a per-council check — asking councils, or
+  checking each site by hand — for structured spending data, a contract
+  register, a proactive disclosure log, project-level capital data, usable
+  online meeting records, and an online rates calculator, starting with the 17
+  sites the scanner couldn't reach. Helps: everyone downstream — it turns two
+  Low-confidence negatives into trustworthy answers and shows where a pilot is
+  actually feasible. Effort: Medium. Supported by the
+  [78-council census finding](../research/findings/civic-transparency/council-spending-census-78.md)
   (confidence: Medium for method, Low for the negative it would test), which
-  names this as its primary follow-up. Would need: patience with 20-working-day
+  names asking councils as its primary follow-up, and the
+  [answerability finding](../research/findings/civic-transparency/council-question-answerability.md)
+  (confidence: Medium), which calls a per-council answerability audit its
+  single most valuable follow-up. Would need: patience with 20-working-day
   response times, and careful request wording.
-- **Build a plain-language answer layer for the recurring question types,
-  using the aggregate data that already exists** — rates-to-services, project
-  costs, contracts, decision trails, service performance — always linking back
-  to source documents. Helps: residents and local journalists. Effort: Large.
+- **Build a plain-language answer layer for the questions published data can
+  already answer — and honestly hand off the ones it can't.** The answerable
+  half: where the money goes by activity, rates and what they fund, service
+  performance against the legally required measures, and elected-member pay —
+  always linking back to source documents. The unanswerable half — specific
+  project costs, contract terms, conduct — would be routed to the existing
+  formal-request channel (which FYI.org.nz already provides) rather than
+  pretended away. Helps: residents and local journalists. Effort: Large.
   Supported by the [demand finding](../research/findings/civic-transparency/council-data-questions.md)
   (confidence: Medium; the "answers beat document dumps" framing is a
   hypothesis, not user research), the
+  [answerability finding](../research/findings/civic-transparency/council-question-answerability.md)
+  (confidence: Medium — it grades exactly which question types such a layer
+  can serve, and warns the decision-record part needs a per-council audit
+  before it can be promised), the
   [comparability finding](../research/findings/civic-transparency/council-spending-comparability.md)
   (confidence: Medium), the
   [data census finding](../research/findings/civic-transparency/council-spending-data-census.md)
   for the raw material (confidence: High that it exists; Medium on the
-  procurement data), and now the
+  procurement data), and the
   [prior-art finding](../research/findings/civic-transparency/council-spending-civic-tech-prior-art.md),
   which found this exact niche unoccupied and says the UK's failure was
   precisely the absence of such a legibility layer (confidence: Medium; the
-  UK "raw dumps failed" lesson itself is High). Would need: evidence that the
-  questions are answerable from published data, reuse of FYI and the official
-  aggregates rather than rebuilding them, and honesty that sustained tools
-  elsewhere had funding — a volunteer team would need a maintenance plan.
+  UK "raw dumps failed" lesson itself is High). Would need: reuse of FYI and
+  the official aggregates rather than rebuilding them, evidence on which kind
+  of question dominates demand, and honesty that sustained tools elsewhere had
+  funding — a volunteer team would need a maintenance plan.
 - **Pilot with the data that's already good** — for example, a project-cost
   view built on Christchurch's openly licensed capital-works dataset, testing
   whether its structure could seed a cross-council standard. Helps: residents
@@ -161,14 +198,18 @@ secrecy, which is what makes this worth working on.
   strongest available). Would need: the dataset to stay maintained, and honesty
   about its budget figures being broad bands, not exact amounts.
 - **Validate the demand and comparability assumptions with people** — talk to
-  local journalists, council finance staff, and community organisers before any
-  build, since most findings say expert or user review is needed, and the
-  prior-art finding specifically asks whether the UK's "nobody used the raw
-  data" experience would repeat here. Helps: the stream itself, by de-risking
+  local journalists, council finance and democracy-services staff, and
+  community organisers before any build, since most findings say expert or
+  user review is needed: the prior-art finding asks whether the UK's "nobody
+  used the raw data" experience would repeat here, and the answerability
+  finding asks a working journalist or frequent requester to sanity-check its
+  grades against day-to-day reality. Helps: the stream itself, by de-risking
   everything else. Effort: Small. Supported by the
   [demand finding](../research/findings/civic-transparency/council-data-questions.md)
   (confidence: Medium), the
   [comparability finding](../research/findings/civic-transparency/council-spending-comparability.md)
+  (confidence: Medium), the
+  [answerability finding](../research/findings/civic-transparency/council-question-answerability.md)
   (confidence: Medium), and the
   [prior-art finding](../research/findings/civic-transparency/council-spending-civic-tech-prior-art.md)
   (confidence: Medium). Would need: access to a few willing practitioners.
@@ -177,8 +218,8 @@ secrecy, which is what makes this worth working on.
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
-Signal: the two gaps flagged last round — the 78-council census and the prior-art review — are now filled, and both point the same way: the data gap is real, and raw disclosure alone has failed elsewhere.
-Signal: the strongest remaining unknown is whether the recurring citizen questions can actually be answered from what's published — the main build option depends on it.
+Signal: the gap flagged last round — whether the recurring citizen questions are answerable from published data — is now filled: the general ones are, the specific ones generally are not, so the honest product shape is "answer the general, hand off the specific".
+Signal: two unknowns still gate any build — whether councils publish usable decision records online, and which councils publish more than the national baseline — and two findings independently name a per-council audit as the next step.
 Signal: every finding that proposes building something still asks for human practitioner or user validation first, and the prior-art finding warns that sustained tools elsewhere were funded, not volunteer-run.
 
 ## Feedback log
