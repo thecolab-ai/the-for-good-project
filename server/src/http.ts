@@ -29,6 +29,13 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
     return { ok: true, buckets: store.tpsHistory(minutes, bucketSeconds), totals: store.historyTotals() };
   });
 
+  /** Recent retained redacted stream lines for a worker detail drawer. */
+  app.get<{ Params: { agentId: string } }>("/api/v1/agents/:agentId/logs", async (req, reply) => {
+    const rec = store.getAgent(req.params.agentId);
+    if (!rec) return reply.code(404).send({ ok: false, error: "unknown agentId" });
+    return { ok: true, agentId: rec.id, handle: rec.handle, lines: store.agentLogs(rec.id) };
+  });
+
   /**
    * Curl-friendly worker telemetry: hello fields + optional heartbeat deltas
    * in one POST. First post returns an `agentId`; include it on subsequent

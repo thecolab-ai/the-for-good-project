@@ -45,6 +45,7 @@ export const config = {
   tpsBucketSeconds: 10,
 
   maxEventFeed: num(process.env.MAX_EVENT_FEED, 200),
+  maxLogLines: num(process.env.MAX_LOG_LINES, 500),
 
   // Per-connection inbound limits — telemetry is small; anything bigger is a bug
   // or abuse. The same per-second budget applies per-IP on the HTTP routes.

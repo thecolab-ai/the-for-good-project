@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bot, GitPullRequest, Globe, MessageSquare, Radio, Wifi, WifiOff, Wrench } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CommentFeed, ActiveStrip } from "@/components/shared/CommentFeed";
 import { StatCard } from "@/components/shared/StatCard";
 import { relativeTime } from "@/lib/format";
-import { compactNumber, liveServerUrl, useLiveFleet, type LiveStatus } from "@/lib/live";
+import { compactNumber, fetchAgentLogs, liveServerUrl, useLiveFleet, type AgentPresence, type LiveStatus, type LogLine } from "@/lib/live";
 import { FleetPulse } from "@/components/live/FleetPulse";
 import { AgentGrid } from "@/components/live/AgentGrid";
 import { WatcherStrip } from "@/components/live/WatcherStrip";
@@ -42,9 +42,45 @@ function ConnectionDot({ status }: { status: LiveStatus }) {
   );
 }
 
+function WorkerStream({ agent, lines, onClose }: { agent: AgentPresence; lines: LogLine[]; onClose: () => void }) {
+  const s = agent.session;
+  return (
+    <Card className="mt-4 border-primary/30">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
+        <div>
+          <CardTitle className="text-base">@{agent.handle} live stream</CardTitle>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {agent.model} · {compactNumber(s.toolCalls)} tools · {compactNumber(s.tokensIn + s.tokensOut)} tokens · updated {relativeTime(agent.lastSeen)}
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          {Object.entries(s.tools ?? {}).length ? Object.entries(s.tools).map(([tool, count]) => (
+            <span key={tool} className="rounded-full bg-muted px-2 py-1 font-mono">{tool} × {count}</span>
+          )) : <span>No per-tool events yet.</span>}
+        </div>
+        <pre className="max-h-96 overflow-auto rounded-lg bg-stone-950 p-3 text-xs leading-relaxed text-stone-100">
+          {lines.length ? lines.map((entry) => `[${new Date(entry.at).toLocaleTimeString()}] ${entry.line}`).join("\n") : "No stream lines yet. Start workers with STREAM_LOGS=1 for transcript/tool output."}
+        </pre>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Real-time mission control, rendered when a fleet server is configured. */
 function FleetSection() {
   const live = useLiveFleet();
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [loadedLogs, setLoadedLogs] = useState<Record<string, LogLine[]>>({});
+  const selectedAgent = live.agents.find((agent) => agent.id === selectedAgentId) ?? null;
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    void fetchAgentLogs(selectedAgentId).then((lines) => {
+      if (lines.length) setLoadedLogs((prev) => ({ ...prev, [selectedAgentId]: lines }));
+    });
+  }, [selectedAgentId]);
   if (live.status === "unconfigured") return null;
 
   const totals = live.historyTotals ?? live.fleet?.totals;
@@ -79,7 +115,19 @@ function FleetSection() {
 
       <div className="mt-6">
         <h2 className="mb-3 font-serif text-lg font-semibold">The fleet</h2>
-        <AgentGrid agents={live.agents} trails={live.agentTrails} />
+        <AgentGrid
+          agents={live.agents}
+          trails={live.agentTrails}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={(agent) => setSelectedAgentId(agent.id)}
+        />
+        {selectedAgent ? (
+          <WorkerStream
+            agent={selectedAgent}
+            lines={[...(loadedLogs[selectedAgent.id] ?? []), ...(live.logs[selectedAgent.id] ?? [])].slice(-500)}
+            onClose={() => setSelectedAgentId(null)}
+          />
+        ) : null}
       </div>
 
       <Card className="mt-6">

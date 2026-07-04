@@ -87,6 +87,11 @@ export interface EventItem {
   ref?: string;
 }
 
+export interface LogLine {
+  at: string;
+  line: string;
+}
+
 export interface FleetSnapshot {
   agents: AgentPresence[];
   watchers: WatcherSummary;
@@ -161,11 +166,13 @@ export interface LiveFleet {
   historyTotals: HistoryTotals | null;
   /** Short per-agent TPS trails for the card sparklines. */
   agentTrails: Record<string, number[]>;
+  logs: Record<string, LogLine[]>;
 }
 
 const MAX_TPS_POINTS = 90; // ~3 minutes of 2s ticks
 const MAX_TRAIL_POINTS = 30;
 const MAX_EVENTS = 100;
+const MAX_LOG_LINES = 500;
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;
 
@@ -179,7 +186,17 @@ const EMPTY: LiveFleet = {
   historicalTps: [],
   historyTotals: null,
   agentTrails: {},
+  logs: {},
 };
+
+export async function fetchAgentLogs(agentId: string): Promise<LogLine[]> {
+  const base = liveServerUrl();
+  if (!base) return [];
+  const res = await fetch(`${base}/api/v1/agents/${encodeURIComponent(agentId)}/logs`);
+  if (!res.ok) return [];
+  const json = (await res.json()) as { lines?: LogLine[] };
+  return json.lines ?? [];
+}
 
 export function useLiveFleet(): LiveFleet {
   const [state, setState] = useState<LiveFleet>(EMPTY);
@@ -254,6 +271,12 @@ export function useLiveFleet(): LiveFleet {
             return { ...prev, watchers: msg.watchers };
           case "event":
             return { ...prev, events: [msg.event, ...prev.events].slice(0, MAX_EVENTS) };
+          case "log": {
+            const at = new Date().toISOString();
+            const existing = prev.logs[msg.agentId] ?? [];
+            const next = [...existing, ...msg.lines.map((line) => ({ at, line }))].slice(-MAX_LOG_LINES);
+            return { ...prev, logs: { ...prev.logs, [msg.agentId]: next } };
+          }
           default:
             return prev;
         }

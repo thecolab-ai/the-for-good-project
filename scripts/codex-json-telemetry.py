@@ -28,6 +28,7 @@ MODEL = env("FLEET_MODEL") or env("MODEL") or "codex"
 TASK_KIND = env("FLEET_TASK_KIND") or "work"
 TASK_REF = env("TASK_REF")
 TASK_TITLE = env("TASK_TITLE") or "codex turn"
+STREAM_LOGS = env("STREAM_LOGS") == "1"
 
 
 def read_agent_id() -> str:
@@ -48,16 +49,13 @@ def write_agent_id(agent_id: str) -> None:
         pass
 
 
-def post_telemetry(usage: dict[str, Any]) -> None:
+def post_telemetry(heartbeat: dict[str, Any]) -> None:
     if not FLEET_SERVER:
         return
-    heartbeat = {
-        "tokensIn": int(usage.get("input_tokens") or 0),
-        "tokensOut": int(usage.get("output_tokens") or 0),
-    }
-    # Only send a heartbeat when there is real token movement. This prevents
-    # no-op malformed events from refreshing TPS as fake activity.
-    if heartbeat["tokensIn"] == 0 and heartbeat["tokensOut"] == 0:
+    # Only send a heartbeat when there is real movement. This prevents no-op
+    # malformed events from refreshing presence as fake activity.
+    numeric_total = sum(int(v or 0) for v in heartbeat.values() if isinstance(v, int))
+    if numeric_total == 0 and not heartbeat.get("tools"):
         return
 
     body: dict[str, Any] = {
@@ -93,20 +91,47 @@ def post_telemetry(usage: dict[str, Any]) -> None:
         return
 
 
-def print_item(item: dict[str, Any]) -> None:
+def post_logs(lines: list[str]) -> None:
+    if not FLEET_SERVER or not STREAM_LOGS or not lines:
+        return
+    agent_id = read_agent_id()
+    if not agent_id:
+        return
+    data = json.dumps({"agentId": agent_id, "lines": [line[:2000] for line in lines[-20:]]}, separators=(",", ":")).encode("utf-8")
+    req = urllib.request.Request(
+        f"{FLEET_SERVER}/api/v1/logs",
+        data=data,
+        headers={"content-type": "application/json"},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=3).close()
+    except (OSError, urllib.error.URLError):
+        return
+
+
+def print_item(item: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
     typ = item.get("type")
     if typ == "agent_message":
         text = item.get("text")
         if isinstance(text, str) and text.strip():
             print(text, flush=True)
+            lines.extend([line for line in text.splitlines() if line.strip()])
     elif typ in {"tool_call", "function_call"}:
-        name = item.get("name") or item.get("command") or item.get("tool")
+        name = item.get("name") or item.get("command") or item.get("tool") or "unknown"
         if name:
-            print(f"[codex tool] {name}", flush=True)
+            line = f"[codex tool] {name}"
+            print(line, flush=True)
+            lines.append(line)
+            post_telemetry({"toolCalls": 1, "tools": {str(name)[:64]: 1}})
     elif typ in {"tool_call_output", "function_call_output"}:
         text = item.get("text") or item.get("output")
         if isinstance(text, str) and text.strip():
-            print(text.rstrip(), flush=True)
+            out = text.rstrip()
+            print(out, flush=True)
+            lines.extend([line for line in out.splitlines() if line.strip()][-20:])
+    return lines
 
 
 def main() -> int:
@@ -122,10 +147,10 @@ def main() -> int:
 
         typ = event.get("type")
         if typ == "item.completed" and isinstance(event.get("item"), dict):
-            print_item(event["item"])
+            post_logs(print_item(event["item"]))
         elif typ == "turn.completed" and isinstance(event.get("usage"), dict):
             usage = event["usage"]
-            post_telemetry(usage)
+            post_telemetry({"tokensIn": int(usage.get("input_tokens") or 0), "tokensOut": int(usage.get("output_tokens") or 0)})
             ti = int(usage.get("input_tokens") or 0)
             to = int(usage.get("output_tokens") or 0)
             cached = int(usage.get("cached_input_tokens") or 0)

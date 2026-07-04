@@ -24,6 +24,7 @@ import type {
   FleetSnapshot,
   Heartbeat,
   Hello,
+  LogLine,
   RoughLocation,
   ServerMessage,
   SessionCounters,
@@ -94,6 +95,7 @@ export class FleetStore extends EventEmitter {
   private readonly watchers = new Map<string, WatcherRecord>();
   /** bucket index (unix seconds / bucket size) -> token counts */
   private readonly tpsBuckets = new Map<number, TpsBucket>();
+  private readonly logs = new Map<string, LogLine[]>();
   private totals: SessionCounters = emptyCounters();
   private events: EventItem[] = [];
   private lastTps = 0;
@@ -434,11 +436,19 @@ export class FleetStore extends EventEmitter {
 
   // ---------------------------------------------------------------- logs
 
-  /** Logs are broadcast-only — nothing is retained server-side. Retention was
-   *  considered and dropped: the stream is theatre/debugging, and keeping
-   *  transcript excerpts in RAM that nothing reads is pure liability. */
+  /** Retain a small redacted per-agent live stream so dashboard viewers can
+   *  click into a worker after a few frames have already gone by. */
   appendLogs(agentId: string, handle: string, lines: string[]): void {
-    if (config.broadcastLogs) this.publish({ type: "log", agentId, handle, lines });
+    const now = new Date().toISOString();
+    const entries = lines.map((line) => ({ at: now, line })).filter((entry) => entry.line.trim());
+    if (!entries.length) return;
+    const current = this.logs.get(agentId) ?? [];
+    this.logs.set(agentId, [...current, ...entries].slice(-config.maxLogLines));
+    if (config.broadcastLogs) this.publish({ type: "log", agentId, handle, lines: entries.map((entry) => entry.line) });
+  }
+
+  agentLogs(agentId: string): LogLine[] {
+    return this.logs.get(agentId) ?? [];
   }
 
   // ------------------------------------------------------------ snapshot

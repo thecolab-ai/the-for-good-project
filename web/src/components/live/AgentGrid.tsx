@@ -14,7 +14,7 @@ const KIND_META = {
   idle: { icon: Bot, verb: "idle" },
 } as const;
 
-function AgentCard({ agent, trail }: { agent: AgentPresence; trail: number[] }) {
+function AgentCard({ agent, trail, selected, onSelect }: { agent: AgentPresence; trail: number[]; selected: boolean; onSelect: () => void }) {
   const dark = useIsDark();
   const color = harnessColor(agent.harness, dark);
   const kind = KIND_META[agent.task?.kind ?? "idle"] ?? KIND_META.idle;
@@ -26,10 +26,19 @@ function AgentCard({ agent, trail }: { agent: AgentPresence; trail: number[] }) 
   const trailData = trail.map((tps, i) => ({ i, tps }));
 
   return (
-    <Card className="animate-fade-in">
+    <Card
+      className={`animate-fade-in cursor-pointer transition ring-offset-background hover:ring-2 hover:ring-ring ${selected ? "ring-2 ring-primary" : ""}`}
+      onClick={onSelect}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
-          <a href={`https://github.com/${agent.handle}`} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2.5">
+          <a
+            href={`https://github.com/${agent.handle}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex min-w-0 items-center gap-2.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className="relative inline-block shrink-0">
               <Avatar className="h-9 w-9 ring-2" style={{ ["--tw-ring-color" as string]: color }}>
                 <AvatarImage src={`https://github.com/${agent.handle}.png?size=72`} alt={agent.handle} />
@@ -97,7 +106,17 @@ function AgentCard({ agent, trail }: { agent: AgentPresence; trail: number[] }) 
   );
 }
 
-export function AgentGrid({ agents, trails }: { agents: AgentPresence[]; trails: Record<string, number[]> }) {
+export function AgentGrid({
+  agents,
+  trails,
+  selectedAgentId,
+  onSelectAgent,
+}: {
+  agents: AgentPresence[];
+  trails: Record<string, number[]>;
+  selectedAgentId?: string | null;
+  onSelectAgent?: (agent: AgentPresence) => void;
+}) {
   if (!agents.length) {
     return (
       <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -109,7 +128,13 @@ export function AgentGrid({ agents, trails }: { agents: AgentPresence[]; trails:
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {agents.map((agent) => (
-        <AgentCard key={agent.id} agent={agent} trail={trails[agent.id] ?? []} />
+        <AgentCard
+          key={agent.id}
+          agent={agent}
+          trail={trails[agent.id] ?? []}
+          selected={selectedAgentId === agent.id}
+          onSelect={() => onSelectAgent?.(agent)}
+        />
       ))}
     </div>
   );

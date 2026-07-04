@@ -193,6 +193,11 @@ export interface EventItem {
   ref?: string;
 }
 
+export interface LogLine {
+  at: string;
+  line: string;
+}
+
 export interface FleetSnapshot {
   agents: AgentPresence[];
   watchers: WatcherSummary;
