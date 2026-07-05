@@ -19,8 +19,8 @@ export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; his
   const harnesses = harnessOrder(Object.keys(fleet?.tpsByHarness ?? {}));
 
   return (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-5">
+    <Card className="relative flex h-full flex-col overflow-hidden">
+      <CardContent className="flex flex-1 flex-col p-5">
         <div className="text-sm font-medium text-muted-foreground">Fleet throughput</div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="font-sans text-5xl font-semibold tabular-nums leading-none">{compactNumber(displayTps)}</span>
@@ -36,7 +36,7 @@ export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; his
           <div className="mt-1 text-xs text-muted-foreground">No tokens flowing right now — last burst {relativeTime(fleet.lastTpsAt)}</div>
         ) : null}
 
-        <div className="mt-3 h-24">
+        <div className="mt-3 h-24 min-h-[6rem] flex-1">
           {history.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
