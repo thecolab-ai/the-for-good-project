@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: "other"
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-212-datagrid-facts.jpg
 ---
 
 # DataGrid's Southland data centre: the verifiable facts in one place

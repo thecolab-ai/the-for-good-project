@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: civic-transparency
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-199-oia-open-by-default.jpg
 ---
 
 <!--

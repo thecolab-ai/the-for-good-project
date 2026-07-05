@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-256-power-bills.jpg
 ---
 
 # Why New Zealand power bills keep climbing — and who gets hurt
