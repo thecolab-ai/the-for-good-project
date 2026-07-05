@@ -115,20 +115,15 @@ remove_worktree() {
 issue_labels()  { gh issue view "$1" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")'; }
 issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 
-# ONE GraphQL query for the whole open-issue queue, normalised to the same
-# shape `gh issue list --json number,createdAt,labels,assignees` returns so the
-# jq filters below are unchanged. A single poll cycle can fetch this once and
-# feed EVERY queue check (available / my rework / unassigned rework) from it,
-# instead of firing a separate REST list call per status. Capped at 100 (the
-# GraphQL page max) to match the previous --limit 100 behaviour; ordered NEWEST
-# first so that if the repo ever exceeds 100 open issues the truncation drops
-# the oldest, not the freshly-created available/rework work we most want to see.
-# (The jq filters re-sort deterministically, so fetch order doesn't affect the
-# result while the queue is under 100 — it only decides which slice survives the
-# cap.) labels(first:50) is ample headroom over the ~5 labels an issue carries.
+# REST snapshot for the whole open issue queue, normalised to the same shape
+# `gh issue list --json number,createdAt,labels,assignees` returns. This used
+# to be a single GraphQL query per worker cycle; with multiple 30s autopilots it
+# silently burned the repository's GraphQL allowance. The REST Issues API costs
+# normal core quota, includes the fields we need, and returns PRs too, so filter
+# out `.pull_request` entries here.
 fetch_open_issues() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){issues(states:OPEN,first:100,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt labels(first:50){nodes{name}} assignees(first:10){nodes{login}}}}}}" \
-    --jq '[.data.repository.issues.nodes[] | {number, createdAt, labels: [.labels.nodes[] | {name}], assignees: [.assignees.nodes[] | {login}]}]'
+  gh api --paginate "repos/$OWNER/$NAME/issues?state=open&per_page=100" \
+    --jq '[.[] | select(.pull_request|not) | {number, createdAt: .created_at, labels: [.labels[] | {name}], assignees: [.assignees[] | {login}]}]'
 }
 
 # Numbers of open issues with a given status label, optional STAGE filter.
@@ -269,16 +264,17 @@ review_feedback() {  # $1 = pr number
 # Newest first — default order is oldest-first, which misses the just-opened
 # PR once >50 PRs are open.
 pr_for_issue() {
-  local pr
-  pr="$(gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
-    --jq ".data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.nodes|map(.number)|index($1)) | .number" | head -1)"
-  [ -n "$pr" ] && { echo "$pr"; return 0; }
-  local cands c
-  cands="$(gh pr list --repo "$REPO" --state open --search "\"Part of #$1\" in:body" \
-    --json number --jq '.[].number' 2>/dev/null || true)"
-  for c in $cands; do
-    if [ -z "$(issue_for_pr "$c")" ]; then echo "$c"; return 0; fi
-  done
+  local pr body closes_other
+  while IFS=$'\t' read -r pr body; do
+    [ -n "$pr" ] || continue
+    # If the PR body closes/fixes/resolves a DIFFERENT issue, it is a child PR
+    # that may mention "Part of #n" for its stream root; do not mistake it for
+    # the root's framing PR.
+    closes_other="$(printf '%s' "$body" | grep -oiE '(closes|fixes|resolves)[[:space:]]*#[0-9]+' | grep -oE '[0-9]+' | grep -vx "$1" | head -1 || true)"
+    [ -n "$closes_other" ] && continue
+    echo "$pr"; return 0
+  done < <(gh api --paginate "repos/$OWNER/$NAME/pulls?state=open&per_page=100" \
+    --jq ".[] | select((.body // \"\") | test(\"(?i)(closes|fixes|resolves|part of)\\\\s*#$1\\\\b\")) | [.number, (.body // \"\")] | @tsv" 2>/dev/null || true)
   return 0
 }
 
@@ -346,8 +342,8 @@ pr_is_framing() {  # $1 = pr number
 # mean "the issue merging this PR will CLOSE" (e.g. marking it done) — discover
 # PRs have no closing ref by design, so this is empty for them.
 issue_for_pr() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$1){closingIssuesReferences(first:5){nodes{number}}}}}" \
-    --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[0].number // empty'
+  gh api "repos/$OWNER/$NAME/pulls/$1" \
+    --jq '(.body // "") | capture("(?i)(?:closes|fixes|resolves)\\s*#(?<n>[0-9]+)").n // empty' 2>/dev/null || true
 }
 
 # The issue a PR is WORKING (for routing rework/status back to the author): a
@@ -457,9 +453,16 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
-      $tmo codex exec --cd "$dir" --skip-git-repo-check \
-        ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
-        ${MODEL:+-m "$MODEL"} "$prompt"
+      if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
+        $tmo codex exec --json --cd "$dir" --skip-git-repo-check \
+          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          ${MODEL:+-m "$MODEL"} "$prompt" \
+          | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
+      else
+        $tmo codex exec --cd "$dir" --skip-git-repo-check \
+          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          ${MODEL:+-m "$MODEL"} "$prompt"
+      fi
       ;;
     claude)
       ( cd "$dir" && $tmo claude -p "$prompt" \

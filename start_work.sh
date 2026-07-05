@@ -41,6 +41,7 @@ MAX="${MAX:-0}"                       # 0 = no limit
 ISSUE="${ISSUE:-}"                    # one-shot: work THIS issue first, then fall into the normal loop
 POLL_SECONDS="${POLL_SECONDS:-180}"   # keep polling when queue empty every 3 min (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
+RECONCILE_REWORK_SECONDS="${RECONCILE_REWORK_SECONDS:-900}"
 CLAIMED_ISSUE=""
 
 release_on_interrupt() {
@@ -461,6 +462,20 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
 # pushed after it — so a freshly reworked PR awaiting re-review is left alone.
 reconcile_rework() {
   [ "$DRY_RUN" = 1 ] && return 0
+  # This is a self-heal sweep, not the normal queue read. It uses review state
+  # that the GitHub CLI can only fetch via GraphQL, so do not run it every
+  # 30-second autopilot loop or the whole fleet burns the GraphQL allowance while
+  # idle. Throttle per user/repo; set RECONCILE_REWORK_SECONDS=0 to run every pass.
+  if [ "${RECONCILE_REWORK_SECONDS:-900}" -gt 0 ]; then
+    local stamp="${TMPDIR:-/tmp}/fg-reconcile-${OWNER}-${NAME}-${ME}.stamp" now last=0
+    now="$(date +%s)"
+    [ -r "$stamp" ] && last="$(cat "$stamp" 2>/dev/null || echo 0)"
+    if [ $((now - ${last:-0})) -lt "$RECONCILE_REWORK_SECONDS" ]; then return 0; fi
+    printf '%s' "$now" > "$stamp" 2>/dev/null || true
+  fi
+  local gql_left
+  gql_left="$(gh api rate_limit --jq '.resources.graphql.remaining // 0' 2>/dev/null || echo 0)"
+  [ "${gql_left:-0}" -gt 0 ] || return 0
   local prs pr iss labels lastcr headcommit synth_rc frame_rc
   prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
           --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"

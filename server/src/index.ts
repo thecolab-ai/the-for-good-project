@@ -13,11 +13,13 @@ import { registerAgentSocket } from "./agent-ws.js";
 import { registerWatchSocket } from "./watch-ws.js";
 import { registerHttpRoutes } from "./http.js";
 import { FleetStore } from "./state.js";
+import { HistoryStore } from "./history.js";
 
 const SWEEP_INTERVAL_MS = 10_000;
 
 async function main(): Promise<void> {
-  const store = new FleetStore(config.stateFile);
+  const history = config.historyDbFile ? new HistoryStore(config.historyDbFile) : undefined;
+  const store = new FleetStore(config.stateFile, history);
 
   const app = Fastify({
     // The privacy contract says client IPs are NEVER logged — Fastify's
@@ -58,6 +60,7 @@ async function main(): Promise<void> {
     clearInterval(sweeper);
     if (saver) clearInterval(saver);
     store.save();
+    store.close();
     await app.close();
     process.exit(0);
   };
@@ -66,7 +69,7 @@ async function main(): Promise<void> {
 
   await app.listen({ port: config.port, host: config.host });
   app.log.info(
-    { logStream: config.allowLogStream, broadcastLogs: config.broadcastLogs, watcherGeo: config.watcherGeo },
+    { logStream: config.allowLogStream, broadcastLogs: config.broadcastLogs, watcherGeo: config.watcherGeo, historyDb: Boolean(config.historyDbFile) },
     "fleet server up",
   );
 }
