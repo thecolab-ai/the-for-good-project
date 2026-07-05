@@ -3,10 +3,11 @@
  *
  * Server-minted bearer tokens (`fgt_<32 hex>`) tied to a GitHub handle + a
  * trust tier, stored in Mongo `agents_registry` as a sha256 hex `tokenHash`
- * — NEVER the plaintext. A handle may be re-minted after revoke (the
- * registry has a unique {handle:1} index, so re-mint replaces the doc's
- * tokenHash and clears revokedAt). Lookup is by tokenHash; a doc with
- * `revokedAt` set never verifies.
+ * — NEVER the plaintext. One registry doc PER TOKEN: a handle may hold any
+ * number of live tokens (one per machine/runner), minted additively and
+ * revoked individually (by tokenId) or handle-wide. Only TOFU self-enrollment
+ * is exactly-once per handle (partial unique index over autoEnrolled docs).
+ * Lookup is by tokenHash; a doc with `revokedAt` set never verifies.
  *
  * Security notes:
  *  - Plaintext tokens exist only in the mint response — they are never
@@ -41,18 +42,27 @@ export interface AgentIdentity {
 /** Registry row as exposed to admins — never includes tokenHash. */
 export interface RegisteredAgent {
   handle: string;
+  /** Short non-secret id (hash prefix) for listing + targeted revocation. */
+  tokenId: string;
   tier: AgentTier;
   note?: string;
   createdAt: string;
   revokedAt?: string;
 }
 
-/** Mongo doc shape for `agents_registry` (internal — hash never leaves). */
+/** Mongo doc shape for `agents_registry` — ONE DOC PER TOKEN (a handle may
+ *  hold any number of independently-revocable tokens, e.g. one per machine;
+ *  internal — hash never leaves). */
 interface RegistryDoc {
   handle: string;
   tokenHash: string;
+  /** First 12 hex of tokenHash — non-secret listing/revocation id. */
+  tokenId: string;
   tier: AgentTier;
   note?: string;
+  /** Set on TOFU self-enrollment docs — the partial unique index on these
+   *  is what makes first-contact minting exactly-once per handle. */
+  autoEnrolled?: boolean;
   createdAt: Date;
   revokedAt?: Date | null; // written as $unset (missing); null allowed so the
   // `revokedAt: null` filter (matches missing OR null) typechecks.
@@ -125,40 +135,36 @@ export function bearerToken(req: FastifyRequest): string | undefined {
 }
 
 /**
- * Mint a token for a handle: generates `fgt_<random>`, upserts the registry
- * doc (replacing any prior token for the handle, clearing revokedAt), and
- * returns the PLAINTEXT token — shown once, never stored or logged.
+ * Mint a token for a handle: generates `fgt_<random>`, INSERTS a new registry
+ * doc — a handle may hold any number of live tokens (one per machine/runner),
+ * each independently revocable by its tokenId — and returns the PLAINTEXT
+ * token, shown once, never stored or logged.
  */
 export async function mintAgentToken(
   orch: Orchestrator,
   opts: { handle: string; tier: AgentTier; note?: string },
-): Promise<{ token: string }> {
+): Promise<{ token: string; tokenId: string }> {
   const handle = opts.handle.trim();
   if (!handle) throw new Error("handle required");
   if (!AGENT_TIERS.includes(opts.tier)) throw new Error(`invalid tier: ${String(opts.tier)}`);
 
   const token = TOKEN_PREFIX + randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
   const tokenHash = hashToken(token);
+  const tokenId = tokenHash.slice(0, 12);
 
-  await registry(orch).updateOne(
-    { handle },
-    {
-      $set: {
-        handle,
-        tokenHash,
-        tier: opts.tier,
-        createdAt: new Date(),
-        ...(opts.note !== undefined ? { note: opts.note } : {}),
-      },
-      $unset: { revokedAt: "", ...(opts.note === undefined ? { note: "" } : {}) },
-    },
-    { upsert: true },
-  );
+  await registry(orch).insertOne({
+    handle,
+    tokenHash,
+    tokenId,
+    tier: opts.tier,
+    createdAt: new Date(),
+    ...(opts.note !== undefined ? { note: opts.note } : {}),
+  });
 
-  // Any cached identity for this handle belongs to the replaced token.
+  // Cached identities for this handle may carry a stale tier — refresh.
   cachePurgeHandle(handle);
 
-  return { token };
+  return { token, tokenId };
 }
 
 /** TOFU auto-enrollment: mint a standard-tier token for a handle on FIRST
@@ -177,18 +183,27 @@ export async function enrollAgent(
   const handle = opts.handle.trim();
   if (!handle) throw new Error("handle required");
 
+  // ANY existing doc for the handle — live, revoked, operator-minted —
+  // refuses self-enrollment: an already-provisioned or revoked identity is
+  // an operator conversation, and a squatter must not TOFU a handle whose
+  // owner already holds operator-minted tokens. The check-then-insert race
+  // is closed by the partial unique index over autoEnrolled docs.
+  if ((await registry(orch).countDocuments({ handle }, { limit: 1 })) > 0) return null;
+
   const token = TOKEN_PREFIX + randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
   const tokenHash = hashToken(token);
   try {
     await registry(orch).insertOne({
       handle,
       tokenHash,
+      tokenId: tokenHash.slice(0, 12),
       tier: "standard",
+      autoEnrolled: true,
       createdAt: new Date(),
       note: opts.note ?? "auto-enrolled",
     });
   } catch (err) {
-    // Duplicate handle (E11000) = already enrolled/revoked — no re-issue.
+    // Duplicate auto-enroll (E11000 on the partial index) = a racer won.
     if (err instanceof Error && "code" in err && (err as { code?: number }).code === 11000) return null;
     throw err;
   }
@@ -196,12 +211,17 @@ export async function enrollAgent(
   return { token };
 }
 
-/** Revoke a handle's token (sets revokedAt). Returns false when the handle
- *  is unknown or already revoked. */
-export async function revokeAgentToken(orch: Orchestrator, handle: string): Promise<boolean> {
-  const result = await registry(orch).updateOne(
+/** Revoke tokens (sets revokedAt): all of a handle's live tokens, or — with
+ *  `tokenId` — exactly one of them (per-machine revocation). Returns false
+ *  when nothing live matched. */
+export async function revokeAgentToken(
+  orch: Orchestrator,
+  handle: string,
+  tokenId?: string,
+): Promise<boolean> {
+  const result = await registry(orch).updateMany(
     // `revokedAt: null` matches both "missing" and "explicit null".
-    { handle, revokedAt: null },
+    { handle, revokedAt: null, ...(tokenId ? { tokenId } : {}) },
     { $set: { revokedAt: new Date() } },
   );
   cachePurgeHandle(handle);
@@ -210,12 +230,15 @@ export async function revokeAgentToken(orch: Orchestrator, handle: string): Prom
 
 /** List registry entries for `GET /api/v1/admin/agents` — no hashes. */
 export async function listRegisteredAgents(orch: Orchestrator): Promise<RegisteredAgent[]> {
+  // tokenHash is fetched ONLY to derive tokenId for docs minted before the
+  // field existed — it is never returned.
   const docs = await registry(orch)
-    .find({}, { projection: { _id: 0, tokenHash: 0 } })
-    .sort({ handle: 1 })
+    .find({}, { projection: { _id: 0 } })
+    .sort({ handle: 1, createdAt: 1 })
     .toArray();
   return docs.map((doc) => ({
     handle: doc.handle,
+    tokenId: doc.tokenId ?? doc.tokenHash.slice(0, 12),
     tier: doc.tier,
     ...(doc.note !== undefined ? { note: doc.note } : {}),
     createdAt: new Date(doc.createdAt).toISOString(),

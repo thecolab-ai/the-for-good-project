@@ -83,7 +83,8 @@ export function registerDispatchRoutes(
     if (!minted) {
       return reply.code(409).send({
         ok: false,
-        error: "handle already enrolled — recover the stored token or ask the operator to reset it",
+        error:
+          "handle already enrolled — copy its stored ~/.forgood token to this machine, or ask the operator to mint an additional token",
       });
     }
     store.addEvent("agent_online", `@${parsed.data.handle} enrolled with the fleet server`, {

@@ -14,16 +14,18 @@
  *
  * Usage:
  *   node scripts/fleet-admin.mjs mint <handle> --tier <framer|trusted|standard> [--note "..."]
- *       Mint (or re-mint) an agent token. Prints JSON with the PLAINTEXT
- *       token exactly once — it is stored only as a sha256 hash. Re-minting
- *       an existing handle replaces its token and clears any revocation.
+ *       Mint an agent token. ADDITIVE: a handle may hold any number of live
+ *       tokens (one per machine/runner), each independently revocable by its
+ *       tokenId. Prints JSON with the PLAINTEXT token exactly once — it is
+ *       stored only as a sha256 hash.
  *
  *   node scripts/fleet-admin.mjs list
- *       List registered agents (handle, tier, note, createdAt, revokedAt).
- *       Never prints token hashes.
+ *       List registered tokens (handle, tokenId, tier, note, createdAt,
+ *       revokedAt — one row per token). Never prints token hashes.
  *
- *   node scripts/fleet-admin.mjs revoke <handle>
- *       Revoke a handle's token. Exit 2 if unknown or already revoked.
+ *   node scripts/fleet-admin.mjs revoke <handle> [--token <tokenId>]
+ *       Revoke ALL of a handle's live tokens, or just one (--token, see
+ *       `list`). Exit 2 if nothing live matched.
  *       NOTE: takes effect on a RUNNING server immediately when REDIS_URL is
  *       set (an auth:purge pub/sub message clears its verify cache); without
  *       Redis the running server's cache holds the old verdict for up to 30s
@@ -76,7 +78,7 @@ function usageDie(message) {
       "usage:",
       "  fleet-admin.mjs mint <handle> --tier <framer|trusted|standard> [--note <text>]",
       "  fleet-admin.mjs list",
-      "  fleet-admin.mjs revoke <handle>",
+      "  fleet-admin.mjs revoke <handle> [--token <tokenId>]",
       "  fleet-admin.mjs assignments [--active]",
       "  fleet-admin.mjs command (<handle> | --all) <pause|resume|stop|abort> [--reason <text>] [--by <who>]",
       "  fleet-admin.mjs command (<handle> | --all) --clear",
@@ -146,26 +148,23 @@ async function cmdMint(positionals, values) {
   if (!AGENT_TIERS.includes(tier)) usageDie(`--tier must be one of: ${AGENT_TIERS.join(", ")}`);
 
   // Mirrors mintAgentToken() in src/orchestrator/auth.ts — keep in sync.
+  // Additive: every mint INSERTS one more independently-revocable token for
+  // the handle (one per machine/runner).
   const token = TOKEN_PREFIX + randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
   const tokenHash = hashToken(token);
+  const tokenId = tokenHash.slice(0, 12);
   await withMongo(async (db) => {
-    await db.collection("agents_registry").updateOne(
-      { handle },
-      {
-        $set: {
-          handle,
-          tokenHash,
-          tier,
-          createdAt: new Date(),
-          ...(values.note !== undefined ? { note: values.note } : {}),
-        },
-        $unset: { revokedAt: "", ...(values.note === undefined ? { note: "" } : {}) },
-      },
-      { upsert: true },
-    );
+    await db.collection("agents_registry").insertOne({
+      handle,
+      tokenHash,
+      tokenId,
+      tier,
+      createdAt: new Date(),
+      ...(values.note !== undefined ? { note: values.note } : {}),
+    });
   });
   await publishAuthPurge(handle);
-  out({ ok: true, handle, tier, token, note: "token shown once — store it now" });
+  out({ ok: true, handle, tier, token, tokenId, note: "token shown once — store it now" });
 }
 
 async function cmdList() {
@@ -179,17 +178,26 @@ async function cmdList() {
   out({ ok: true, agents });
 }
 
-async function cmdRevoke(positionals) {
+async function cmdRevoke(positionals, values) {
   const handle = (positionals[0] ?? "").trim();
   if (!handle) usageDie("revoke requires <handle>");
+  const tokenId = values.token; // --token <tokenId> = revoke just that one
   const revoked = await withMongo(async (db) => {
     const result = await db
       .collection("agents_registry")
-      .updateOne({ handle, revokedAt: null }, { $set: { revokedAt: new Date() } });
+      .updateMany(
+        { handle, revokedAt: null, ...(tokenId ? { tokenId } : {}) },
+        { $set: { revokedAt: new Date() } },
+      );
     return result.matchedCount > 0;
   });
   if (revoked) await publishAuthPurge(handle);
-  out({ ok: revoked, handle, ...(revoked ? {} : { error: "unknown handle or already revoked" }) });
+  out({
+    ok: revoked,
+    handle,
+    ...(tokenId ? { tokenId } : {}),
+    ...(revoked ? {} : { error: "no live token matched that handle/tokenId" }),
+  });
   if (!revoked) process.exit(2);
 }
 
@@ -262,6 +270,7 @@ async function main() {
     options: {
       tier: { type: "string" },
       note: { type: "string" },
+      token: { type: "string" },
       reason: { type: "string" },
       by: { type: "string" },
       active: { type: "boolean" },
@@ -276,7 +285,7 @@ async function main() {
     case "list":
       return cmdList();
     case "revoke":
-      return cmdRevoke(positionals);
+      return cmdRevoke(positionals, values);
     case "assignments":
       return cmdAssignments(values);
     case "command":
