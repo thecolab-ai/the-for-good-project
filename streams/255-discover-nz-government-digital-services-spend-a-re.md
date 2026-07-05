@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: civic-transparency
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-255-digital-spend.jpg
 ---
 
 # Government digital spending: no one can say how much, on what, or what worked

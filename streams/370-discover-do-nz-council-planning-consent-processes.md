@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-370-flood-risk-labels.jpg
 ---
 
 # Flood-proofing your home rarely moves the official risk label — and nobody rewards you for it

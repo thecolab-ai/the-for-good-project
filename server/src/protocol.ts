@@ -55,6 +55,8 @@ export const heartbeatSchema = z.object({
   tokensIn: count.optional(),
   tokensOut: count.optional(),
   toolCalls: count.optional(),
+  /** Milliseconds covered by this heartbeat's token delta. Used for real TPS. */
+  elapsedMs: z.number().int().min(1).max(86_400_000).optional(),
   /** Per-tool call counts, e.g. { bash: 3, edit: 1, webfetch: 2 }. */
   tools: countMap.optional(),
   fetchesOk: count.optional(),
@@ -141,6 +143,9 @@ export interface AgentPresence {
   session: SessionCounters;
   /** Current tokens/sec for this agent over the sliding window. */
   tps: number;
+  /** Last non-zero token burst observed for this agent, retained for idle display. */
+  lastTps: number;
+  lastTpsAt: string | null;
 }
 
 export interface RoughLocation {
@@ -159,6 +164,9 @@ export interface WatcherSummary {
 export interface FleetMetrics {
   /** Fleet-wide tokens/sec over the sliding window. */
   tps: number;
+  /** Last non-zero fleet throughput burst, retained so idle dashboards don't look dead. */
+  lastTps: number;
+  lastTpsAt: string | null;
   tpsByModel: Record<string, number>;
   tpsByHarness: Record<string, number>;
   activeAgents: number;
@@ -185,6 +193,11 @@ export interface EventItem {
   handle?: string;
   harness?: string;
   ref?: string;
+}
+
+export interface LogLine {
+  at: string;
+  line: string;
 }
 
 export interface FleetSnapshot {

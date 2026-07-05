@@ -35,8 +35,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
+parse_agent_args "$@"
+export AGENT MODEL
 
 REVIEW_PER_WORK="${REVIEW_PER_WORK:-2}"   # review passes per work pass — bias to review; it's the bottleneck
+FRAME_PER_WORK="${FRAME_PER_WORK:-1}"       # framing/discover rework passes per cycle; frame_work owns discover roots
 POLL_SECONDS="${POLL_SECONDS:-120}"       # idle wait between cycles when the whole queue is empty
 MAX_CYCLES="${MAX_CYCLES:-0}"             # 0 = run forever
 PULL="${PULL:-1}"                         # git-pull latest main each cycle (0 to disable)
@@ -55,25 +58,134 @@ if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
   warn "To balance the queue, set REVIEW_GITHUB_TOKEN to a DISTINCT GitHub identity with write access."
 fi
 
+# Optional fleet telemetry (#398). This is deliberately best-effort: GitHub is
+# the source of truth and workers must keep running if mission control is down.
+FLEET_SERVER="${FLEET_SERVER:-}"
+FLEET_HANDLE="${FLEET_HANDLE:-${HANDLE:-$(gh api user --jq .login 2>/dev/null || git config user.name 2>/dev/null || echo unknown)}}"
+FLEET_MODEL="${FLEET_MODEL:-${MODEL:-$AGENT}}"
+FLEET_AGENT_ID_FILE="${FLEET_AGENT_ID_FILE:-${TMPDIR:-/tmp}/fg-autopilot-agent-id-${FLEET_HANDLE}-${AGENT}}"
+export FLEET_SERVER FLEET_HANDLE FLEET_MODEL FLEET_AGENT_ID_FILE
+
+fleet_enabled() { [ -n "$FLEET_SERVER" ]; }
+
+fleet_json() {  # kind ref title tokens_in tokens_out tool_calls tasks_completed prs_opened reviews_completed errors
+  python3 - "$@" <<'PY'
+import json, os, sys
+kind, ref, title, ti, to, tools, tasks, prs, reviews, errors = sys.argv[1:]
+agent_id = ''
+try:
+    with open(os.environ['FLEET_AGENT_ID_FILE']) as f:
+        agent_id = f.read().strip()
+except Exception:
+    pass
+body = {
+    'handle': os.environ.get('FLEET_HANDLE', 'unknown'),
+    'harness': os.environ.get('AGENT', 'unknown'),
+    'model': os.environ.get('FLEET_MODEL') or os.environ.get('MODEL') or os.environ.get('AGENT', 'unknown'),
+    'version': 'autopilot.sh',
+    'task': {'kind': kind or 'idle'},
+    'heartbeat': {
+        'toolCalls': int(tools or 0),
+        'tasksCompleted': int(tasks or 0),
+        'prsOpened': int(prs or 0),
+        'reviewsCompleted': int(reviews or 0),
+        'errors': int(errors or 0),
+    }
+}
+if agent_id:
+    body['agentId'] = agent_id
+if ref:
+    body['task']['ref'] = ref[:32]
+if title:
+    body['task']['title'] = title[:300]
+if int(ti or 0):
+    body['heartbeat']['tokensIn'] = int(ti)
+if int(to or 0):
+    body['heartbeat']['tokensOut'] = int(to)
+print(json.dumps(body, separators=(',', ':')))
+PY
+}
+
+fleet_send() {  # kind ref title token_in token_out tool_calls tasks prs reviews errors
+  fleet_enabled || return 0
+  local resp id
+  resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  id="$(printf '%s' "$resp" | sed -n 's/.*"agentId":"\([^"]*\)".*/\1/p')"
+  [ -n "$id" ] && printf '%s' "$id" > "$FLEET_AGENT_ID_FILE"
+}
+
+fleet_logs() {  # file
+  fleet_enabled || return 0
+  [ "${STREAM_LOGS:-0}" = 1 ] || return 0
+  [ -s "$1" ] || return 0
+  local agent_id payload
+  agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+  [ -n "$agent_id" ] || return 0
+  payload="$(python3 - "$agent_id" "$1" <<'PY'
+import json, re, sys
+agent_id, path = sys.argv[1:]
+patterns = [
+    re.compile(r'(?i)(token|secret|password|api[_-]?key|authorization)(\s*[:=]\s*)\S+'),
+    re.compile(r'gh[pousr]_[A-Za-z0-9_]{20,}'),
+    re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
+    re.compile(r'https?://[^\s/:]+:[^\s@]+@'),
+]
+with open(path, errors='replace') as f:
+    raw = f.read().splitlines()[-40:]
+lines=[]
+for line in raw:
+    # strip ANSI, cap line size; server redacts again.
+    line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+    for p in patterns:
+        line = p.sub(lambda m: (m.group(1)+m.group(2)+'[REDACTED]') if len(m.groups()) >= 2 else '[REDACTED]', line)
+    if line.strip():
+        lines.append(line[:2000])
+print(json.dumps({'agentId': agent_id, 'lines': lines[-40:]}, separators=(',', ':')))
+PY
+)"
+  curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/logs" -H 'content-type: application/json' -d "$payload" >/dev/null 2>&1 || true
+}
+
 # Run ONE runner pass and report whether it actually DID something. The runners
 # exit 0 whether they processed an item OR found an empty queue, so we can't use
 # the exit code alone — instead detect the empty-queue sentinel line each runner
 # prints (review_work.sh: "No open PRs needing review."; start_work.sh: "Queue
 # empty — no rework…"). Returns 0 = did work, 1 = idle (or errored).
-run_pass() {  # $@ = command to run
-  local out rc; out="$(mktemp)"
+run_pass() {  # $1 = task kind, rest = command to run
+  local kind="$1" out rc title did=0 errs=0 reviews=0 tasks=0; shift
+  title="autopilot ${kind} pass"
+  fleet_send "$kind" "" "$title" 0 0 1 0 0 0 0
+  out="$(mktemp)"
   set +e; "$@" 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}; set -e
-  if grep -qE "No open PRs needing review\.|Queue empty — no rework" "$out"; then
+  fleet_logs "$out"
+  if was_usage_limited "$out" || grep -qE "API rate limit|rate limit already exceeded|usage limit" "$out"; then
+    fleet_send "$kind" "" "${kind} pass hit API/rate limit" 0 0 0 0 0 0 1
     rm -f "$out"; return 1
   fi
+  if grep -qE "No open PRs needing review\.|Queue empty|nothing available" "$out"; then
+    fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
+  if [ "$kind" = review ] && grep -qE "already (passed adversarial review|reviewed at this revision)|waiting on the author's rework|parked for a human maintainer" "$out"; then
+    fleet_send "idle" "" "review skipped: already reviewed" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
+  if [ "$rc" -eq 0 ]; then did=1; else errs=1; fi
+  case "$kind" in
+    review) reviews="$did" ;;
+    work) tasks="$did"; grep -qE 'https://github.com/.*/pull/[0-9]+|Work submitted in #[0-9]+' "$out" && prs=1 || prs=0 ;;
+    *) tasks="$did" ;;
+  esac
+  fleet_send "$kind" "" "${kind} pass complete" 0 0 1 "$tasks" "${prs:-0}" "$reviews" "$errs"
   rm -f "$out"
   [ "$rc" -eq 0 ]
 }
 
 cycle=0
+review_disabled_reported=0
 while :; do
   cycle=$((cycle + 1))
-  rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → work×1)"
+  rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → frame×${FRAME_PER_WORK} → work×1)"
 
   # Pull latest main each cycle so operators automatically pick up script and
   # pipeline improvements without a manual git pull. git swaps files by atomic
@@ -103,13 +215,26 @@ while :; do
   if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then
     for _ in $(seq 1 "$REVIEW_PER_WORK"); do
       info "review pass…"
-      run_pass env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
+      run_pass review env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
+    done
+  elif [ "$review_disabled_reported" = 0 ]; then
+    fleet_send "idle" "" "review disabled: REVIEW_GITHUB_TOKEN missing" 0 0 0 0 0 0 0
+    review_disabled_reported=1
+  fi
+
+  # Framing side: discover roots and sent-back discover/framing PRs are not
+  # claimable by start_work.sh (ADR-0014). Without this pass autopilot can look
+  # idle while discover rework such as PRs marked "Part of #<root>" is waiting.
+  if [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
+    for _ in $(seq 1 "$FRAME_PER_WORK"); do
+      info "frame pass…"
+      run_pass frame env MAX=1 POLL_SECONDS=0 ./frame_work.sh "$@" && did_something=1
     done
   fi
 
   # Work side (your normal identity).
   info "work pass…"
-  run_pass env MAX=1 POLL_SECONDS=0 ./start_work.sh "$@" && did_something=1
+  run_pass work env MAX=1 POLL_SECONDS=0 ./start_work.sh "$@" && did_something=1
 
   if [ "$MAX_CYCLES" != 0 ] && [ "$cycle" -ge "$MAX_CYCLES" ]; then
     ok "Reached MAX_CYCLES=$MAX_CYCLES — stopping."; break
