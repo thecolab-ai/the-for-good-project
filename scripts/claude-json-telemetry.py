@@ -14,6 +14,7 @@ scripts/fg-common.sh whenever FLEET_SERVER is set.
 """
 from __future__ import annotations
 
+import glob
 import json
 import os
 import sys
@@ -50,11 +51,66 @@ USER_AGENT = "forgood-fleet-telemetry/1.0 (+https://github.com/thecolab-ai/the-f
 _last_event_mono = time.monotonic()
 
 # The stream's per-message usage.output_tokens is a message-START stub (often
-# literally 1) — only the final `result` event carries the real output total.
-# So per message we ESTIMATE output from the content we just printed (live
-# TPS), keep a ledger of what we've posted, and settle the exact remainder
-# when `result` arrives. Input-side numbers on assistant events are real.
+# literally 1) — but the session TRANSCRIPT on disk records the real, final
+# usage per API call (including thinking tokens). So per assistant event we
+# look the message id up in the transcript for exact amounts, falling back to
+# a content-size estimate only when the transcript write hasn't landed yet,
+# and settle any remainder against the `result` event's usage via a ledger.
 _est_out_posted = 0
+_posted_ids: set[str] = set()
+_usage_by_id: dict[str, dict[str, Any]] = {}
+_transcript_path: str | None = None
+_transcript_offset = 0
+_session_id = ""
+
+
+def _find_transcript() -> str | None:
+    """Claude Code writes ~/.claude/projects/<munged-cwd>/<session_id>.jsonl —
+    the session id is globally unique, so glob for it instead of reproducing
+    the cwd-munging rules."""
+    global _transcript_path
+    if _transcript_path or not _session_id:
+        return _transcript_path
+    home = env("CLAUDE_CONFIG_DIR") or str(Path.home() / ".claude")
+    hits = glob.glob(f"{home}/projects/*/{_session_id}.jsonl")
+    if hits:
+        _transcript_path = hits[0]
+    return _transcript_path
+
+
+def _lookup_usage(message_id: str) -> dict[str, Any] | None:
+    """Incrementally read new transcript lines and index real usage by
+    message id (a message's several content-block entries repeat the same
+    final usage — the dedupe is the point)."""
+    global _transcript_offset
+    if not message_id:
+        return None
+    path = _find_transcript()
+    if not path:
+        return None
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            f.seek(_transcript_offset)
+            chunk = f.read()
+            end = f.tell()
+    except OSError:
+        return _usage_by_id.get(message_id)
+    nl = chunk.rfind("\n")
+    if nl >= 0:
+        _transcript_offset = end - (len(chunk) - nl - 1)
+        for line in chunk[: nl + 1].splitlines():
+            if '"assistant"' not in line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            msg = entry.get("message")
+            if entry.get("type") == "assistant" and isinstance(msg, dict):
+                mid, usage = msg.get("id"), msg.get("usage")
+                if mid and isinstance(usage, dict):
+                    _usage_by_id[str(mid)] = usage
+    return _usage_by_id.get(message_id)
 
 
 def estimate_output_tokens(message: dict[str, Any]) -> int:
@@ -176,15 +232,29 @@ def handle_assistant(message: dict[str, Any], elapsed_ms: int) -> None:
             print(line, flush=True)
             lines.append(line)
             post_telemetry({"toolCalls": 1, "tools": {name: 1}})
-    usage = message.get("usage")
+    global _est_out_posted
+    message_id = str(message.get("id") or "")
+    if message_id and message_id in _posted_ids:
+        # A message's tool_use and text blocks can arrive as separate stream
+        # events with the same id — its tokens are only counted once.
+        post_logs(lines)
+        return
+    real = _lookup_usage(message_id)
+    usage = real if isinstance(real, dict) else message.get("usage")
     if isinstance(usage, dict):
-        global _est_out_posted
         # Cache reads excluded — fresh input + cache writes + output only,
         # matching the claude-code hook client and the dashboard's meaning of
         # "intelligence at work".
         tokens_in = int(usage.get("input_tokens") or 0) + int(usage.get("cache_creation_input_tokens") or 0)
-        tokens_out = estimate_output_tokens(message)
+        if isinstance(real, dict):
+            tokens_out = int(real.get("output_tokens") or 0)
+        else:
+            # Transcript write hasn't landed yet — estimate from content; the
+            # result-event settle trues it up.
+            tokens_out = estimate_output_tokens(message)
         _est_out_posted += tokens_out
+        if message_id:
+            _posted_ids.add(message_id)
         post_tokens(tokens_in, tokens_out, elapsed_ms)
     post_logs(lines)
 
@@ -205,9 +275,11 @@ def main() -> int:
         _last_event_mono = now
         typ = event.get("type")
         if typ == "system" and event.get("subtype") == "init":
+            global _session_id
             if event.get("model"):
                 MODEL = str(event["model"])
-            print(f"[claude session] model={MODEL} session={event.get('session_id', '')[:8]}", flush=True)
+            _session_id = str(event.get("session_id") or "")
+            print(f"[claude session] model={MODEL} session={_session_id[:8]}", flush=True)
         elif typ == "assistant" and isinstance(event.get("message"), dict):
             handle_assistant(event["message"], elapsed_ms)
         elif typ == "result":
@@ -220,7 +292,10 @@ def main() -> int:
                     actual_out = int(usage.get("output_tokens") or 0)
                 settle = actual_out - _est_out_posted
                 if settle > 0:
-                    post_tokens(0, settle, elapsed_ms)
+                    # The result event lands milliseconds after the last
+                    # assistant event — floor the window so a residual settle
+                    # can't register as a silly thousands-tok/s burst.
+                    post_tokens(0, settle, max(elapsed_ms, 3000))
             cost = event.get("total_cost_usd")
             print(
                 f"[claude result] {event.get('subtype', '')} turns={event.get('num_turns', '?')}"
