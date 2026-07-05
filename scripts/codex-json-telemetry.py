@@ -12,6 +12,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+import time
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,9 @@ TASK_KIND = env("FLEET_TASK_KIND") or "work"
 TASK_REF = env("TASK_REF")
 TASK_TITLE = env("TASK_TITLE") or "codex turn"
 STREAM_LOGS = env("STREAM_LOGS") == "1"
+START_MONO = time.monotonic()
+last_usage_total = 0
+last_usage_mono = START_MONO
 
 
 def read_agent_id() -> str:
@@ -149,14 +153,31 @@ def main() -> int:
         if typ == "item.completed" and isinstance(event.get("item"), dict):
             post_logs(print_item(event["item"]))
         elif typ == "turn.completed" and isinstance(event.get("usage"), dict):
+            global last_usage_total, last_usage_mono
             usage = event["usage"]
-            post_telemetry({"tokensIn": int(usage.get("input_tokens") or 0), "tokensOut": int(usage.get("output_tokens") or 0)})
             ti = int(usage.get("input_tokens") or 0)
             to = int(usage.get("output_tokens") or 0)
             cached = int(usage.get("cached_input_tokens") or 0)
             reasoning = int(usage.get("reasoning_output_tokens") or 0)
+            total = ti + to
+            now = time.monotonic()
+            elapsed_ms = max(1, int((now - last_usage_mono) * 1000))
+            delta_total = max(0, total - last_usage_total)
+            if delta_total > 0:
+                # Codex reports cumulative turn/session usage. Send only the
+                # new token delta and the elapsed wall time since the previous
+                # usage sample, otherwise the fleet dashboard treats the whole
+                # run as a one-minute burst and prints silly TPS.
+                if total > 0:
+                    delta_in = max(0, round(delta_total * (ti / total)))
+                else:
+                    delta_in = 0
+                delta_out = max(0, delta_total - delta_in)
+                post_telemetry({"tokensIn": delta_in, "tokensOut": delta_out, "elapsedMs": elapsed_ms})
+            last_usage_total = max(last_usage_total, total)
+            last_usage_mono = now
             print(
-                f"[codex usage] input={ti} cached={cached} output={to} reasoning={reasoning}",
+                f"[codex usage] total_input={ti} cached={cached} total_output={to} reasoning={reasoning} delta={delta_total} elapsed_ms={elapsed_ms}",
                 flush=True,
             )
         elif typ == "error":

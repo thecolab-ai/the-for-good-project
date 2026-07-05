@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import type { SessionCounters, TaskInfo } from "./protocol.js";
+import type { Heartbeat, SessionCounters, TaskInfo } from "./protocol.js";
 
 export interface TokenSample {
   agentId: string;
@@ -7,7 +7,7 @@ export interface TokenSample {
   harness: string;
   model: string;
   task: TaskInfo | null;
-  heartbeat: Partial<SessionCounters>;
+  heartbeat: Partial<Omit<Heartbeat, "type">>;
 }
 
 export interface TpsBucket {
@@ -21,6 +21,7 @@ export interface TpsBucket {
   reviewsCompleted: number;
   byHarness: Record<string, number>;
   byModel: Record<string, number>;
+  elapsedMs?: number;
 }
 
 export interface HistoryTotals {
@@ -58,6 +59,7 @@ export class HistoryStore {
         task_title TEXT,
         tokens_in INTEGER NOT NULL DEFAULT 0,
         tokens_out INTEGER NOT NULL DEFAULT 0,
+        elapsed_ms INTEGER NOT NULL DEFAULT 0,
         tool_calls INTEGER NOT NULL DEFAULT 0,
         tasks_completed INTEGER NOT NULL DEFAULT 0,
         prs_opened INTEGER NOT NULL DEFAULT 0,
@@ -78,12 +80,18 @@ export class HistoryStore {
       CREATE INDEX IF NOT EXISTS idx_token_samples_agent_at ON token_samples(agent_id, at_ms);
       CREATE INDEX IF NOT EXISTS idx_token_samples_harness_at ON token_samples(harness, at_ms);
     `);
+    try {
+      this.db.exec("ALTER TABLE token_samples ADD COLUMN elapsed_ms INTEGER NOT NULL DEFAULT 0");
+    } catch {
+      // Existing DBs already have the column.
+    }
   }
 
   record(sample: TokenSample): void {
     const hb = sample.heartbeat;
     const tokensIn = num(hb.tokensIn);
     const tokensOut = num(hb.tokensOut);
+    const elapsedMs = Math.max(0, num(hb.elapsedMs));
     const toolCalls = num(hb.toolCalls);
     const tasksCompleted = num(hb.tasksCompleted);
     const prsOpened = num(hb.prsOpened);
@@ -96,8 +104,8 @@ export class HistoryStore {
       .prepare(`
         INSERT INTO token_samples (
           at_ms, at_iso, agent_id, handle, harness, model, task_kind, task_ref, task_title,
-          tokens_in, tokens_out, tool_calls, tasks_completed, prs_opened, reviews_completed, errors
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          tokens_in, tokens_out, elapsed_ms, tool_calls, tasks_completed, prs_opened, reviews_completed, errors
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         at,
@@ -111,6 +119,7 @@ export class HistoryStore {
         sample.task?.title ?? null,
         tokensIn,
         tokensOut,
+        elapsedMs,
         toolCalls,
         tasksCompleted,
         prsOpened,
@@ -200,6 +209,7 @@ export class HistoryStore {
           model,
           SUM(tokens_in) AS tokens_in,
           SUM(tokens_out) AS tokens_out,
+          SUM(elapsed_ms) AS elapsed_ms,
           SUM(tool_calls) AS tool_calls,
           SUM(tasks_completed) AS tasks_completed,
           SUM(prs_opened) AS prs_opened,
@@ -217,6 +227,7 @@ export class HistoryStore {
       const tokensIn = Number(row.tokens_in ?? 0);
       const tokensOut = Number(row.tokens_out ?? 0);
       const tokens = tokensIn + tokensOut;
+      const elapsedMs = Number(row.elapsed_ms ?? 0);
       const existing = buckets.get(bucketMs) ?? {
         at: new Date(bucketMs).toISOString(),
         tps: 0,
@@ -228,7 +239,9 @@ export class HistoryStore {
         reviewsCompleted: 0,
         byHarness: {},
         byModel: {},
+        elapsedMs: 0,
       };
+      existing.elapsedMs = (existing.elapsedMs ?? 0) + elapsedMs;
       existing.tokensIn += tokensIn;
       existing.tokensOut += tokensOut;
       existing.toolCalls += Number(row.tool_calls ?? 0);
@@ -242,12 +255,15 @@ export class HistoryStore {
       buckets.set(bucketMs, existing);
     }
 
-    return [...buckets.entries()].map(([, bucket]) => ({
-      ...bucket,
-      tps: Math.round(((bucket.tokensIn + bucket.tokensOut) / boundedBucket) * 10) / 10,
-      byHarness: Object.fromEntries(Object.entries(bucket.byHarness).map(([k, v]) => [k, Math.round((v / boundedBucket) * 10) / 10])),
-      byModel: Object.fromEntries(Object.entries(bucket.byModel).map(([k, v]) => [k, Math.round((v / boundedBucket) * 10) / 10])),
-    }));
+    return [...buckets.entries()].map(([, bucket]) => {
+      const denominatorSeconds = bucket.elapsedMs && bucket.elapsedMs > 0 ? bucket.elapsedMs / 1000 : boundedBucket;
+      return {
+        ...bucket,
+        tps: Math.round(((bucket.tokensIn + bucket.tokensOut) / denominatorSeconds) * 10) / 10,
+        byHarness: Object.fromEntries(Object.entries(bucket.byHarness).map(([k, v]) => [k, Math.round((v / denominatorSeconds) * 10) / 10])),
+        byModel: Object.fromEntries(Object.entries(bucket.byModel).map(([k, v]) => [k, Math.round((v / denominatorSeconds) * 10) / 10])),
+      };
+    });
   }
 
   close(): void {

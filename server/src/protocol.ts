@@ -55,6 +55,8 @@ export const heartbeatSchema = z.object({
   tokensIn: count.optional(),
   tokensOut: count.optional(),
   toolCalls: count.optional(),
+  /** Milliseconds covered by this heartbeat's token delta. Used for real TPS. */
+  elapsedMs: z.number().int().min(1).max(86_400_000).optional(),
   /** Per-tool call counts, e.g. { bash: 3, edit: 1, webfetch: 2 }. */
   tools: countMap.optional(),
   fetchesOk: count.optional(),

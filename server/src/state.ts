@@ -51,7 +51,7 @@ function emptyCounters(): SessionCounters {
 /** Stored agent record = broadcast presence + a rolling token trail used to
  *  compute the agent's own tokens/sec, + the expiry deadline. */
 interface AgentRecord extends Omit<AgentPresence, "tps"> {
-  recent: Array<{ t: number; tokens: number }>;
+  recent: Array<{ t: number; tokens: number; elapsedMs: number }>;
   expiresAt: number;
 }
 
@@ -64,8 +64,9 @@ interface WatcherRecord {
 
 interface TpsBucket {
   total: number;
-  byModel: Record<string, number>;
-  byHarness: Record<string, number>;
+  elapsedMs: number;
+  byModel: Record<string, { tokens: number; elapsedMs: number }>;
+  byHarness: Record<string, { tokens: number; elapsedMs: number }>;
 }
 
 interface PersistedState {
@@ -75,18 +76,27 @@ interface PersistedState {
   lastTpsAt?: string | null;
 }
 
+function sampleTps(tokens: number, elapsedMs: number): number {
+  if (tokens <= 0 || elapsedMs <= 0) return 0;
+  return Math.round((tokens / (elapsedMs / 1000)) * 10) / 10;
+}
+
+function aggregateTps(tokens: number, elapsedMs: number): number {
+  return sampleTps(tokens, elapsedMs);
+}
+
 function agentTps(rec: AgentRecord, now: number): number {
   const windowMs = config.tpsWindowSeconds * 1000;
-  const tokens = rec.recent.reduce((s, p) => (now - p.t <= windowMs ? s + p.tokens : s), 0);
-  return Math.round((tokens / config.tpsWindowSeconds) * 10) / 10;
+  const recent = rec.recent.filter((p) => now - p.t <= windowMs);
+  const tokens = recent.reduce((s, p) => s + p.tokens, 0);
+  const elapsedMs = recent.reduce((s, p) => s + p.elapsedMs, 0);
+  return aggregateTps(tokens, elapsedMs);
 }
 
 function toPresence(rec: AgentRecord, now: number): AgentPresence {
   const { recent: _recent, expiresAt: _expiresAt, ...presence } = rec;
   return { ...presence, tps: agentTps(rec, now) };
 }
-
-const rate = (n: number) => Math.round((n / config.tpsWindowSeconds) * 10) / 10;
 
 /** Emits "message" with a ServerMessage whenever watchers should hear about a
  *  change — the watch hub subscribes and fans out to its sockets. */
@@ -183,9 +193,10 @@ export class FleetStore extends EventEmitter {
     for (const [skill, n] of Object.entries(hb.skills ?? {})) s.skills[skill] = (s.skills[skill] ?? 0) + n;
 
     const tokens = (hb.tokensIn ?? 0) + (hb.tokensOut ?? 0);
+    const elapsedMs = Math.max(1, hb.elapsedMs ?? config.tpsWindowSeconds * 1000);
     const windowMs = config.tpsWindowSeconds * 1000;
     rec.recent = rec.recent.filter((p) => now - p.t <= windowMs);
-    if (tokens > 0) rec.recent.push({ t: now, tokens });
+    if (tokens > 0) rec.recent.push({ t: now, tokens, elapsedMs });
 
     if (hb.task) {
       const changed = hb.task.ref !== rec.task?.ref || hb.task.kind !== rec.task?.kind;
@@ -280,7 +291,8 @@ export class FleetStore extends EventEmitter {
   private recordThroughput(rec: AgentRecord, hb: Omit<Heartbeat, "type">, tokens: number): void {
     if (tokens > 0) {
       const nowIso = new Date().toISOString();
-      const burstTps = rate(tokens);
+      const elapsedMs = Math.max(1, hb.elapsedMs ?? config.tpsWindowSeconds * 1000);
+      const burstTps = sampleTps(tokens, elapsedMs);
       rec.lastTps = burstTps;
       rec.lastTpsAt = nowIso;
       this.lastTps = burstTps;
@@ -288,12 +300,19 @@ export class FleetStore extends EventEmitter {
       const bucketId = Math.floor(Date.now() / 1000 / config.tpsBucketSeconds);
       let bucket = this.tpsBuckets.get(bucketId);
       if (!bucket) {
-        bucket = { total: 0, byModel: {}, byHarness: {} };
+        bucket = { total: 0, elapsedMs: 0, byModel: {}, byHarness: {} };
         this.tpsBuckets.set(bucketId, bucket);
       }
       bucket.total += tokens;
-      bucket.byModel[rec.model] = (bucket.byModel[rec.model] ?? 0) + tokens;
-      bucket.byHarness[rec.harness] = (bucket.byHarness[rec.harness] ?? 0) + tokens;
+      bucket.elapsedMs += elapsedMs;
+      const model = bucket.byModel[rec.model] ?? { tokens: 0, elapsedMs: 0 };
+      model.tokens += tokens;
+      model.elapsedMs += elapsedMs;
+      bucket.byModel[rec.model] = model;
+      const harness = bucket.byHarness[rec.harness] ?? { tokens: 0, elapsedMs: 0 };
+      harness.tokens += tokens;
+      harness.elapsedMs += elapsedMs;
+      bucket.byHarness[rec.harness] = harness;
     }
     const t = this.totals;
     t.tokensIn += hb.tokensIn ?? 0;
@@ -315,25 +334,37 @@ export class FleetStore extends EventEmitter {
     const currentBucket = Math.floor(Date.now() / 1000 / config.tpsBucketSeconds);
     const bucketCount = Math.ceil(config.tpsWindowSeconds / config.tpsBucketSeconds);
     let total = 0;
-    const byModel: Record<string, number> = {};
-    const byHarness: Record<string, number> = {};
+    let elapsedMs = 0;
+    const byModel: Record<string, { tokens: number; elapsedMs: number }> = {};
+    const byHarness: Record<string, { tokens: number; elapsedMs: number }> = {};
     for (let i = 0; i < bucketCount; i++) {
       const bucket = this.tpsBuckets.get(currentBucket - i);
       if (!bucket) continue;
       total += bucket.total;
-      for (const [k, v] of Object.entries(bucket.byModel)) byModel[k] = (byModel[k] ?? 0) + v;
-      for (const [k, v] of Object.entries(bucket.byHarness)) byHarness[k] = (byHarness[k] ?? 0) + v;
+      elapsedMs += bucket.elapsedMs;
+      for (const [k, v] of Object.entries(bucket.byModel)) {
+        const acc = byModel[k] ?? { tokens: 0, elapsedMs: 0 };
+        acc.tokens += v.tokens;
+        acc.elapsedMs += v.elapsedMs;
+        byModel[k] = acc;
+      }
+      for (const [k, v] of Object.entries(bucket.byHarness)) {
+        const acc = byHarness[k] ?? { tokens: 0, elapsedMs: 0 };
+        acc.tokens += v.tokens;
+        acc.elapsedMs += v.elapsedMs;
+        byHarness[k] = acc;
+      }
     }
     // Prune buckets that have slid out of every window.
     for (const id of this.tpsBuckets.keys()) {
       if (id < currentBucket - bucketCount * 2) this.tpsBuckets.delete(id);
     }
     return {
-      tps: rate(total),
+      tps: aggregateTps(total, elapsedMs),
       lastTps: this.lastTps,
       lastTpsAt: this.lastTpsAt,
-      tpsByModel: Object.fromEntries(Object.entries(byModel).map(([k, v]) => [k, rate(v)])),
-      tpsByHarness: Object.fromEntries(Object.entries(byHarness).map(([k, v]) => [k, rate(v)])),
+      tpsByModel: Object.fromEntries(Object.entries(byModel).map(([k, v]) => [k, aggregateTps(v.tokens, v.elapsedMs)])),
+      tpsByHarness: Object.fromEntries(Object.entries(byHarness).map(([k, v]) => [k, aggregateTps(v.tokens, v.elapsedMs)])),
       activeAgents: this.agents.size,
       watcherCount: this.watchers.size,
       totals: this.totals,
