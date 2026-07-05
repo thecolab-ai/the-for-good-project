@@ -638,6 +638,20 @@ main() {
   fi
   info "frame_work.sh · repo=$REPO · agent=$AGENT${MODEL:+ · model=$MODEL}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
+  # One-shot: let an operator target a stuck discover root/framing rework
+  # directly, e.g. ISSUE=441 PR=469 ./frame_work.sh codex. Normal autopilot
+  # still uses the queue below.
+  if [ -n "${ISSUE:-}" ]; then
+    local forced_pr="${PR:-}"
+    if [ -z "$forced_pr" ]; then forced_pr="$(pr_for_issue "$ISSUE" || true)"; fi
+    if [ -n "$forced_pr" ] && pr_is_framing "$forced_pr"; then
+      reframe_one "$ISSUE" "$forced_pr" || true
+    else
+      frame_one "$ISSUE" || true
+    fi
+    rule; ok "Reached targeted ISSUE=$ISSUE. Stopping."
+    return
+  fi
   while :; do
     reconcile_framing_rework   # pull in sent-back framings the hand-off missed
     # Rework FIRST: a sent-back framing blocks its whole stream's credibility,
