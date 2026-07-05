@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Bot, GitPullRequest, Globe, MessageSquare, Radio, Wifi, WifiOff, Wrench } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Bot, GitPullRequest, Globe, MessageSquare, Pause, Play, Radio, Wifi, WifiOff, Wrench } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -44,26 +44,78 @@ function ConnectionDot({ status }: { status: LiveStatus }) {
 
 function WorkerStream({ agent, lines, onClose }: { agent: AgentPresence; lines: LogLine[]; onClose: () => void }) {
   const s = agent.session;
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const [followTail, setFollowTail] = useState(true);
+
+  useEffect(() => {
+    if (!followTail) return;
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [followTail, lines]);
+
+  const jumpToBottom = () => {
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    setFollowTail(true);
+  };
+
   return (
-    <Card className="mt-4 border-primary/30">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
-        <div>
-          <CardTitle className="text-base">@{agent.handle} live stream</CardTitle>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {agent.model} · {compactNumber(s.toolCalls)} tools · {compactNumber(s.tokensIn + s.tokensOut)} tokens · updated {relativeTime(agent.lastSeen)}
+    <Card className="mt-4 max-w-full overflow-hidden border-primary/30" id="worker-live-stream">
+      <CardHeader className="sticky top-2 z-10 flex flex-col gap-3 border-b bg-card/95 pb-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <CardTitle className="truncate text-base">@{agent.handle} live stream</CardTitle>
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span className="max-w-full truncate font-mono">{agent.model}</span>
+            <span>{compactNumber(s.toolCalls)} tools</span>
+            <span>{compactNumber(s.tokensIn + s.tokensOut)} tokens</span>
+            <span>updated {relativeTime(agent.lastSeen)}</span>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1 sm:flex-none">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setFollowTail((v) => !v)} className="flex-1 sm:flex-none">
+            {followTail ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {followTail ? "Pause" : "Follow"}
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 p-3 sm:p-4">
         <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
           {Object.entries(s.tools ?? {}).length ? Object.entries(s.tools).map(([tool, count]) => (
-            <span key={tool} className="rounded-full bg-muted px-2 py-1 font-mono">{tool} × {count}</span>
+            <span key={tool} className="max-w-full rounded-full bg-muted px-2 py-1 font-mono break-all">{tool} × {count}</span>
           )) : <span>No per-tool events yet.</span>}
         </div>
-        <pre className="max-h-96 overflow-auto rounded-lg bg-stone-950 p-3 text-xs leading-relaxed text-stone-100">
-          {lines.length ? lines.map((entry) => `[${new Date(entry.at).toLocaleTimeString()}] ${entry.line}`).join("\n") : "No stream lines yet. Start workers with STREAM_LOGS=1 for transcript/tool output."}
-        </pre>
+        <div className="relative min-w-0">
+          <div
+            ref={logRef}
+            className="max-h-[70vh] min-h-64 overflow-y-auto overflow-x-hidden rounded-lg bg-stone-950 p-3 font-mono text-[11px] leading-relaxed text-stone-100 shadow-inner sm:max-h-[34rem] sm:p-4 sm:text-xs"
+            onScroll={(event) => {
+              const el = event.currentTarget;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+              if (followTail !== atBottom) setFollowTail(atBottom);
+            }}
+          >
+            {lines.length ? lines.map((entry, index) => (
+              <div key={`${entry.at}-${index}`} className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-b border-white/5 py-1 last:border-0">
+                <time className="select-none whitespace-nowrap text-stone-500">{new Date(entry.at).toLocaleTimeString()}</time>
+                <span className="min-w-0 whitespace-pre-wrap break-words">{entry.line}</span>
+              </div>
+            )) : (
+              <div className="whitespace-pre-wrap break-words text-stone-400">
+                No stream lines yet. Start workers with STREAM_LOGS=1 for transcript/tool output.
+              </div>
+            )}
+          </div>
+          {!followTail ? (
+            <Button size="sm" variant="brand" onClick={jumpToBottom} className="absolute bottom-3 right-3 shadow-lg">
+              Follow latest
+            </Button>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
@@ -79,6 +131,13 @@ function FleetSection() {
     if (!selectedAgentId) return;
     void fetchAgentLogs(selectedAgentId).then((lines) => {
       if (lines.length) setLoadedLogs((prev) => ({ ...prev, [selectedAgentId]: lines }));
+    });
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById("worker-live-stream")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [selectedAgentId]);
   if (live.status === "unconfigured") return null;
