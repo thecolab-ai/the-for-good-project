@@ -313,6 +313,9 @@ work_one() {  # $1 = issue number
     finish_issue "$n"; return 0
   fi
   make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
+  # Task context for the telemetry bridges/hooks — otherwise the session
+  # shows as "idle" on the fleet dashboard while its tokens move.
+  export FLEET_TASK_KIND=work TASK_REF="#$n" TASK_TITLE="$(issue_field "$n" title 2>/dev/null || true)"
   info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(work_prompt "$n")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
@@ -426,6 +429,7 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   local before after
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; set_status_label "$n" "changes-requested" "claimed" || true; return 1; }
+  export FLEET_TASK_KIND=work TASK_REF="#$pr" TASK_TITLE="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title 2>/dev/null || echo "rework PR #$pr")"
   info "Handing PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(rework_prompt "$n" "$pr" "$branch")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e

@@ -454,6 +454,10 @@ review_one() {  # $1 = PR number
   local tmp; tmp="$(mktemp)"
   local prompt
   if [ "$kind" = method ]; then prompt="$(review_prompt "$pr" "$REVIEW_FILE")"; else prompt="$(standard_review_prompt "$pr" "$REVIEW_FILE")"; fi
+  # Task context for the telemetry bridges/hooks (they inherit the agent's
+  # env) — without it a hard-working agent session shows as "idle" on the
+  # fleet dashboard while its tokens visibly move.
+  export FLEET_TASK_KIND=review TASK_REF="#$pr" TASK_TITLE="$title"
   info "Handing PR #$pr to $AGENT for $kind review (worktree: $WORKTREE)..."
   set +e
   run_agent "$prompt" "$WORKTREE" 2>&1 | tee "$tmp"
