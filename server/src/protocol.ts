@@ -34,6 +34,17 @@ const countMap = z.record(z.string().max(64), count);
 // ---------------------------------------------------------------------------
 // Agent -> server messages
 
+/** A deliberately-imprecise, self-reported location. The server prefers a
+ *  city-level lookup from the connection IP (which it then discards) and only
+ *  falls back to this when IP geo fails — e.g. a worker behind localhost/CGNAT
+ *  or the fleet simulator. Coordinates only; no addresses. */
+export const roughLocationSchema = z.object({
+  city: z.string().max(80).optional(),
+  country: z.string().max(80).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
+});
+
 export const helloSchema = z.object({
   type: z.literal("hello"),
   /** Public GitHub handle. Identity is assumed-trust for now (auth parked). */
@@ -42,6 +53,8 @@ export const helloSchema = z.object({
   model: z.string().min(1).max(128),
   task: taskInfoSchema.optional(),
   version: z.string().max(64).optional(),
+  /** Optional fallback location (used only if IP geo fails). See schema note. */
+  location: roughLocationSchema.optional(),
 });
 export type Hello = z.infer<typeof helloSchema>;
 
@@ -146,6 +159,8 @@ export interface AgentPresence {
   /** Last non-zero token burst observed for this agent, retained for idle display. */
   lastTps: number;
   lastTpsAt: string | null;
+  /** Rough, city-level location for the worldwide globe (IP discarded, ~11km). */
+  location?: RoughLocation | null;
 }
 
 export interface RoughLocation {

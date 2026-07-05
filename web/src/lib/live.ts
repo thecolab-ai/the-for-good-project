@@ -44,6 +44,7 @@ export interface AgentPresence {
   tps: number;
   lastTps: number;
   lastTpsAt: string | null;
+  location?: RoughLocation | null;
 }
 
 export interface RoughLocation {
