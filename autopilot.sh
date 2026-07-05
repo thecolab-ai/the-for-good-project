@@ -165,6 +165,10 @@ run_pass() {  # $1 = task kind, rest = command to run
     fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
     rm -f "$out"; return 1
   fi
+  if [ "$kind" = review ] && grep -qE "already (passed adversarial review|reviewed at this revision)|waiting on the author's rework|parked for a human maintainer" "$out"; then
+    fleet_send "idle" "" "review skipped: already reviewed" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
   if [ "$rc" -eq 0 ]; then did=1; else errs=1; fi
   case "$kind" in
     review) reviews="$did" ;;
