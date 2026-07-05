@@ -87,6 +87,14 @@ export const config = {
   // Unset = the admin routes are not registered (404).
   adminToken: process.env.ADMIN_TOKEN || undefined,
 
+  // TOFU auto-enrollment: any runner's first contact mints its own
+  // standard-tier token (POST /api/v1/agents/enroll), so operators never
+  // hand tokens out. Turn off to require operator-minted tokens only.
+  autoEnroll: bool(process.env.AUTO_ENROLL, true),
+  // Max concurrently-active server claims per handle — bounds how much of
+  // the queue one auto-enrolled identity can sit on.
+  maxActiveClaims: num(process.env.MAX_ACTIVE_CLAIMS, 3),
+
   leaseTtlSeconds: num(process.env.LEASE_TTL_SECONDS, 1800),
   // One-shot fleet drain commands (stop/abort) expire after this long, so a
   // handle minted (or a runner restarted) weeks after a drain is never killed

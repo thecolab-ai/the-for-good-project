@@ -33,9 +33,11 @@
 # Env:  REVIEW_GITHUB_TOKEN  REVIEW_PER_WORK(=2)  POLL_SECONDS(=120)
 #       MAX_CYCLES(=0)  PULL(=1)  MAIN_BRANCH(=main)  + everything the runners read
 #       FLEET_SERVER(=https://forgood.thecolab.ai; ""=off)  STREAM_LOGS(=0, opt-in)
-#       FLEET_TOKEN (server-minted agent token: authed heartbeats + pause/resume/
-#       stop/abort commands)  FLEET_CLAIM(=0; 1 + FLEET_TOKEN = server-orchestrated
-#       claiming in start_work.sh — default off, label-claim flow unchanged)
+#       FLEET_CLAIM(=1: server-orchestrated claiming, AUTO-ENROLLS this gh
+#       identity on first contact and stores the token in ~/.forgood/ — no
+#       hand-outs; every failure falls back to the label-claim path; 0=off)
+#       FLEET_TOKEN (optional pre-minted agent token — overrides auto-enroll;
+#       authed heartbeats carry pause/resume/stop/abort commands either way)
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -97,6 +99,20 @@ if [ -n "$FLEET_CMDS_FILE" ]; then
   ( umask 077; : > "$FLEET_CMDS_FILE" ) 2>/dev/null || true
 fi
 fleet_cleanup_run_dir() { [ -n "${FLEET_RUN_DIR:-}" ] && rm -rf "$FLEET_RUN_DIR" 2>/dev/null || true; }
+
+# Server-orchestrated claiming (ADR-0017) — ON by default: the runner asks
+# the fleet server for its next issue (atomic Redis lease, no label race)
+# and AUTO-ENROLLS on first contact — the server mints this identity's token
+# straight into ~/.forgood/, so nobody hands tokens out. EVERY failure
+# (server down, enrollment refused, queue empty) falls back to the exact
+# label-claim path, so this is safe to default on. Opt out with
+# FLEET_CLAIM=0. The enrolled token also authenticates heartbeats, which is
+# what makes server-side pause/stop/abort commands reach this runner.
+FLEET_CLAIM="${FLEET_CLAIM-1}"
+export FLEET_CLAIM
+if [ -n "$FLEET_SERVER" ] && [ "$FLEET_CLAIM" = "1" ]; then
+  fleet_ensure_token || true
+fi
 
 fleet_enabled() { [ -n "$FLEET_SERVER" ]; }
 

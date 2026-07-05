@@ -161,6 +161,41 @@ export async function mintAgentToken(
   return { token };
 }
 
+/** TOFU auto-enrollment: mint a standard-tier token for a handle on FIRST
+ *  contact, exactly once (unique {handle:1} index arbitrates racers). Returns
+ *  null when the handle already has a registry doc — live OR revoked: a
+ *  revocation must stick, and a lost token is an operator reset
+ *  (admin route / fleet-admin.mjs re-mint), never a self-service re-issue,
+ *  otherwise anyone could rotate a rival's token by re-enrolling their
+ *  handle. Squatting an unclaimed handle is possible by construction
+ *  (self-reported identity, assumed trust — ADR-0017); it is visible in the
+ *  registry listing and revocable. */
+export async function enrollAgent(
+  orch: Orchestrator,
+  opts: { handle: string; note?: string },
+): Promise<{ token: string } | null> {
+  const handle = opts.handle.trim();
+  if (!handle) throw new Error("handle required");
+
+  const token = TOKEN_PREFIX + randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
+  const tokenHash = hashToken(token);
+  try {
+    await registry(orch).insertOne({
+      handle,
+      tokenHash,
+      tier: "standard",
+      createdAt: new Date(),
+      note: opts.note ?? "auto-enrolled",
+    });
+  } catch (err) {
+    // Duplicate handle (E11000) = already enrolled/revoked — no re-issue.
+    if (err instanceof Error && "code" in err && (err as { code?: number }).code === 11000) return null;
+    throw err;
+  }
+  cachePurgeHandle(handle);
+  return { token };
+}
+
 /** Revoke a handle's token (sets revokedAt). Returns false when the handle
  *  is unknown or already revoked. */
 export async function revokeAgentToken(orch: Orchestrator, handle: string): Promise<boolean> {

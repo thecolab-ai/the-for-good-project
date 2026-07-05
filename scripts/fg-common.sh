@@ -50,8 +50,51 @@ rule() { printf '%s────────────────────�
 # The telemetry side (fleet_send / fleet_logs) lives in autopilot.sh; these
 # live here so start_work.sh (which has no telemetry helpers) can claim,
 # renew and release too.
+# Where the auto-enrolled token lives (0600, owner-only). One file per
+# server host so pointing FLEET_SERVER elsewhere never replays a token minted
+# for a different server.
+fleet_token_file() {
+  local host; host="$(printf '%s' "${FLEET_SERVER:-}" | sed 's|^[a-z]*://||; s|[/:].*$||')"
+  printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}}"
+}
+
+# fleet_ensure_token — resolve FLEET_TOKEN: env var > stored file > TOFU
+# auto-enroll against the server (ADR-0017: first contact mints the token,
+# so nobody hands tokens out). Returns 1 when no token can be resolved (the
+# caller falls back to the label-claim path). The stored file is trusted
+# only when it is a regular, non-symlink file we own — same paranoia as the
+# command stash: a foreign-writable path must never feed a bearer token.
+fleet_ensure_token() {
+  [ -n "${FLEET_TOKEN:-}" ] && return 0
+  [ -n "${FLEET_SERVER:-}" ] || return 1
+  local f; f="$(fleet_token_file)"
+  if [ -f "$f" ] && [ ! -L "$f" ] && [ -O "$f" ]; then
+    FLEET_TOKEN="$(head -c 256 "$f" 2>/dev/null | tr -d '[:space:]')"
+    [ -n "$FLEET_TOKEN" ] && { export FLEET_TOKEN; return 0; }
+  fi
+  # First contact: enroll this gh identity. 409 = the handle is already
+  # enrolled somewhere else (or was revoked) — that's an operator
+  # conversation, not something to retry every loop.
+  local resp token
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/agents/enroll" \
+    -H 'content-type: application/json' \
+    -d "$(jq -cn --arg h "${ME:-${FLEET_HANDLE:-}}" --arg a "${AGENT:-}" --arg m "${MODEL:-}" '
+        {handle: $h}
+      + (if $a != "" then {harness: $a[0:32]} else {} end)
+      + (if $m != "" then {model: $m[0:128]} else {} end)')" 2>/dev/null)" || return 1
+  token="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .token // empty' 2>/dev/null || true)"
+  if [ -z "$token" ]; then
+    warn "fleet enrollment failed for @${ME:-${FLEET_HANDLE:-?}}: $(printf '%s' "$resp" | jq -r '.error // "server unreachable"' 2>/dev/null || echo 'server unreachable') — using the label-claim path."
+    return 1
+  fi
+  ( umask 077; mkdir -p "$(dirname "$f")" && printf '%s' "$token" > "$f" ) || true
+  FLEET_TOKEN="$token"; export FLEET_TOKEN
+  ok "Enrolled @${ME:-${FLEET_HANDLE:-?}} with the fleet server (token stored in $f)"
+  return 0
+}
+
 fleet_claim_enabled() {
-  [ -n "${FLEET_SERVER:-}" ] && [ -n "${FLEET_TOKEN:-}" ] && [ "${FLEET_CLAIM:-0}" = "1" ]
+  [ -n "${FLEET_SERVER:-}" ] && [ "${FLEET_CLAIM:-0}" = "1" ] && fleet_ensure_token
 }
 
 # fleet_claim [stages-csv] — ask the server for the next eligible issue. On

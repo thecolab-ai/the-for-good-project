@@ -20,6 +20,7 @@ import { dockerAvailable, startRedis, startMongo } from "./helpers/containers.mj
 import {
   AGENT_TIERS,
   bearerToken,
+  enrollAgent,
   mintAgentToken,
   revokeAgentToken,
   listRegisteredAgents,
@@ -150,6 +151,49 @@ test("re-mint without revoke replaces the old token", { skip }, async () => {
   const second = await mintAgentToken(orch, { handle: "dave", tier: "standard" });
   assert.equal(await verifyAgentToken(orch, first.token), null, "replaced token must stop verifying");
   assert.ok(await verifyAgentToken(orch, second.token));
+});
+
+// ---------------------------------------------------------------------------
+// TOFU auto-enrollment (ADR-0017): first contact mints, everything after that
+// is refused — a revocation or an existing registration must stick, or anyone
+// could rotate a rival's token by re-enrolling their handle.
+// ---------------------------------------------------------------------------
+
+test("enroll: first contact mints a standard-tier token that verifies", { skip }, async () => {
+  const minted = await enrollAgent(orch, { handle: "tofu-first" });
+  assert.ok(minted, "first enrollment must mint");
+  assert.match(minted.token, TOKEN_RE);
+  assert.deepEqual(await verifyAgentToken(orch, minted.token), { handle: "tofu-first", tier: "standard" });
+  const doc = await orch.db.collection("agents_registry").findOne({ handle: "tofu-first" });
+  assert.equal(doc.tier, "standard", "auto-enrollment never grants above standard");
+  assert.ok(!JSON.stringify(doc).includes(minted.token), "plaintext token leaked into the registry doc");
+});
+
+test("enroll: second contact for the same handle is refused, first token survives", { skip }, async () => {
+  const first = await enrollAgent(orch, { handle: "tofu-dup" });
+  assert.ok(first);
+  assert.equal(await enrollAgent(orch, { handle: "tofu-dup" }), null, "re-enroll must NOT re-issue");
+  assert.ok(await verifyAgentToken(orch, first.token), "original token must be untouched by the refused attempt");
+});
+
+test("enroll: a revoked handle can NOT re-enroll itself (revocation sticks)", { skip }, async () => {
+  const first = await enrollAgent(orch, { handle: "tofu-revoked" });
+  assert.ok(first);
+  await revokeAgentToken(orch, "tofu-revoked");
+  assert.equal(await enrollAgent(orch, { handle: "tofu-revoked" }), null, "self-service un-revoke must be impossible");
+  assert.equal(await verifyAgentToken(orch, first.token), null, "revoked token stays dead");
+  // The operator path still works: an explicit re-mint replaces the doc.
+  const remint = await mintAgentToken(orch, { handle: "tofu-revoked", tier: "standard" });
+  assert.ok(await verifyAgentToken(orch, remint.token), "operator re-mint recovers the handle");
+});
+
+test("enroll: concurrent racers on one handle mint exactly one token", { skip }, async () => {
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () => enrollAgent(orch, { handle: "tofu-race" })),
+  );
+  const minted = results.filter(Boolean);
+  assert.equal(minted.length, 1, "the unique {handle:1} index must arbitrate to exactly one winner");
+  assert.equal(await orch.db.collection("agents_registry").countDocuments({ handle: "tofu-race" }), 1);
 });
 
 test("listRegisteredAgents exposes no hashes and ISO dates", { skip }, async () => {

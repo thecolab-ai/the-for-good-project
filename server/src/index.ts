@@ -64,6 +64,7 @@ function every(baseMs: number, run: () => Promise<unknown>, onError: (err: unkno
 function registerOrchestrationDisabled(app: FastifyInstance): void {
   const disabled = { ok: false, error: "orchestration disabled" };
   const paths = [
+    { method: "POST" as const, url: "/api/v1/agents/enroll" },
     { method: "POST" as const, url: "/api/v1/work/claim" },
     { method: "POST" as const, url: "/api/v1/work/renew" },
     { method: "POST" as const, url: "/api/v1/work/release" },

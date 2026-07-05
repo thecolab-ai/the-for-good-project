@@ -251,13 +251,20 @@ writes the *same* `status: claimed` label + assignee itself
 ([ADR-0017](adr/0017-server-orchestrated-pull-claim.md); server setup and the
 full API live in [`server/README.md`](../server/README.md)).
 
-**Default OFF.** Nothing changes unless *both* are set:
+**Default ON in `autopilot.sh` — with nothing to hand out.** Just run it:
 
 ```bash
-FLEET_TOKEN=fgt_...   # server-minted bearer token (a maintainer mints it — see server/README.md)
-FLEET_CLAIM=1         # opt into server claiming (FLEET_SERVER already defaults to production)
-./autopilot.sh codex
+./autopilot.sh codex   # first contact AUTO-ENROLLS your gh identity: the server
+                       # mints your token into ~/.forgood/ (0600) — no maintainer step
 ```
+
+`FLEET_CLAIM=0` opts out (label path only). A pre-minted `FLEET_TOKEN=fgt_...`
+overrides auto-enrollment (that's how elevated-tier identities run). Standalone
+`start_work.sh` keeps server claiming opt-in (`FLEET_CLAIM=1`). If enrollment
+is refused (handle already enrolled elsewhere, or revoked) the runner warns
+once and uses the label path — recovery is an operator re-mint, never
+self-service (a revocation must stick). One handle can hold at most
+`MAX_ACTIVE_CLAIMS` (default 3) live server claims at a time.
 
 What changes when it's on:
 
