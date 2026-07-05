@@ -19,9 +19,11 @@ import type { Finding, Snapshot } from "@/lib/types";
 import { FleetPulse } from "./FleetPulse";
 import { AgentTable } from "./AgentTable";
 import { LiveEventFeed } from "./LiveEventFeed";
+import { FleetGlobe, type GlobePoint } from "./FleetGlobe";
+import { harnessColor, useIsDark } from "./harness";
 
 type CommentFilter = "all" | "issues" | "prs";
-type FeedTab = "comments" | "findings";
+type FeedTab = "activity" | "comments" | "findings";
 
 const CONFIDENCE_STYLE: Record<string, string> = {
   High: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
@@ -268,9 +270,10 @@ function WorkerTerminal({ agent, lines, onClose }: { agent: AgentPresence; lines
 
 export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
   const live = useLiveFleet();
+  const dark = useIsDark();
   const { theme, toggle } = useTheme();
   const [filter, setFilter] = useState<CommentFilter>("all");
-  const [feedTab, setFeedTab] = useState<FeedTab>("comments");
+  const [feedTab, setFeedTab] = useState<FeedTab>("activity");
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [loadedLogs, setLoadedLogs] = useState<Record<string, LogLine[]>>({});
 
@@ -285,6 +288,44 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
   );
   const available = stats.byStatus?.available ?? 0;
   const inReview = stats.byStatus?.["in review"] ?? stats.byStatus?.["in-review"] ?? 0;
+
+  // Worldwide globe: plot located workers (by harness colour) and watchers.
+  const watcherColor = dark ? "#34D399" : "#059669";
+  const globePoints: GlobePoint[] = useMemo(() => {
+    const pts: GlobePoint[] = [];
+    for (const a of live.agents) {
+      const l = a.location;
+      if (typeof l?.lat === "number" && typeof l?.lon === "number") {
+        pts.push({ lat: l.lat, lon: l.lon, color: harnessColor(a.harness, dark), kind: "worker" });
+      }
+    }
+    for (const w of live.watchers.locations) {
+      if (typeof w.lat === "number" && typeof w.lon === "number") {
+        pts.push({ lat: w.lat, lon: w.lon, color: watcherColor, kind: "watcher" });
+      }
+    }
+    return pts;
+  }, [live.agents, live.watchers, dark, watcherColor]);
+  const locatedWorkers = live.agents.filter((a) => typeof a.location?.lat === "number").length;
+  const globeCountries = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of live.agents) if (a.location?.country) set.add(a.location.country);
+    for (const w of live.watchers.locations) if (w.country) set.add(w.country);
+    return set.size;
+  }, [live.agents, live.watchers]);
+  const topPlace = useMemo(() => {
+    const counts = new Map<string, number>();
+    const add = (city?: string, country?: string) => {
+      const label = [city, country].filter(Boolean).join(", ");
+      if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
+    };
+    for (const a of live.agents) add(a.location?.city, a.location?.country);
+    for (const w of live.watchers.locations) add(w.city, w.country);
+    let best: string | null = null;
+    let bestN = 0;
+    for (const [label, n] of counts) if (n > bestN) { best = label; bestN = n; }
+    return best;
+  }, [live.agents, live.watchers]);
 
   const selectedAgent = live.agents.find((a) => a.id === selectedAgentId) ?? null;
   useEffect(() => {
@@ -417,22 +458,34 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
             )}
           </section>
 
-          {/* Bottom row — activity + comments/findings side by side */}
-          <div className="grid min-h-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <section className="hud-panel flex min-h-0 flex-col overflow-hidden">
-              <div className="p-3 pb-2">
-                <PanelHead label="Activity" icon={Radio} accent="#C2410C"
-                  right={generatedAt ? <span>upd {relativeTime(generatedAt)}</span> : null} />
+          {/* Bottom row — worldwide globe + tabbed activity/comments/findings */}
+          <div className="grid min-h-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+            {/* Globe — the fleet, worldwide */}
+            <section className="hud-panel flex min-h-[18rem] flex-col overflow-hidden xl:min-h-0">
+              <div className="flex items-center justify-between gap-2 p-3 pb-1">
+                <PanelHead label="Worldwide" icon={Globe} accent="#0EA5E9"
+                  right={<span className="inline-flex items-center gap-3">
+                    <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-brand-cyan" />workers</span>
+                    <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />watchers</span>
+                  </span>} />
               </div>
-              <div className="console-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-                <LiveEventFeed events={live.events} />
+              <div className="relative min-h-0 flex-1">
+                <FleetGlobe points={globePoints} />
+              </div>
+              <div className="flex items-center gap-x-4 gap-y-1 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
+                <span><span className="font-mono font-semibold text-foreground">{locatedWorkers}</span> workers mapped</span>
+                <span><span className="font-mono font-semibold text-foreground">{live.watchers.count}</span> watching</span>
+                <span><span className="font-mono font-semibold text-foreground">{globeCountries}</span> countries</span>
+                {topPlace ? <span className="ml-auto truncate">busiest · {topPlace}</span> : null}
               </div>
             </section>
 
-            <section className="hud-panel flex min-h-0 flex-col overflow-hidden">
+            {/* Feeds — activity / comments / findings */}
+            <section className="hud-panel flex min-h-[18rem] flex-col overflow-hidden xl:min-h-0">
               <div className="flex flex-wrap items-center justify-between gap-2 p-3 pb-2">
                 <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
                   {([
+                    { k: "activity", label: "Activity", icon: Radio, count: live.events.length },
                     { k: "comments", label: "Comments", icon: MessageSquare, count: filteredComments.length },
                     { k: "findings", label: "Findings", icon: FileText, count: recentFindings.length },
                   ] as const).map(({ k, label, icon: Icon, count }) => (
@@ -468,10 +521,14 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
                       </button>
                     ))}
                   </div>
+                ) : feedTab === "activity" && generatedAt ? (
+                  <span className="text-[11px] text-muted-foreground">upd {relativeTime(generatedAt)}</span>
                 ) : null}
               </div>
               <div className="console-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-                {feedTab === "comments" ? <CommentFeed comments={filteredComments} /> : <FindingsFeed findings={recentFindings} />}
+                {feedTab === "activity" ? <LiveEventFeed events={live.events} />
+                  : feedTab === "comments" ? <CommentFeed comments={filteredComments} />
+                    : <FindingsFeed findings={recentFindings} />}
               </div>
             </section>
           </div>
