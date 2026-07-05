@@ -117,7 +117,7 @@ function PanelHead({ label, count, accent = "#0EA5E9", right, icon: Icon }:
 function StatTile({ label, value, hint, icon: Icon, accent = "#2E4057" }:
   { label: string; value: React.ReactNode; hint?: string; icon: typeof Bot; accent?: string }) {
   return (
-    <div className="hud-panel flex min-h-0 flex-col justify-between overflow-hidden p-3">
+    <div className="hud-panel flex min-h-[6.25rem] flex-col justify-between overflow-hidden p-3">
       <div className="flex items-start justify-between gap-2">
         <span className="hud-label truncate">{label}</span>
         <span className="rounded-md p-1" style={{ backgroundColor: `${accent}1f` }}>
@@ -374,10 +374,12 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
       {/* ── Grid body ── */}
       <main className="flex-1 xl:min-h-0">
         <div className="grid h-full grid-cols-1 gap-3 p-3 xl:grid-cols-[336px_minmax(0,1fr)]">
-          {/* Left rail — throughput + KPIs */}
+          {/* Left rail — throughput (grows) + compact KPI tiles */}
           <div className="flex min-h-0 flex-col gap-3">
-            <FleetPulse fleet={live.fleet} history={live.historicalTps.length ? live.historicalTps : live.tpsHistory} />
-            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 xl:grid-rows-3">
+            <div className="min-h-[16rem] xl:flex-1">
+              <FleetPulse fleet={live.fleet} history={live.historicalTps.length ? live.historicalTps : live.tpsHistory} />
+            </div>
+            <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2">
               <StatTile label="Workers" value={live.agents.length} icon={Cpu} accent="#0EA5E9"
                 hint={live.agents.length ? `${reviewing} reviewing` : "waiting for fleet"} />
               <StatTile label="Watchers" value={live.watchers.count} icon={Globe} accent="#7C3AED" hint="right now" />
