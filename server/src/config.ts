@@ -18,6 +18,7 @@ export const config = {
   // persistence at all.
   stateFile: process.env.STATE_FILE || undefined,
   stateSaveSeconds: num(process.env.STATE_SAVE_SECONDS, 30),
+  historyDbFile: process.env.HISTORY_DB_FILE || (process.env.STATE_FILE ? `${process.env.STATE_FILE}.sqlite` : undefined),
 
   // Comma-separated list of allowed origins, or "*" (default) for any.
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
@@ -44,6 +45,7 @@ export const config = {
   tpsBucketSeconds: 10,
 
   maxEventFeed: num(process.env.MAX_EVENT_FEED, 200),
+  maxLogLines: num(process.env.MAX_LOG_LINES, 500),
 
   // Per-connection inbound limits — telemetry is small; anything bigger is a bug
   // or abuse. The same per-second budget applies per-IP on the HTTP routes.
