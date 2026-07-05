@@ -30,6 +30,10 @@ TASK_KIND = env("FLEET_TASK_KIND") or "work"
 TASK_REF = env("TASK_REF")
 TASK_TITLE = env("TASK_TITLE") or "codex turn"
 STREAM_LOGS = env("STREAM_LOGS") == "1"
+# Cloudflare's bot protection 403s python-urllib's default user-agent (curl
+# passes), silently eating every token post to the tunnelled fleet server —
+# any honest custom UA gets through.
+USER_AGENT = "forgood-fleet-telemetry/1.0 (+https://github.com/thecolab-ai/the-for-good-project)"
 START_MONO = time.monotonic()
 last_usage_total = 0
 last_usage_mono = START_MONO
@@ -82,7 +86,7 @@ def post_telemetry(heartbeat: dict[str, Any]) -> None:
     req = urllib.request.Request(
         f"{FLEET_SERVER}/api/v1/telemetry",
         data=data,
-        headers={"content-type": "application/json"},
+        headers={"content-type": "application/json", "user-agent": USER_AGENT},
         method="POST",
     )
     try:
@@ -105,7 +109,7 @@ def post_logs(lines: list[str]) -> None:
     req = urllib.request.Request(
         f"{FLEET_SERVER}/api/v1/logs",
         data=data,
-        headers={"content-type": "application/json"},
+        headers={"content-type": "application/json", "user-agent": USER_AGENT},
         method="POST",
     )
     try:
@@ -122,13 +126,27 @@ def print_item(item: dict[str, Any]) -> list[str]:
         if isinstance(text, str) and text.strip():
             print(text, flush=True)
             lines.extend([line for line in text.splitlines() if line.strip()])
-    elif typ in {"tool_call", "function_call"}:
-        name = item.get("name") or item.get("command") or item.get("tool") or "unknown"
-        if name:
-            line = f"[codex tool] {name}"
-            print(line, flush=True)
-            lines.append(line)
-            post_telemetry({"toolCalls": 1, "tools": {str(name)[:64]: 1}})
+    elif typ in {"tool_call", "function_call", "command_execution", "mcp_tool_call", "web_search"}:
+        # Modern codex emits command_execution / mcp_tool_call / web_search
+        # items (the legacy tool_call/function_call names never fire), so this
+        # is also the mid-run presence heartbeat — without it a long codex run
+        # looks offline on the dashboard between turn boundaries.
+        if typ == "command_execution":
+            name = "shell"
+            detail = str(item.get("command") or "")[:120]
+        elif typ == "mcp_tool_call":
+            name = str(item.get("tool") or item.get("server") or "mcp")[:64]
+            detail = ""
+        elif typ == "web_search":
+            name = "web_search"
+            detail = str(item.get("query") or "")[:120]
+        else:
+            name = str(item.get("name") or item.get("command") or item.get("tool") or "unknown")[:64]
+            detail = ""
+        line = f"[codex tool] {name}{': ' + detail if detail else ''}"
+        print(line, flush=True)
+        lines.append(line)
+        post_telemetry({"toolCalls": 1, "tools": {name: 1}})
     elif typ in {"tool_call_output", "function_call_output"}:
         text = item.get("text") or item.get("output")
         if isinstance(text, str) and text.strip():
