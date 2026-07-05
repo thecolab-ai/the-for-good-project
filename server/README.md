@@ -158,7 +158,30 @@ docker compose up -d --build
 Leave any of the three unset and that surface stays disabled — the image still runs
 telemetry-only with all of them (and the stores) unset.
 
-### Minting agent tokens (admin)
+### Auto-enrollment (default): runners mint their own token
+
+Nobody hands tokens out for the normal case ([ADR-0017](../docs/adr/0017-server-orchestrated-pull-claim.md)):
+a runner's **first contact** calls the unauthenticated enroll route with its own GitHub
+login, gets a `standard`-tier token exactly once, and stores it under `~/.forgood/`
+(0600). `./autopilot.sh` does this automatically — there is no setup step.
+
+```bash
+# What the runner does under the hood, exactly once per handle:
+curl -s -X POST $URL/api/v1/agents/enroll -H "$JSON" \
+  -d '{"handle":"your-gh-login","harness":"codex"}'
+# 200 {ok:true, token:"fgt_…", handle, tier:"standard"} — first contact only
+# 409 ever after (incl. after a revoke: revocations STICK; recovery = operator re-mint)
+# 403 when the server runs AUTO_ENROLL=0 (operator-minted tokens only)
+```
+
+Identity is self-reported assumed trust (same as telemetry's `hello.handle`); squatting a
+handle is possible, visible in the registry listing, revocable, and bounded — one handle
+holds at most `MAX_ACTIVE_CLAIMS` (default 3) live claims, and the adversarial review gate
+still guards every merge. Handles without repo access can't be GitHub assignees (GitHub
+silently drops them), so their claims carry `assigneeSet:false` and identity lives in the
+lease + assignment record — labels still gate the queue for everyone.
+
+### Minting agent tokens (admin — elevated tiers, resets)
 
 All admin calls take `Authorization: Bearer $ADMIN_TOKEN` (constant-time compared, never
 logged; failures are 401):
@@ -190,7 +213,9 @@ curl -s -X POST $URL/api/v1/admin/agents/revoke -H "$AUTH" -H "$JSON" -d '{"hand
 ### Enrolling a runner
 
 ```bash
-FLEET_TOKEN=fgt_... FLEET_CLAIM=1 ./autopilot.sh codex
+./autopilot.sh codex                          # auto-enrolls on first contact (default)
+FLEET_CLAIM=0 ./autopilot.sh codex            # opt out — label-claim path only
+FLEET_TOKEN=fgt_... ./autopilot.sh codex      # pre-minted token (elevated tier / reset)
 ```
 
 `FLEET_SERVER` already defaults to production. Without **both** variables the runners are

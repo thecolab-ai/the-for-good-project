@@ -31,9 +31,11 @@
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  AGENT MODEL MAX ISSUE STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
 #       PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
-#       FLEET_SERVER FLEET_TOKEN FLEET_CLAIM(=0) — set FLEET_CLAIM=1 with a
-#       server-minted FLEET_TOKEN to let the fleet server claim atomically for
-#       you (falls back to the label-claim path on ANY failure; default off)
+#       FLEET_SERVER FLEET_TOKEN FLEET_CLAIM(=0) — set FLEET_CLAIM=1 to let the
+#       fleet server claim atomically for you; with no FLEET_TOKEN it
+#       AUTO-ENROLLS this gh identity on first contact (token stored in
+#       ~/.forgood/). Falls back to the label-claim path on ANY failure.
+#       (autopilot.sh defaults FLEET_CLAIM=1; standalone runs stay opt-in.)
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"

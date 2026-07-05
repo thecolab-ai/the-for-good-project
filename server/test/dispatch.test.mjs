@@ -429,28 +429,60 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(await anyAssignment(47), null, "no half-recorded assignment");
     });
 
-    await t.test("unassignable handle → claim aborts 'disabled', labels reverted, queue not walked", async () => {
+    await t.test("unassignable handle (auto-enrolled outsider) → claim PROCEEDS without an assignee", async () => {
+      // ADR-0017 auto-enrollment: outside contributors can't be assignees on
+      // GitHub (it silently drops logins without repo access) — that must
+      // not block their claim; the lease + assignment doc carry identity.
       await seed([
         { number: 48, labels: ["status: available", "stage: research"], createdAt: "2026-04-01T00:00:00Z" },
-        { number: 49, labels: ["status: available", "stage: research"], createdAt: "2026-04-02T00:00:00Z" },
       ]);
       mock.assignableUsers = new Set(["someone-else"]); // GitHub silently ignores "alice"
       const result = await dispatch.claimNext(o, new FleetStore(), { handle: "alice", tier: "standard" });
-      assert.equal(result.status, "disabled", "misconfigured handle fails loudly, not a phantom claim");
-      assert.match(result.reason, /not assignable/);
+      assert.equal(result.status, "claimed", "the drop is normal, not a failure");
+      assert.equal(result.issue.number, 48);
       const gh48 = mock.getIssue(48);
-      assert.ok(gh48.labels.includes("status: available"), "labels reverted");
-      assert.ok(!gh48.labels.includes("status: claimed"));
-      assert.deepEqual(gh48.assignees, [], "mirror/GitHub never show a phantom assignee");
-      assert.equal(await o.redis.exists(leaseKey(48)), 0);
-      assert.equal(await anyAssignment(48), null);
-      assert.equal(
-        mock.calls.filter((c) => c.path.includes("/issues/49/")).length,
-        0,
-        "one misconfiguration probe does not cost O(queue) GitHub writes",
-      );
+      assert.ok(gh48.labels.includes("status: claimed"), "labels claimed as usual");
+      assert.ok(!gh48.labels.includes("status: available"));
+      assert.deepEqual(gh48.assignees, [], "no phantom assignee on GitHub");
+      const assignment = await activeAssignment(48);
+      assert.equal(assignment.assigneeSet, false, "the doc records that no assignee landed");
       const mirror = await o.db.collection("issues").findOne({ _id: 48 });
-      assert.deepEqual(mirror.assignees, [], "optimistic mirror never ran");
+      assert.deepEqual(mirror.assignees, [], "the mirror only holds what GitHub accepted");
+
+      // The renew guard must not demand an assignee GitHub never accepted:
+      // an authed heartbeat still extends this lease.
+      await o.redis.expire(leaseKey(48), 5);
+      await dispatch.renewLeasesForHandle(o, "alice");
+      const ttl = await o.redis.ttl(leaseKey(48));
+      assert.ok(ttl > 5, `assignee-less claim must still renew (ttl=${ttl})`);
+    });
+
+    await t.test("active-claim cap: one handle cannot sit on the whole queue", async () => {
+      const specs = Array.from({ length: config.maxActiveClaims + 2 }, (_, i) => ({
+        number: 60 + i,
+        labels: ["status: available", "stage: research"],
+        createdAt: `2026-04-0${i + 1}T00:00:00Z`,
+      }));
+      await seed(specs);
+      for (let i = 0; i < config.maxActiveClaims; i++) {
+        const r = await dispatch.claimNext(o, new FleetStore(), { handle: "greedy", tier: "standard" });
+        assert.equal(r.status, "claimed", `claim ${i + 1}/${config.maxActiveClaims} under the cap`);
+      }
+      const capped = await dispatch.claimNext(o, new FleetStore(), { handle: "greedy", tier: "standard" });
+      assert.equal(capped.status, "capped", "claim over the cap is refused");
+      // The cap is per-handle: another agent still gets work.
+      const other = await dispatch.claimNext(o, new FleetStore(), { handle: "modest", tier: "standard" });
+      assert.equal(other.status, "claimed");
+      // Releasing frees headroom.
+      const first = await activeAssignment(60);
+      await dispatch.releaseAssignment(o, new FleetStore(), {
+        handle: "greedy",
+        issue: 60,
+        outcome: "done",
+      });
+      assert.ok(first, "sanity: #60 was greedy's");
+      const after = await dispatch.claimNext(o, new FleetStore(), { handle: "greedy", tier: "standard" });
+      assert.equal(after.status, "claimed", "released claim restores headroom");
     });
 
     await t.test("permission 403 (not rate limit) → claim aborts 'disabled', queue not walked", async () => {
@@ -888,6 +920,58 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       });
       assert.equal(emptyClaim.statusCode, 200);
       assert.equal(emptyClaim.json().issue, null, "empty queue is ok:true, issue:null");
+    });
+
+    await t.test("enroll route: TOFU mint once, 409 after, strict handle shape, config-off → 403", async () => {
+      const { config: cfg } = await import("../dist/config.js");
+      const auth = await import("../dist/orchestrator/auth.js");
+      await seed([]);
+      const app = Fastify();
+      apps.push(app);
+      registerDispatchRoutes(app, new FleetStore(), o);
+
+      const first = await app.inject({
+        method: "POST",
+        url: "/api/v1/agents/enroll",
+        payload: { handle: "route-enrollee", harness: "claude" },
+      });
+      assert.equal(first.statusCode, 200);
+      const body = first.json();
+      assert.equal(body.ok, true);
+      assert.match(body.token, /^fgt_[0-9a-f]{32}$/, "a real usable token comes back exactly once");
+      assert.equal(body.tier, "standard", "auto-enrollment never grants above standard");
+      assert.deepEqual(
+        await auth.verifyAgentToken(o, body.token),
+        { handle: "route-enrollee", tier: "standard" },
+        "the minted token verifies for claims/heartbeats",
+      );
+
+      const dup = await app.inject({
+        method: "POST",
+        url: "/api/v1/agents/enroll",
+        payload: { handle: "route-enrollee" },
+      });
+      assert.equal(dup.statusCode, 409, "second contact never re-issues");
+      assert.ok(!dup.body.includes("fgt_"), "no token material on the refusal path");
+
+      // The handle flows into GitHub assignee calls — only a real GitHub
+      // login shape may enter the registry.
+      for (const bad of ["-lead", "trail-", "dou--ble", "a b", "x".repeat(40), "we/inject", ""]) {
+        const r = await app.inject({ method: "POST", url: "/api/v1/agents/enroll", payload: { handle: bad } });
+        assert.equal(r.statusCode, 400, `handle ${JSON.stringify(bad)} must be rejected`);
+      }
+
+      cfg.autoEnroll = false;
+      try {
+        const off = await app.inject({
+          method: "POST",
+          url: "/api/v1/agents/enroll",
+          payload: { handle: "someone-new" },
+        });
+        assert.equal(off.statusCode, 403, "AUTO_ENROLL=0 = operator-minted tokens only");
+      } finally {
+        cfg.autoEnroll = true;
+      }
     });
 
     await t.test("claim route: 429 rate-limited, redacted 502 on GitHub 5xx, 503 without a github token", async () => {

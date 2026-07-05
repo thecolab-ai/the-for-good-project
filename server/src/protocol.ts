@@ -254,6 +254,22 @@ export const commandSchema = z.object({
 });
 export type FleetCommand = z.infer<typeof commandSchema>;
 
+/** TOFU auto-enrollment: a runner's FIRST contact mints its token (no
+ *  operator hand-out). `handle` is the runner's self-reported GitHub login —
+ *  assumed trust, same as telemetry's `hello.handle`; squatting a handle is
+ *  visible in the registry and revocable. Strict GitHub-login shape so an
+ *  arbitrary string can never become a registry identity (it flows into
+ *  GitHub assignee calls). */
+export const enrollRequestSchema = z.object({
+  handle: z
+    .string()
+    .max(39)
+    .regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/, "not a valid GitHub login"),
+  harness: z.string().max(32).optional(),
+  model: z.string().max(128).optional(),
+});
+export type EnrollRequest = z.infer<typeof enrollRequestSchema>;
+
 export const claimRequestSchema = z.object({
   stages: z.array(z.enum(["research", "ideate", "build"])).optional(), // default: all three
   harness: z.string().max(32).optional(),
