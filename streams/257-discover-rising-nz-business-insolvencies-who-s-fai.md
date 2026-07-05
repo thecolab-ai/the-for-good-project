@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: "other"
 updated: 2026-07-05
-image: ""
+image: /images/streams/stream-257-business-insolvencies.jpg
 ---
 
 # Rising business failures in New Zealand
