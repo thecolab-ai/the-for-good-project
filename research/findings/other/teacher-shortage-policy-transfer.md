@@ -12,6 +12,8 @@ status: "draft"
 
 # NZ should adapt targeted incentives, workload relief, mentoring and workforce data, not import whole overseas teacher-career systems
 
+**Provenance note:** The frontmatter date and all "accessed 6 July 2026" source entries use the contributor environment's Pacific/Auckland local date (UTC+12 in July 2026), which explains the one-day difference from review environments still on 5 July 2026.
+
 ## Executive answer
 
 - The most transferable instruments for NZ's shortage points are **targeted scholarships/bonding, subject-and-place retention payments, earn-while-training pathways for existing unqualified/LAT teachers, funded workload relief, structured mentoring, and better linked workforce data**; these map to NZ's current secondary, te reo Māori/Māori-medium, rural and priority-staffing shortage signals rather than treating teacher supply as a uniform national headcount problem [Ministry of Education TDS release, 2026](https://www.education.govt.nz/news/teacher-demand-and-supply-2025-report-released), [Education Workforce TBS](https://workforce.education.govt.nz/principals-and-schools/initiatives-schools-and-kura/teacher-bonding-scheme), [Education Workforce EBITE](https://workforce.education.govt.nz/kaupapa-maori-maori-medium-ebite-programme-funding-award).
