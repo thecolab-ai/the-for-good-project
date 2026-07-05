@@ -382,6 +382,9 @@ frame_one() {  # $1 = root issue number
     return 0
   fi
   make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
+  # Task context for the telemetry bridges/hooks — otherwise the session
+  # shows as "idle" on the fleet dashboard while its tokens move.
+  export FLEET_TASK_KIND=frame TASK_REF="#$n" TASK_TITLE="$title"
   info "Handing root #$n to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(framing_prompt "$n" "$slug")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
@@ -589,6 +592,7 @@ reframe_one() {  # $1 = root issue number, $2 = framing PR number
   local before after
   before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
   make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
+  export FLEET_TASK_KIND=frame TASK_REF="#$pr" TASK_TITLE="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title 2>/dev/null || echo "framing rework PR #$pr")"
   info "Handing framing rework for root #$n to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(framing_rework_prompt "$n" "$pr" "$branch")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
