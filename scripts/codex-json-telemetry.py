@@ -15,6 +15,7 @@ import threading
 import urllib.error
 import urllib.request
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -93,9 +94,11 @@ def _find_transcript() -> str | None:
     return _transcript_path
 
 
-def _post_cumulative(fresh_in: int, out_tok: int) -> None:
-    """Post only the movement since the last post, with real elapsed wall
-    time so the fleet TPS gauge reflects an actual rate."""
+def _post_cumulative(fresh_in: int, out_tok: int, window_ms: int | None = None) -> None:
+    """Post only the movement since the last post. `window_ms` is the
+    GENERATION window (from the rollout's own timestamps) — charging
+    wall-clock-since-last-post instead lets tool-execution gaps dilute the
+    rate the same way the claude bridge used to read 0.3 tok/s."""
     global _cum_in, _cum_out, _last_post_mono
     with _cum_lock:
         d_in = max(0, fresh_in - _cum_in)
@@ -105,13 +108,40 @@ def _post_cumulative(fresh_in: int, out_tok: int) -> None:
         _cum_in = max(_cum_in, fresh_in)
         _cum_out = max(_cum_out, out_tok)
         now = time.monotonic()
-        elapsed_ms = max(1, int((now - _last_post_mono) * 1000))
+        elapsed_ms = window_ms if window_ms and window_ms > 0 else int((now - _last_post_mono) * 1000)
         _last_post_mono = now
-    post_telemetry({"tokensIn": d_in, "tokensOut": d_out, "elapsedMs": elapsed_ms})
+    post_telemetry({"tokensIn": d_in, "tokensOut": d_out, "elapsedMs": min(600_000, max(1, elapsed_ms))})
+
+
+# Rollout entries that mark "generation starts after this": a tool's output
+# going back in, the user prompt, or the task starting. The window charged to
+# a token_count is (its timestamp - the latest boundary before it).
+_BOUNDARY_TYPES = frozenset(
+    {"function_call_output", "custom_tool_call_output", "local_shell_call_output", "mcp_tool_call_output", "user_message", "task_started"}
+)
+_SCAN_MARKERS = tuple(f'"{t}"' for t in _BOUNDARY_TYPES) + ('"token_count"',)
+_last_boundary_ms: int | None = None
+
+
+def _ts_ms(value: Any) -> int | None:
+    try:
+        return int(datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp() * 1000)
+    except (ValueError, TypeError):
+        return None
+
+
+_read_lock = threading.Lock()
 
 
 def _read_transcript_once() -> None:
-    global _transcript_offset
+    # Called from the poller thread AND from turn.completed on the main
+    # thread — serialize so offset/boundary state stays coherent.
+    with _read_lock:
+        _read_transcript_locked()
+
+
+def _read_transcript_locked() -> None:
+    global _transcript_offset, _last_boundary_ms
     path = _find_transcript()
     if not path:
         return
@@ -127,20 +157,32 @@ def _read_transcript_once() -> None:
     if nl < 0:
         return
     _transcript_offset = end - (len(chunk) - nl - 1)
-    latest = None
     for line in chunk[: nl + 1].splitlines():
-        if '"token_count"' not in line:
+        if not any(marker in line for marker in _SCAN_MARKERS):
             continue
         try:
             obj = json.loads(line)
         except json.JSONDecodeError:
             continue
-        usage = ((obj.get("payload") or {}).get("info") or {}).get("total_token_usage")
-        if isinstance(usage, dict):
-            latest = usage
-    if latest:
-        fresh = max(0, int(latest.get("input_tokens") or 0) - int(latest.get("cached_input_tokens") or 0))
-        _post_cumulative(fresh, int(latest.get("output_tokens") or 0))
+        payload = obj.get("payload") or {}
+        ptype = payload.get("type")
+        ts = _ts_ms(obj.get("timestamp"))
+        if ptype in _BOUNDARY_TYPES:
+            if ts is not None:
+                _last_boundary_ms = ts
+            continue
+        if ptype != "token_count":
+            continue
+        usage = (payload.get("info") or {}).get("total_token_usage")
+        if not isinstance(usage, dict):
+            continue
+        window = None
+        if ts is not None and _last_boundary_ms is not None and ts > _last_boundary_ms:
+            window = ts - _last_boundary_ms
+        if ts is not None:
+            _last_boundary_ms = ts
+        fresh = max(0, int(usage.get("input_tokens") or 0) - int(usage.get("cached_input_tokens") or 0))
+        _post_cumulative(fresh, int(usage.get("output_tokens") or 0), window)
 
 
 def _transcript_poller() -> None:
@@ -302,7 +344,11 @@ def main() -> int:
             to = int(usage.get("output_tokens") or 0)
             cached = int(usage.get("cached_input_tokens") or 0)
             reasoning = int(usage.get("reasoning_output_tokens") or 0)
-            _post_cumulative(max(0, ti - cached), to)
+            # Drain the transcript first so the final response's tokens get
+            # their REAL generation window; any residue settles over a floored
+            # window rather than registering as a burst.
+            _read_transcript_once()
+            _post_cumulative(max(0, ti - cached), to, 3000)
             print(
                 f"[codex usage] total_input={ti} cached={cached} total_output={to} reasoning={reasoning}",
                 flush=True,
