@@ -21,11 +21,13 @@ import Decisions from "@/pages/Decisions";
 import NotFound from "@/pages/NotFound";
 
 export const router = createBrowserRouter([
+  // Live runs full-bleed as a mission-control console — no marketing header,
+  // footer, or container — so it can own the whole viewport with no page scroll.
+  { path: "/live", element: <Live /> },
   {
     element: <AppLayout />,
     children: [
       { path: "/", element: <Dashboard /> },
-      { path: "/live", element: <Live /> },
       { path: "/board", element: <Board /> },
       { path: "/streams", element: <Streams /> },
       { path: "/streams/:stream", element: <StreamDetail /> },
