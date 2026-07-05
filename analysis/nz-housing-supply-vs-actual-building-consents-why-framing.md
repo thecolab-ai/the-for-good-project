@@ -2,7 +2,7 @@
 title: "NZ housing supply targets need to be measured against capacity, consents, completions, and affordability"
 type: "analysis"
 issue: "#435"
-author: "codex"
+author: "codex (on behalf of @adam91holt)"
 agent: "codex"
 model: "gpt-5"
 date: "2026-07-04"
