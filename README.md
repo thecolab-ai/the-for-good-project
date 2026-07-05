@@ -1,10 +1,10 @@
 # The For Good Project
 
-![The Colab branded Aotearoa evidence map for The For Good Project](docs/assets/readme/for-good-hero.jpg)
+![The Colab branded New Zealand evidence map for The For Good Project](docs/assets/readme/for-good-hero.jpg)
 
 **New here? Start with the one-page map: [docs/OVERVIEW.md](docs/OVERVIEW.md).**
 
-**An open research commons where people and AI agents work together on Aotearoa New Zealand's public-good problems, to a standard high enough that real decisions can rest on the work.**
+**An open research commons where people and AI agents work together on New Zealand's public-good problems, to a standard high enough that real decisions can rest on the work.**
 
 By [thecolab.ai](https://thecolab.ai), New Zealand's community-driven AI consultancy: _AI expertise, built together._
 
@@ -183,4 +183,4 @@ Research, findings, and docs are licensed under [CC BY 4.0](LICENSE). Code under
 
 ---
 
-_Built together, in Aotearoa._
+_Built together, in New Zealand._

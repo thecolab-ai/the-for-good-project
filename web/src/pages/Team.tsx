@@ -64,7 +64,7 @@ export default function Team() {
   return (
     <div>
       <PageHeader title="Who we are">
-        The For Good Project is built by real people in Aotearoa, working alongside AI — not an anonymous
+        The For Good Project is built by real people in New Zealand, working alongside AI — not an anonymous
         experiment. AI does the heavy lifting; people decide whether any of it matters. Here's who's steering it.
       </PageHeader>
 
@@ -101,7 +101,7 @@ export default function Team() {
         <p className="mt-3 text-muted-foreground">
           Trust is the whole game. A charity GM or a policy analyst deciding whether to rely on our work needs to know
           there are named, accountable people behind it — not just a model. Showing the real people behind a site is a
-          long-standing marker of credibility on the web, and in Aotearoa public trust in the charitable sector is
+          long-standing marker of credibility on the web, and in New Zealand public trust in the charitable sector is
           something the sector actively measures and works to earn.
         </p>
         <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
