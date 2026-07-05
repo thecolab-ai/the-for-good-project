@@ -39,6 +39,7 @@ parse_agent_args "$@"
 export AGENT MODEL
 
 REVIEW_PER_WORK="${REVIEW_PER_WORK:-2}"   # review passes per work pass — bias to review; it's the bottleneck
+FRAME_PER_WORK="${FRAME_PER_WORK:-1}"       # framing/discover rework passes per cycle; frame_work owns discover roots
 POLL_SECONDS="${POLL_SECONDS:-120}"       # idle wait between cycles when the whole queue is empty
 MAX_CYCLES="${MAX_CYCLES:-0}"             # 0 = run forever
 PULL="${PULL:-1}"                         # git-pull latest main each cycle (0 to disable)
@@ -157,8 +158,16 @@ run_pass() {  # $1 = task kind, rest = command to run
   out="$(mktemp)"
   set +e; "$@" 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}; set -e
   fleet_logs "$out"
+  if was_usage_limited "$out" || grep -qE "API rate limit|rate limit already exceeded|usage limit" "$out"; then
+    fleet_send "$kind" "" "${kind} pass hit API/rate limit" 0 0 0 0 0 0 1
+    rm -f "$out"; return 1
+  fi
   if grep -qE "No open PRs needing review\.|Queue empty|nothing available" "$out"; then
     fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
+  if [ "$kind" = review ] && grep -qE "already (passed adversarial review|reviewed at this revision)|waiting on the author's rework|parked for a human maintainer" "$out"; then
+    fleet_send "idle" "" "review skipped: already reviewed" 0 0 0 0 0 0 0
     rm -f "$out"; return 1
   fi
   if [ "$rc" -eq 0 ]; then did=1; else errs=1; fi
@@ -173,9 +182,10 @@ run_pass() {  # $1 = task kind, rest = command to run
 }
 
 cycle=0
+review_disabled_reported=0
 while :; do
   cycle=$((cycle + 1))
-  rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → work×1)"
+  rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → frame×${FRAME_PER_WORK} → work×1)"
 
   # Pull latest main each cycle so operators automatically pick up script and
   # pipeline improvements without a manual git pull. git swaps files by atomic
@@ -206,6 +216,19 @@ while :; do
     for _ in $(seq 1 "$REVIEW_PER_WORK"); do
       info "review pass…"
       run_pass review env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
+    done
+  elif [ "$review_disabled_reported" = 0 ]; then
+    fleet_send "idle" "" "review disabled: REVIEW_GITHUB_TOKEN missing" 0 0 0 0 0 0 0
+    review_disabled_reported=1
+  fi
+
+  # Framing side: discover roots and sent-back discover/framing PRs are not
+  # claimable by start_work.sh (ADR-0014). Without this pass autopilot can look
+  # idle while discover rework such as PRs marked "Part of #<root>" is waiting.
+  if [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
+    for _ in $(seq 1 "$FRAME_PER_WORK"); do
+      info "frame pass…"
+      run_pass frame env MAX=1 POLL_SECONDS=0 ./frame_work.sh "$@" && did_something=1
     done
   fi
 

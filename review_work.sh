@@ -362,8 +362,8 @@ EOF
 }
 
 open_prs_needing_review() {
-  gh pr list --repo "$REPO" --state open --json number,isDraft,headRefOid,author,labels \
-    --jq ".[] | select(.isDraft|not) | select(([.labels[].name] | index(\"$HUMAN_ONLY_LABEL\")) | not) | .number"
+  gh api --paginate "repos/$OWNER/$NAME/pulls?state=open&per_page=100" \
+    --jq ".[] | select(.draft|not) | select((.labels // [] | map(.name) | index(\"$HUMAN_ONLY_LABEL\")) | not) | .number"
 }
 
 check_state() {  # $1 = sha  -> success|failure|pending|none
@@ -380,15 +380,19 @@ set_check() {  # $1 sha, $2 state(success|failure), $3 desc, $4 url
 
 review_one() {  # $1 = PR number
   local pr="$1"
-  local sha author url
-  sha="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
-  author="$(gh pr view "$pr" --repo "$REPO" --json author --jq .author.login)"
-  url="$(gh pr view "$pr" --repo "$REPO" --json url --jq .url)"
-  rule; info "${c_bold}PR #$pr${c_reset} — $(gh pr view "$pr" --repo "$REPO" --json title --jq .title) ${c_dim}(by @$author)${c_reset}"
+  local sha author url title labels
+  local meta
+  meta="$(gh api "repos/$OWNER/$NAME/pulls/$pr" \
+    --jq '{sha:.head.sha, author:.user.login, url:.html_url, title:.title, labels:(.labels // [] | map(.name) | join(","))}' 2>/dev/null)" || return 1
+  sha="$(printf '%s' "$meta" | jq -r .sha)"
+  author="$(printf '%s' "$meta" | jq -r .author)"
+  url="$(printf '%s' "$meta" | jq -r .url)"
+  title="$(printf '%s' "$meta" | jq -r .title)"
+  labels="$(printf '%s' "$meta" | jq -r .labels)"
+  rule; info "${c_bold}PR #$pr${c_reset} — $title ${c_dim}(by @$author)${c_reset}"
 
   # HUMAN-ONLY: pipeline/governance PRs are reviewed by a human maintainer, not
   # by this loop (also guards the PR=<n> single-PR path).
-  local labels; labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
   case ",$labels," in
     *",$HUMAN_ONLY_LABEL,"*)
       log "#$pr carries \"$HUMAN_ONLY_LABEL\" — a human maintainer reviews and merges this one. Skipping."; return 0 ;;
