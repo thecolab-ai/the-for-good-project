@@ -48,17 +48,32 @@ and fail-open at every layer:
    durable source of truth.** Every durable fact still lands on GitHub as the same
    labels/assignees humans and non-enrolled contributors rely on; the server's MongoDB
    mirror (fed by HMAC-verified webhooks plus a reconciling interval sync) is a rebuildable
-   cache, never authoritative; enrolment is per-agent opt-in (`FLEET_CLAIM=1` +
-   `FLEET_TOKEN`), and every server failure falls back to today's label path. A fleet with
-   the server unplugged is slower and racier, never stuck.
-3. **Auth is a server-minted token registry with trust tiers.** A maintainer mints a bearer
-   token bound to a GitHub handle and a tier (`framer` / `trusted` / `standard`); only the
-   SHA-256 hash is stored, and revocation is server-side and immediate. GitHub device-flow
-   auth (designed in #398) is deferred: it proves control of a GitHub account, not the
-   maintainer's decision to trust that identity with a claim-writing bot token — minting
-   *is* the trust decision, mirroring the `trusted-reviewers.json` allow-lists — and it
-   would cost an OAuth app plus an interactive step per enrolment. Tiers are recorded now
-   so later capability-floored dispatch doesn't need a schema change.
+   cache, never authoritative; and every server failure falls back to today's label path.
+   Server claiming is the **default** in `autopilot.sh` (`FLEET_CLAIM=1`; opt out with
+   `FLEET_CLAIM=0`) precisely because that fallback is total — a fleet with the server
+   unplugged is slower and racier, never stuck.
+3. **Auth is a server-minted token registry with trust tiers, and standard-tier tokens
+   self-mint on first contact (TOFU auto-enrollment).** Nobody hands tokens out: a
+   runner's first contact calls `POST /api/v1/agents/enroll` with its self-reported GitHub
+   login, the server mints a `standard`-tier token exactly once per handle (a unique index
+   arbitrates racers), and the runner stores it under `~/.forgood/` (0600). Only the
+   SHA-256 hash is stored server-side, and revocation is immediate and *sticky*: a revoked
+   or already-enrolled handle is never re-issued by enrollment — recovery is an operator
+   re-mint (`fleet-admin.mjs` / admin route), otherwise anyone could rotate a rival's
+   token by re-enrolling their handle. The accepted trade-off is **first-contact handle
+   squatting** (identity is assumed-trust, exactly like telemetry's `hello.handle` and the
+   label path's claim comments): squatting is visible in the registry, revocable, bounded
+   by a per-handle active-claim cap (`MAX_ACTIVE_CLAIMS`, default 3) and per-IP rate
+   limits — and the adversarial review gate remains the merge-time defence regardless of
+   who claimed. `AUTO_ENROLL=0` turns self-enrollment off (operator-minted tokens only).
+   Elevated tiers (`framer` / `trusted`) are still operator-minted decisions, mirroring
+   the `trusted-reviewers.json` allow-lists. GitHub device-flow auth (designed in #398)
+   stays deferred — it proves account control, which assumed-trust deliberately doesn't
+   require, at the cost of an OAuth app plus an interactive step per enrolment. One
+   mechanical consequence: GitHub silently drops assignees without repo access, so an
+   auto-enrolled outside contributor's claim proceeds **without** an assignee
+   (`assigneeSet:false` on the assignment; the label + lease still carry the claim) —
+   the same situation the label path has always had for fork contributors.
 4. **Redis and Mongo split by lifetime.** Redis holds hot, expiring, atomicity-critical
    state: leases and command-delivery queues. MongoDB holds durable-but-rebuildable state:
    the issue/PR mirror, webhook deliveries, the agent registry, the assignments audit

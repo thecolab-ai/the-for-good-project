@@ -50,6 +50,19 @@ class Handler(BaseHTTPRequestHandler):
         with open(log_file, "a") as f:
             f.write(json.dumps({"path": self.path, "body": body, "auth": auth}) + "\n")
         mode = open(mode_file).read().strip()
+        if self.path == "/api/v1/agents/enroll":
+            if mode == "enroll409":
+                raw = json.dumps({"ok": False, "error": "handle already enrolled"}).encode()
+                self.send_response(409)
+            else:
+                raw = json.dumps({"ok": True, "token": "fgt_" + "ab" * 16,
+                                  "handle": "testuser", "tier": "standard"}).encode()
+                self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
         if mode == "empty":
             payload = {"ok": True, "issue": None}
         elif mode == "garbage":
@@ -176,5 +189,42 @@ if [ -n "$foreign" ] && [ ! -O "$foreign" ]; then
 else
   pass "fleet_pop_commands: drain-once + refuses non-regular stashes (no foreign file available to test ownership)"
 fi
+
+# --- fleet_ensure_token: TOFU auto-enroll (ADR-0017) ---------------------------
+# No FLEET_TOKEN anywhere → first contact enrolls, stores the token 0600,
+# and later runs reuse the stored file without re-enrolling.
+unset FLEET_TOKEN
+export FLEET_TOKEN_FILE="$TMP/fleet-token"
+ME="testuser"
+enrolls_before="$(grep -c '/api/v1/agents/enroll' "$LOG_FILE" || true)"
+fleet_claim_enabled || fail "auto-enroll must resolve a token with no FLEET_TOKEN set"
+[ "$FLEET_TOKEN" = "fgt_$(printf 'ab%.0s' 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)" ] \
+  || fail "FLEET_TOKEN must hold the enrolled token (got: ${FLEET_TOKEN:-unset})"
+req="$(grep '/api/v1/agents/enroll' "$LOG_FILE" | tail -1)"
+printf '%s' "$req" | jq -e '.body | fromjson | .handle == "testuser"' >/dev/null \
+  || fail "enroll must send the gh identity as the handle (got: $req)"
+[ -f "$FLEET_TOKEN_FILE" ] || fail "enrolled token must be stored"
+[ "$(stat -c %a "$FLEET_TOKEN_FILE")" = "600" ] || fail "stored token must be 0600 (got $(stat -c %a "$FLEET_TOKEN_FILE"))"
+pass "fleet_ensure_token enrolls on first contact and stores the token 0600"
+
+# Stored token is reused — no second enroll request.
+unset FLEET_TOKEN
+fleet_claim_enabled || fail "stored token must be reused"
+[ -n "$FLEET_TOKEN" ] || fail "FLEET_TOKEN must be loaded from the stored file"
+enrolls_after="$(grep -c '/api/v1/agents/enroll' "$LOG_FILE" || true)"
+[ "$enrolls_after" = "$((enrolls_before + 1))" ] \
+  || fail "exactly ONE enroll request expected across both runs (got $enrolls_after)"
+pass "stored token reused without re-enrolling"
+
+# A symlinked token file is REFUSED (never read), and an enroll refusal (409:
+# handle taken/revoked) falls back to the label path rather than looping.
+unset FLEET_TOKEN
+rm -f "$FLEET_TOKEN_FILE"; ln -s /etc/hostname "$FLEET_TOKEN_FILE"
+printf 'enroll409' > "$MODE_FILE"
+fleet_claim_enabled && fail "409 enrollment must disable fleet claiming (label-path fallback)"
+[ -z "${FLEET_TOKEN:-}" ] || fail "a symlinked token file must never be read (got: $FLEET_TOKEN)"
+rm -f "$FLEET_TOKEN_FILE"
+printf 'claim' > "$MODE_FILE"
+pass "symlinked token file refused; enroll 409 falls back to the label path"
 
 echo "ALL FLEET CLIENT TESTS PASSED"

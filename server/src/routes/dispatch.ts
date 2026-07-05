@@ -3,6 +3,10 @@
  *
  * All require `Authorization: Bearer fgt_...` verified via
  * orchestrator/auth.verifyAgentToken (401 otherwise):
+ *  - POST /api/v1/agents/enroll — UNAUTHENTICATED TOFU enrollment (ADR-0017):
+ *    body enrollRequestSchema; 200 {ok,token,handle,tier:"standard"} exactly
+ *    once per handle; 409 ever after (revocations stick — operator re-mints);
+ *    403 when AUTO_ENROLL=0. Rate-limited per IP like every agent route.
  *  - POST /api/v1/work/claim   — body claimRequestSchema. 200
  *    {ok:true, issue: ClaimedIssue, assignmentId, leaseTtlSeconds, handle}
  *    (handle = the registry identity the claim was made for — the runner
@@ -23,10 +27,10 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { GitHubApiError } from "../github/gh-api.js";
 import { IpRateLimiter } from "../guards.js";
-import { bearerToken, verifyAgentToken, type AgentIdentity } from "../orchestrator/auth.js";
+import { bearerToken, enrollAgent, verifyAgentToken, type AgentIdentity } from "../orchestrator/auth.js";
 import { claimNext, releaseAssignment, renewLease, type ClaimResult } from "../orchestrator/dispatch.js";
 import type { Orchestrator } from "../orchestrator/stores.js";
-import { claimRequestSchema, releaseRequestSchema } from "../protocol.js";
+import { claimRequestSchema, enrollRequestSchema, releaseRequestSchema } from "../protocol.js";
 import type { FleetStore } from "../state.js";
 
 const renewRequestSchema = z.object({ issue: z.number().int().positive() });
@@ -55,6 +59,39 @@ export function registerDispatchRoutes(
     }
     return identity;
   };
+
+  // TOFU auto-enrollment (ADR-0017): a runner's first contact mints its own
+  // standard-tier token, so "just run autopilot.sh" works with no operator
+  // hand-out. Unauthenticated by design — the handle is self-reported
+  // assumed-trust identity (same as telemetry's hello.handle); the strict
+  // login-shape schema keeps arbitrary strings out of the registry, the
+  // unique index makes first-contact wins atomic, a revoked or existing
+  // handle is NEVER re-issued here, and per-IP rate limiting bounds abuse.
+  app.post("/api/v1/agents/enroll", async (req, reply) => {
+    if (await rateLimited(req, reply)) return reply;
+    if (!config.autoEnroll) {
+      return reply.code(403).send({ ok: false, error: "auto-enrollment disabled — ask the operator for a token" });
+    }
+    const parsed = enrollRequestSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
+    }
+    const minted = await enrollAgent(orch, {
+      handle: parsed.data.handle,
+      note: `auto-enrolled${parsed.data.harness ? ` (${parsed.data.harness})` : ""}`,
+    });
+    if (!minted) {
+      return reply.code(409).send({
+        ok: false,
+        error: "handle already enrolled — recover the stored token or ask the operator to reset it",
+      });
+    }
+    store.addEvent("agent_online", `@${parsed.data.handle} enrolled with the fleet server`, {
+      handle: parsed.data.handle,
+      ...(parsed.data.harness ? { harness: parsed.data.harness } : {}),
+    });
+    return { ok: true, token: minted.token, handle: parsed.data.handle, tier: "standard" };
+  });
 
   app.post("/api/v1/work/claim", async (req, reply) => {
     if (await rateLimited(req, reply)) return reply;
@@ -95,6 +132,10 @@ export function registerDispatchRoutes(
         };
       case "empty":
         return { ok: true, issue: null };
+      case "capped":
+        // Shaped like empty (issue:null) so every runner just falls into its
+        // queue-empty path; the reason lets an operator see why.
+        return { ok: true, issue: null, reason: "active-claim-cap" };
       case "rate-limited":
         return reply.code(429).send({
           ok: false,

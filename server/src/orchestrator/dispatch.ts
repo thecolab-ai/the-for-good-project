@@ -100,6 +100,10 @@ interface AssignmentDoc {
   claimedAt: string;
   renewedAt: string;
   active: boolean;
+  /** False when GitHub silently dropped the assignee (handle without repo
+   *  access — normal for auto-enrolled outside contributors). Missing on
+   *  docs from before this field existed = assignee was set. */
+  assigneeSet?: boolean;
   releasedAt?: string;
   outcome?: ReleaseOutcome;
   prNumber?: number;
@@ -121,6 +125,9 @@ export interface ClaimContext {
 
 export type ClaimResult =
   | { status: "claimed"; issue: ClaimedIssue; assignmentId: string; leaseTtlSeconds: number }
+  /** This handle already holds `maxActiveClaims` active assignments —
+   *  bounds how much of the queue one (auto-enrolled) identity can sit on. */
+  | { status: "capped" }
   /** Queue empty — the route answers `{ok:true, issue:null}`. */
   | { status: "empty" }
   /** GitHub rate-limited mid-claim — the route answers 429. */
@@ -272,6 +279,12 @@ export async function claimNext(
   const gh = orch.gh;
   if (!gh) return { status: "disabled", reason: "no github token" };
 
+  // Anti-grief bound for auto-enrolled identities (ADR-0017): one handle can
+  // hold at most maxActiveClaims live assignments. Checked before any lease
+  // is taken so a capped agent costs one Mongo count, nothing else.
+  const activeCount = await assignmentsCol(orch).countDocuments({ handle: ctx.handle, active: true });
+  if (activeCount >= config.maxActiveClaims) return { status: "capped" };
+
   const candidates = await orderedCandidates(orch, ctx.stages);
   const ttl = config.leaseTtlSeconds;
 
@@ -300,6 +313,7 @@ export async function claimNext(
     // issue-status reconciler converges that, and it beats corrupting live
     // state on every stale candidate.
     let step = 0;
+    let assigneeSet = false;
     try {
       const removedAvailable = await gh.removeLabel(n, AVAILABLE_LABEL);
       if (!removedAvailable) {
@@ -312,7 +326,19 @@ export async function claimNext(
       step = 1; // available removed — from here, undo means re-adding it
       await gh.addLabels(n, [CLAIMED_LABEL]);
       step = 2; // claimed added — undo removes it too
-      await gh.addAssignees(n, [ctx.handle]);
+      try {
+        await gh.addAssignees(n, [ctx.handle]);
+        assigneeSet = true;
+      } catch (err) {
+        if (err instanceof GitHubApiError && err.code === "assignee-ignored") {
+          // GitHub silently drops assignees without repo access — NORMAL for
+          // auto-enrolled outside contributors (they can't be assignees on
+          // the label path either). The lease + assignment doc carry the
+          // claim identity; the labels still gate the queue. Proceed.
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       // Best-effort undo of any partial write, on EVERY failure path (while
       // still holding the lease — see above). Available-first means a
@@ -329,21 +355,16 @@ export async function claimNext(
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
         return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
       }
-      if (err instanceof GitHubApiError && (err.code === "assignee-ignored" || err.status === 403)) {
-        // Misconfiguration, not a per-issue failure: the handle isn't
-        // assignable on the repo, or the bot token lacks write access
-        // (a permission 403 — isRateLimit already excluded the quota case).
-        // Undo, free the lease, and ABORT the claim rather than burning one
-        // failing GitHub write per candidate across the whole queue.
+      if (err instanceof GitHubApiError && err.status === 403) {
+        // Misconfiguration, not a per-issue failure: the BOT token lacks
+        // write access (a permission 403 — isRateLimit already excluded the
+        // quota case; an unassignable HANDLE is handled inline above and
+        // never aborts). Undo, free the lease, and ABORT the claim rather
+        // than burning one failing GitHub write per candidate across the
+        // whole queue.
         await undoPartialWrites();
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
-        return {
-          status: "disabled",
-          reason:
-            err.code === "assignee-ignored"
-              ? "handle not assignable on the repo (missing repo access?)"
-              : "github token lacks write access",
-        };
+        return { status: "disabled", reason: "github token lacks write access" };
       }
       if (err instanceof GitHubApiError && err.status >= 400 && err.status < 500) {
         // Per-issue 4xx: undo, free the lease, try the next candidate.
@@ -373,10 +394,14 @@ export async function claimNext(
       claimedAt: now,
       renewedAt: now,
       active: true,
+      assigneeSet,
     };
     const labels = candidate.labels.filter((l) => l !== AVAILABLE_LABEL);
     if (!labels.includes(CLAIMED_LABEL)) labels.push(CLAIMED_LABEL);
-    const assignees = candidate.assignees.includes(ctx.handle)
+    // Mirror only what GitHub actually holds: an unassignable handle
+    // (assigneeSet=false) must not appear in the mirror's assignees, or the
+    // renew guard would trust an assignee GitHub never accepted.
+    const assignees = !assigneeSet || candidate.assignees.includes(ctx.handle)
       ? candidate.assignees
       : [...candidate.assignees, ctx.handle];
     try {
@@ -613,10 +638,14 @@ export async function renewLeasesForHandle(orch: Orchestrator, handle: string): 
         { _id: doc.issueNumber },
         { projection: { labels: 1, assignees: 1 } },
       );
+      // The assignee check only applies when the claim actually set one —
+      // auto-enrolled outside contributors can't be assignees on GitHub
+      // (assigneeSet:false), so for them "still claimed" is label-only.
+      const expectAssignee = doc.assigneeSet !== false;
       if (
         !issue ||
         !(issue.labels ?? []).includes(CLAIMED_LABEL) ||
-        !(issue.assignees ?? []).includes(doc.handle)
+        (expectAssignee && !(issue.assignees ?? []).includes(doc.handle))
       ) {
         continue; // no longer claimed by this handle — let the lease lapse
       }
