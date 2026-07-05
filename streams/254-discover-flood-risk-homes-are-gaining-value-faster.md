@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-05
-image: ""
+image: /images/streams/stream-370-flood-risk-labels.jpg
 ---
 
 # Flood-risk homes, insurance retreat, and who is left exposed
