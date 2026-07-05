@@ -85,7 +85,7 @@ async function send(heartbeat) {
  *  figures against what this session last posted. Cache reads are excluded —
  *  they'd inflate "intelligence at work" by orders of magnitude. */
 function readTranscriptDelta() {
-  const out = { tokensIn: 0, tokensOut: 0, lastText: "" };
+  const out = { tokensIn: 0, tokensOut: 0, lastText: "", windowMs: 0 };
   const path = payload.transcript_path;
   if (!path) return out;
   let raw;
@@ -101,7 +101,20 @@ function readTranscriptDelta() {
   }
   const offset = Number.isFinite(state.offset) ? state.offset : 0;
   state.offset = raw.length;
+  // Generation windows come from the rollout's own timestamps: a window runs
+  // from the latest boundary (tool output returning, user prompt, task start)
+  // to the token_count it produced. Charging wall-clock between hook firings
+  // would dilute the rate with tool-execution time.
+  const BOUNDARIES = new Set([
+    "function_call_output",
+    "custom_tool_call_output",
+    "local_shell_call_output",
+    "mcp_tool_call_output",
+    "user_message",
+    "task_started",
+  ]);
   let latest = null;
+  let lastBoundary = Number.isFinite(state.lastBoundaryTs) ? state.lastBoundaryTs : null;
   for (const line of raw.slice(offset).split("\n")) {
     if (!line.trim()) continue;
     let entry;
@@ -112,11 +125,21 @@ function readTranscriptDelta() {
     }
     const p = entry?.payload;
     if (!p || typeof p !== "object") continue;
-    if (p.type === "token_count" && p.info?.total_token_usage) latest = p.info.total_token_usage;
+    const ts = Date.parse(entry.timestamp ?? "") || null;
+    if (BOUNDARIES.has(p.type)) {
+      if (ts) lastBoundary = ts;
+      continue;
+    }
+    if (p.type === "token_count" && p.info?.total_token_usage) {
+      latest = p.info.total_token_usage;
+      if (ts && lastBoundary && ts > lastBoundary) out.windowMs += ts - lastBoundary;
+      if (ts) lastBoundary = ts;
+    }
     if (p.type === "agent_message" && typeof p.message === "string" && p.message.trim()) {
       out.lastText = p.message;
     }
   }
+  state.lastBoundaryTs = lastBoundary;
   if (latest) {
     const cumIn = Math.max(0, (latest.input_tokens ?? 0) - (latest.cached_input_tokens ?? 0));
     const cumOut = latest.output_tokens ?? 0;
@@ -128,14 +151,19 @@ function readTranscriptDelta() {
   return out;
 }
 
-/** Token heartbeat with real elapsed wall time, so the fleet TPS gauge
- *  reflects the actual rate rather than a per-post burst. */
+/** Token heartbeat over the tokens' own generation window (from rollout
+ *  timestamps), falling back to wall time since the last token post. */
+function tokenWindowMs(delta) {
+  const now = Date.now();
+  const fallback = now - (state.lastTokensAt ?? now - 1000);
+  state.lastTokensAt = now;
+  const windowMs = delta.windowMs > 0 ? delta.windowMs : fallback;
+  return Math.min(600_000, Math.max(1, windowMs));
+}
+
 async function sendTokens(delta) {
   if (delta.tokensIn <= 0 && delta.tokensOut <= 0) return false;
-  const now = Date.now();
-  const elapsedMs = Math.min(86_400_000, Math.max(1, now - (state.lastTokensAt ?? now - 1000)));
-  state.lastTokensAt = now;
-  await send({ tokensIn: delta.tokensIn, tokensOut: delta.tokensOut, elapsedMs });
+  await send({ tokensIn: delta.tokensIn, tokensOut: delta.tokensOut, elapsedMs: tokenWindowMs(delta) });
   return true;
 }
 
@@ -150,11 +178,9 @@ switch (event) {
     const delta = readTranscriptDelta();
     const heartbeat = { toolCalls: 1, tools: { [tool]: 1 } };
     if (delta.tokensIn > 0 || delta.tokensOut > 0) {
-      const now = Date.now();
       heartbeat.tokensIn = delta.tokensIn;
       heartbeat.tokensOut = delta.tokensOut;
-      heartbeat.elapsedMs = Math.min(86_400_000, Math.max(1, now - (state.lastTokensAt ?? now - 1000)));
-      state.lastTokensAt = now;
+      heartbeat.elapsedMs = tokenWindowMs(delta);
     }
     await send(heartbeat);
     break;
