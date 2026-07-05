@@ -645,6 +645,14 @@ pick_frameable() {  # $1 = queue snapshot
 
 main() {
   preflight
+  # Global framing kill-switch: framing is OFF unless explicitly enabled with
+  # FRAMING=true. This is deliberately a graceful skip (not an error) with the
+  # "nothing available" idle sentinel, so autopilot's run_pass reads it as idle
+  # rather than a failed pass. DRY_RUN still previews so you can inspect intent.
+  if [ "${FRAMING:-false}" != "true" ] && [ "$DRY_RUN" = 0 ]; then
+    info "Framing gated off — set FRAMING=true to enable discover-root framing. (nothing available to frame)"
+    return
+  fi
   # The capability floor (#379 / ADR-0014): framing is reserved for a trusted
   # identity running a powerful model. FAIL CLOSED — but let DRY_RUN through
   # with a warning so anyone can inspect what the runner would do.

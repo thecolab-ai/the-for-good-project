@@ -255,7 +255,11 @@ claim_issue() {  # $1 = issue number; returns 0 if we hold the claim
   local n="$1"
   # Re-check it's still available (best-effort lock via the label + assignee).
   local labels; labels="$(issue_labels "$n")"
-  case ",$labels," in *",status: available,"*) : ;; *) warn "#$n no longer available — skipping."; return 1 ;; esac
+  # rc 2 = "unworkable, advance to the NEXT candidate" (vs rc 1 = a genuine
+  # failed attempt): the caller must not let this consume a MAX slot, and must
+  # not re-pick this same issue on the next loop (#502 churned forever because a
+  # skip both counted toward MAX=1 and left the issue first in the queue).
+  case ",$labels," in *",status: available,"*) : ;; *) warn "#$n no longer available — skipping."; return 2 ;; esac
   # Never start FRESH work on an issue that already has an open PR: a claim
   # race that slips past the tie-break can otherwise produce two PRs for one
   # issue (#305 + #307 both closed #234), and the loser's stale PR wedges the
@@ -264,7 +268,7 @@ claim_issue() {  # $1 = issue number; returns 0 if we hold the claim
   local existing; existing="$(pr_for_issue "$n" || true)"
   if [ -n "$existing" ]; then
     warn "#$n already has open PR #$existing — skipping instead of opening a duplicate."
-    return 1
+    return 2
   fi
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would claim #$n (assign @$ME, status: available → claimed)"; return 0; fi
   gh issue edit "$n" --repo "$REPO" --add-assignee "@me" \
@@ -307,7 +311,7 @@ finish_issue() {  # $1 = issue number
 work_one() {  # $1 = issue number
   local n="$1"
   rule; info "${c_bold}Issue #$n${c_reset} — $(issue_field "$n" title)"
-  claim_issue "$n" || return 1
+  claim_issue "$n"; local crc=$?; [ "$crc" -ne 0 ] && return "$crc"   # rc 2 = unworkable/skip → caller advances without spending a MAX slot
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would run: AGENT=$AGENT in a fresh origin/main worktree on the following prompt:"; log "$(work_prompt "$n" | sed 's/^/    /')"
     finish_issue "$n"; return 0
@@ -595,6 +599,12 @@ main() {
     done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX issue(s). Stopping."; return; fi
   fi
+  # Issues skipped as unworkable THIS run (already has a PR, no longer
+  # available). We drop them from the snapshot below so selection advances to
+  # the next candidate instead of re-picking the same stuck issue every loop
+  # (#502 was available-with-a-PR, sorted first, and churned forever). Cleared
+  # on the poll/sleep path so a long-running poller re-evaluates fresh.
+  local skip_ids=""
   while :; do
     reconcile_rework   # pull in any PRs a reviewer sent back that the hand-off missed
     # ONE GraphQL query snapshots the whole open-issue queue; every check below
@@ -604,6 +614,9 @@ main() {
     # we sleep and retry — exactly what the old per-call `|| true` reads did,
     # rather than letting set -e kill the whole runner.
     local snap; snap="$(fetch_open_issues)" || snap='[]'
+    if [ -n "$skip_ids" ]; then
+      snap="$(printf '%s' "$snap" | jq --argjson skip "[$skip_ids]" '[.[] | select((.number as $n | $skip | index($n)) | not)]')" || snap='[]'
+    fi
     # Priority: my own rework → a TTL-freed rework I can push → a fresh issue.
     local next kind=new
     next="$(rework_issues "$snap" | head -1 || true)"
@@ -619,11 +632,19 @@ main() {
         # same issue every cycle (the claim tie-break stays correct regardless;
         # this just cuts down how often two of them collide in the first place).
         local nap=$(( POLL_SECONDS + (RANDOM % (POLL_SECONDS / 4 + 1)) ))
-        log "No rework for @$ME and no available issues. Sleeping ${nap}s... (Ctrl-C to stop)"; sleep "$nap"; continue
+        log "No rework for @$ME and no available issues. Sleeping ${nap}s... (Ctrl-C to stop)"; skip_ids=""; sleep "$nap"; continue
       fi
       rule; ok "Queue empty — no rework for @$ME and nothing available.${STAGE:+ (stage=$STAGE)}"; break
     fi
-    if [ "$kind" = rework ]; then rework_one "$next" || true; else work_one "$next" || true; fi
+    local wrc=0
+    if [ "$kind" = rework ]; then rework_one "$next" || wrc=$?; else work_one "$next" || wrc=$?; fi
+    # rc 2 = the issue was unworkable (already has a PR / no longer available).
+    # A skip must NOT spend a MAX slot; remember it so we don't re-pick it, and
+    # loop straight to the next candidate.
+    if [ "$wrc" -eq 2 ]; then
+      skip_ids="${skip_ids:+$skip_ids,}$next"
+      continue
+    fi
     done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX issue(s). Stopping."; break; fi
   done
