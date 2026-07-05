@@ -7,9 +7,11 @@ runner output readable while sending those usage deltas to the fleet server.
 """
 from __future__ import annotations
 
+import glob
 import json
 import os
 import sys
+import threading
 import urllib.error
 import urllib.request
 import time
@@ -34,9 +36,128 @@ STREAM_LOGS = env("STREAM_LOGS") == "1"
 # passes), silently eating every token post to the tunnelled fleet server —
 # any honest custom UA gets through.
 USER_AGENT = "forgood-fleet-telemetry/1.0 (+https://github.com/thecolab-ai/the-for-good-project)"
+
+
+def hooks_own_telemetry() -> bool:
+    """True when the codex fleet hook (server/clients/codex-hook.mjs) is wired
+    into the Codex config — it then owns token/tool telemetry (with live
+    mid-run deltas from the transcript), and this bridge must not double-post.
+    The bridge keeps printing human-readable output and streaming logs.
+    Override with FG_CODEX_BRIDGE_TELEMETRY=1 to force bridge posts anyway."""
+    if env("FG_CODEX_BRIDGE_TELEMETRY") == "1":
+        return False
+    codex_home = Path(env("CODEX_HOME") or Path.home() / ".codex")
+    for cfg in (
+        codex_home / "hooks.json",
+        codex_home / "config.toml",
+        Path.cwd() / ".codex" / "hooks.json",
+        Path.cwd() / ".codex" / "config.toml",
+    ):
+        try:
+            if "codex-hook.mjs" in cfg.read_text(encoding="utf-8"):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+HOOKS_OWN_TELEMETRY = hooks_own_telemetry()
 START_MONO = time.monotonic()
-last_usage_total = 0
-last_usage_mono = START_MONO
+
+# ---------------------------------------------------------------------------
+# Live token streaming. The exec --json stream only reports usage at
+# turn.completed — for a 30-minute run that is one burst every 30 minutes and
+# the dashboard reads "no tokens flowing". But Codex continuously appends
+# cumulative `token_count` events to its rollout transcript, so a background
+# poller tails the transcript (located from `thread.started`'s thread id) and
+# posts token DELTAS every few seconds — a real live feed.
+
+TRANSCRIPT_POLL_S = float(env("FG_TOKEN_POLL_SECONDS") or 5)
+_cum_lock = threading.Lock()
+_cum_in = 0  # fresh input (input - cached) already posted
+_cum_out = 0
+_last_post_mono = START_MONO
+_transcript_path: str | None = None
+_transcript_offset = 0
+_thread_id = ""
+
+
+def _find_transcript() -> str | None:
+    global _transcript_path
+    if _transcript_path or not _thread_id:
+        return _transcript_path
+    home = env("CODEX_HOME") or str(Path.home() / ".codex")
+    hits = glob.glob(f"{home}/sessions/*/*/*/rollout-*-{_thread_id}.jsonl")
+    if hits:
+        _transcript_path = max(hits)
+    return _transcript_path
+
+
+def _post_cumulative(fresh_in: int, out_tok: int) -> None:
+    """Post only the movement since the last post, with real elapsed wall
+    time so the fleet TPS gauge reflects an actual rate."""
+    global _cum_in, _cum_out, _last_post_mono
+    with _cum_lock:
+        d_in = max(0, fresh_in - _cum_in)
+        d_out = max(0, out_tok - _cum_out)
+        if d_in == 0 and d_out == 0:
+            return
+        _cum_in = max(_cum_in, fresh_in)
+        _cum_out = max(_cum_out, out_tok)
+        now = time.monotonic()
+        elapsed_ms = max(1, int((now - _last_post_mono) * 1000))
+        _last_post_mono = now
+    post_telemetry({"tokensIn": d_in, "tokensOut": d_out, "elapsedMs": elapsed_ms})
+
+
+def _read_transcript_once() -> None:
+    global _transcript_offset
+    path = _find_transcript()
+    if not path:
+        return
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            f.seek(_transcript_offset)
+            chunk = f.read()
+            end = f.tell()
+    except OSError:
+        return
+    # Never consume a partial trailing line — the writer may be mid-append.
+    nl = chunk.rfind("\n")
+    if nl < 0:
+        return
+    _transcript_offset = end - (len(chunk) - nl - 1)
+    latest = None
+    for line in chunk[: nl + 1].splitlines():
+        if '"token_count"' not in line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        usage = ((obj.get("payload") or {}).get("info") or {}).get("total_token_usage")
+        if isinstance(usage, dict):
+            latest = usage
+    if latest:
+        fresh = max(0, int(latest.get("input_tokens") or 0) - int(latest.get("cached_input_tokens") or 0))
+        _post_cumulative(fresh, int(latest.get("output_tokens") or 0))
+
+
+def _transcript_poller() -> None:
+    while True:
+        time.sleep(TRANSCRIPT_POLL_S)
+        try:
+            _read_transcript_once()
+        except Exception:  # noqa: BLE001 — telemetry must never kill the pipe
+            pass
+
+
+def start_token_stream(thread_id: str) -> None:
+    global _thread_id
+    if not thread_id or _thread_id:
+        return
+    _thread_id = thread_id
+    threading.Thread(target=_transcript_poller, daemon=True, name="fg-token-poll").start()
 
 
 def read_agent_id() -> str:
@@ -58,7 +179,7 @@ def write_agent_id(agent_id: str) -> None:
 
 
 def post_telemetry(heartbeat: dict[str, Any]) -> None:
-    if not FLEET_SERVER:
+    if not FLEET_SERVER or HOOKS_OWN_TELEMETRY:
         return
     # Only send a heartbeat when there is real movement. This prevents no-op
     # malformed events from refreshing presence as fake activity.
@@ -168,34 +289,22 @@ def main() -> int:
             continue
 
         typ = event.get("type")
-        if typ == "item.completed" and isinstance(event.get("item"), dict):
+        if typ == "thread.started":
+            start_token_stream(str(event.get("thread_id") or ""))
+        elif typ == "item.completed" and isinstance(event.get("item"), dict):
             post_logs(print_item(event["item"]))
         elif typ == "turn.completed" and isinstance(event.get("usage"), dict):
-            global last_usage_total, last_usage_mono
+            # Same cumulative ledger as the transcript poller, so the two
+            # sources can never double-count — this just settles any tail the
+            # last poll hadn't seen yet.
             usage = event["usage"]
             ti = int(usage.get("input_tokens") or 0)
             to = int(usage.get("output_tokens") or 0)
             cached = int(usage.get("cached_input_tokens") or 0)
             reasoning = int(usage.get("reasoning_output_tokens") or 0)
-            total = ti + to
-            now = time.monotonic()
-            elapsed_ms = max(1, int((now - last_usage_mono) * 1000))
-            delta_total = max(0, total - last_usage_total)
-            if delta_total > 0:
-                # Codex reports cumulative turn/session usage. Send only the
-                # new token delta and the elapsed wall time since the previous
-                # usage sample, otherwise the fleet dashboard treats the whole
-                # run as a one-minute burst and prints silly TPS.
-                if total > 0:
-                    delta_in = max(0, round(delta_total * (ti / total)))
-                else:
-                    delta_in = 0
-                delta_out = max(0, delta_total - delta_in)
-                post_telemetry({"tokensIn": delta_in, "tokensOut": delta_out, "elapsedMs": elapsed_ms})
-            last_usage_total = max(last_usage_total, total)
-            last_usage_mono = now
+            _post_cumulative(max(0, ti - cached), to)
             print(
-                f"[codex usage] total_input={ti} cached={cached} total_output={to} reasoning={reasoning} delta={delta_total} elapsed_ms={elapsed_ms}",
+                f"[codex usage] total_input={ti} cached={cached} total_output={to} reasoning={reasoning}",
                 flush=True,
             )
         elif typ == "error":

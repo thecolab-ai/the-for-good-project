@@ -453,21 +453,46 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
+      # The repo ships its own Codex hooks (.codex/config.toml -> the fleet
+      # telemetry client, ADR-0016). Codex skips non-trusted hooks silently in
+      # exec mode, and trust can only be persisted interactively — so pass the
+      # automation bypass, exactly its documented purpose ("automation that
+      # already vets hook sources": these hooks are versioned in this repo and
+      # the runner already uses --dangerously-bypass-approvals-and-sandbox).
+      # Only passed when the checkout actually carries the repo hook config.
+      local hook_trust=""
+      [ -f "$dir/.codex/hooks.json" ] && hook_trust="--dangerously-bypass-hook-trust"
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
-        $tmo codex exec --json --cd "$dir" --skip-git-repo-check \
+        $tmo codex exec --json --cd "$dir" --skip-git-repo-check $hook_trust \
           ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
           ${MODEL:+-m "$MODEL"} "$prompt" \
           | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
       else
-        $tmo codex exec --cd "$dir" --skip-git-repo-check \
+        $tmo codex exec --cd "$dir" --skip-git-repo-check $hook_trust \
           ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
           ${MODEL:+-m "$MODEL"} "$prompt"
       fi
       ;;
     claude)
-      ( cd "$dir" && $tmo claude -p "$prompt" \
-        --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
-        ${MODEL:+--model "$MODEL"} )
+      # Default the fleet's claude runs to sonnet (maintainer call,
+      # 2026-07-05: sonnet for testing) — override with --model / MODEL.
+      local claude_model="${MODEL:-sonnet}"
+      if [ -n "${FLEET_SERVER:-}" ] && [ "${CLAUDE_JSON_TELEMETRY:-1}" = 1 ]; then
+        # stream-json (requires --verbose) emits every assistant message and
+        # tool use as it happens WITH per-message token usage — the bridge
+        # renders readable progress and posts live tool/token telemetry.
+        # Plain -p prints nothing until the very end, so a worker looked hung
+        # for the whole run and reported nothing.
+        ( cd "$dir" && $tmo claude -p "$prompt" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --model "$claude_model" \
+          --output-format stream-json --verbose ) \
+          | python3 "$REPO_DIR/scripts/claude-json-telemetry.py"
+      else
+        ( cd "$dir" && $tmo claude -p "$prompt" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --model "$claude_model" )
+      fi
       ;;
     hermes)
       ( cd "$dir" && $tmo hermes ${HERMES_PROFILE:+--profile "$HERMES_PROFILE"} chat -Q \

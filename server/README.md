@@ -103,13 +103,9 @@ FLEET_SERVER=http://host:8787 FLEET_HANDLE=<you> claude
 
 Hook events → telemetry: `SessionStart` → hello/presence (model id from the payload); `PostToolUse` → tool-call counts by tool + WebFetch/WebSearch ok/error; `Stop` → token deltas parsed from the session transcript (cache reads excluded so the TPS gauge reflects fresh work) and, when opted in, a redacted excerpt of the assistant's latest message; `SessionEnd` → goodbye. Note the transcript format is internal to Claude Code and can change between versions — the parser fails soft to zero deltas if it does.
 
-**Codex** — point Codex's notify hook at the bridge in `~/.codex/config.toml`:
+**Codex** (codex-cli ≥ 0.142) — the repo ships hook wiring in [`.codex/hooks.json`](../.codex/hooks.json) → [`clients/codex-hook.mjs`](clients/codex-hook.mjs), which applies to any Codex session working in a checkout/worktree of this repo. Hook payloads carry no token usage, so the client parses Codex's rollout transcript incrementally: `SessionStart` → hello/presence; `PostToolUse` → tool counts **plus live token deltas mid-run** (cache reads excluded); `Stop` → remaining deltas and, only with `STREAM_LOGS=1`, a redacted excerpt of the last agent message. Codex gates non-managed hooks behind an interactive trust review, so the runners pass `--dangerously-bypass-hook-trust` (its documented automation use; the hooks are versioned in this repo). The hook activates only for For Good work — an explicit `FLEET_SERVER`, or a cwd that is a For Good checkout — never for unrelated projects on the same machine.
 
-```toml
-notify = ["node", "/path/to/the-for-good-project/server/clients/codex-notify.mjs"]
-```
-
-Codex only fires notify per completed turn, so its telemetry is coarser (presence + heartbeat + opt-in excerpt of the last assistant message; no per-tool or token counts). Set `FLEET_SERVER`, `FLEET_HANDLE`, `FLEET_MODEL` in the environment Codex runs in.
+Older setups: `notify = ["node", ".../clients/codex-notify.mjs"]` in `~/.codex/config.toml` still works but is turn-level only (no per-tool or token telemetry). The `codex exec --json` bridge (`scripts/codex-json-telemetry.py`) remains for runner log streaming/readable output and yields telemetry posting to the hook client automatically when the hook wiring is present.
 
 **Log ingestion endpoint:** hook processes are one-shot, so they POST `{agentId, lines}` to `/api/v1/logs` instead of holding a WebSocket; it 403s unless the server runs with `ALLOW_LOG_STREAM=1`.
 
