@@ -31,6 +31,9 @@
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  AGENT MODEL MAX ISSUE STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
 #       PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
+#       FLEET_SERVER FLEET_TOKEN FLEET_CLAIM(=0) — set FLEET_CLAIM=1 with a
+#       server-minted FLEET_TOKEN to let the fleet server claim atomically for
+#       you (falls back to the label-claim path on ANY failure; default off)
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -43,11 +46,28 @@ POLL_SECONDS="${POLL_SECONDS:-180}"   # keep polling when queue empty every 3 mi
 DRY_RUN="${DRY_RUN:-0}"
 RECONCILE_REWORK_SECONDS="${RECONCILE_REWORK_SECONDS:-900}"
 CLAIMED_ISSUE=""
+FLEET_CLAIMED=0     # 1 while working an issue the fleet SERVER claimed for us (FLEET_CLAIM=1 opt-in)
+FLEET_RENEW_PID=""  # background lease-renew loop for a fleet-claimed issue
+FLEET_LEASE_TTL=""  # leaseTtlSeconds from the last fleet claim — drives the renew cadence
+
+fleet_stop_renew() {  # stop the background lease-renew loop, if any
+  [ -n "$FLEET_RENEW_PID" ] || return 0
+  kill "$FLEET_RENEW_PID" 2>/dev/null || true
+  wait "$FLEET_RENEW_PID" 2>/dev/null || true
+  FLEET_RENEW_PID=""
+  return 0
+}
 
 release_on_interrupt() {
+  fleet_stop_renew || true
   remove_worktree || true
   if [ -n "$CLAIMED_ISSUE" ] && [ "$DRY_RUN" = 0 ]; then
-    warn "Interrupted mid-issue #$CLAIMED_ISSUE — leaving it 'claimed' for you to resume or release."
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then
+      warn "Interrupted mid-issue #$CLAIMED_ISSUE — releasing the fleet claim as abandoned (the server reverts the labels)."
+      fleet_release "$CLAIMED_ISSUE" abandoned
+    else
+      warn "Interrupted mid-issue #$CLAIMED_ISSUE — leaving it 'claimed' for you to resume or release."
+    fi
   fi
   exit 130
 }
@@ -294,12 +314,18 @@ finish_issue() {  # $1 = issue number
       || warn "  could not enable auto-merge on #$pr (needs write access) — a reviewer/maintainer can enable it"
     gh issue comment "$n" --repo "$REPO" --body "🔍 Work submitted in #$pr — moving to **in review**. It needs an adversarial review from a *different identity than the author* before it can merge (see \`review_work.sh\`)." >/dev/null
     ok "#$n → in-review (PR #$pr)"
+    # Fleet-claimed issue done: free the server's lease + close the assignment.
+    # 'done' never touches labels (the PR/Actions pipeline owns them from here).
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" done "$pr"; fi
   else
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] no PR found for #$n — would release back to available"; CLAIMED_ISSUE=""; return 0; fi
     set_status_label "$n" "available" "claimed"
     gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null || true
     gh issue comment "$n" --repo "$REPO" --body "⚠️ The agent finished without opening a PR — releasing this back to **available** for someone else to pick up." >/dev/null
     warn "#$n released (no PR opened)"
+    # Fleet-claimed: also release the server's lease as abandoned (labels are
+    # already reverted above; the server's own revert is an idempotent no-op).
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" abandoned; fi
   fi
   CLAIMED_ISSUE=""
 }
@@ -307,18 +333,73 @@ finish_issue() {  # $1 = issue number
 work_one() {  # $1 = issue number
   local n="$1"
   rule; info "${c_bold}Issue #$n${c_reset} — $(issue_field "$n" title)"
-  claim_issue "$n" || return 1
+  if [ "${FLEET_CLAIMED:-0}" = 1 ]; then
+    # The fleet server already claimed this issue for us ATOMICALLY (Redis
+    # lease + claim labels + assignee) — running claim_issue would just bail
+    # on the now-"claimed" status. Track it so every release path knows the
+    # server holds the lease.
+    CLAIMED_ISSUE="$n"
+    # Duplicate-PR guard, same as claim_issue's (#305 + #307 both closed
+    # #234): the server picks candidates by labels alone and can't see PRs,
+    # so a mislabeled available issue with a live PR — or one re-queued by a
+    # mid-run lease expiry — would be worked AGAIN. Release with 'done', NOT
+    # 'abandoned': a revert back to 'status: available' would just re-dispatch
+    # it into this same guard on every claim. Then heal the label to what an
+    # open PR means (in-review) and step aside.
+    local existing; existing="$(pr_for_issue "$n" || true)"
+    if [ -n "$existing" ]; then
+      warn "#$n already has open PR #$existing — releasing the fleet claim instead of opening a duplicate."
+      fleet_release "$n" done "$existing"
+      set_status_label "$n" "in-review" 2>/dev/null || true
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+      CLAIMED_ISSUE=""
+      return 1
+    fi
+    # Cross-population race settlement: a label-path worker can claim the
+    # same issue off the server's stale mirror window, and the old GitHub
+    # race only converged because EVERY racer ran the deterministic
+    # co-assignee tie-break — so the fleet path must run it too. On loss the
+    # winner keeps the labels: free the lease WITHOUT reverting ('done'),
+    # never 'abandoned' (that would flip the winner's claim back to
+    # available). resolve_claim_race already removed our assignee.
+    if ! resolve_claim_race "$n"; then
+      fleet_release "$n" done
+      CLAIMED_ISSUE=""
+      return 1
+    fi
+    ok "Claimed #$n via fleet server"
+  else
+    claim_issue "$n" || return 1
+  fi
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would run: AGENT=$AGENT in a fresh origin/main worktree on the following prompt:"; log "$(work_prompt "$n" | sed 's/^/    /')"
     finish_issue "$n"; return 0
   fi
-  make_worktree origin/main || { err "Couldn't create worktree for #$n — skipping."; return 1; }
+  if ! make_worktree origin/main; then
+    err "Couldn't create worktree for #$n — skipping."
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" abandoned; CLAIMED_ISSUE=""; fi
+    return 1
+  fi
   # Task context for the telemetry bridges/hooks — otherwise the session
   # shows as "idle" on the fleet dashboard while its tokens move.
   export FLEET_TASK_KIND=work TASK_REF="#$n" TASK_TITLE="$(issue_field "$n" title 2>/dev/null || true)"
+  if [ "${FLEET_CLAIMED:-0}" = 1 ]; then
+    # Keep the server's lease alive across a long agent run (the lease TTL can
+    # be shorter than AGENT_TIMEOUT) — best-effort renewals in the background.
+    # Cadence derives from the TTL the claim response actually returned
+    # (TTL/3, floor 15s): a fixed default would silently expire every lease
+    # against a server configured with a shorter LEASE_TTL_SECONDS. An
+    # explicit FLEET_RENEW_SECONDS still overrides.
+    local renew_secs
+    renew_secs="${FLEET_RENEW_SECONDS:-$(( ${FLEET_LEASE_TTL:-1800} / 3 ))}"
+    [ "$renew_secs" -ge 15 ] 2>/dev/null || renew_secs=15
+    ( while sleep "$renew_secs"; do fleet_renew "$n"; done ) &
+    FLEET_RENEW_PID=$!
+  fi
   info "Handing #$n to $AGENT (worktree: $WORKTREE)..."
   local tmp; tmp="$(mktemp)"
   set +e; run_agent "$(work_prompt "$n")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
+  fleet_stop_renew
   was_interrupted "$rc" && { rm -f "$tmp"; release_on_interrupt; }   # Ctrl-C the agent → stop the whole run, don't roll to the next issue
   # Usage/rate limit: back off and release the issue quietly (no "finished
   # without a PR" comment — that's a false failure), so a later loop retries it.
@@ -327,6 +408,7 @@ work_one() {  # $1 = issue number
     rm -f "$tmp"; remove_worktree
     set_status_label "$n" "available" "claimed"
     gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" abandoned; fi
     CLAIMED_ISSUE=""
     sleep "$USAGE_LIMIT_SLEEP"
     return 0
@@ -611,7 +693,24 @@ main() {
       kind=rework
     else
       next="$(take_unassigned_rework "$snap" || true)"
-      if [ -n "$next" ]; then kind=rework; else next="$(pick_available "$snap" || true)"; fi
+      if [ -n "$next" ]; then
+        kind=rework
+      else
+        # Server-orchestrated claim (opt-in: FLEET_CLAIM=1 + FLEET_TOKEN): the
+        # fleet server picks the next eligible issue, takes an atomic lease and
+        # writes the claim labels/assignee ITSELF — so claim_issue is skipped
+        # for it (kind=fleet). Any failure — queue empty, server down, bad
+        # token — falls back to the exact label-claim path below.
+        if [ "$DRY_RUN" = 0 ] && fleet_claim_enabled; then
+          local fleet_resp
+          if fleet_resp="$(fleet_claim "${STAGE:-}")"; then
+            next="$(printf '%s' "$fleet_resp" | jq -r '.issue.number // empty' 2>/dev/null || true)"
+            FLEET_LEASE_TTL="$(printf '%s' "$fleet_resp" | jq -r '.leaseTtlSeconds // empty' 2>/dev/null || true)"
+            if [ -n "$next" ]; then kind=fleet; fi
+          fi
+        fi
+        if [ -z "$next" ]; then next="$(pick_available "$snap" || true)"; fi
+      fi
     fi
     if [ -z "$next" ]; then
       if [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ]; then
@@ -623,7 +722,15 @@ main() {
       fi
       rule; ok "Queue empty — no rework for @$ME and nothing available.${STAGE:+ (stage=$STAGE)}"; break
     fi
-    if [ "$kind" = rework ]; then rework_one "$next" || true; else work_one "$next" || true; fi
+    if [ "$kind" = rework ]; then
+      rework_one "$next" || true
+    elif [ "$kind" = fleet ]; then
+      FLEET_CLAIMED=1
+      work_one "$next" || true
+      FLEET_CLAIMED=0
+    else
+      work_one "$next" || true
+    fi
     done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX issue(s). Stopping."; break; fi
   done

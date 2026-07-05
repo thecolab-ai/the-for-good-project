@@ -65,4 +65,44 @@ export const config = {
   // flush follows within this window, instead of one whole-fleet frame per
   // heartbeat (per-tool-call hooks make those very frequent).
   agentsFlushMs: 750,
+
+  // ------------------------------------------------------------------------
+  // Orchestration (pull-claim v1). Everything below is additive and
+  // fail-open: with REDIS_URL/MONGO_URL unset the server behaves exactly as
+  // before (telemetry only) and the orchestration routes answer 503.
+  redisUrl: process.env.REDIS_URL || undefined,
+  mongoUrl: process.env.MONGO_URL || undefined,
+  mongoDb: process.env.MONGO_DB || "forgood",
+
+  // Bot token used for label writes + the mirror sync job. Dispatch requires
+  // it (claim answers 503 "no github token" without it); the mirror can still
+  // be fed by webhooks alone.
+  githubToken: process.env.GITHUB_TOKEN || undefined,
+  githubRepo: process.env.GITHUB_REPO || "thecolab-ai/the-for-good-project",
+  // Overridable so tests can point the client at a mock server.
+  githubApiUrl: process.env.GITHUB_API_URL || "https://api.github.com",
+
+  // Unset = the GitHub webhook route is not registered (404).
+  webhookSecret: process.env.WEBHOOK_SECRET || undefined,
+  // Unset = the admin routes are not registered (404).
+  adminToken: process.env.ADMIN_TOKEN || undefined,
+
+  leaseTtlSeconds: num(process.env.LEASE_TTL_SECONDS, 1800),
+  // One-shot fleet drain commands (stop/abort) expire after this long, so a
+  // handle minted (or a runner restarted) weeks after a drain is never killed
+  // by a months-old command. pause/resume represent STATE and persist.
+  fleetCmdTtlSeconds: num(process.env.FLEET_CMD_TTL_SECONDS, 3600),
+  syncIntervalSeconds: num(process.env.SYNC_INTERVAL_SECONDS, 60),
+  syncFullIntervalSeconds: num(process.env.SYNC_FULL_INTERVAL_SECONDS, 900),
+  maxSyncPages: num(process.env.MAX_SYNC_PAGES, 20),
+  // Bounded priority jump (ADR-0013): "priority: high" only jumps the queue
+  // for the first N distinct streams. Mirrors HIGH_PRIORITY_CAP in
+  // scripts/fg-common.sh.
+  highPriorityCap: num(process.env.HIGH_PRIORITY_CAP, 5),
 } as const;
+
+/** Orchestration is on only when BOTH hot and durable stores are configured.
+ *  Dispatch additionally requires `githubToken` (checked at claim time). */
+export function orchestrationEnabled(cfg: typeof config = config): boolean {
+  return Boolean(cfg.redisUrl && cfg.mongoUrl);
+}

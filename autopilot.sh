@@ -33,6 +33,9 @@
 # Env:  REVIEW_GITHUB_TOKEN  REVIEW_PER_WORK(=2)  POLL_SECONDS(=120)
 #       MAX_CYCLES(=0)  PULL(=1)  MAIN_BRANCH(=main)  + everything the runners read
 #       FLEET_SERVER(=https://forgood.thecolab.ai; ""=off)  STREAM_LOGS(=0, opt-in)
+#       FLEET_TOKEN (server-minted agent token: authed heartbeats + pause/resume/
+#       stop/abort commands)  FLEET_CLAIM(=0; 1 + FLEET_TOKEN = server-orchestrated
+#       claiming in start_work.sh — default off, label-claim flow unchanged)
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -52,7 +55,7 @@ SELF="$PWD/$(basename "$0")"
 self_hash() { sha1sum "$SELF" 2>/dev/null | cut -d' ' -f1 || true; }
 SELF_HASH="$(self_hash)"
 
-trap 'rule; warn "autopilot stopping."; exit 130' INT TERM
+trap 'rule; warn "autopilot stopping."; fleet_cleanup_run_dir; exit 130' INT TERM
 
 if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
   warn "REVIEW_GITHUB_TOKEN is not set — running WORK-ONLY (no review passes)."
@@ -72,7 +75,26 @@ export STREAM_LOGS="${STREAM_LOGS:-0}"
 FLEET_HANDLE="${FLEET_HANDLE:-${HANDLE:-$(gh api user --jq .login 2>/dev/null || git config user.name 2>/dev/null || echo unknown)}}"
 FLEET_MODEL="${FLEET_MODEL:-${MODEL:-$AGENT}}"
 FLEET_AGENT_ID_FILE="${FLEET_AGENT_ID_FILE:-${TMPDIR:-/tmp}/fg-autopilot-agent-id-${FLEET_HANDLE}-${AGENT}}"
-export FLEET_SERVER FLEET_HANDLE FLEET_MODEL FLEET_AGENT_ID_FILE
+# Control-plane stash: fleet_send drops any commands the server piggybacks on a
+# telemetry response in here (one kind per line); fleet_pop_commands (in
+# fg-common.sh) drains it. Only ever written when FLEET_TOKEN is set.
+# Unlike the telemetry-only agent-id file, this file's CONTENTS drive control
+# flow (a 'stop' line exits the loop), so it lives in a PRIVATE per-run
+# directory (mktemp -d = 0700) — never at a predictable world-writable /tmp
+# path another local user could pre-create or inject commands into.
+# fleet_pop_commands additionally refuses any stash we don't own.
+FLEET_RUN_DIR=""
+if [ -z "${FLEET_CMDS_FILE:-}" ]; then
+  FLEET_RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/fg-autopilot.XXXXXX" 2>/dev/null || true)"
+  [ -n "$FLEET_RUN_DIR" ] && FLEET_CMDS_FILE="$FLEET_RUN_DIR/cmds"
+fi
+FLEET_CMDS_FILE="${FLEET_CMDS_FILE:-}"
+export FLEET_SERVER FLEET_HANDLE FLEET_MODEL FLEET_AGENT_ID_FILE FLEET_CMDS_FILE
+# Never act on commands stashed by a previous run (0600 via umask).
+if [ -n "$FLEET_CMDS_FILE" ]; then
+  ( umask 077; : > "$FLEET_CMDS_FILE" ) 2>/dev/null || true
+fi
+fleet_cleanup_run_dir() { [ -n "${FLEET_RUN_DIR:-}" ] && rm -rf "$FLEET_RUN_DIR" 2>/dev/null || true; }
 
 fleet_enabled() { [ -n "$FLEET_SERVER" ]; }
 
@@ -117,9 +139,23 @@ PY
 fleet_send() {  # kind ref title token_in token_out tool_calls tasks prs reviews errors
   fleet_enabled || return 0
   local resp id
-  resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  # An enrolled agent (FLEET_TOKEN set) authenticates its heartbeats so the
+  # server can auto-renew its lease and piggyback control commands on the
+  # response. Without a token the request is exactly what it always was.
+  # (Two explicit invocations, not a conditional array: empty-array expansion
+  # trips `set -u` on macOS's bash 3.2.)
+  if [ -n "${FLEET_TOKEN:-}" ]; then
+    resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -H "authorization: Bearer $FLEET_TOKEN" -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  else
+    resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  fi
   id="$(printf '%s' "$resp" | sed -n 's/.*"agentId":"\([^"]*\)".*/\1/p')"
-  [ -n "$id" ] && printf '%s' "$id" > "$FLEET_AGENT_ID_FILE"
+  if [ -n "$id" ]; then printf '%s' "$id" > "$FLEET_AGENT_ID_FILE"; fi
+  # Stash any piggybacked control commands for fleet_pop_commands (one kind/line).
+  if [ -n "${FLEET_TOKEN:-}" ] && [ -n "${FLEET_CMDS_FILE:-}" ] && [ -n "$resp" ]; then
+    printf '%s' "$resp" | jq -r '.commands[]?.kind // empty' 2>/dev/null >> "$FLEET_CMDS_FILE" || true
+  fi
+  return 0
 }
 
 fleet_logs() {  # file
@@ -152,6 +188,37 @@ print(json.dumps({'agentId': agent_id, 'lines': lines[-40:]}, separators=(',', '
 PY
 )"
   curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/logs" -H 'content-type: application/json' -d "$payload" >/dev/null 2>&1 || true
+}
+
+# Act on control-plane commands the server piggybacked on our heartbeats
+# (pull-claim orchestration): stop/abort → return 1 so the caller breaks the
+# main loop; pause → hold HERE, sending an idle heartbeat every 30s (each
+# response can carry the resume), until resume — or stop/abort — arrives.
+# No FLEET_TOKEN / no pending commands → instant no-op returning 0, so the
+# default flow is untouched.
+fleet_handle_commands() {
+  local cmd paused=0
+  while :; do
+    while IFS= read -r cmd; do
+      case "$cmd" in
+        stop|abort)
+          warn "fleet command '$cmd' received — stopping autopilot."
+          fleet_send "idle" "" "stopped by fleet command ($cmd)" 0 0 0 0 0 0 0
+          return 1 ;;
+        pause)
+          if [ "$paused" = 0 ]; then
+            info "fleet command 'pause' received — pausing (idle heartbeat every ${FLEET_PAUSE_POLL:-30}s until resume)…"
+          fi
+          paused=1 ;;
+        resume)
+          if [ "$paused" = 1 ]; then info "fleet command 'resume' received — resuming."; fi
+          paused=0 ;;
+      esac
+    done < <(fleet_pop_commands)
+    if [ "$paused" = 0 ]; then return 0; fi
+    fleet_send "idle" "" "paused by fleet command" 0 0 0 0 0 0 0
+    sleep "${FLEET_PAUSE_POLL:-30}"
+  done
 }
 
 # Run ONE runner pass and report whether it actually DID something. The runners
@@ -195,6 +262,10 @@ while :; do
   cycle=$((cycle + 1))
   rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → frame×${FRAME_PER_WORK} → work×1)"
 
+  # Fleet control plane: honour pause/stop/abort at the top of every cycle
+  # (and again between passes below). No-op without FLEET_TOKEN.
+  fleet_handle_commands || break
+
   # Pull latest main each cycle so operators automatically pick up script and
   # pipeline improvements without a manual git pull. git swaps files by atomic
   # rename, so the RUNNING autopilot keeps executing its current (open) inode —
@@ -222,6 +293,7 @@ while :; do
   # Review side (distinct identity), review-first so we drain before adding.
   if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then
     for _ in $(seq 1 "$REVIEW_PER_WORK"); do
+      fleet_handle_commands || break 2
       info "review pass…"
       run_pass review env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
     done
@@ -235,12 +307,14 @@ while :; do
   # idle while discover rework such as PRs marked "Part of #<root>" is waiting.
   if [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
     for _ in $(seq 1 "$FRAME_PER_WORK"); do
+      fleet_handle_commands || break 2
       info "frame pass…"
       run_pass frame env MAX=1 POLL_SECONDS=0 ./frame_work.sh "$@" && did_something=1
     done
   fi
 
   # Work side (your normal identity).
+  fleet_handle_commands || break
   info "work pass…"
   run_pass work env MAX=1 POLL_SECONDS=0 ./start_work.sh "$@" && did_something=1
 
@@ -254,3 +328,4 @@ while :; do
     sleep "$POLL_SECONDS"
   fi
 done
+fleet_cleanup_run_dir

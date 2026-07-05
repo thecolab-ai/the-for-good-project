@@ -9,6 +9,10 @@ import type { WebSocket } from "ws";
 import { config } from "./config.js";
 import { roughLocate } from "./geo.js";
 import { originAllowed, RateLimiter } from "./guards.js";
+import { bearerToken, verifyAgentToken } from "./orchestrator/auth.js";
+import { popCommands } from "./orchestrator/control.js";
+import { renewLeasesForHandle } from "./orchestrator/dispatch.js";
+import type { Orchestrator } from "./orchestrator/stores.js";
 import { agentMessageSchema } from "./protocol.js";
 import { redactLines } from "./redact.js";
 import type { FleetStore } from "./state.js";
@@ -16,7 +20,15 @@ import type { FleetStore } from "./state.js";
 const HELLO_TIMEOUT_MS = 10_000;
 const PING_INTERVAL_MS = 25_000;
 
-export function registerAgentSocket(app: FastifyInstance, store: FleetStore): void {
+/**
+ * `orch` (optional — undefined when orchestration is disabled) lets the
+ * socket push pending FleetCommands to token-authed agents after each
+ * heartbeat as `{type:"command", command}` frames. Auth = an
+ * `Authorization: Bearer fgt_...` header on the WS upgrade request, verified
+ * against the agent registry; sockets without a valid token behave exactly
+ * as before (they simply never receive commands — v1 contract).
+ */
+export function registerAgentSocket(app: FastifyInstance, store: FleetStore, orch?: Orchestrator): void {
   app.get("/ws/agent", { websocket: true }, (socket: WebSocket, req: FastifyRequest) => {
     if (!originAllowed(req)) {
       socket.close(4403, "origin not allowed");
@@ -25,6 +37,42 @@ export function registerAgentSocket(app: FastifyInstance, store: FleetStore): vo
     let agentId: string | null = null;
     let alive = true;
     const limiter = new RateLimiter();
+
+    // Registry handle behind the connection's bearer token (upgrade-request
+    // header), once verified. Commands key on THIS handle — never the
+    // self-reported hello handle. Verification is fired once, off the hot
+    // path; until it resolves the socket just doesn't receive commands yet.
+    let commandHandle: string | null = null;
+    if (orch) {
+      const token = bearerToken(req);
+      if (token) {
+        verifyAgentToken(orch, token)
+          .then((identity) => {
+            if (identity) commandHandle = identity.handle;
+          })
+          .catch(() => undefined);
+      }
+    }
+
+    /** After a heartbeat from an authed agent: best-effort lease renewal,
+     *  then push each pending command as its own `{type:"command"}` frame.
+     *  Exactly-once is owned by popCommands; failures here never disturb
+     *  the telemetry path. */
+    const deliverCommands = async (): Promise<void> => {
+      if (!orch || !commandHandle) return;
+      try {
+        await renewLeasesForHandle(orch, commandHandle).catch(() => undefined);
+        // Consumer = this socket's session id: exactly-once per session, so
+        // parallel runners under one handle each hear a drain.
+        const commands = await popCommands(orch, commandHandle, agentId ?? undefined);
+        for (const command of commands) {
+          if (socket.readyState !== socket.OPEN) break;
+          socket.send(JSON.stringify({ type: "command", command }));
+        }
+      } catch {
+        /* fail-open: command delivery must never break the socket */
+      }
+    };
 
     const helloTimer = setTimeout(() => {
       if (!agentId) socket.close(4000, "no hello");
@@ -77,6 +125,7 @@ export function registerAgentSocket(app: FastifyInstance, store: FleetStore): vo
           if (!agentId) return;
           const { type: _type, ...hb } = msg;
           store.applyHeartbeat(agentId, hb);
+          void deliverCommands();
           break;
         }
         case "task": {

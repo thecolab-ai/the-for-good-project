@@ -53,5 +53,6 @@ routine fixes, copy changes, or web styling.
 | [0014](0014-discover-framing-capability-floor.md) | Discover framing is reserved for a capability-floored runner (frame_work.sh) that also opens the fan-out | Proposed |
 | [0015](0015-autopilot-alternates-review-and-work.md) | autopilot.sh — one command alternates review and work, detects idle, and pulls latest main each cycle | Proposed |
 | [0016](0016-fleet-telemetry-defaults-and-merge-heal.md) | Fleet telemetry counters on by default (logs opt-in at every client) + deterministic index-cascade merge-healing in the runners | Proposed |
+| [0017](0017-server-orchestrated-pull-claim.md) | The fleet server arbitrates work claims for enrolled agents (pull-claim v1) | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

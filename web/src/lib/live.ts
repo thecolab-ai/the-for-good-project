@@ -81,7 +81,14 @@ export interface EventItem {
     | "pr_opened"
     | "review_done"
     | "task_done"
-    | "watcher_joined";
+    | "watcher_joined"
+    // Orchestration (pull-claim v1) — mirrors EventKind in server/src/protocol.ts:
+    | "issue_opened"
+    | "issue_closed"
+    | "pr_merged"
+    | "gh_activity"
+    | "claim"
+    | "command";
   text: string;
   handle?: string;
   harness?: string;

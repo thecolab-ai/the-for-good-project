@@ -43,6 +43,98 @@ warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$*"; }
 err()  { printf '%s✗%s %s\n' "$c_red" "$c_reset" "$*" >&2; }
 rule() { printf '%s────────────────────────────────────────────────%s\n' "$c_dim" "$c_reset"; }
 
+# ---- fleet server work-claim helpers (server-orchestrated pull-claim) ----
+# Opt-in integration with the fleet server's work orchestrator. DEFAULT OFF:
+# every function below is a hard no-op unless ALL of FLEET_SERVER, FLEET_TOKEN
+# and FLEET_CLAIM=1 are set, so default runs keep the exact label-claim flow.
+# The telemetry side (fleet_send / fleet_logs) lives in autopilot.sh; these
+# live here so start_work.sh (which has no telemetry helpers) can claim,
+# renew and release too.
+fleet_claim_enabled() {
+  [ -n "${FLEET_SERVER:-}" ] && [ -n "${FLEET_TOKEN:-}" ] && [ "${FLEET_CLAIM:-0}" = "1" ]
+}
+
+# fleet_claim [stages-csv] — ask the server for the next eligible issue. On
+# success prints {issue: ClaimedIssue, leaseTtlSeconds} — the issue object is
+# {number,title,labels,body,htmlUrl,stage,stream}, and leaseTtlSeconds is the
+# server's ACTUAL lease TTL so the caller can derive its renew cadence from
+# it (a fixed client-side cadence silently expires every lease when the
+# server runs a shorter LEASE_TTL_SECONDS) — and returns 0. The server has
+# already taken the lease AND written the claim labels + assignee itself, so
+# the caller must NOT run its own label claim.
+# Queue empty, non-200, bad JSON or timeout → returns 1 (caller falls back to
+# the label-claim path).
+fleet_claim() {
+  fleet_claim_enabled || return 1
+  local stages="${1:-}" agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    # claimRequestSchema wants a UUID — never let a stale/garbled stash 400 the claim.
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg stages "$stages" --arg harness "${AGENT:-}" \
+                 --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      (if $stages  != "" then {stages: ($stages | split(","))} else {} end)
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  printf '%s' "$resp" | jq -e '.ok == true and .issue != null' >/dev/null 2>&1 || return 1
+  printf '%s' "$resp" | jq -c '{issue: .issue, leaseTtlSeconds: .leaseTtlSeconds}'
+}
+
+# fleet_renew <issue> — best-effort lease renewal; every failure swallowed.
+fleet_renew() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" '{issue: ($issue | tonumber)}' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/renew" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# fleet_release <issue> <done|abandoned> [pr] — tell the server we're finished
+# with a fleet-claimed issue. done = server frees the lease and does NOT touch
+# labels (the PR/Actions pipeline owns post-work transitions); abandoned = the
+# server reverts labels + assignee too. Best-effort: failures are swallowed —
+# the lease TTL and the server-side sweeper backstop a lost release.
+fleet_release() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" --arg outcome "${2:-}" --arg pr "${3:-}" '
+      {issue: ($issue | tonumber), outcome: $outcome}
+    + (if $pr != "" then {prNumber: ($pr | tonumber)} else {} end)' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# fleet_pop_commands — print (and consume) the control-command KINDS the
+# server piggybacked on telemetry responses (pause|resume|stop|abort), one
+# per line. fleet_send (autopilot.sh) stashes them into $FLEET_CMDS_FILE as
+# it hears them; this drains the stash. No/empty stash → prints nothing,
+# always returns 0.
+fleet_pop_commands() {
+  local f="${FLEET_CMDS_FILE:-}"
+  [ -n "$f" ] || return 0
+  # Trust only a regular file WE own: this hop is unauthenticated (the token
+  # check happens server-side, on the write into the stash), so a foreign or
+  # pre-created file in a shared tmp dir must never drive control flow —
+  # a planted 'stop'/'pause' line would kill or wedge the autopilot.
+  [ -f "$f" ] && [ -O "$f" ] || return 0
+  [ -s "$f" ] || return 0
+  cat "$f" 2>/dev/null || true
+  : > "$f" 2>/dev/null || true
+  return 0
+}
+
 # ---- preflight ----
 preflight() {
   local missing=0

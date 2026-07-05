@@ -197,7 +197,14 @@ export type EventKind =
   | "pr_opened"
   | "review_done"
   | "task_done"
-  | "watcher_joined";
+  | "watcher_joined"
+  // Orchestration (pull-claim v1) — mirrored in web/src/lib/live.ts:
+  | "issue_opened"
+  | "issue_closed"
+  | "pr_merged"
+  | "gh_activity"
+  | "claim"
+  | "command";
 
 export interface EventItem {
   id: string;
@@ -233,3 +240,39 @@ export type ServerMessage =
   | { type: "event"; event: EventItem }
   | { type: "log"; agentId: string; handle: string; lines: string[] }
   | { type: "pong" };
+
+// ---------------------------------------------------------------------------
+// Orchestration (pull-claim v1) — server-arbitrated claims + control plane.
+
+export const COMMAND_KINDS = ["pause", "resume", "stop", "abort"] as const;
+export type CommandKind = (typeof COMMAND_KINDS)[number];
+export const commandSchema = z.object({
+  id: z.string(),
+  kind: z.enum(COMMAND_KINDS),
+  reason: z.string().max(300).optional(),
+  issuedAt: z.string(),
+});
+export type FleetCommand = z.infer<typeof commandSchema>;
+
+export const claimRequestSchema = z.object({
+  stages: z.array(z.enum(["research", "ideate", "build"])).optional(), // default: all three
+  harness: z.string().max(32).optional(),
+  model: z.string().max(128).optional(),
+  agentId: z.string().uuid().optional(),
+});
+export type ClaimRequest = z.infer<typeof claimRequestSchema>;
+
+export const releaseRequestSchema = z.object({
+  issue: z.number().int().positive(),
+  outcome: z.enum(["done", "abandoned"]),
+  prNumber: z.number().int().positive().optional(),
+});
+export type ReleaseRequest = z.infer<typeof releaseRequestSchema>;
+
+export interface ClaimedIssue {
+  number: number; title: string; labels: string[]; body: string; htmlUrl: string;
+  stage: string | null; stream: string | null;
+}
+// Server->agent WS message (agents only, not watchers):
+//   { type: "command", command: FleetCommand }
+// /api/v1/telemetry HTTP response gains optional `commands: FleetCommand[]`.
