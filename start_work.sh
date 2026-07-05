@@ -473,6 +473,9 @@ reconcile_rework() {
     if [ $((now - ${last:-0})) -lt "$RECONCILE_REWORK_SECONDS" ]; then return 0; fi
     printf '%s' "$now" > "$stamp" 2>/dev/null || true
   fi
+  local gql_left
+  gql_left="$(gh api rate_limit --jq '.resources.graphql.remaining // 0' 2>/dev/null || echo 0)"
+  [ "${gql_left:-0}" -gt 0 ] || return 0
   local prs pr iss labels lastcr headcommit synth_rc frame_rc
   prs="$(gh pr list --repo "$REPO" --state open --author "@me" --json number,reviewDecision \
           --jq '.[]|select(.reviewDecision=="CHANGES_REQUESTED")|.number' 2>/dev/null || true)"
