@@ -77,6 +77,7 @@ REVIEW_CLAIMING_LABEL="review: claimed"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a review claim is honoured before it's treated as stale
 MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-10}"  # change-requesting rounds before the PR is parked for a human (#287)
+DID_REVIEW=0   # set once review_one claims a PR and spends real work on it; skips leave it 0
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
 # exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
@@ -439,6 +440,7 @@ review_one() {  # $1 = PR number
   # Claim it so concurrent runners don't double-review the same PR.
   claim_pr "$pr" || return 0
   CLAIMED_PR="$pr"
+  DID_REVIEW=1
 
   info "Checking out PR #$pr into a fresh worktree..."
   if ! git -C "$REPO_DIR" fetch origin --quiet "+pull/$pr/head:refs/fg/pr-$pr"; then
@@ -562,11 +564,35 @@ review_one() {  # $1 = PR number
     done
     if [ "$AUTO_MERGE" = 1 ]; then
       info "AUTO_MERGE=1 — merging #$pr..."
-      if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
+      local merged=0 merr mstate
+      if merr="$(gh pr merge "$pr" --repo "$REPO" --squash --delete-branch 2>&1 >/dev/null)"; then
+        merged=1
+      else
+        # Framing PRs go DIRTY on analysis/README.md when a sibling merges
+        # (the index cascade). Heal that one deterministic conflict, carry
+        # the just-passed verdict onto the new head, and retry once after
+        # the required checks re-run.
+        mstate="$(gh pr view "$pr" --repo "$REPO" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || echo "")"
+        local newsha
+        if [ "$mstate" = DIRTY ] && newsha="$(fg_heal_index_conflict "$pr")" && [ -n "$newsha" ]; then
+          log "  healed analysis/README.md index conflict — new head $newsha; re-stamping check and retrying merge..."
+          set_check "$newsha" success "Adversarial review passed (verdict carried over an index-conflict heal)" "$url"
+          local mwaited=0
+          while [ "$mwaited" -lt "${MERGE_WAIT:-300}" ]; do
+            sleep 15; mwaited=$((mwaited+15))
+            mstate="$(gh pr view "$pr" --repo "$REPO" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || echo "")"
+            case "$mstate" in CLEAN|UNSTABLE|HAS_HOOKS) break ;; esac
+          done
+          if merr="$(gh pr merge "$pr" --repo "$REPO" --squash --delete-branch 2>&1 >/dev/null)"; then merged=1; fi
+        fi
+      fi
+      if [ "$merged" = 1 ]; then
         ok "Merged #$pr"
         local iss; iss="$(issue_for_pr "$pr" || true)"
         [ -n "$iss" ] && { set_status_label "$iss" "done" "in-review" "claimed" "changes-requested"; ok "Issue #$iss → done"; }
-      else warn "Could not auto-merge #$pr (branch protection / conflicts) — leaving for a maintainer."; fi
+      else
+        warn "Could not auto-merge #$pr (mergeStateStatus=${mstate:-unknown}): ${merr:-no error output} — leaving for a maintainer / merge_ready.sh."
+      fi
     fi
   else
     [ -z "$verdict" ] && warn "No explicit verdict parsed — failing closed (NEEDS_WORK)."
@@ -626,9 +652,14 @@ main() {
       rule; ok "No open PRs needing review."; break
     fi
     for pr in $prs; do
+      DID_REVIEW=0
       set +e; review_one "$pr"; local rc=$?; set -e
       was_interrupted "$rc" && { rule; warn "Interrupted — stopping."; exit 130; }
-      done=$((done+1))
+      # Only a review that actually ran counts toward MAX. Skips (already
+      # passed, parked, human-only, author==reviewer) must not burn the
+      # pass's slot, or a queue full of already-reviewed PRs turns every
+      # MAX=1 autopilot pass into a no-op.
+      [ "$DID_REVIEW" = 1 ] && done=$((done+1))
       [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ] && { rule; ok "Reached MAX=$MAX. Stopping."; exit 0; }
     done
     [ -n "$ONLY_PR" ] && break

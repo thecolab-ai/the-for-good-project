@@ -479,3 +479,51 @@ run_agent() {
     *) err "unknown AGENT '$AGENT'"; return 2 ;;
   esac
 }
+
+# Heal the known framing-PR merge conflict (the index cascade): every framing
+# PR appends a row to analysis/README.md's index table, so the moment one
+# merges, every other open framing PR goes DIRTY on that one file — reviews
+# PASS but the merge strands. If a same-repo PR's ONLY conflict with main is
+# analysis/README.md and its side of that file only ADDS full rows, re-resolve
+# deterministically (main's version + the branch's added rows), push, and
+# print the new head SHA. Anything else — fork head, other conflicted files,
+# row edits/removals — return 1 and leave it for a human.
+fg_heal_index_conflict() {  # $1 = pr number; prints the new head sha on success
+  local pr="$1" headrepo branch rows parent wt newsha
+  headrepo="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.repo.full_name' 2>/dev/null || true)"
+  [ "$headrepo" = "$REPO" ] || return 1
+  branch="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.ref' 2>/dev/null || true)"
+  [ -n "$branch" ] || return 1
+  git -C "$REPO_DIR" fetch origin --quiet || return 1
+  # The branch's README change must be pure row additions.
+  if git -C "$REPO_DIR" diff "origin/main...origin/$branch" -- analysis/README.md | grep -q '^-[^-]'; then
+    return 1
+  fi
+  rows="$(git -C "$REPO_DIR" diff "origin/main...origin/$branch" -- analysis/README.md | sed -n 's/^+\(|.*\)$/\1/p')"
+  [ -n "$rows" ] || return 1
+  parent="$(mktemp -d "${TMPDIR:-/tmp}/fg-heal.XXXXXX")"; wt="$parent/repo"
+  git -C "$REPO_DIR" worktree add --quiet --detach "$wt" "origin/$branch" 2>/dev/null \
+    || { rm -rf "$parent"; return 1; }
+  if ! (
+    cd "$wt" || exit 1
+    git merge --no-edit origin/main >/dev/null 2>&1 || true
+    conflicts="$(git diff --name-only --diff-filter=U)"
+    if [ -n "$conflicts" ] && [ "$conflicts" != "analysis/README.md" ]; then exit 1; fi
+    if [ -n "$conflicts" ]; then
+      git checkout origin/main -- analysis/README.md || exit 1
+      printf '%s\n' "$rows" >> analysis/README.md
+      git add analysis/README.md
+      git -c core.editor=true commit --no-edit >/dev/null 2>&1 || exit 1
+    fi
+    git push --quiet origin HEAD:"$branch" || exit 1
+  ); then
+    git -C "$REPO_DIR" worktree remove --force "$wt" 2>/dev/null || true
+    rm -rf "$parent" 2>/dev/null || true
+    return 1
+  fi
+  newsha="$(git -C "$wt" rev-parse HEAD 2>/dev/null || true)"
+  git -C "$REPO_DIR" worktree remove --force "$wt" 2>/dev/null || true
+  rm -rf "$parent" 2>/dev/null || true
+  [ -n "$newsha" ] || return 1
+  echo "$newsha"
+}

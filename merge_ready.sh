@@ -107,10 +107,38 @@ evaluate_pr() {  # $1 = pr number
   # Record the gate check, then merge.
   gh api -X POST "repos/$OWNER/$NAME/statuses/$sha" -f state=success -f context="$REVIEW_CHECK_CONTEXT" \
     -f description="Merged by merge_ready: ${#approvers[@]} trusted review(s)" -f target_url="$url" >/dev/null 2>&1 || true
-  if gh pr merge "$pr" --repo "$REPO" --squash --delete-branch >/dev/null 2>&1; then
+  # A freshly pushed head sits at mergeStateStatus UNKNOWN, then BLOCKED until
+  # the required checks report on the new SHA — merging in that window fails
+  # even though the PR has PASSED review. Wait (bounded by MERGE_WAIT seconds)
+  # for the state to settle, and name the failure instead of swallowing it.
+  local waited=0 mstate="" healed_once=0
+  while [ "$waited" -lt "${MERGE_WAIT:-300}" ]; do
+    mstate="$(gh pr view "$pr" --repo "$REPO" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || echo "")"
+    case "$mstate" in
+      CLEAN|UNSTABLE|HAS_HOOKS) break ;;
+      DIRTY)
+        # Framing PRs go DIRTY on analysis/README.md the moment a sibling
+        # merges (the index cascade). Heal that one deterministic conflict,
+        # re-stamp the gate check on the new head, and keep waiting for the
+        # required checks to re-run.
+        if [ "$healed_once" = 0 ] && sha="$(fg_heal_index_conflict "$pr")" && [ -n "$sha" ]; then
+          healed_once=1; waited=0
+          log "  healed analysis/README.md index conflict — new head $sha; waiting for checks..."
+          gh api -X POST "repos/$OWNER/$NAME/statuses/$sha" -f state=success -f context="$REVIEW_CHECK_CONTEXT" \
+            -f description="Merged by merge_ready: ${#approvers[@]} trusted review(s)" -f target_url="$url" >/dev/null 2>&1 || true
+          sleep 10
+          continue
+        fi
+        err "  NOT MERGED — merge conflict with the base branch (mergeStateStatus=DIRTY) that auto-heal couldn't resolve. Update/rebase the branch and re-run."
+        return ;;
+      *) sleep 10; waited=$((waited+10)) ;;
+    esac
+  done
+  local merr
+  if merr="$(gh pr merge "$pr" --repo "$REPO" --squash --delete-branch 2>&1 >/dev/null)"; then
     ok "  MERGED #$pr"
   else
-    err "  merge failed (conflicts / permissions?) — handle manually."
+    err "  merge failed (mergeStateStatus=${mstate:-unknown}): ${merr:-no error output}"
   fi
 }
 

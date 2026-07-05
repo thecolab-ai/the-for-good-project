@@ -32,6 +32,7 @@
 # Args: [claude|codex|hermes] [--model <name>]   (forwarded to both runners)
 # Env:  REVIEW_GITHUB_TOKEN  REVIEW_PER_WORK(=2)  POLL_SECONDS(=120)
 #       MAX_CYCLES(=0)  PULL(=1)  MAIN_BRANCH(=main)  + everything the runners read
+#       FLEET_SERVER(=https://forgood.thecolab.ai; ""=off)  STREAM_LOGS(=1)
 set -euo pipefail
 cd "$(dirname "$0")"
 source "scripts/fg-common.sh"
@@ -58,9 +59,16 @@ if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
   warn "To balance the queue, set REVIEW_GITHUB_TOKEN to a DISTINCT GitHub identity with write access."
 fi
 
-# Optional fleet telemetry (#398). This is deliberately best-effort: GitHub is
-# the source of truth and workers must keep running if mission control is down.
-FLEET_SERVER="${FLEET_SERVER:-}"
+# Fleet telemetry (#398) — ON by default against the project's mission-control
+# server, so `./autopilot.sh codex` reports presence/heartbeats with zero setup.
+# It stays deliberately best-effort: GitHub is the source of truth and workers
+# keep running exactly as before if the server is down (3s timeouts, all
+# failures swallowed). Opt out with FLEET_SERVER="" (explicitly empty), or
+# point elsewhere with FLEET_SERVER=<url>. Log streaming (STREAM_LOGS, default
+# on; redacted at both ends) can be disabled with STREAM_LOGS=0.
+FLEET_SERVER="${FLEET_SERVER-https://forgood.thecolab.ai}"
+STREAM_LOGS="${STREAM_LOGS:-1}"
+export STREAM_LOGS
 FLEET_HANDLE="${FLEET_HANDLE:-${HANDLE:-$(gh api user --jq .login 2>/dev/null || git config user.name 2>/dev/null || echo unknown)}}"
 FLEET_MODEL="${FLEET_MODEL:-${MODEL:-$AGENT}}"
 FLEET_AGENT_ID_FILE="${FLEET_AGENT_ID_FILE:-${TMPDIR:-/tmp}/fg-autopilot-agent-id-${FLEET_HANDLE}-${AGENT}}"

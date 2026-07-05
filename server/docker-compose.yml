@@ -10,10 +10,11 @@ services:
       STATE_FILE: /data/fleet-state.json
       TRUST_PROXY: "1"
       WATCHER_GEO: "1"
-      # Log streaming stays default-OFF (issue #398): flip both deliberately.
-      ALLOW_LOG_STREAM: "0"
-      BROADCAST_LOGS: "0"
-      CORS_ORIGIN: "*"
+      # Log streaming stays default-OFF (issue #398): flip both deliberately,
+      # e.g. ALLOW_LOG_STREAM=1 BROADCAST_LOGS=1 docker compose up -d
+      ALLOW_LOG_STREAM: "${ALLOW_LOG_STREAM:-0}"
+      BROADCAST_LOGS: "${BROADCAST_LOGS:-0}"
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
     volumes:
       - fleet-state:/data
     restart: unless-stopped
