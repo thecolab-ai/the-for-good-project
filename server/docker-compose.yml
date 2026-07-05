@@ -3,7 +3,10 @@
 # only preserves lifetime totals + the event feed across restarts.
 services:
   fleet-server:
-    build: .
+    build:
+      # Repo root: the image builds server/ AND web/ (dashboard served at /).
+      context: ..
+      dockerfile: server/Dockerfile
     ports:
       - "${PORT:-8787}:8787"
     environment:

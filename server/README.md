@@ -11,8 +11,11 @@ docker compose up -d          # server on :8787
 ```
 
 Production (the fleet's mission control at **https://forgood.thecolab.ai**) runs exactly this
-container on the maintainer's box, published on host port 4444 behind a Cloudflare tunnel,
-with log streaming deliberately enabled:
+container on the maintainer's box, published on host port 4444 behind a Cloudflare tunnel.
+The image also builds `web/` and serves the dashboard at `/` (`STATIC_DIR`), so that one URL
+is both the site and the telemetry endpoint. Server-side log streaming is deliberately
+enabled there — but every *client* stays opt-in (`STREAM_LOGS=1`); plain telemetry counters
+flow from all workers regardless:
 
 ```bash
 PORT=4444 ALLOW_LOG_STREAM=1 BROADCAST_LOGS=1 docker compose up -d --build
@@ -49,7 +52,7 @@ Point the dashboard at it: set `VITE_LIVE_SERVER_URL=http://localhost:8787` when
 
 **Streamed logs are broadcast-only** — the server retains nothing: no log lines are stored in memory or on disk, they only fan out live to connected watchers (and only when `BROADCAST_LOGS=1`).
 
-**Log streaming needs both ends to agree** (per #398): the worker must send (`STREAM_LOGS` — harness hooks default off; `autopilot.sh` defaults ON, set `STREAM_LOGS=0` to opt out) *and* the server must allow it (`ALLOW_LOG_STREAM=1`, default off), and even then logs are redacted twice — worker-side and server-side, both from the ONE shared pattern library ([`clients/redact-patterns.mjs`](clients/redact-patterns.mjs)) so the two passes can never drift. Coverage: URL credentials (Postgres/MySQL/MongoDB/Redis/AMQP/any `scheme://user:pass@`), private-key/PGP/age blocks, AWS key ids + secret assignments, GitHub/GitLab/Slack/Discord/Telegram tokens and webhook URLs, OpenAI/Anthropic/HF/Stripe/Google/Azure/SendGrid/Twilio/npm/PyPI/Shopify/DigitalOcean/Databricks/Linear/Notion/Airtable token shapes, JWTs, auth headers, and any `NAME=value` where the name looks secret-bearing (quoted values included) — tested by `npm test` (`test/redact.test.mjs`), which deliberately accepts over-redaction. Logs only reach the public dashboard if `BROADCAST_LOGS=1` is *also* set. Heartbeats carry counts and rates, never content — and redaction remains best-effort harm reduction, not a guarantee.
+**Log streaming needs both ends to agree** (per #398): the worker must opt in (`STREAM_LOGS=1` — every client including `autopilot.sh` defaults OFF; telemetry counters always flow regardless) *and* the server must allow it (`ALLOW_LOG_STREAM=1`, default off; the production server allows it), and even then logs are redacted twice — worker-side and server-side, both from the ONE shared pattern library ([`clients/redact-patterns.mjs`](clients/redact-patterns.mjs)) so the two passes can never drift. Coverage: URL credentials (Postgres/MySQL/MongoDB/Redis/AMQP/any `scheme://user:pass@`), private-key/PGP/age blocks, AWS key ids + secret assignments, GitHub/GitLab/Slack/Discord/Telegram tokens and webhook URLs, OpenAI/Anthropic/HF/Stripe/Google/Azure/SendGrid/Twilio/npm/PyPI/Shopify/DigitalOcean/Databricks/Linear/Notion/Airtable token shapes, JWTs, auth headers, and any `NAME=value` where the name looks secret-bearing (quoted values included) — tested by `npm test` (`test/redact.test.mjs`), which deliberately accepts over-redaction. Logs only reach the public dashboard if `BROADCAST_LOGS=1` is *also* set. Heartbeats carry counts and rates, never content — and redaction remains best-effort harm reduction, not a guarantee.
 
 ## Protocol
 

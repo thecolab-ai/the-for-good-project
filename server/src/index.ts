@@ -7,7 +7,10 @@
  */
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { config } from "./config.js";
 import { registerAgentSocket } from "./agent-ws.js";
 import { registerWatchSocket } from "./watch-ws.js";
@@ -47,6 +50,28 @@ async function main(): Promise<void> {
   registerHttpRoutes(app, store);
   registerAgentSocket(app, store);
   registerWatchSocket(app, store);
+
+  // Optionally host the built web dashboard on the same origin, so one URL
+  // (e.g. https://forgood.thecolab.ai) is both the site and the telemetry
+  // endpoint. The dashboard is a client-routed SPA: unknown GET paths outside
+  // the API/WS surface fall back to index.html; API 404s stay JSON.
+  if (config.staticDir) {
+    const root = path.resolve(config.staticDir);
+    const indexHtml = path.join(root, "index.html");
+    if (!existsSync(indexHtml)) {
+      app.log.warn({ staticDir: root }, "STATIC_DIR has no index.html — serving API only");
+    } else {
+      await app.register(fastifyStatic, { root });
+      app.setNotFoundHandler((req, reply) => {
+        const url = req.raw.url ?? "";
+        if (req.method === "GET" && !url.startsWith("/api/") && !url.startsWith("/ws/")) {
+          return reply.type("text/html").sendFile("index.html");
+        }
+        return reply.code(404).send({ ok: false, error: "not found" });
+      });
+      app.log.info({ staticDir: root }, "serving web dashboard");
+    }
+  }
 
   const sweeper = setInterval(() => {
     store.sweepAgents();

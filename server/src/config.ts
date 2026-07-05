@@ -20,6 +20,11 @@ export const config = {
   stateSaveSeconds: num(process.env.STATE_SAVE_SECONDS, 30),
   historyDbFile: process.env.HISTORY_DB_FILE || (process.env.STATE_FILE ? `${process.env.STATE_FILE}.sqlite` : undefined),
 
+  // Serve the built web dashboard (a `vite build --base=/` of ../web) from
+  // this directory at "/", with an SPA fallback for its client-side routes.
+  // Unset = API/WS only (the pre-hosting behaviour).
+  staticDir: process.env.STATIC_DIR || undefined,
+
   // Comma-separated list of allowed origins, or "*" (default) for any.
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
 
