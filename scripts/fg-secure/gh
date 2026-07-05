@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Secret-scrubbing `gh` shim (security incident: PR #585 leaked a live gho_
+# token in a comment body and it had to be revoked).
+#
+# When this directory is prepended to PATH (fg-common.sh's preflight does this
+# for every fleet script AND for the agent it spawns via run_agent), every
+# `gh` call routes through here first. For the handful of subcommands that
+# publish free text — `pr|issue comment|create|review|edit` — we redact any
+# GitHub token / known secret from the --body / --title / --body-file value
+# before handing the call to the real gh. Every other gh call (api, auth,
+# label edits, …) is passed straight through, untouched.
+#
+# This is a backstop, not a licence to be careless: the real fix is to never
+# put a token on a command line in the first place (build-data.mjs now
+# self-authenticates via `gh auth token`, so nobody needs to). But a shim that
+# fails closed on the ONE thing that reaches the public — the comment body —
+# means a stray token can never be published again, whatever an agent types.
+set -u
+
+self_dir="$(cd "$(dirname "$0")" && pwd)"
+
+# Resolve the real gh: the first `gh` on PATH that is not this shim. Honour an
+# explicit override so environments can pin it.
+real_gh="${FG_REAL_GH:-}"
+if [ -z "$real_gh" ]; then
+  IFS=':' read -r -a _dirs <<< "${PATH:-}"
+  for d in "${_dirs[@]}"; do
+    [ -n "$d" ] || continue
+    rd="$(cd "$d" 2>/dev/null && pwd || true)"
+    [ -n "$rd" ] && [ "$rd" = "$self_dir" ] && continue
+    if [ -x "$d/gh" ]; then real_gh="$d/gh"; break; fi
+  done
+fi
+if [ -z "$real_gh" ] || [ ! -x "$real_gh" ]; then
+  echo "fg-gh-shim: could not locate the real 'gh' binary (set FG_REAL_GH)" >&2
+  exit 127
+fi
+
+# Redact GitHub tokens (classic gho_/ghp_/ghs_/ghr_/ghu_, fine-grained
+# github_pat_), the fleet server's bearer token (fgt_<32hex>, ADR-0017), and
+# KEY=secret assignments for the credentials this repo uses.
+_scrub() {  # reads stdin -> writes scrubbed stdout
+  sed -E \
+    -e 's/github_pat_[A-Za-z0-9_]{20,}/***REDACTED-TOKEN***/g' \
+    -e 's/gh[oprsu]_[A-Za-z0-9]{20,}/***REDACTED-TOKEN***/g' \
+    -e 's/fgt_[0-9a-f]{32}/***REDACTED-TOKEN***/g' \
+    -e 's/(GITHUB_TOKEN|GH_TOKEN|REVIEW_GITHUB_TOKEN|FLEET_TOKEN|ANTHROPIC_API_KEY|VOYAGE_API_KEY|GROQ_API_KEY)=[^[:space:]"'"'"'`]+/\1=***REDACTED***/g'
+}
+
+_scrub_val() { printf '%s' "${1:-}" | _scrub; }
+
+# Scrub a --body-file target: returns a path to scrubbed content. `-` = stdin.
+_scrub_file() {
+  local f="$1" tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/fg-gh-body.XXXXXX")" || { printf '%s' "$f"; return; }
+  if [ "$f" = "-" ]; then
+    _scrub > "$tmp"
+  elif [ -f "$f" ]; then
+    _scrub < "$f" > "$tmp"
+  else
+    rm -f "$tmp"; printf '%s' "$f"; return
+  fi
+  printf '%s' "$tmp"
+}
+
+# Identify the subcommand: the first two non-flag tokens are <group> <command>.
+group="" cmd=""
+for a in "$@"; do
+  case "$a" in -*) continue ;; esac
+  if [ -z "$group" ]; then group="$a"; continue; fi
+  cmd="$a"; break
+done
+
+gated=0
+case "$group/$cmd" in
+  pr/comment|pr/create|pr/review|pr/edit|issue/comment|issue/create|issue/edit) gated=1 ;;
+esac
+
+# Not a text-publishing command → nothing to scrub, hand off verbatim.
+[ "$gated" = 1 ] || exec "$real_gh" "$@"
+
+# Rewrite only the body/title/body-file values; leave every other arg alone.
+out=()
+argv=("$@")
+n=$#
+i=0
+while [ "$i" -lt "$n" ]; do
+  a="${argv[$i]}"
+  case "$a" in
+    --body|-b|--title|-t)
+      out+=("$a"); i=$((i + 1))
+      [ "$i" -lt "$n" ] && out+=("$(_scrub_val "${argv[$i]}")")
+      ;;
+    --body=*)  out+=("--body=$(_scrub_val "${a#--body=}")") ;;
+    --title=*) out+=("--title=$(_scrub_val "${a#--title=}")") ;;
+    --body-file|-F)
+      out+=("$a"); i=$((i + 1))
+      [ "$i" -lt "$n" ] && out+=("$(_scrub_file "${argv[$i]}")")
+      ;;
+    --body-file=*) out+=("--body-file=$(_scrub_file "${a#--body-file=}")") ;;
+    *) out+=("$a") ;;
+  esac
+  i=$((i + 1))
+done
+
+exec "$real_gh" "${out[@]}"
