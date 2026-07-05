@@ -1,0 +1,96 @@
+---
+title: "Council seismic remediation exposure is visible asset-by-asset, but not as a public national liability"
+domain: "civic-transparency"
+issue: "#480"
+confidence: "Medium"
+author: "codex"
+agent: "codex"
+model: "gpt-5-codex"
+date: "2026-07-05"
+status: "draft"
+---
+
+# Council seismic remediation exposure is visible asset-by-asset, but not as a public national liability
+
+## Executive answer
+
+- The best public answer is a register problem, not a single balance-sheet number: MBIE's public EPB API returned 5,956 current building records when fetched on 2026-07-05, but those records identify the issuing territorial authority and building attributes, not whether the asset is owned by that council or a council-controlled organisation. [MBIE EPB public buildings API, fetched 2026-07-05](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000)
+- A public council-owned register exists for some councils: Hutt City lists council-owned buildings with %NBS ratings and explicitly identifies the Petone Recreation Ground grandstand as 20% NBS and earthquake prone, and the Petone Wharf as earthquake prone. [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings)
+- Palmerston North City Council has the clearest public council-owned EPB list found in this pass: its June 2023 paper says Council owns 21 facilities confirmed as earthquake-prone, including the Regent Theatre, Central Library, Te Manawa, Civic Administration Building, Caccia Birch House, water and wastewater plants, and community/recreation facilities. [PNCC, 2023](https://www.pncc.govt.nz/files/assets/public/v/1/documents/have-your-say/closed/ltp-2024/seismic-prioritisation-report-june-2023.pdf)
+- Nelson City Council's 2024-34 Property AMP says Council owns five assets with earthquake-prone status, four of which sit in the Property AMP; Appendix C names Anchor Shipping, the NCC Electricity Building, Nelson Tobacco Company and Civic House, and shows only two of those four had strengthening budgeted in the LTP at the time of writing. [Nelson City Council, 2024](https://www.nelson.govt.nz/repository/libraries/id%3A2r883m1me1cxbyryo0mp/hierarchy/1Your%20Council/A-Z%20Plans%2C%20Policies%2C%20Strategies/A-E/Activity%20Management%20Plan/Property%20Activity%20Management%20Plan%20-%20AMP%20-%202024-2034%20-%20FINAL%20-%20v02%20-%207%20Nov%202024.pdf)
+- The best public aggregate estimate is **not a national total**; a defensible visible lower bound from explicitly costed, not-yet-resolved items found here is about **$17.8 million**, made up of Wellington's adopted $15 million City-to-Sea Bridge/former Capital E plan and Hutt City's approximately $2.78 million remaining Petone Grandstand project budget. [Wellington City Council, 2026](https://wellington.govt.nz/news-and-events/news-and-information/our-wellington/2026/02/city-to-sea-bridge-to-be-refurbished); [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand)
+
+**Overall confidence:** Medium -- the existence of council-owned exposure is well supported for the named councils, but the aggregate cost estimate is a lower bound because most public sources disclose asset status without cost, or project cost without isolating remaining seismic-only work.
+
+## Evidence
+
+### The national EPB register is a regulatory spine, not an ownership register
+
+The EPB Register describes itself as information about buildings that territorial authorities have determined to be earthquake-prone, and its app text says information appears online once an EPB notice has been issued and the TA has recorded it in the register. [MBIE EPB Register, accessed 2026-07-05](https://epbr.building.govt.nz/)
+
+The public MBIE endpoint fetched on 2026-07-05 returned 5,956 EPB records, with the largest issuing-authority counts in that extract being Auckland Council 1,544, Wellington City Council 492, Christchurch City Council 436, Dunedin City Council 413, Palmerston North City Council 217, Timaru District Council 204, Invercargill City Council 194, Hamilton City Council 183, Whanganui District Council 150, and Hutt City Council 116. [MBIE EPB public buildings API, fetched 2026-07-05](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000)
+
+Those MBIE counts should not be read as council-owned liabilities, because the same endpoint records `issuedBy`, address, notice date, priority status, rating and deadline fields rather than ownership, and MBIE has separately told a data.govt.nz requester that downloadable CSV/PDF access exists while shapefile data does not exist. [MBIE EPB public buildings API, fetched 2026-07-05](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000); [data.govt.nz, 2024](https://www.data.govt.nz/datasetrequest/show/1097)
+
+This distinction matters because councils are both regulators and asset owners: Hutt City says its building seismic register lists council-owned buildings and their ratings, while its separate earthquake-strengthening page describes owners' obligations for EPBs generally. [Hutt City Council council-owned register, accessed 2026-07-05](https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings); [Hutt City Council earthquake strengthening, accessed 2026-07-05](https://www.huttcity.govt.nz/property-and-building/seismic-information/earthquake-strengthening)
+
+### Council-owned and council-controlled exposure found in this pass
+
+| Council / entity | Publicly identified council-owned or controlled exposure | Cost visibility | Confidence |
+|---|---|---:|---|
+| Wellington City Council | Wellington Town Hall remains a council project: WCC's project page says the Town Hall will reopen in February 2027, with Town Hall construction due July 2026 and the new annex to follow; a 2023 1News report, citing WCC, said the strengthening project completion cost could rise to $252m-$329m. [WCC, accessed 2026-07-05](https://wellington.govt.nz/your-council/projects/earthquake-strengthening-projects/town-hall-strengthening/about-the-project); [1News, 2023](https://www.1news.co.nz/2023/10/03/fresh-cost-blowout-on-project-to-strengthen-wellington-town-hall/) | Cost envelope public, remaining-to-spend not isolated. | Medium |
+| Wellington City Council | WCC's February 2026 City-to-Sea Bridge/former Capital E decision says the committee decided to refurbish the bridge and carry out targeted strengthening of the former Capital E building. [WCC, 2026](https://wellington.govt.nz/news-and-events/news-and-information/our-wellington/2026/02/city-to-sea-bridge-to-be-refurbished) | WCC describes the decision as a $15m plan, while noting $36m was allocated in the LTP and that the adopted plan saves an estimated $17m; treat $15m as the supported adopted project envelope, not $36m. [WCC, 2026](https://wellington.govt.nz/news-and-events/news-and-information/our-wellington/2026/02/city-to-sea-bridge-to-be-refurbished) | Medium |
+| Hutt City Council | Hutt City's council-owned register lists Petone Recreation Ground grandstand as DSA 20% NBS and earthquake prone, Petone Wharf as earthquake prone, and Minoh Friendship House / 9-11 Myrtle Street chimneys as potentially earthquake prone. [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings) | Petone Grandstand page gives seismic-only options of $2.93m-$3.16m and says about $2.78m remains from the $3m LTP project allocation after $223,539 spent. [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand) | High |
+| Palmerston North City Council | PNCC says it owns 21 facilities confirmed as EPBs; Appendix 3 lists 21 facilities and NBS bands, including Central Library 20%-25%, Te Manawa 12%-20%, Civic Administration Building 20%-25%, Caccia Birch House 10%, water/wastewater plants 20%, and Lido indoor pool 20%. [PNCC, 2023](https://www.pncc.govt.nz/files/assets/public/v/1/documents/have-your-say/closed/ltp-2024/seismic-prioritisation-report-june-2023.pdf) | PNCC's paper describes prioritisation and scoring, but the extracted public table does not give per-building dollar costs. [PNCC, 2023](https://www.pncc.govt.nz/files/assets/public/v/1/documents/have-your-say/closed/ltp-2024/seismic-prioritisation-report-june-2023.pdf) | High |
+| Nelson City Council | Nelson's Property AMP says Council owns five assets with EPB status; Appendix C lists four Property AMP assets: 258 Wakefield Quay / Anchor Shipping at 22% NBS, 300 Wakefield Quay / NCC Electricity Building at 30% NBS, 3 Halifax Street / Nelson Tobacco Company at 15% NBS, and 110 Trafalgar Street / Civic House at 20% NBS. [Nelson City Council, 2024](https://www.nelson.govt.nz/repository/libraries/id%3A2r883m1me1cxbyryo0mp/hierarchy/1Your%20Council/A-Z%20Plans%2C%20Policies%2C%20Strategies/A-E/Activity%20Management%20Plan/Property%20Activity%20Management%20Plan%20-%20AMP%20-%202024-2034%20-%20FINAL%20-%20v02%20-%207%20Nov%202024.pdf) | Nelson's Appendix C records whether strengthening is budgeted in the LTP but does not state dollar costs in that table. [Nelson City Council, 2024](https://www.nelson.govt.nz/repository/libraries/id%3A2r883m1me1cxbyryo0mp/hierarchy/1Your%20Council/A-Z%20Plans%2C%20Policies%2C%20Strategies/A-E/Activity%20Management%20Plan/Property%20Activity%20Management%20Plan%20-%20AMP%20-%202024-2034%20-%20FINAL%20-%20v02%20-%207%20Nov%202024.pdf) | High |
+| Christchurch / Dunedin / Auckland and other high-count TAs | MBIE shows large numbers of EPB notices issued by these territorial authorities, but this pass did not find a clean current council-owned asset register equivalent to Hutt, PNCC or Nelson for those councils. [MBIE EPB public buildings API, fetched 2026-07-05](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000) | Not aggregated from public sources in this pass. | Medium-low |
+
+### Best public aggregate estimate
+
+I did not find a public official all-council seismic remediation liability total in MBIE, Stats NZ, Audit Office, council LTP or council-owned-register sources reviewed for this issue. [MBIE EPB Register, accessed 2026-07-05](https://epbr.building.govt.nz/); [Stats NZ local authority financial statistics, 2025](https://www.stats.govt.nz/information-releases/local-authority-financial-statistics-year-ended-june-2025/); [Audit Office, 2025](https://ao.parliament.nz/2025/long-term-plans/part2.htm)
+
+The Audit Office's 2025 LTP observations support the budget-pressure context rather than a seismic-only total: it says councils own and operate 26% of New Zealand's infrastructure assets, worth at least $76b, and forecast $91.9b of 2024-34 capital expenditure across 58 councils, but its categories are new assets, levels of service and renewals rather than seismic remediation. [Audit Office, 2025](https://ao.parliament.nz/2025/long-term-plans/part2.htm)
+
+Stats NZ's Local authority financial statistics release is useful for council financial context, but it does not publish a seismic-remediation cost category in the public release. [Stats NZ, 2025](https://www.stats.govt.nz/information-releases/local-authority-financial-statistics-year-ended-june-2025/)
+
+The best public number I would use today is therefore a **visible lower bound, not a national estimate**: $15.0m for Wellington's adopted City-to-Sea Bridge/former Capital E plan plus about $2.78m remaining in Hutt City's Petone Grandstand project allocation gives about **$17.8m** of explicitly costed unresolved exposure in the sources above. I would not use Wellington's full $36m LTP allocation as remaining exposure, because the same WCC page says the adopted plan is $15m and saves an estimated $17m. [Wellington City Council, 2026](https://wellington.govt.nz/news-and-events/news-and-information/our-wellington/2026/02/city-to-sea-bridge-to-be-refurbished); [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand)
+
+If current or near-complete approved project envelopes are included rather than remaining cost, Wellington Town Hall alone adds a public reported envelope of up to $329m, but I would not add that to a "remaining cost" total because the WCC project page says construction is due to complete in July 2026 and the public material reviewed here does not isolate unspent dollars as at 2026-07-05. [WCC, accessed 2026-07-05](https://wellington.govt.nz/your-council/projects/earthquake-strengthening-projects/town-hall-strengthening/about-the-project); [1News, 2023](https://www.1news.co.nz/2023/10/03/fresh-cost-blowout-on-project-to-strengthen-wellington-town-hall/)
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| MBIE's EPB data is not enough to build a council-owned liability register because it is a regulator/notice register, not an ownership/cost register. | [MBIE EPB public buildings API](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000) | [Hutt City council-owned register showing a separate ownership layer](https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings) | High |
+| There is no robust public national aggregate of remaining council seismic remediation cost in the sources reviewed. | [Audit Office LTP trends](https://ao.parliament.nz/2025/long-term-plans/part2.htm) | [Stats NZ local authority financial statistics](https://www.stats.govt.nz/information-releases/local-authority-financial-statistics-year-ended-june-2025/) | Medium |
+| Palmerston North has material council-owned exposure, with 21 council-owned facilities confirmed as EPBs in a 2023 council paper. | [PNCC seismic prioritisation report](https://www.pncc.govt.nz/files/assets/public/v/1/documents/have-your-say/closed/ltp-2024/seismic-prioritisation-report-june-2023.pdf) | MBIE shows PNCC as an active issuing authority with 217 EPB records, corroborating regulatory exposure but not ownership. [MBIE API](https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000) | Medium-high |
+| Hutt City's remaining cost that can be explicitly carried into a public lower bound is about $2.78m for Petone Grandstand, but that is not a full Hutt seismic liability. | [Hutt Petone Grandstand project page](https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand) | [Hutt council-owned register](https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings) | High |
+
+## What would change this conclusion
+
+- A current MBIE, DIA, Audit Office, LGFA or Stats NZ dataset tagging seismic remediation budgets by council and ownership would replace the lower-bound method with a national estimate. [Stats NZ, 2025](https://www.stats.govt.nz/information-releases/local-authority-financial-statistics-year-ended-june-2025/)
+- Council LTP project ledgers or annual-plan capital schedules that separate "seismic strengthening" from refurbishment, access, fire, asbestos, heritage, consenting and fit-out costs would materially improve the aggregate estimate. [Hutt City Council, accessed 2026-07-05](https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand)
+- A full scrape or council-by-council manual coding of all 67 territorial authorities' LTPs, annual reports, asset-management plans, CCO statements of intent and property registers could turn this v0 register into a national register. [MBIE EPB Register, accessed 2026-07-05](https://epbr.building.govt.nz/)
+- I could not verify a current all-council aggregate remaining cost, full CCO exposure, or all Wellington unspent amounts as at 2026-07-05 from public sources in this pass.
+
+## Open follow-up questions
+
+- Which of the 5,956 MBIE EPB records are publicly owned or CCO-owned, and can ownership be matched reliably from council property schedules, rating-unit ownership, or LINZ parcel ownership data?
+- Which 2024-34 LTP capital lines are primarily seismic remediation rather than general refurbishment, heritage renewal or level-of-service upgrades?
+- How will the Building (Earthquake-prone Buildings) Amendment Bill change mandatory remediation exposure for the council-owned assets listed above?
+
+## Sources
+
+1. MBIE Building Performance, Register of earthquake-prone buildings app, accessed 2026-07-05 -- https://epbr.building.govt.nz/
+2. MBIE EPB public buildings API, fetched with `curl` on 2026-07-05 -- https://epbr.building.govt.nz/api/public/buildings?paging.index=0&paging.size=10000
+3. data.govt.nz, "Register of earthquake-prone buildings (EPB Register)", MBIE response, 13 August 2024 -- https://www.data.govt.nz/datasetrequest/show/1097
+4. Hutt City Council, "Council owned buildings", accessed via WebFetch after raw `curl` was Cloudflare-blocked, 2026-07-05 -- https://www.huttcity.govt.nz/property-and-building/seismic-information/council-owned-buildings
+5. Hutt City Council, "Earthquake strengthening", accessed 2026-07-05 -- https://www.huttcity.govt.nz/property-and-building/seismic-information/earthquake-strengthening
+6. Hutt City Council, "Petone Grandstand Project", accessed 2026-07-05 -- https://www.huttcity.govt.nz/council/our-projects/pito-one-projects/petone-grandstand
+7. Palmerston North City Council, "Strengthening Order of Council-owned Earthquake Prone Buildings", 28 June 2023 -- https://www.pncc.govt.nz/files/assets/public/v/1/documents/have-your-say/closed/ltp-2024/seismic-prioritisation-report-june-2023.pdf
+8. Nelson City Council, "Property Activity Management Plan 2024-2034", 7 November 2024 -- https://www.nelson.govt.nz/repository/libraries/id%3A2r883m1me1cxbyryo0mp/hierarchy/1Your%20Council/A-Z%20Plans%2C%20Policies%2C%20Strategies/A-E/Activity%20Management%20Plan/Property%20Activity%20Management%20Plan%20-%20AMP%20-%202024-2034%20-%20FINAL%20-%20v02%20-%207%20Nov%202024.pdf
+9. Wellington City Council, "About Te Whare Whakarauika Wellington Town Hall redevelopment project", fetched via `scripts/fetch.mjs` plain HTTP on 2026-07-05 -- https://wellington.govt.nz/your-council/projects/earthquake-strengthening-projects/town-hall-strengthening/about-the-project
+10. 1News, "Fresh cost blowout on project to strengthen Wellington Town Hall", 3 October 2023 -- https://www.1news.co.nz/2023/10/03/fresh-cost-blowout-on-project-to-strengthen-wellington-town-hall/
+11. Wellington City Council, "Council to refurbish City to Sea Bridge and former Capital E building", fetched via `scripts/fetch.mjs` plain HTTP on 2026-07-05 -- https://wellington.govt.nz/news-and-events/news-and-information/our-wellington/2026/02/city-to-sea-bridge-to-be-refurbished
+12. Office of the Auditor-General, "Part 2: Trends in councils' financial and infrastructure strategies", 2025 -- https://ao.parliament.nz/2025/long-term-plans/part2.htm
+13. Stats NZ, "Local authority financial statistics: Year ended June 2025", 2025 -- https://www.stats.govt.nz/information-releases/local-authority-financial-statistics-year-ended-june-2025/

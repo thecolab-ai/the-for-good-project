@@ -44,6 +44,8 @@ export AGENT MODEL
 
 REVIEW_PER_WORK="${REVIEW_PER_WORK:-2}"   # review passes per work pass — bias to review; it's the bottleneck
 FRAME_PER_WORK="${FRAME_PER_WORK:-1}"       # framing/discover rework passes per cycle; frame_work owns discover roots
+FRAMING="${FRAMING:-false}"                  # OFF by default — set FRAMING=true to enable discover-root framing at all
+export FRAMING
 POLL_SECONDS="${POLL_SECONDS:-120}"       # idle wait between cycles when the whole queue is empty
 MAX_CYCLES="${MAX_CYCLES:-0}"             # 0 = run forever
 PULL="${PULL:-1}"                         # git-pull latest main each cycle (0 to disable)
@@ -305,7 +307,7 @@ while :; do
   # Framing side: discover roots and sent-back discover/framing PRs are not
   # claimable by start_work.sh (ADR-0014). Without this pass autopilot can look
   # idle while discover rework such as PRs marked "Part of #<root>" is waiting.
-  if [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
+  if [ "$FRAMING" = "true" ] && [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
     for _ in $(seq 1 "$FRAME_PER_WORK"); do
       fleet_handle_commands || break 2
       info "frame pass…"
