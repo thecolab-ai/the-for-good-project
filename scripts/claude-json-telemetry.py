@@ -41,7 +41,35 @@ STREAM_LOGS = env("STREAM_LOGS") == "1"
 # tunnelled fleet server — an honest custom UA passes.
 USER_AGENT = "forgood-fleet-telemetry/1.0 (+https://github.com/thecolab-ai/the-for-good-project)"
 
-_last_post_mono = time.monotonic()
+# Generation-time clock: reset on EVERY stream event, so the elapsed time
+# attributed to an assistant message runs from the previous event (usually the
+# tool result going back in) to the message completing — i.e. API latency +
+# actual generation. Charging wall-clock-since-last-post instead diluted a
+# 30-token message after a 60s bash run down to ~0.5 tok/s, which is not what
+# anyone means by "speed".
+_last_event_mono = time.monotonic()
+
+# The stream's per-message usage.output_tokens is a message-START stub (often
+# literally 1) — only the final `result` event carries the real output total.
+# So per message we ESTIMATE output from the content we just printed (live
+# TPS), keep a ledger of what we've posted, and settle the exact remainder
+# when `result` arrives. Input-side numbers on assistant events are real.
+_est_out_posted = 0
+
+
+def estimate_output_tokens(message: dict[str, Any]) -> int:
+    chars = 0
+    for block in message.get("content") or []:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") == "text":
+            chars += len(str(block.get("text") or ""))
+        elif block.get("type") == "tool_use":
+            try:
+                chars += len(json.dumps(block.get("input") or {})) + 20
+            except (TypeError, ValueError):
+                chars += 40
+    return max(3, round(chars / 4))
 
 
 def read_agent_id() -> str:
@@ -121,19 +149,15 @@ def post_logs(lines: list[str]) -> None:
         return
 
 
-def post_tokens(tokens_in: int, tokens_out: int) -> None:
-    """Per-message usage deltas with real elapsed wall time, so the TPS gauge
-    reflects an actual rate. Cache reads are excluded by the caller."""
-    global _last_post_mono
+def post_tokens(tokens_in: int, tokens_out: int, elapsed_ms: int) -> None:
+    """Per-message usage deltas over the message's own generation window.
+    Cache reads are excluded by the caller."""
     if tokens_in <= 0 and tokens_out <= 0:
         return
-    now = time.monotonic()
-    elapsed_ms = max(1, int((now - _last_post_mono) * 1000))
-    _last_post_mono = now
-    post_telemetry({"tokensIn": tokens_in, "tokensOut": tokens_out, "elapsedMs": elapsed_ms})
+    post_telemetry({"tokensIn": tokens_in, "tokensOut": tokens_out, "elapsedMs": max(1, elapsed_ms)})
 
 
-def handle_assistant(message: dict[str, Any]) -> None:
+def handle_assistant(message: dict[str, Any], elapsed_ms: int) -> None:
     lines: list[str] = []
     for block in message.get("content") or []:
         if not isinstance(block, dict):
@@ -154,17 +178,19 @@ def handle_assistant(message: dict[str, Any]) -> None:
             post_telemetry({"toolCalls": 1, "tools": {name: 1}})
     usage = message.get("usage")
     if isinstance(usage, dict):
+        global _est_out_posted
         # Cache reads excluded — fresh input + cache writes + output only,
         # matching the claude-code hook client and the dashboard's meaning of
         # "intelligence at work".
         tokens_in = int(usage.get("input_tokens") or 0) + int(usage.get("cache_creation_input_tokens") or 0)
-        tokens_out = int(usage.get("output_tokens") or 0)
-        post_tokens(tokens_in, tokens_out)
+        tokens_out = estimate_output_tokens(message)
+        _est_out_posted += tokens_out
+        post_tokens(tokens_in, tokens_out, elapsed_ms)
     post_logs(lines)
 
 
 def main() -> int:
-    global MODEL
+    global MODEL, _last_event_mono
     for raw in sys.stdin:
         raw = raw.strip()
         if not raw:
@@ -174,14 +200,27 @@ def main() -> int:
         except json.JSONDecodeError:
             print(raw, flush=True)
             continue
+        now = time.monotonic()
+        elapsed_ms = int((now - _last_event_mono) * 1000)
+        _last_event_mono = now
         typ = event.get("type")
         if typ == "system" and event.get("subtype") == "init":
             if event.get("model"):
                 MODEL = str(event["model"])
             print(f"[claude session] model={MODEL} session={event.get('session_id', '')[:8]}", flush=True)
         elif typ == "assistant" and isinstance(event.get("message"), dict):
-            handle_assistant(event["message"])
+            handle_assistant(event["message"], elapsed_ms)
         elif typ == "result":
+            usage = event.get("usage")
+            if isinstance(usage, dict):
+                iterations = usage.get("iterations")
+                if isinstance(iterations, list) and iterations:
+                    actual_out = sum(int(it.get("output_tokens") or 0) for it in iterations if isinstance(it, dict))
+                else:
+                    actual_out = int(usage.get("output_tokens") or 0)
+                settle = actual_out - _est_out_posted
+                if settle > 0:
+                    post_tokens(0, settle, elapsed_ms)
             cost = event.get("total_cost_usd")
             print(
                 f"[claude result] {event.get('subtype', '')} turns={event.get('num_turns', '?')}"
