@@ -3,7 +3,11 @@ import { relativeTime } from "@/lib/format";
 import type { EventItem } from "@/lib/live";
 import { harnessColor, useIsDark } from "./harness";
 
-const EVENT_META = {
+/** Generic fallback so event kinds this build doesn't know yet (the server
+ *  may be newer — e.g. orchestration kinds) still render safely. */
+const FALLBACK_META = { icon: Play, label: "event" } as const;
+
+const EVENT_META: Partial<Record<EventItem["kind"], { icon: typeof Play; label: string }>> = {
   agent_online: { icon: Bot, label: "online" },
   agent_offline: { icon: LogOut, label: "offline" },
   task_started: { icon: Play, label: "started" },
@@ -11,7 +15,7 @@ const EVENT_META = {
   review_done: { icon: Search, label: "review" },
   task_done: { icon: CheckCircle2, label: "done" },
   watcher_joined: { icon: Eye, label: "watcher" },
-} as const;
+};
 
 /** The rolling fleet event stream: connects, task starts, PRs, reviews. */
 export function LiveEventFeed({ events }: { events: EventItem[] }) {
@@ -22,7 +26,7 @@ export function LiveEventFeed({ events }: { events: EventItem[] }) {
   return (
     <ul className="divide-y divide-border">
       {events.map((e) => {
-        const meta = EVENT_META[e.kind] ?? EVENT_META.task_started;
+        const meta = EVENT_META[e.kind] ?? FALLBACK_META;
         const Icon = meta.icon;
         const color = e.harness ? harnessColor(e.harness, dark) : undefined;
         return (

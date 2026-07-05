@@ -2,14 +2,53 @@
  * REST surface — a polling fallback for the dashboard and a plain-curl path
  * for bash workers (autopilot.sh) that don't want to hold a WebSocket open.
  */
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { config } from "./config.js";
 import { IpRateLimiter } from "./guards.js";
-import { logPostSchema, telemetryPostSchema } from "./protocol.js";
+import { bearerToken, verifyAgentToken } from "./orchestrator/auth.js";
+import { popCommands } from "./orchestrator/control.js";
+import { renewLeasesForHandle } from "./orchestrator/dispatch.js";
+import type { Orchestrator } from "./orchestrator/stores.js";
+import { logPostSchema, telemetryPostSchema, type FleetCommand } from "./protocol.js";
 import { redactLines } from "./redact.js";
 import type { FleetStore } from "./state.js";
 
-export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): void {
+/**
+ * Orchestration side-channel on the telemetry heartbeat: when the POST
+ * carries a valid agent bearer token, auto-renew the handle's active lease
+ * and drain its pending FleetCommands into the response. Best-effort and
+ * fail-open by design — a bad/missing token or an orchestration hiccup NEVER
+ * breaks telemetry (the response just carries no `commands`), and the
+ * registry handle (not the self-reported hello handle) is what leases and
+ * command queues key on.
+ */
+async function orchestrationExtras(
+  orch: Orchestrator,
+  req: FastifyRequest,
+  consumerId?: string,
+): Promise<FleetCommand[] | undefined> {
+  const token = bearerToken(req);
+  if (!token) return undefined;
+  try {
+    const identity = await verifyAgentToken(orch, token);
+    if (!identity) return undefined;
+    await renewLeasesForHandle(orch, identity.handle).catch(() => undefined);
+    // Commands are exactly-once per CONSUMER (the caller's stable session id
+    // when it sends one; the handle otherwise) so a handle running several
+    // runners has each of them hear a drain — see orchestrator/control.ts.
+    return await popCommands(orch, identity.handle, consumerId);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * `orch` (optional — undefined when orchestration is disabled) lets the
+ * telemetry route, when a valid agent bearer token is presented, (a)
+ * auto-renew the handle's active lease and (b) piggyback pending
+ * FleetCommands on the response (`commands: FleetCommand[]`).
+ */
+export function registerHttpRoutes(app: FastifyInstance, store: FleetStore, orch?: Orchestrator): void {
   // The WS routes get a per-connection limiter; the plain-HTTP ingestion
   // routes need the same budget per source IP or they're a free flood path.
   const limiter = new IpRateLimiter();
@@ -54,6 +93,15 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore): voi
     const id = store.upsertAgent({ type: "hello", ...hello }, "http", knownId);
     if (!id) return reply.code(503).send({ ok: false, error: "fleet full" });
     if (heartbeat) store.applyHeartbeat(id, heartbeat);
+    // Token-authed posts additionally renew leases and drain pending
+    // commands; without a token (or orchestration) the response is exactly
+    // the pre-orchestration shape.
+    if (orch) {
+      // The CLIENT-echoed agentId is the consumer identity (stable across a
+      // runner's posts); a first post without one falls back to the handle.
+      const commands = await orchestrationExtras(orch, req, knownId);
+      if (commands) return { ok: true, agentId: id, commands };
+    }
     return { ok: true, agentId: id };
   });
 

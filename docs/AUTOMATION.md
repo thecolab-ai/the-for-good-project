@@ -170,7 +170,10 @@ For a **new issue** it claims (assigns you + `status: claimed`), creates a fresh
 worktree from `origin/main`, hands the issue to the agent with the method baked
 into the prompt, then finds the PR the agent opened (via GitHub's closing-issue
 link) and flips the issue to `status: in-review`. If the agent opened no PR,
-the issue is released back to `available`.
+the issue is released back to `available`. (Enrolled agents can claim
+atomically through the fleet server instead of the label race — see
+[Server-orchestrated claiming (opt-in)](#server-orchestrated-claiming-opt-in);
+default off.)
 
 Two bounds shape what gets picked up (#292 / #293, ADR-0013):
 
@@ -237,6 +240,61 @@ DRY_RUN=1 ./reap.sh    # report what would be released
 The workflow can also be started manually from GitHub's Actions tab, including
 in dry-run mode. It uses only the repository `GITHUB_TOKEN`; no model API keys
 or agent credentials are involved.
+
+## Server-orchestrated claiming (opt-in)
+
+The label claim above is a **read-then-write race**: `next_available()` reads
+the queue, then the label write claims — nothing atomic between them, so two
+runners polling at once can pick the same issue. **Enrolled** agents can
+instead claim through the fleet server, which takes an atomic Redis lease and
+writes the *same* `status: claimed` label + assignee itself
+([ADR-0017](adr/0017-server-orchestrated-pull-claim.md); server setup and the
+full API live in [`server/README.md`](../server/README.md)).
+
+**Default OFF.** Nothing changes unless *both* are set:
+
+```bash
+FLEET_TOKEN=fgt_...   # server-minted bearer token (a maintainer mints it — see server/README.md)
+FLEET_CLAIM=1         # opt into server claiming (FLEET_SERVER already defaults to production)
+./autopilot.sh codex
+```
+
+What changes when it's on:
+
+- **Claiming** — `start_work.sh` asks `POST /api/v1/work/claim` instead of
+  running `next_available` + `claim_issue`. The server picks by the *same
+  ordering* (priority-high with the `HIGH_PRIORITY_CAP` stream bound, then
+  oldest first), leases it, and writes the labels — so the claim is atomic
+  among enrolled agents, and GitHub still shows exactly the state every other
+  doc describes. Discover roots are **never** dispatched (ADR-0014 —
+  `frame_work.sh` keeps its own path). Before starting work the runner still
+  applies the two label-path safety checks: the duplicate-PR guard (an
+  already-PR'd issue is released `done` and healed to in-review, never worked
+  twice — the #305/#307 protection) and the deterministic co-assignee
+  tie-break against label-path racers (`resolve_claim_race`). The lease-renew
+  loop derives its cadence from the `leaseTtlSeconds` the claim returns
+  (TTL/3, floor 15s; `FLEET_RENEW_SECONDS` overrides).
+- **Fallback is automatic and total** — queue empty, timeout, non-200, server
+  down: the runner falls back to today's label path, byte-for-byte. The
+  server can never make the fleet *stop*; only GitHub can.
+- **Releasing** — on the success path the runner reports `done` (labels are
+  left to the normal PR/Actions transitions); on failure/interrupt it reports
+  `abandoned` and the server reverts the labels to `status: available`.
+- **Leases replace `reap.sh` for enrolled agents** — the claim's lease
+  (default 30 min) auto-renews on telemetry heartbeats; if the agent dies,
+  the server's sweeper reverts the labels within about a minute of expiry
+  instead of waiting for `reap.sh`'s cron. `reap.sh` still covers everyone on
+  the label path.
+- **Fleet commands** — `autopilot.sh` checks each loop for maintainer
+  commands delivered on heartbeat responses: `pause` (idle-poll until
+  `resume`), `stop` (finish the current task, then exit), `abort` (abandon
+  current work — released `abandoned` — and exit). Command semantics and the
+  admin API are in [`server/README.md`](../server/README.md).
+
+GitHub remains the durable source of truth throughout: the server arbitrates
+*who claims*, but every durable fact lands on GitHub as the same labels and
+assignees — humans and non-enrolled agents keep working exactly as before,
+in the same queue.
 
 ## `review_work.sh` — review before merge
 
