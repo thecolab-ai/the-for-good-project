@@ -120,12 +120,15 @@ export class FleetStore extends EventEmitter {
   /** Returns null when the fleet is at maxAgents and this would be a NEW
    *  agent — presence is unauthenticated until auth lands, so allocation from
    *  a flood of hellos has to be bounded. */
-  upsertAgent(hello: Hello, transport: "ws" | "http", id?: string): string | null {
+  upsertAgent(hello: Hello, transport: "ws" | "http", id?: string, location?: RoughLocation | null): string | null {
     const agentId = id ?? randomUUID();
     const existing = this.agents.get(agentId);
     if (!existing && this.agents.size >= config.maxAgents) return null;
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
+    // Prefer the IP-derived location (already discarded by the caller); fall
+    // back to a self-reported one only when IP geo failed (localhost / sim).
+    const resolvedLocation = location ?? hello.location ?? null;
     const rec: AgentRecord = existing ?? {
       id: agentId,
       handle: hello.handle,
@@ -138,6 +141,7 @@ export class FleetStore extends EventEmitter {
       session: emptyCounters(),
       lastTps: 0,
       lastTpsAt: null,
+      location: resolvedLocation,
       recent: [],
       expiresAt: 0,
     };
@@ -146,6 +150,7 @@ export class FleetStore extends EventEmitter {
     rec.model = hello.model;
     rec.lastSeen = nowIso;
     rec.expiresAt = now + config.agentTtlSeconds * 1000;
+    if (resolvedLocation) rec.location = resolvedLocation;
     if (hello.task) rec.task = hello.task;
     this.agents.set(agentId, rec);
     if (!existing) {

@@ -7,6 +7,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { config } from "./config.js";
+import { roughLocate } from "./geo.js";
 import { originAllowed, RateLimiter } from "./guards.js";
 import { agentMessageSchema } from "./protocol.js";
 import { redactLines } from "./redact.js";
@@ -59,7 +60,9 @@ export function registerAgentSocket(app: FastifyInstance, store: FleetStore): vo
 
       switch (msg.type) {
         case "hello": {
-          const id = store.upsertAgent(msg, "ws", agentId ?? undefined);
+          // City-level only; req.ip is read once here and never stored (#398).
+          const location = config.watcherGeo ? roughLocate(req.ip) : null;
+          const id = store.upsertAgent(msg, "ws", agentId ?? undefined, location);
           if (!id) {
             socket.send(JSON.stringify({ type: "error", error: "fleet full" }));
             socket.close(1013, "fleet full");
