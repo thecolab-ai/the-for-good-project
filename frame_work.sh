@@ -562,6 +562,23 @@ reframe_one() {  # $1 = root issue number, $2 = framing PR number
     [ "$DRY_RUN" = 1 ] || restore_root_posture "$n" || true
     return 0
   fi
+  # A fork-headed framing PR can't be reworked here: the rework worktree needs
+  # origin/<branch> (absent for forks) and the rework push would need write on
+  # the contributor's fork. Hand off to the author/a maintainer ONCE (ADR-0009)
+  # and return 3 ("no work done") so this PR can't wedge the rework queue by
+  # burning the pass's MAX slot every cycle (the #434 wedge).
+  local headrepo
+  headrepo="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.repo.full_name' 2>/dev/null || echo "$REPO")"
+  if [ -n "$headrepo" ] && [ "$headrepo" != "$REPO" ]; then
+    log "PR #$pr's branch lives on fork $headrepo — framing rework handed off to the author/a maintainer (ADR-0009). Skipping."
+    if [ "$DRY_RUN" = 0 ] && ! gh api "repos/$REPO/issues/$pr/comments?per_page=100" --jq '.[].body' 2>/dev/null | grep -q 'fg-fork-rework-handoff'; then
+      gh pr comment "$pr" --repo "$REPO" --body "🔀 \`frame_work.sh\`: this framing PR's branch lives on a fork (\`$headrepo\`), so the framing-rework loop can't check it out or push a rework (ADR-0009). Handing off: the author pushes the rework to their fork branch, or a maintainer reworks it via \`gh pr checkout $pr\`.
+
+<!-- fg-fork-rework-handoff -->" >/dev/null 2>&1 || true
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    fi
+    return 3
+  fi
   if [ "$DRY_RUN" = 1 ]; then
     info "[dry-run] would rework framing PR #$pr (branch $branch) against the review feedback and push"
     return 0
@@ -656,11 +673,15 @@ main() {
     reconcile_framing_rework   # pull in sent-back framings the hand-off missed
     # Rework FIRST: a sent-back framing blocks its whole stream's credibility,
     # so it beats framing new roots. Each pair is "<root> <pr>".
-    local n pr
+    local n pr rrc
     while IFS=' ' read -r n pr; do
       [ -z "$n" ] && continue
-      reframe_one "$n" "$pr" || true
-      done=$((done+1))
+      set +e; reframe_one "$n" "$pr"; rrc=$?; set -e
+      # Only a rework that actually ran counts toward MAX — a handed-off fork
+      # PR (rc 3) or a failed claim/worktree (rc 1) must not burn the pass's
+      # slot, or one stuck PR at the head of the queue starves every rework
+      # behind it (the #434 wedge).
+      [ "$rrc" -eq 0 ] && done=$((done+1))
       [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ] && { rule; ok "Reached MAX=$MAX. Stopping."; exit 0; }
     done <<< "$(framing_rework_targets || true)"
     local snap; snap="$(fetch_open_issues)" || snap='[]'

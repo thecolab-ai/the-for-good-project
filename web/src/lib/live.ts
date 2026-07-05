@@ -122,7 +122,10 @@ export function liveServerUrl(): string | null {
     /* storage blocked */
   }
   const fromEnv = import.meta.env.VITE_LIVE_SERVER_URL as string | undefined;
-  const url = fromStorage || fromEnv || (import.meta.env.DEV ? "http://localhost:8787" : null);
+  // Production default: the fleet server behind the Cloudflare tunnel (#398).
+  // Overridable per-browser via localStorage or per-build via env.
+  const url =
+    fromStorage || fromEnv || (import.meta.env.DEV ? "http://localhost:8787" : "https://forgood.thecolab.ai");
   return url ? url.replace(/\/+$/, "") : null;
 }
 
