@@ -192,7 +192,11 @@ export class FleetStore extends EventEmitter {
     for (const [tool, n] of Object.entries(hb.tools ?? {})) s.tools[tool] = (s.tools[tool] ?? 0) + n;
     for (const [skill, n] of Object.entries(hb.skills ?? {})) s.skills[skill] = (s.skills[skill] ?? 0) + n;
 
-    const tokens = (hb.tokensIn ?? 0) + (hb.tokensOut ?? 0);
+    // The TPS gauge measures GENERATION speed — output tokens only. Counting
+    // input too made the gauge read thousands of tok/s whenever a worker
+    // ingested big files/tool output, which nobody reads as "speed". Totals
+    // still track both directions.
+    const tokens = hb.tokensOut ?? 0;
     const elapsedMs = Math.max(1, hb.elapsedMs ?? config.tpsWindowSeconds * 1000);
     const windowMs = config.tpsWindowSeconds * 1000;
     rec.recent = rec.recent.filter((p) => now - p.t <= windowMs);

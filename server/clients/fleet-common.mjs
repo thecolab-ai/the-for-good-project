@@ -27,7 +27,12 @@ export async function post(path, body) {
   try {
     const res = await fetch(`${FLEET_SERVER}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      // Cloudflare's bot protection 403s default/absent client user-agents on
+      // the tunnelled production server; an honest custom UA passes.
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "forgood-fleet-telemetry/1.0 (+https://github.com/thecolab-ai/the-for-good-project)",
+      },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(POST_TIMEOUT_MS),
     });

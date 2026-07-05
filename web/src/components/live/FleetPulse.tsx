@@ -24,7 +24,7 @@ export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; his
         <div className="text-sm font-medium text-muted-foreground">Fleet throughput</div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="font-sans text-5xl font-semibold tabular-nums leading-none">{compactNumber(displayTps)}</span>
-          <span className="text-sm text-muted-foreground">{showingLast ? "last tok/s" : "tokens/sec"}</span>
+          <span className="text-sm text-muted-foreground">{showingLast ? "last out tok/s" : "output tokens/sec"}</span>
           {currentTps > 0 ? (
             <span className="relative ml-1 flex h-2 w-2 self-center">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ backgroundColor: accent }} />
@@ -52,10 +52,25 @@ export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; his
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const p = payload[0].payload as TpsPoint;
+                    const when = new Date(p.t);
+                    const split = Object.entries(p.byHarness ?? {}).filter(([, v]) => v > 0);
                     return (
                       <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md">
-                        <div className="font-medium tabular-nums">{compactNumber(p.tps)} tok/s</div>
-                        <div className="text-muted-foreground">{new Date(p.t).toLocaleTimeString()}</div>
+                        <div className="font-medium tabular-nums">{compactNumber(p.tps)} out tok/s</div>
+                        <div className="text-muted-foreground">
+                          {when.toLocaleDateString(undefined, { day: "numeric", month: "short" })}{" "}
+                          {when.toLocaleTimeString()}
+                        </div>
+                        {split.length > 0 ? (
+                          <div className="mt-1 space-y-0.5">
+                            {split.map(([h, v]) => (
+                              <div key={h} className="flex items-center gap-1.5 text-muted-foreground">
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: harnessColor(h, dark) }} />
+                                {h} <span className="tabular-nums text-popover-foreground">{compactNumber(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   }}
