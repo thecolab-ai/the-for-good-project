@@ -64,13 +64,18 @@ MAX="${MAX:-0}"
 ONLY_PR="${PR:-}"
 REVIEW_FILE=""
 CLAIMED_PR=""
+REVIEW_CLAIM_TOKEN=""
 # The reviewer's PR claim lock. Lives in the review: namespace (with
 # "review: human-only"), NOT status: — it marks a PR a reviewer is holding,
 # not an issue's lifecycle state, and status:-prefixed labels are parsed by
 # the website as lifecycle states (an actively-reviewed PR rendered as "New").
+# The label is only a visible hint; the real race-breaker is a per-commit
+# pending status claim with a unique target_url. Label add is set-union and two
+# reviewers can both add/observe it concurrently; status claims are last-writer
+# wins, so only the runner whose token remains latest proceeds.
 REVIEW_CLAIMING_LABEL="review: claimed"
 HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a human maintainer, never by this loop
-REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a 'status: reviewing' claim is honoured before it's treated as stale
+REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a review claim is honoured before it's treated as stale
 MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-10}"  # change-requesting rounds before the PR is parked for a human (#287)
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
@@ -87,10 +92,10 @@ trap 'exit 143' TERM
 if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then export GH_TOKEN="$REVIEW_GITHUB_TOKEN"; fi
 
 # ---- concurrency: claim a PR before reviewing so parallel runners don't
-# collide on the same PR (or all pile onto the front of the list). A claim is a
-# "status: reviewing" label; it's honoured for REVIEW_CLAIM_TTL then treated as
-# stale (crashed runner) and taken over. Small residual race, but it removes the
-# front-of-list stampede that had one PR getting 5 reviews while 20 got none.
+# collide on the same PR (or all pile onto the front of the list). A visible
+# "review: claimed" label is honoured for REVIEW_CLAIM_TTL then treated as stale
+# (crashed runner) and taken over. The actual race-breaker is the pending status
+# claim written by claim_pr(), verified after a short settle window.
 review_claim_age() {  # $1 pr -> seconds since the reviewing label was applied, or empty if unknown
   local t
   t="$(gh api "repos/$OWNER/$NAME/issues/$1/timeline" --paginate \
@@ -104,7 +109,7 @@ review_claim_age() {  # $1 pr -> seconds since the reviewing label was applied, 
 }
 
 claim_pr() {  # $1 pr -> 0 if we now hold the claim, 1 if another runner holds a fresh claim
-  local pr="$1" labels
+  local pr="$1" labels sha url claim_url latest_url
   labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
   case ",$labels," in
     *",$REVIEW_CLAIMING_LABEL,"*)
@@ -114,7 +119,28 @@ claim_pr() {  # $1 pr -> 0 if we now hold the claim, 1 if another runner holds a
       fi
       warn "#$pr had a stale review claim (${age:-unknown age}) — taking it over." ;;
   esac
+
+  sha="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
+  url="$(gh pr view "$pr" --repo "$REPO" --json url --jq .url)"
+  REVIEW_CLAIM_TOKEN="${ME}-$$-${RANDOM}-${RANDOM}"
+  claim_url="$url#review-claim-$REVIEW_CLAIM_TOKEN"
+
   gh pr edit "$pr" --repo "$REPO" --add-label "$REVIEW_CLAIMING_LABEL" >/dev/null 2>&1 || true
+  set_check "$sha" pending "Review claim by @$ME" "$claim_url"
+
+  # Let simultaneous reviewers' status writes settle, then only the latest
+  # writer proceeds. This closes the race where two processes both add the
+  # set-union label and review the same PR.
+  sleep $((3 + (RANDOM % 5)))
+  latest_url="$(gh api "repos/$OWNER/$NAME/commits/$sha/statuses" \
+      --jq "[.[]|select(.context==\"$REVIEW_CHECK_CONTEXT\")][0].target_url // \"\"" 2>/dev/null || true)"
+  if [ "$latest_url" != "$claim_url" ]; then
+    log "#$pr review claim lost to another runner — skipping."
+    # Do NOT remove the shared claim label here: it belongs to the winning
+    # runner. That runner will release it when done, or TTL will free it.
+    REVIEW_CLAIM_TOKEN=""
+    return 1
+  fi
   return 0
 }
 
@@ -336,8 +362,8 @@ EOF
 }
 
 open_prs_needing_review() {
-  gh pr list --repo "$REPO" --state open --json number,isDraft,headRefOid,author,labels \
-    --jq ".[] | select(.isDraft|not) | select(([.labels[].name] | index(\"$HUMAN_ONLY_LABEL\")) | not) | .number"
+  gh api --paginate "repos/$OWNER/$NAME/pulls?state=open&per_page=100" \
+    --jq ".[] | select(.draft|not) | select((.labels // [] | map(.name) | index(\"$HUMAN_ONLY_LABEL\")) | not) | .number"
 }
 
 check_state() {  # $1 = sha  -> success|failure|pending|none
@@ -354,15 +380,19 @@ set_check() {  # $1 sha, $2 state(success|failure), $3 desc, $4 url
 
 review_one() {  # $1 = PR number
   local pr="$1"
-  local sha author url
-  sha="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid)"
-  author="$(gh pr view "$pr" --repo "$REPO" --json author --jq .author.login)"
-  url="$(gh pr view "$pr" --repo "$REPO" --json url --jq .url)"
-  rule; info "${c_bold}PR #$pr${c_reset} — $(gh pr view "$pr" --repo "$REPO" --json title --jq .title) ${c_dim}(by @$author)${c_reset}"
+  local sha author url title labels
+  local meta
+  meta="$(gh api "repos/$OWNER/$NAME/pulls/$pr" \
+    --jq '{sha:.head.sha, author:.user.login, url:.html_url, title:.title, labels:(.labels // [] | map(.name) | join(","))}' 2>/dev/null)" || return 1
+  sha="$(printf '%s' "$meta" | jq -r .sha)"
+  author="$(printf '%s' "$meta" | jq -r .author)"
+  url="$(printf '%s' "$meta" | jq -r .url)"
+  title="$(printf '%s' "$meta" | jq -r .title)"
+  labels="$(printf '%s' "$meta" | jq -r .labels)"
+  rule; info "${c_bold}PR #$pr${c_reset} — $title ${c_dim}(by @$author)${c_reset}"
 
   # HUMAN-ONLY: pipeline/governance PRs are reviewed by a human maintainer, not
   # by this loop (also guards the PR=<n> single-PR path).
-  local labels; labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
   case ",$labels," in
     *",$HUMAN_ONLY_LABEL,"*)
       log "#$pr carries \"$HUMAN_ONLY_LABEL\" — a human maintainer reviews and merges this one. Skipping."; return 0 ;;

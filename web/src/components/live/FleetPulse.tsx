@@ -1,5 +1,6 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { relativeTime } from "@/lib/format";
 import { compactNumber, type FleetMetrics, type TpsPoint } from "@/lib/live";
 import { harnessColor, harnessOrder, useIsDark } from "./harness";
 
@@ -11,7 +12,10 @@ import { harnessColor, harnessOrder, useIsDark } from "./harness";
 export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; history: TpsPoint[] }) {
   const dark = useIsDark();
   const accent = harnessColor("claude", dark);
-  const tps = fleet?.tps ?? 0;
+  const currentTps = fleet?.tps ?? 0;
+  const lastTps = fleet?.lastTps ?? 0;
+  const displayTps = currentTps > 0 ? currentTps : lastTps;
+  const showingLast = currentTps <= 0 && lastTps > 0;
   const harnesses = harnessOrder(Object.keys(fleet?.tpsByHarness ?? {}));
 
   return (
@@ -19,15 +23,18 @@ export function FleetPulse({ fleet, history }: { fleet: FleetMetrics | null; his
       <CardContent className="p-5">
         <div className="text-sm font-medium text-muted-foreground">Fleet throughput</div>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className="font-sans text-5xl font-semibold tabular-nums leading-none">{compactNumber(tps)}</span>
-          <span className="text-sm text-muted-foreground">tokens/sec</span>
-          {tps > 0 ? (
+          <span className="font-sans text-5xl font-semibold tabular-nums leading-none">{compactNumber(displayTps)}</span>
+          <span className="text-sm text-muted-foreground">{showingLast ? "last tok/s" : "tokens/sec"}</span>
+          {currentTps > 0 ? (
             <span className="relative ml-1 flex h-2 w-2 self-center">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ backgroundColor: accent }} />
               <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
             </span>
           ) : null}
         </div>
+        {showingLast && fleet?.lastTpsAt ? (
+          <div className="mt-1 text-xs text-muted-foreground">No tokens flowing right now — last burst {relativeTime(fleet.lastTpsAt)}</div>
+        ) : null}
 
         <div className="mt-3 h-24">
           {history.length > 1 ? (

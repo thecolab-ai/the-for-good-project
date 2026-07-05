@@ -106,11 +106,20 @@ framing_pr_for() {  # $1 = root issue number, $2 = slug
 # leave the root's status alone rather than guess (a mis-park from a fail-open
 # read here is exactly the stranded-root class ADR-0014 exists to prevent).
 stream_child_counts() {  # $1 = root issue number
-  local open total
-  open="$(gh issue list --repo "$REPO" --state open --label "stream:$1" \
-          --json number --jq "[.[].number | select(. != $1)] | length" 2>/dev/null)" || return 1
-  total="$(gh issue list --repo "$REPO" --state all --label "stream:$1" --limit 200 \
-          --json number --jq "[.[].number | select(. != $1)] | length" 2>/dev/null)" || return 1
+  local root="$1" open total issues
+  # Prefer REST here: `gh issue list` is GraphQL-backed and can hit the
+  # GraphQL bucket even while REST core quota remains healthy. Fan-out must not
+  # strand a stream just because the GraphQL search/list path is temporarily
+  # exhausted.
+  if issues="$(gh api "repos/$OWNER/$NAME/issues?state=all&labels=stream%3A$root&per_page=100" 2>/dev/null)"; then
+    open="$(printf '%s' "$issues" | jq --argjson root "$root" '[.[] | select(.number != $root) | select(.pull_request | not) | select(.state == "open")] | length')" || return 1
+    total="$(printf '%s' "$issues" | jq --argjson root "$root" '[.[] | select(.number != $root) | select(.pull_request | not)] | length')" || return 1
+  else
+    open="$(gh issue list --repo "$REPO" --state open --label "stream:$root" \
+            --json number --jq "[.[].number | select(. != $root)] | length" 2>/dev/null)" || return 1
+    total="$(gh issue list --repo "$REPO" --state all --label "stream:$root" --limit 200 \
+            --json number --jq "[.[].number | select(. != $root)] | length" 2>/dev/null)" || return 1
+  fi
   [ -n "$open" ] && [ -n "$total" ] || return 1
   printf '%s %s\n' "$open" "$total"
 }
@@ -283,9 +292,12 @@ spawn_children() {  # $1 = root issue number, $2 = children json path, $3 = fram
   # title list, no spawning — a duplicate flood is worse than a human opening
   # the children from the framing doc.
   local titles
-  if ! titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null)"; then
-    warn "Couldn't read stream #$n's issue titles for dedupe — opening nothing this run."
-    return 2
+  if ! titles="$(gh api "repos/$OWNER/$NAME/issues?state=all&labels=stream%3A$n&per_page=100" \
+          --jq '.[].title' 2>/dev/null)"; then
+    if ! titles="$(gh issue list --repo "$REPO" --label "stream:$n" --state all --limit 200 --json title --jq '.[].title' 2>/dev/null)"; then
+      warn "Couldn't read stream #$n's issue titles for dedupe — opening nothing this run."
+      return 2
+    fi
   fi
   titles="$(printf '%s' "$titles" | tr '[:upper:]' '[:lower:]' | sed -E 's/^([[:space:]]*research:[[:space:]]*)+//; s/[[:space:]]+/ /g; s/^ //; s/ $//')"
 
@@ -599,7 +611,10 @@ pick_frameable() {  # $1 = queue snapshot
       count="$(printf '%s\n' "$active" | grep -c . || true)"
     fi
     if [ "$count" -ge "$MAX_ACTIVE_STREAMS" ] && ! printf '%s\n' "$active" | grep -qx "$n"; then
-      log "#$n is a new stream root but $count stream(s) are already active (MAX_ACTIVE_STREAMS=$MAX_ACTIVE_STREAMS) — leaving it in the backlog."
+      # This function's stdout is command-substituted by main() to capture the
+      # selected issue number. Keep diagnostics off stdout or they become the
+      # "issue number" and gh tries to parse the whole backlog log blob.
+      log "#$n is a new stream root but $count stream(s) are already active (MAX_ACTIVE_STREAMS=$MAX_ACTIVE_STREAMS) — leaving it in the backlog." >&2
       continue
     fi
     echo "$n"; return 0
@@ -623,6 +638,20 @@ main() {
   fi
   info "frame_work.sh · repo=$REPO · agent=$AGENT${MODEL:+ · model=$MODEL}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
+  # One-shot: let an operator target a stuck discover root/framing rework
+  # directly, e.g. ISSUE=441 PR=469 ./frame_work.sh codex. Normal autopilot
+  # still uses the queue below.
+  if [ -n "${ISSUE:-}" ]; then
+    local forced_pr="${PR:-}"
+    if [ -z "$forced_pr" ]; then forced_pr="$(pr_for_issue "$ISSUE" || true)"; fi
+    if [ -n "$forced_pr" ] && pr_is_framing "$forced_pr"; then
+      reframe_one "$ISSUE" "$forced_pr" || true
+    else
+      frame_one "$ISSUE" || true
+    fi
+    rule; ok "Reached targeted ISSUE=$ISSUE. Stopping."
+    return
+  fi
   while :; do
     reconcile_framing_rework   # pull in sent-back framings the hand-off missed
     # Rework FIRST: a sent-back framing blocks its whole stream's credibility,
@@ -643,12 +672,14 @@ main() {
       fi
       rule; ok "Queue empty — no discover roots to frame."; break
     fi
-    if ! frame_one "$next"; then
+    if frame_one "$next"; then
+      done=$((done+1))
+    else
       # A failed claim or worktree would re-pick the same root immediately —
-      # back off a poll interval instead of hot-spinning API calls on it.
+      # back off a poll interval instead of hot-spinning API calls on it. Do
+      # not count it toward MAX: no root was actually framed/reworked.
       [ "$POLL_SECONDS" -gt 0 ] && [ "$DRY_RUN" = 0 ] && sleep "$POLL_SECONDS"
     fi
-    done=$((done+1))
     if [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ]; then rule; ok "Reached MAX=$MAX root(s). Stopping."; break; fi
     # A dry run changes nothing, so the same root would be picked forever —
     # one pass over the queue is the whole point.

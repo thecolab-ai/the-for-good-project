@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Bot, GitPullRequest, Globe, MessageSquare, Radio, Wifi, WifiOff, Wrench } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Bot, GitPullRequest, Globe, MessageSquare, Pause, Play, Radio, Wifi, WifiOff, Wrench } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CommentFeed, ActiveStrip } from "@/components/shared/CommentFeed";
 import { StatCard } from "@/components/shared/StatCard";
 import { relativeTime } from "@/lib/format";
-import { compactNumber, liveServerUrl, useLiveFleet, type LiveStatus } from "@/lib/live";
+import { compactNumber, fetchAgentLogs, liveServerUrl, useLiveFleet, type AgentPresence, type LiveStatus, type LogLine } from "@/lib/live";
 import { FleetPulse } from "@/components/live/FleetPulse";
 import { AgentGrid } from "@/components/live/AgentGrid";
 import { WatcherStrip } from "@/components/live/WatcherStrip";
@@ -42,13 +42,109 @@ function ConnectionDot({ status }: { status: LiveStatus }) {
   );
 }
 
+function WorkerStream({ agent, lines, onClose }: { agent: AgentPresence; lines: LogLine[]; onClose: () => void }) {
+  const s = agent.session;
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const [followTail, setFollowTail] = useState(true);
+
+  useEffect(() => {
+    if (!followTail) return;
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [followTail, lines]);
+
+  const jumpToBottom = () => {
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    setFollowTail(true);
+  };
+
+  return (
+    <Card className="mt-4 max-w-full overflow-hidden border-primary/30" id="worker-live-stream">
+      <CardHeader className="sticky top-2 z-10 flex flex-col gap-3 border-b bg-card/95 pb-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <CardTitle className="truncate text-base">@{agent.handle} live stream</CardTitle>
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span className="max-w-full truncate font-mono">{agent.model}</span>
+            <span>{compactNumber(s.toolCalls)} tools</span>
+            <span>{compactNumber(s.tokensIn + s.tokensOut)} tokens</span>
+            <span>updated {relativeTime(agent.lastSeen)}</span>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1 sm:flex-none">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setFollowTail((v) => !v)} className="flex-1 sm:flex-none">
+            {followTail ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {followTail ? "Pause" : "Follow"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="min-w-0 p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          {Object.entries(s.tools ?? {}).length ? Object.entries(s.tools).map(([tool, count]) => (
+            <span key={tool} className="max-w-full rounded-full bg-muted px-2 py-1 font-mono break-all">{tool} × {count}</span>
+          )) : <span>No per-tool events yet.</span>}
+        </div>
+        <div className="relative min-w-0">
+          <div
+            ref={logRef}
+            className="max-h-[70vh] min-h-64 overflow-y-auto overflow-x-hidden rounded-lg bg-stone-950 p-3 font-mono text-[11px] leading-relaxed text-stone-100 shadow-inner sm:max-h-[34rem] sm:p-4 sm:text-xs"
+            onScroll={(event) => {
+              const el = event.currentTarget;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+              if (followTail !== atBottom) setFollowTail(atBottom);
+            }}
+          >
+            {lines.length ? lines.map((entry, index) => (
+              <div key={`${entry.at}-${index}`} className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-b border-white/5 py-1 last:border-0">
+                <time className="select-none whitespace-nowrap text-stone-500">{new Date(entry.at).toLocaleTimeString()}</time>
+                <span className="min-w-0 whitespace-pre-wrap break-words">{entry.line}</span>
+              </div>
+            )) : (
+              <div className="whitespace-pre-wrap break-words text-stone-400">
+                No stream lines yet. Start workers with STREAM_LOGS=1 for transcript/tool output.
+              </div>
+            )}
+          </div>
+          {!followTail ? (
+            <Button size="sm" variant="brand" onClick={jumpToBottom} className="absolute bottom-3 right-3 shadow-lg">
+              Follow latest
+            </Button>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Real-time mission control, rendered when a fleet server is configured. */
 function FleetSection() {
   const live = useLiveFleet();
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [loadedLogs, setLoadedLogs] = useState<Record<string, LogLine[]>>({});
+  const selectedAgent = live.agents.find((agent) => agent.id === selectedAgentId) ?? null;
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    void fetchAgentLogs(selectedAgentId).then((lines) => {
+      if (lines.length) setLoadedLogs((prev) => ({ ...prev, [selectedAgentId]: lines }));
+    });
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById("worker-live-stream")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [selectedAgentId]);
   if (live.status === "unconfigured") return null;
 
-  const totals = live.fleet?.totals;
-  const fetchTotal = (totals?.fetchesOk ?? 0) + (totals?.fetchesError ?? 0);
+  const totals = live.historyTotals ?? live.fleet?.totals;
+  const liveTotals = live.fleet?.totals;
+  const fetchTotal = (liveTotals?.fetchesOk ?? 0) + (liveTotals?.fetchesError ?? 0);
 
   return (
     <section className="mb-10">
@@ -59,13 +155,13 @@ function FleetSection() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <FleetPulse fleet={live.fleet} history={live.tpsHistory} />
+          <FleetPulse fleet={live.fleet} history={live.historicalTps.length ? live.historicalTps : live.tpsHistory} />
         </div>
         <div className="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
           <StatCard label="Workers online" value={live.agents.length} icon={Bot} accent="#0284C7"
             hint={live.agents.length ? `${live.agents.filter((a) => a.task?.kind === "review").length} reviewing` : "waiting for the fleet"} />
           <StatCard label="Tool calls" value={compactNumber(totals?.toolCalls ?? 0)} icon={Wrench} accent="#2E4057"
-            hint={fetchTotal > 0 ? `${Math.round(((totals?.fetchesOk ?? 0) / fetchTotal) * 100)}% of ${compactNumber(fetchTotal)} fetches ok` : "all time"} />
+            hint={fetchTotal > 0 ? `${Math.round(((liveTotals?.fetchesOk ?? 0) / fetchTotal) * 100)}% of ${compactNumber(fetchTotal)} fetches ok` : "all time"} />
         </div>
       </div>
 
@@ -78,7 +174,19 @@ function FleetSection() {
 
       <div className="mt-6">
         <h2 className="mb-3 font-serif text-lg font-semibold">The fleet</h2>
-        <AgentGrid agents={live.agents} trails={live.agentTrails} />
+        <AgentGrid
+          agents={live.agents}
+          trails={live.agentTrails}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={(agent) => setSelectedAgentId(agent.id)}
+        />
+        {selectedAgent ? (
+          <WorkerStream
+            agent={selectedAgent}
+            lines={[...(loadedLogs[selectedAgent.id] ?? []), ...(live.logs[selectedAgent.id] ?? [])].slice(-500)}
+            onClose={() => setSelectedAgentId(null)}
+          />
+        ) : null}
       </div>
 
       <Card className="mt-6">
