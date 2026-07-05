@@ -202,6 +202,18 @@ preflight() {
     err "Run this from inside a clone of $REPO (or set REPO_DIR to one)."
     exit 1
   fi
+
+  # Route every `gh` call — ours AND the agent's (run_agent inherits this PATH)
+  # — through the secret-scrubbing shim, so a token can never reach a public
+  # comment/PR body again (PR #585 leaked one and it had to be revoked). The
+  # shim only touches the body/title of pr|issue post commands; everything else
+  # passes straight through. Idempotent: never prepend twice.
+  if [ -x "$REPO_DIR/scripts/fg-secure/gh" ]; then
+    case ":$PATH:" in
+      *":$REPO_DIR/scripts/fg-secure:"*) ;;
+      *) export PATH="$REPO_DIR/scripts/fg-secure:$PATH" ;;
+    esac
+  fi
   if ! ME="$(gh api user --jq .login 2>/dev/null)"; then
     if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
       ME="github-actions[bot]"

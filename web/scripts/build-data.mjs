@@ -2,8 +2,17 @@
 // Fetches issues/PRs/contributors from the GitHub API and parses research
 // findings from disk, then writes web/public/data/snapshot.json. Runs in the
 // deploy Action (authenticated via GITHUB_TOKEN) and locally for testing.
+//
+// Auth: prefers $GITHUB_TOKEN / $GH_TOKEN (what the deploy Action sets), and
+// falls back to your local `gh` login via `gh auth token`. That fallback is
+// deliberate — it means you NEVER have to put a token on the command line
+// (`GITHUB_TOKEN=gho_… node scripts/build-data.mjs`). Doing that once leaked a
+// live token into a public PR comment and it had to be revoked (PR #585). Just
+// run `node scripts/build-data.mjs`; if you're logged in with `gh`, it's
+// authenticated, and if not it still runs — just rate-limited, not broken.
 import { writeFileSync, mkdirSync, readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import matter from "gray-matter";
 
@@ -14,7 +23,21 @@ const OUT_DIR = path.join(WEB_DIR, "public", "data");
 
 const REPO = process.env.FOR_GOOD_REPO || "thecolab-ai/the-for-good-project";
 const [OWNER, NAME] = REPO.split("/");
-const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+
+// Fall back to the local gh login so nobody ever has to inline a token (see the
+// header note). Never throws: if gh is absent or logged out we run unauthenticated.
+function ghAuthToken() {
+  try {
+    return execFileSync("gh", ["auth", "token"], {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return "";
+  }
+}
+const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || ghAuthToken();
 const API = "https://api.github.com";
 
 const headers = {
