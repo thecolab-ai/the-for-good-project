@@ -3,7 +3,7 @@
 # scripts/fg-common.sh (spec bullet 8 — runner integration):
 #   - fleet_claim_enabled: hard OFF unless FLEET_SERVER + FLEET_TOKEN +
 #     FLEET_CLAIM=1 are ALL set (default runs keep the exact label flow)
-#   - fleet_claim: emits {issue, leaseTtlSeconds} on ok:true+issue, sends the
+#   - fleet_claim: emits {issue, leaseTtlSeconds, handle} on ok:true+issue, sends the
 #     bearer + request body, and returns 1 on empty-queue / non-JSON / server
 #     down (the label-claim fallback contract)
 #   - fleet_release: sends done-with-prNumber vs abandoned payloads and
@@ -63,6 +63,7 @@ class Handler(BaseHTTPRequestHandler):
                           "stage": "research", "stream": None},
                 "assignmentId": "abc123",
                 "leaseTtlSeconds": 300,
+                "handle": "work-bot",
             }
         raw = json.dumps(payload).encode()
         self.send_response(200)
@@ -108,13 +109,15 @@ resp="$(AGENT=claude MODEL=test-model fleet_claim "research,ideate")" \
   || fail "fleet_claim must emit .issue (got: $resp)"
 [ "$(printf '%s' "$resp" | jq -r '.leaseTtlSeconds')" = "300" ] \
   || fail "fleet_claim must pass the server's leaseTtlSeconds through (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.handle')" = "work-bot" ] \
+  || fail "fleet_claim must pass the server's claim handle through — race settlement compares against it (got: $resp)"
 req="$(tail -1 "$LOG_FILE")"
 [ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/claim" ] || fail "claim path"
 printf '%s' "$req" | jq -e '.auth == "Bearer fgt_0123456789abcdef0123456789abcdef"' >/dev/null \
   || fail "claim must send the bearer token"
 printf '%s' "$req" | jq -e '.body | fromjson | .stages == ["research","ideate"] and .harness == "claude" and .model == "test-model"' >/dev/null \
   || fail "claim body must carry stages/harness/model (got: $req)"
-pass "fleet_claim emits {issue, leaseTtlSeconds} and sends the right request"
+pass "fleet_claim emits {issue, leaseTtlSeconds, handle} and sends the right request"
 
 # --- fleet_claim fallback contract -------------------------------------------
 printf 'empty' > "$MODE_FILE"

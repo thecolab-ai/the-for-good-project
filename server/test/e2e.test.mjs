@@ -211,18 +211,23 @@ test("e2e: mint → claim → heartbeat → stop command → release done → cl
     assert.ok(claim.body.issue.labels.includes("status: claimed"));
     assert.equal(typeof claim.body.assignmentId, "string");
     assert.equal(claim.body.leaseTtlSeconds, LEASE_TTL_SECONDS);
+    assert.equal(
+      claim.body.handle,
+      HANDLE,
+      "claim echoes the registry handle — the runner settles races against THIS, not its local gh login",
+    );
 
     // Label writes hit the mock in the claim-loop order, on the right issue.
     assert.deepEqual(
       mock.calls.map((c) => ({ method: c.method, path: c.path })),
       [
-        { method: "POST", path: "/repos/example/repo/issues/50/labels" },
         { method: "DELETE", path: "/repos/example/repo/issues/50/labels/status%3A%20available" },
+        { method: "POST", path: "/repos/example/repo/issues/50/labels" },
         { method: "POST", path: "/repos/example/repo/issues/50/assignees" },
       ],
-      "add claimed → remove available → assign, in order",
+      "remove available (test-and-set) → add claimed → assign, in order",
     );
-    assert.deepEqual(mock.calls[0].body, { labels: ["status: claimed"] });
+    assert.deepEqual(mock.calls[1].body, { labels: ["status: claimed"] });
     assert.deepEqual(mock.calls[2].body, { assignees: [HANDLE] });
 
     const ghIssue = mock.getIssue(50);
@@ -346,8 +351,8 @@ test("e2e: mint → claim → heartbeat → stop command → release done → cl
           .filter((c) => c.path.includes(`/issues/${n}/`))
           .map((c) => ({ method: c.method, path: c.path })),
         [
-          { method: "POST", path: `/repos/example/repo/issues/${n}/labels` },
           { method: "DELETE", path: `/repos/example/repo/issues/${n}/labels/status%3A%20available` },
+          { method: "POST", path: `/repos/example/repo/issues/${n}/labels` },
           { method: "POST", path: `/repos/example/repo/issues/${n}/assignees` },
         ],
         `claim-loop write order for #${n}`,

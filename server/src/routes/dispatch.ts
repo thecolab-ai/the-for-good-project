@@ -4,7 +4,10 @@
  * All require `Authorization: Bearer fgt_...` verified via
  * orchestrator/auth.verifyAgentToken (401 otherwise):
  *  - POST /api/v1/work/claim   — body claimRequestSchema. 200
- *    {ok:true, issue: ClaimedIssue, assignmentId, leaseTtlSeconds};
+ *    {ok:true, issue: ClaimedIssue, assignmentId, leaseTtlSeconds, handle}
+ *    (handle = the registry identity the claim was made for — the runner
+ *    settles cross-population assignee races against THIS, not its local
+ *    `gh` login, which may differ for bot-handle tokens);
  *    {ok:true, issue:null} when the queue is empty; 503 when no github
  *    token; 429 {ok:false, retryAfterSeconds} on GitHub rate-limit.
  *  - POST /api/v1/work/renew   — body {issue}. 404 when this handle has no
@@ -88,6 +91,7 @@ export function registerDispatchRoutes(
           issue: result.issue,
           assignmentId: result.assignmentId,
           leaseTtlSeconds: result.leaseTtlSeconds,
+          handle: identity.handle,
         };
       case "empty":
         return { ok: true, issue: null };

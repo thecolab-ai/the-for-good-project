@@ -351,7 +351,8 @@ work_one() {  # $1 = issue number
       warn "#$n already has open PR #$existing — releasing the fleet claim instead of opening a duplicate."
       fleet_release "$n" done "$existing"
       set_status_label "$n" "in-review" 2>/dev/null || true
-      gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+      # The server assigned the TOKEN's handle, not necessarily @me.
+      gh issue edit "$n" --repo "$REPO" --remove-assignee "${FLEET_CLAIM_HANDLE:-@me}" >/dev/null 2>&1 || true
       CLAIMED_ISSUE=""
       return 1
     fi
@@ -361,8 +362,10 @@ work_one() {  # $1 = issue number
     # co-assignee tie-break — so the fleet path must run it too. On loss the
     # winner keeps the labels: free the lease WITHOUT reverting ('done'),
     # never 'abandoned' (that would flip the winner's claim back to
-    # available). resolve_claim_race already removed our assignee.
-    if ! resolve_claim_race "$n"; then
+    # available). resolve_claim_race already removed our assignee. Settle
+    # against the handle the server claimed FOR (may be a bot handle) —
+    # comparing to $ME would misread every such valid claim as a loss.
+    if ! resolve_claim_race "$n" "${FLEET_CLAIM_HANDLE:-}"; then
       fleet_release "$n" done
       CLAIMED_ISSUE=""
       return 1
@@ -706,6 +709,9 @@ main() {
           if fleet_resp="$(fleet_claim "${STAGE:-}")"; then
             next="$(printf '%s' "$fleet_resp" | jq -r '.issue.number // empty' 2>/dev/null || true)"
             FLEET_LEASE_TTL="$(printf '%s' "$fleet_resp" | jq -r '.leaseTtlSeconds // empty' 2>/dev/null || true)"
+            # The identity the server claimed FOR — race settlement and
+            # assignee cleanup must use this, not $ME (bot-handle tokens).
+            FLEET_CLAIM_HANDLE="$(printf '%s' "$fleet_resp" | jq -r '.handle // empty' 2>/dev/null || true)"
             if [ -n "$next" ]; then kind=fleet; fi
           fi
         fi

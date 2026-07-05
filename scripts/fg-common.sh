@@ -83,7 +83,10 @@ fleet_claim() {
     -H "authorization: Bearer $FLEET_TOKEN" \
     -d "$body" 2>/dev/null)" || return 1
   printf '%s' "$resp" | jq -e '.ok == true and .issue != null' >/dev/null 2>&1 || return 1
-  printf '%s' "$resp" | jq -c '{issue: .issue, leaseTtlSeconds: .leaseTtlSeconds}'
+  # handle = the registry identity the server claimed FOR (the token's bound
+  # handle). It can differ from the local `gh` login (bot-handle tokens), so
+  # race settlement must compare against it, not $ME.
+  printf '%s' "$resp" | jq -c '{issue: .issue, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
 }
 
 # fleet_renew <issue> — best-effort lease renewal; every failure swallowed.
@@ -465,14 +468,18 @@ claim_settle_secs() { echo $(( CLAIM_SETTLE + (RANDOM % 5) )); }
 # It's a pure function of the observed assignee set, so every racer computes the
 # SAME winner with no coordination. Returns 0 if THIS worker holds the claim;
 # otherwise un-assigns @me and returns 1 so the caller yields.
-resolve_claim_race() {  # $1 = issue number
-  local n="$1" assignees winner
+resolve_claim_race() {  # $1 = issue number, $2 = expected claim identity (default: $ME)
+  # $2 exists for the fleet path: a server claim is assigned to the handle
+  # bound to FLEET_TOKEN, which can differ from the local `gh` login (the
+  # docs mint bot-handle tokens). Comparing that claim to $ME would misread
+  # every valid fleet claim as a race loss (PR #592 review).
+  local n="$1" expected="${2:-$ME}" assignees winner
   sleep "$(claim_settle_secs)"
   assignees="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '[.assignees[].login]|sort|join(" ")')"
   winner="${assignees%% *}"
-  if [ -n "$winner" ] && [ "$winner" != "$ME" ]; then
+  if [ -n "$winner" ] && [ "$winner" != "$expected" ]; then
     warn "#$n was claimed concurrently (assignees: $assignees) — @$winner wins, yielding."
-    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    gh issue edit "$n" --repo "$REPO" --remove-assignee "$expected" >/dev/null 2>&1 || true
     return 1
   fi
   return 0

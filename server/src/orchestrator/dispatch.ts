@@ -289,24 +289,43 @@ export async function claimNext(
     //    is freed — the lease is what serialises label writers per issue, so
     //    a rival's immediate re-claim can never have its fresh
     //    "status: claimed" stripped by our late-arriving undo.
+    // Remove "status: available" FIRST: GitHub 404s the second remover, so a
+    // successful removal is a test-and-set that arbitrates against label-path
+    // workers AND against a stale mirror in one write. A candidate whose live
+    // issue already moved on (in-review / changes-requested / closed) 404s
+    // before we have written ANYTHING — the previous claimed-first order
+    // deposited "status: claimed" on top of whatever status the live issue
+    // held whenever the mirror lagged (PR #592 review). The cost is a
+    // one-HTTP-call crash window where the issue is briefly status-less; the
+    // issue-status reconciler converges that, and it beats corrupting live
+    // state on every stale candidate.
     let step = 0;
     try {
-      await gh.addLabels(n, [CLAIMED_LABEL]);
-      step = 1;
       const removedAvailable = await gh.removeLabel(n, AVAILABLE_LABEL);
       if (!removedAvailable) {
-        // 404 removing "status: available" IS the label-path collision
-        // signal: a rival (label-path worker, or a human) took the issue
-        // while the mirror was stale. The rival owns "status: claimed" now —
-        // leave it in place (we added it idempotently), never touch
-        // assignees (we haven't written any), free the lease, next candidate.
+        // 404: the live issue is no longer "status: available" — a rival
+        // claimed it or the mirror is stale. Nothing was written; free the
+        // lease, refresh the mirror doc best-effort, next candidate.
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
         continue;
       }
-      step = 2;
+      step = 1; // available removed — from here, undo means re-adding it
+      await gh.addLabels(n, [CLAIMED_LABEL]);
+      step = 2; // claimed added — undo removes it too
       await gh.addAssignees(n, [ctx.handle]);
     } catch (err) {
+      // Best-effort undo of any partial write, on EVERY failure path (while
+      // still holding the lease — see above). Available-first means a
+      // failure after step 1 leaves the issue status-less if the undo is
+      // skipped, and nothing converges a status-less issue — so even the
+      // rate-limited and 5xx paths must try (their undo writes may fail too;
+      // swallowed, the reconciler is the last resort).
+      const undoPartialWrites = async (): Promise<void> => {
+        if (step >= 2) await gh.removeLabel(n, CLAIMED_LABEL).catch(() => undefined);
+        if (step >= 1) await gh.addLabels(n, [AVAILABLE_LABEL]).catch(() => undefined);
+      };
       if (err instanceof GitHubApiError && err.isRateLimit) {
+        await undoPartialWrites();
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
         return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
       }
@@ -316,8 +335,7 @@ export async function claimNext(
         // (a permission 403 — isRateLimit already excluded the quota case).
         // Undo, free the lease, and ABORT the claim rather than burning one
         // failing GitHub write per candidate across the whole queue.
-        if (step >= 1) await gh.removeLabel(n, CLAIMED_LABEL).catch(() => undefined);
-        if (step >= 2) await gh.addLabels(n, [AVAILABLE_LABEL]).catch(() => undefined);
+        await undoPartialWrites();
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
         return {
           status: "disabled",
@@ -328,13 +346,12 @@ export async function claimNext(
         };
       }
       if (err instanceof GitHubApiError && err.status >= 400 && err.status < 500) {
-        // Best-effort undo of any partial write (while still holding the
-        // lease — see above), then try the next candidate.
-        if (step >= 1) await gh.removeLabel(n, CLAIMED_LABEL).catch(() => undefined);
-        if (step >= 2) await gh.addLabels(n, [AVAILABLE_LABEL]).catch(() => undefined);
+        // Per-issue 4xx: undo, free the lease, try the next candidate.
+        await undoPartialWrites();
         await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
         continue;
       }
+      await undoPartialWrites();
       await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
       throw err; // 5xx / network — surface to the route; lease is freed
     }

@@ -184,15 +184,17 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.ok(result.issue.labels.includes("status: claimed"));
       assert.ok(!result.issue.labels.includes("status: available"));
 
-      // GitHub writes, in order: add claimed → remove available → assign.
+      // GitHub writes, in order: remove available (the test-and-set) →
+      // add claimed → assign. Available-first means a stale candidate is
+      // skipped before anything is written (PR #592 review).
       const writes = mock.calls.filter((c) => c.path.includes("/issues/21/"));
       assert.equal(writes.length, 3);
-      assert.equal(writes[0].method, "POST");
-      assert.ok(writes[0].path.endsWith("/issues/21/labels"));
-      const added = Array.isArray(writes[0].body) ? writes[0].body : writes[0].body.labels;
+      assert.equal(writes[0].method, "DELETE");
+      assert.ok(decodeURIComponent(writes[0].path).includes("/issues/21/labels/status: available"));
+      assert.equal(writes[1].method, "POST");
+      assert.ok(writes[1].path.endsWith("/issues/21/labels"));
+      const added = Array.isArray(writes[1].body) ? writes[1].body : writes[1].body.labels;
       assert.deepEqual(added, ["status: claimed"]);
-      assert.equal(writes[1].method, "DELETE");
-      assert.ok(decodeURIComponent(writes[1].path).includes("/issues/21/labels/status: available"));
       assert.equal(writes[2].method, "POST");
       assert.ok(writes[2].path.endsWith("/issues/21/assignees"));
       assert.deepEqual(writes[2].body.assignees, ["alice"]);
@@ -289,7 +291,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(await anyAssignment(51), null);
     });
 
-    await t.test("4xx on the available-label DELETE → claimed label undone (step>=1 undo)", async () => {
+    await t.test("4xx on the available-label DELETE (first write) → nothing written, next candidate", async () => {
       await seed([
         { number: 41, labels: ["status: available", "stage: research"], createdAt: "2026-04-01T00:00:00Z" },
         { number: 42, labels: ["status: available", "stage: research"], createdAt: "2026-04-02T00:00:00Z" },
@@ -300,7 +302,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(result.issue.number, 42, "fell through to the next candidate");
       const gh41 = mock.getIssue(41);
       assert.ok(gh41.labels.includes("status: available"), "available never removed");
-      assert.ok(!gh41.labels.includes("status: claimed"), "step>=1 undo removed 'status: claimed'");
+      assert.ok(!gh41.labels.includes("status: claimed"), "the DELETE is the FIRST write — nothing else was attempted");
       assert.deepEqual(gh41.assignees, [], "assignee never written");
       assert.equal(await o.redis.exists(leaseKey(41)), 0, "lease released");
       assert.equal(await anyAssignment(41), null);
@@ -316,22 +318,60 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(result.status, "claimed");
       assert.equal(result.issue.number, 42);
       const gh41 = mock.getIssue(41);
-      assert.ok(gh41.labels.includes("status: available"), "step>=2 undo re-added 'status: available'");
-      assert.ok(!gh41.labels.includes("status: claimed"), "step>=1 undo removed 'status: claimed'");
+      assert.ok(gh41.labels.includes("status: available"), "step>=1 undo re-added 'status: available'");
+      assert.ok(!gh41.labels.includes("status: claimed"), "step>=2 undo removed 'status: claimed'");
       assert.deepEqual(gh41.assignees, []);
       assert.equal(await o.redis.exists(leaseKey(41)), 0);
       assert.equal(await anyAssignment(41), null);
       // Undo requests were issued in order, after the two forward writes
-      // (the injected assignee failure itself is not recorded by the mock).
+      // (the injected assignee failure itself is not recorded by the mock):
+      // remove available → add claimed → [assignee fails] → remove claimed →
+      // re-add available.
       assert.deepEqual(
         mock.calls.filter((c) => c.path.includes("/issues/41/")).map((c) => ({ method: c.method, path: c.path })),
         [
-          { method: "POST", path: "/repos/example/repo/issues/41/labels" },
           { method: "DELETE", path: "/repos/example/repo/issues/41/labels/status%3A%20available" },
+          { method: "POST", path: "/repos/example/repo/issues/41/labels" },
           { method: "DELETE", path: "/repos/example/repo/issues/41/labels/status%3A%20claimed" },
           { method: "POST", path: "/repos/example/repo/issues/41/labels" },
         ],
       );
+    });
+
+    await t.test("stale mirror: live issue moved to in-review → skipped with NOTHING written (no label soup)", async () => {
+      // PR #592 review, problem 1: the mirror still says "status: available"
+      // but the live issue has moved on (in-review with a PR up, no rival
+      // "status: claimed" present). The claimed-first order used to deposit
+      // "status: claimed" on top of "status: in-review" and leave it there.
+      await seed([
+        { number: 47, labels: ["status: available", "stage: research"], createdAt: "2026-04-01T00:00:00Z" },
+        { number: 48, labels: ["status: available", "stage: research"], createdAt: "2026-04-02T00:00:00Z" },
+      ]);
+      mock.addIssue(
+        makeIssue({
+          number: 47,
+          labels: ["status: in-review", "stage: research"],
+          assignees: ["worker-done"],
+          createdAt: "2026-04-01T00:00:00Z",
+        }),
+      );
+      const result = await dispatch.claimNext(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "claimed");
+      assert.equal(result.issue.number, 48, "stale candidate skipped");
+      const gh47 = mock.getIssue(47);
+      assert.deepEqual(
+        gh47.labels.sort(),
+        ["stage: research", "status: in-review"],
+        "the in-review issue's labels are COMPLETELY untouched",
+      );
+      assert.deepEqual(gh47.assignees, ["worker-done"], "assignees untouched");
+      assert.deepEqual(
+        mock.calls.filter((c) => c.path.includes("/issues/47/")).map((c) => ({ method: c.method, path: c.path })),
+        [{ method: "DELETE", path: "/repos/example/repo/issues/47/labels/status%3A%20available" }],
+        "exactly ONE write attempted: the failed available-removal test-and-set",
+      );
+      assert.equal(await o.redis.exists(leaseKey(47)), 0, "lease released");
+      assert.equal(await anyAssignment(47), null);
     });
 
     await t.test("lost label-path race (available already gone) → skip, rival's claim preserved", async () => {
@@ -352,7 +392,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(result.status, "claimed");
       assert.equal(result.issue.number, 46, "the raced candidate is skipped, not double-claimed");
       const gh45 = mock.getIssue(45);
-      assert.ok(gh45.labels.includes("status: claimed"), "the rival's claim label survives our undo");
+      assert.ok(gh45.labels.includes("status: claimed"), "the rival's claim label is never touched — we wrote nothing");
       assert.ok(!gh45.labels.includes("status: available"), "'status: available' is NOT restored over the rival");
       assert.deepEqual(gh45.assignees, ["rival"], "rival stays the sole assignee");
       assert.equal(await o.redis.exists(leaseKey(45)), 0, "lease released for the next arbiter");

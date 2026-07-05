@@ -204,7 +204,8 @@ Bearer-authenticated with the minted `fgt_…` token (401 on a bad/revoked token
 ```bash
 TOK="Authorization: Bearer fgt_..."
 
-# Claim: 200 {ok:true, issue:{number,title,labels,body,htmlUrl,stage,stream}, assignmentId, leaseTtlSeconds}
+# Claim: 200 {ok:true, issue:{number,title,labels,body,htmlUrl,stage,stream}, assignmentId, leaseTtlSeconds, handle}
+# (handle = the registry identity claimed for — runners settle assignee races against it)
 #        {ok:true, issue:null} = queue empty · 429 + retryAfterSeconds = GitHub rate-limited
 curl -s -X POST $URL/api/v1/work/claim -H "$TOK" -H "$JSON" -d '{"stages":["research","ideate","build"]}'
 
