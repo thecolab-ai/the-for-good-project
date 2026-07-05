@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: child-welfare
 updated: 2026-07-04
-image: ""
+image: /images/streams/stream-259-child-protection-gaps.jpg
 ---
 
 # Children at risk are still falling through the gaps in NZ's child-protection system

@@ -42,6 +42,8 @@ export interface AgentPresence {
   task: TaskInfo | null;
   session: SessionCounters;
   tps: number;
+  lastTps: number;
+  lastTpsAt: string | null;
 }
 
 export interface RoughLocation {
@@ -58,6 +60,8 @@ export interface WatcherSummary {
 
 export interface FleetMetrics {
   tps: number;
+  lastTps: number;
+  lastTpsAt: string | null;
   tpsByModel: Record<string, number>;
   tpsByHarness: Record<string, number>;
   activeAgents: number;
@@ -81,6 +85,11 @@ export interface EventItem {
   handle?: string;
   harness?: string;
   ref?: string;
+}
+
+export interface LogLine {
+  at: string;
+  line: string;
 }
 
 export interface FleetSnapshot {
@@ -132,6 +141,18 @@ export interface TpsPoint {
   byHarness: Record<string, number>;
 }
 
+export interface HistoryTotals {
+  tokensIn: number;
+  tokensOut: number;
+  toolCalls: number;
+  tasksCompleted: number;
+  prsOpened: number;
+  reviewsCompleted: number;
+  samples: number;
+  firstAt: string | null;
+  lastAt: string | null;
+}
+
 export interface LiveFleet {
   status: LiveStatus;
   agents: AgentPresence[];
@@ -140,13 +161,18 @@ export interface LiveFleet {
   events: EventItem[];
   /** Fleet TPS over time, one point per server tick (~2s), for the pulse chart. */
   tpsHistory: TpsPoint[];
+  /** Durable TPS buckets from the history DB, survives refresh/restart. */
+  historicalTps: TpsPoint[];
+  historyTotals: HistoryTotals | null;
   /** Short per-agent TPS trails for the card sparklines. */
   agentTrails: Record<string, number[]>;
+  logs: Record<string, LogLine[]>;
 }
 
 const MAX_TPS_POINTS = 90; // ~3 minutes of 2s ticks
 const MAX_TRAIL_POINTS = 30;
 const MAX_EVENTS = 100;
+const MAX_LOG_LINES = 500;
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;
 
@@ -157,8 +183,20 @@ const EMPTY: LiveFleet = {
   watchers: { count: 0, locations: [] },
   events: [],
   tpsHistory: [],
+  historicalTps: [],
+  historyTotals: null,
   agentTrails: {},
+  logs: {},
 };
+
+export async function fetchAgentLogs(agentId: string): Promise<LogLine[]> {
+  const base = liveServerUrl();
+  if (!base) return [];
+  const res = await fetch(`${base}/api/v1/agents/${encodeURIComponent(agentId)}/logs`);
+  if (!res.ok) return [];
+  const json = (await res.json()) as { lines?: LogLine[] };
+  return json.lines ?? [];
+}
 
 export function useLiveFleet(): LiveFleet {
   const [state, setState] = useState<LiveFleet>(EMPTY);
@@ -171,6 +209,25 @@ export function useLiveFleet(): LiveFleet {
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
+
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch(`${base}/api/v1/history/tps?minutes=1440&bucketSeconds=60`);
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          buckets?: Array<{ at: string; tps: number; byHarness?: Record<string, number> }>;
+          totals?: HistoryTotals | null;
+        };
+        const historicalTps = (json.buckets ?? []).map((b) => ({
+          t: new Date(b.at).getTime(),
+          tps: b.tps,
+          byHarness: b.byHarness ?? {},
+        }));
+        setState((prev) => ({ ...prev, historicalTps, historyTotals: json.totals ?? null }));
+      } catch {
+        /* history is optional */
+      }
+    };
 
     const apply = (msg: ServerMessage) => {
       setState((prev) => {
@@ -214,6 +271,12 @@ export function useLiveFleet(): LiveFleet {
             return { ...prev, watchers: msg.watchers };
           case "event":
             return { ...prev, events: [msg.event, ...prev.events].slice(0, MAX_EVENTS) };
+          case "log": {
+            const at = new Date().toISOString();
+            const existing = prev.logs[msg.agentId] ?? [];
+            const next = [...existing, ...msg.lines.map((line) => ({ at, line }))].slice(-MAX_LOG_LINES);
+            return { ...prev, logs: { ...prev.logs, [msg.agentId]: next } };
+          }
           default:
             return prev;
         }
@@ -254,8 +317,11 @@ export function useLiveFleet(): LiveFleet {
     };
 
     connect();
+    void fetchHistory();
+    const historyTimer = setInterval(() => void fetchHistory(), 30_000);
     return () => {
       closed = true;
+      clearInterval(historyTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };

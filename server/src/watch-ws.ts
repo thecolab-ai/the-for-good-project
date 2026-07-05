@@ -61,14 +61,20 @@ export function registerWatchSocket(app: FastifyInstance, store: FleetStore): vo
     socket.send(JSON.stringify({ type: "snapshot", state: store.snapshot() } satisfies ServerMessage));
 
     let alive = true;
+    const cleanupWatcher = () => {
+      clearInterval(pinger);
+      sockets.delete(socket);
+      store.removeWatcher(watcher.id);
+    };
+
     const pinger = setInterval(() => {
       if (!alive) {
+        cleanupWatcher();
         socket.terminate();
         return;
       }
       alive = false;
       socket.ping();
-      store.touchWatcher(watcher.id);
     }, PING_INTERVAL_MS);
 
     socket.on("pong", () => {
@@ -85,12 +91,11 @@ export function registerWatchSocket(app: FastifyInstance, store: FleetStore): vo
       }
     });
 
-    socket.on("close", () => {
-      clearInterval(pinger);
-      sockets.delete(socket);
-      store.removeWatcher(watcher.id);
-    });
+    socket.on("close", cleanupWatcher);
 
-    socket.on("error", () => socket.terminate());
+    socket.on("error", () => {
+      cleanupWatcher();
+      socket.terminate();
+    });
   });
 }
