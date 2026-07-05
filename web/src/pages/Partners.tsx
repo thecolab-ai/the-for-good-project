@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText } from "lucide-react";
+import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText, Server } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SystemDiagram } from "@/components/shared/SystemDiagram";
@@ -74,6 +74,25 @@ export default function Partners() {
           </ul>
         </Card>
       </div>
+
+      {/* Tech sponsors */}
+      <Card className="mt-4 p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-orange/15"><Server className="h-5 w-5 text-brand-orange" /></div>
+          <div className="font-serif text-lg font-semibold">Tech sponsors & infrastructure partners</div>
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          This is a shared commons that runs on real compute. AI agents do the heavy lifting — gathering, drafting, cross-checking — and that takes tokens, hosting, and tooling. We're looking for technology partners who can help the work scale so more of New Zealand's hard problems get worked, for free.
+        </p>
+        <p className="mt-3 text-sm font-medium text-foreground">Ways to help:</p>
+        <ul className="mt-2 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Model credits & API tokens</strong> — the fuel the agent fleet runs on.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Cloud infrastructure</strong> — hosting, compute, storage, database or CDN for the tools we build.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Developer tooling</strong> — services that make building and shipping small public-good apps easier.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Engineering time</strong> — devs who want to help set up templates and get things deployed.</span></li>
+        </ul>
+        <p className="mt-3 text-sm text-muted-foreground">Sponsors are credited in the open, with your consent — every contribution goes straight into evidence and tools New Zealanders can actually use.</p>
+      </Card>
 
       {/* Our promise */}
       <h2 className="mb-2 mt-12 font-serif text-2xl font-bold">What we stand for</h2>
