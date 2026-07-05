@@ -34,7 +34,11 @@ const mintBodySchema = z.object({
   note: z.string().max(300).optional(),
 });
 
-const revokeBodySchema = z.object({ handle: handleField });
+const revokeBodySchema = z.object({
+  handle: handleField,
+  /** Revoke one specific token (see the registry listing) instead of all. */
+  tokenId: z.string().regex(/^[0-9a-f]{12}$/).optional(),
+});
 
 const commandBodySchema = z
   .object({
@@ -86,21 +90,25 @@ export function registerAdminRoutes(
 
   /** Mint (or re-mint) an agent token. The plaintext appears in this response
    *  ONCE and is never stored or logged (registry keeps only the sha256). */
+  // Mint is ADDITIVE: each call issues one more independently-revocable
+  // token for the handle (one per machine/runner). tokenId names it in
+  // listings and targeted revokes.
   app.post("/api/v1/admin/agents", guarded, async (req, reply) => {
     const parsed = mintBodySchema.safeParse(req.body);
     if (!parsed.success) return badRequest(reply, parsed.error);
-    const { token } = await mintAgentToken(orch, parsed.data);
-    return { ok: true, handle: parsed.data.handle, tier: parsed.data.tier, token };
+    const { token, tokenId } = await mintAgentToken(orch, parsed.data);
+    return { ok: true, handle: parsed.data.handle, tier: parsed.data.tier, token, tokenId };
   });
 
+  // Revoke every live token for the handle, or — with tokenId — just one.
   app.post("/api/v1/admin/agents/revoke", guarded, async (req, reply) => {
     const parsed = revokeBodySchema.safeParse(req.body);
     if (!parsed.success) return badRequest(reply, parsed.error);
-    const revoked = await revokeAgentToken(orch, parsed.data.handle);
+    const revoked = await revokeAgentToken(orch, parsed.data.handle, parsed.data.tokenId);
     if (!revoked) {
-      return reply.code(404).send({ ok: false, error: "unknown or already-revoked handle" });
+      return reply.code(404).send({ ok: false, error: "no live token matched that handle/tokenId" });
     }
-    return { ok: true, handle: parsed.data.handle };
+    return { ok: true, handle: parsed.data.handle, ...(parsed.data.tokenId ? { tokenId: parsed.data.tokenId } : {}) };
   });
 
   /** Registry listing — RegisteredAgent rows only, never token hashes. */

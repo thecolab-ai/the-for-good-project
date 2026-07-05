@@ -3,3 +3,4 @@ dist/
 *.log
 .env
 fleet-state.json
+docker-compose.override.yml

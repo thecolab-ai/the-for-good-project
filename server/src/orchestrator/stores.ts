@@ -110,14 +110,31 @@ async function ensureIndexes(db: Db): Promise<void> {
       if ((err as { codeName?: string }).codeName !== "NamespaceExists") throw err;
     });
 
+  // Registry v2 migration: v1 enforced one-token-per-handle with a unique
+  // {handle:1} index; a handle now holds ANY number of tokens (one per
+  // machine), so drop the legacy unique index if this deployment carries it.
+  const reg = db.collection("agents_registry");
+  const regIndexes = await reg.indexes().catch(() => []);
+  if (regIndexes.some((i) => i.name === "handle_1" && i.unique)) {
+    await reg.dropIndex("handle_1").catch(() => undefined);
+  }
+
   await Promise.all([
     db.collection("issues").createIndex({ state: 1, labels: 1 }),
     db.collection("issues").createIndex({ updatedAt: -1 }),
     db.collection("assignments").createIndex({ issueNumber: 1, active: 1 }),
     db.collection("assignments").createIndex({ handle: 1 }),
-    db.collection("agents_registry").createIndex({ handle: 1 }, { unique: true }),
+    reg.createIndex({ handle: 1 }, { name: "handle_lookup" }),
+    // TOFU self-enrollment stays exactly-once per handle: only the
+    // autoEnrolled docs are under the unique constraint, so operator mints
+    // are unlimited while racing first-contact enrolls still get exactly
+    // one winner (auth.enrollAgent relies on the E11000 from this).
+    reg.createIndex(
+      { handle: 1 },
+      { unique: true, partialFilterExpression: { autoEnrolled: true }, name: "handle_autoenroll_unique" },
+    ),
     // Not in the spec's index list but every token verification is a lookup
     // by tokenHash — cheap, idempotent, and saves a collection scan per claim.
-    db.collection("agents_registry").createIndex({ tokenHash: 1 }),
+    reg.createIndex({ tokenHash: 1 }),
   ]);
 }

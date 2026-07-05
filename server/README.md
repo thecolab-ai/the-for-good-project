@@ -197,16 +197,21 @@ curl -s -X POST $URL/api/v1/admin/agents -H "$AUTH" -H "$JSON" \
 ```
 
 The response contains the plaintext token (`fgt_…`) — **shown exactly once**; only its
-SHA-256 hash is stored. Hand it to the runner as `FLEET_TOKEN`. The `handle` is the GitHub
-identity the server assigns claimed issues to, so it must be a real account with repo
-access via the bot token's writes. Revocation via this admin API is immediate and
+SHA-256 hash is stored — plus a short non-secret `tokenId`. **Minting is additive**: a
+handle may hold any number of live tokens (mint one per machine/runner) and each is
+independently revocable, so multi-machine fleets don't have to copy token files around.
+Hand the token to the runner as `FLEET_TOKEN`. The `handle` is the GitHub identity the
+server assigns claimed issues to. Revocation via this admin API is immediate and
 server-side. Revoking out-of-band with `scripts/fleet-admin.mjs revoke` is also immediate
 on a running server when `REDIS_URL` is set (the CLI publishes an `auth:purge` message the
 server turns into a cache purge); without Redis the running server's verify cache can
-honour the old token for up to 30s. A handle can be re-minted after revoke:
+honour the old token for up to 30s.
 
 ```bash
-curl -s $URL/api/v1/admin/agents -H "$AUTH"                       # list (no hashes)
+curl -s $URL/api/v1/admin/agents -H "$AUTH"     # list — one row per token, incl. tokenId, no hashes
+# revoke ONE machine's token…
+curl -s -X POST $URL/api/v1/admin/agents/revoke -H "$AUTH" -H "$JSON" -d '{"handle":"my-work-bot","tokenId":"abc123def456"}'
+# …or every live token the handle holds:
 curl -s -X POST $URL/api/v1/admin/agents/revoke -H "$AUTH" -H "$JSON" -d '{"handle":"my-work-bot"}'
 ```
 

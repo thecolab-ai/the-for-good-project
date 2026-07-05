@@ -60,7 +60,9 @@ and fail-open at every layer:
    SHA-256 hash is stored server-side, and revocation is immediate and *sticky*: a revoked
    or already-enrolled handle is never re-issued by enrollment — recovery is an operator
    re-mint (`fleet-admin.mjs` / admin route), otherwise anyone could rotate a rival's
-   token by re-enrolling their handle. The accepted trade-off is **first-contact handle
+   token by re-enrolling their handle. Operator minting is **additive**: a handle may
+   hold any number of live tokens (one per machine/runner), each independently
+   revocable by tokenId — only self-enrollment is once-per-handle. The accepted trade-off is **first-contact handle
    squatting** (identity is assumed-trust, exactly like telemetry's `hello.handle` and the
    label path's claim comments): squatting is visible in the registry, revocable, bounded
    by a per-handle active-claim cap (`MAX_ACTIVE_CLAIMS`, default 3) and per-IP rate

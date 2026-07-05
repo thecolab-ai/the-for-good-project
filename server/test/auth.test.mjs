@@ -140,17 +140,27 @@ test("re-mint after revoke: new token verifies, old stays dead", { skip }, async
   assert.deepEqual(await verifyAgentToken(orch, second.token), { handle: "carol", tier: "framer" });
   assert.equal(await verifyAgentToken(orch, first.token), null, "pre-revoke token must stay dead");
 
-  // Exactly one doc per handle (unique {handle:1} index → re-mint replaces).
+  // One doc PER TOKEN now: the revoked one stays as the audit trail.
   const count = await orch.db.collection("agents_registry").countDocuments({ handle: "carol" });
-  assert.equal(count, 1);
+  assert.equal(count, 2);
 });
 
-test("re-mint without revoke replaces the old token", { skip }, async () => {
-  const first = await mintAgentToken(orch, { handle: "dave", tier: "standard" });
-  assert.ok(await verifyAgentToken(orch, first.token), "sanity: first token verifies");
-  const second = await mintAgentToken(orch, { handle: "dave", tier: "standard" });
-  assert.equal(await verifyAgentToken(orch, first.token), null, "replaced token must stop verifying");
-  assert.ok(await verifyAgentToken(orch, second.token));
+test("mints are additive: a handle holds many live tokens, revocable individually", { skip }, async () => {
+  const first = await mintAgentToken(orch, { handle: "dave", tier: "standard", note: "laptop" });
+  const second = await mintAgentToken(orch, { handle: "dave", tier: "standard", note: "server" });
+  assert.notEqual(first.tokenId, second.tokenId);
+  assert.ok(await verifyAgentToken(orch, first.token), "first token stays live after a second mint");
+  assert.ok(await verifyAgentToken(orch, second.token), "both tokens verify concurrently");
+
+  // Targeted revoke kills exactly one machine's token.
+  assert.ok(await revokeAgentToken(orch, "dave", first.tokenId));
+  assert.equal(await verifyAgentToken(orch, first.token), null, "revoked token dead");
+  assert.ok(await verifyAgentToken(orch, second.token), "sibling token untouched");
+
+  // Handle-wide revoke sweeps the rest.
+  assert.ok(await revokeAgentToken(orch, "dave"));
+  assert.equal(await verifyAgentToken(orch, second.token), null);
+  assert.equal(await revokeAgentToken(orch, "dave"), false, "nothing live left to revoke");
 });
 
 // ---------------------------------------------------------------------------
@@ -182,9 +192,18 @@ test("enroll: a revoked handle can NOT re-enroll itself (revocation sticks)", { 
   await revokeAgentToken(orch, "tofu-revoked");
   assert.equal(await enrollAgent(orch, { handle: "tofu-revoked" }), null, "self-service un-revoke must be impossible");
   assert.equal(await verifyAgentToken(orch, first.token), null, "revoked token stays dead");
-  // The operator path still works: an explicit re-mint replaces the doc.
+  // The operator path still works: an explicit mint adds a fresh live token.
   const remint = await mintAgentToken(orch, { handle: "tofu-revoked", tier: "standard" });
   assert.ok(await verifyAgentToken(orch, remint.token), "operator re-mint recovers the handle");
+});
+
+test("enroll: an operator-minted handle can NOT be TOFU-squatted", { skip }, async () => {
+  await mintAgentToken(orch, { handle: "provisioned-user", tier: "trusted", note: "minted first" });
+  assert.equal(
+    await enrollAgent(orch, { handle: "provisioned-user" }),
+    null,
+    "self-enrollment must refuse a handle the operator already provisioned",
+  );
 });
 
 test("enroll: concurrent racers on one handle mint exactly one token", { skip }, async () => {
