@@ -54,4 +54,19 @@ export const CONFIDENCE_COLOR: Record<string, string> = {
   Unknown: "#78716C",
 };
 
+// Per-domain accent colour — single source of truth for coverage bars, facet
+// dots, and list rails across Findings/Sources. Keep in sync with DOMAIN_LABELS.
+export const DOMAIN_COLOR: Record<string, string> = {
+  "child-welfare": "#DB2777",
+  "grant-access": "#0E8A16",
+  "civic-transparency": "#1D76DB",
+  "ai-policy": "#8B5CF6",
+  biosecurity: "#0EA5E9",
+  other: "#78716C",
+};
+
+export function domainColor(d: string | null | undefined): string {
+  return (d && DOMAIN_COLOR[d]) || "#78716C";
+}
+
 export const STAGE_ORDER: Exclude<Stage, "none">[] = ["discover", "research", "ideate", "build"];

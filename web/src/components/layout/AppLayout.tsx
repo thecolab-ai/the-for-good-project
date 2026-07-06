@@ -10,7 +10,7 @@ export function AppLayout() {
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-screen flex-col">
         <Header repoUrl={data?.repo.url} />
-        <main className="container flex-1 overflow-x-hidden py-8">
+        <main className="container flex-1 overflow-x-clip py-8">
           <Outlet />
         </main>
         <Footer repoUrl={data?.repo.url} generatedAt={data?.generatedAt} />

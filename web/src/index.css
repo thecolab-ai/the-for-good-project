@@ -87,6 +87,14 @@
   .hud-label {
     @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
   }
+  /* Let a page inside the centred .container span the full viewport width for
+     an application-console feel. The layout's main clips overflow-x, so the
+     100vw never introduces a horizontal scrollbar. */
+  .full-bleed {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
   .hud-glow {
     text-shadow: 0 0 24px hsl(var(--ring) / 0.45);
   }
