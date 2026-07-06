@@ -845,6 +845,41 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(board.openPrs, 1);
     });
 
+    await t.test("active-work route: who works on what, for how long, lease health", async () => {
+      await seed([
+        { number: 81, title: "research: X", labels: ["status: available", "stage: research"], createdAt: "2026-05-01T00:00:00Z" },
+        { number: 82, title: "research: Y", labels: ["status: available", "stage: ideate"], createdAt: "2026-05-02T00:00:00Z" },
+      ]);
+      const claimed = await dispatch.claimNext(o, new FleetStore(), {
+        handle: "worker-one",
+        tier: "standard",
+        harness: "codex",
+        model: "gpt-x",
+      });
+      assert.equal(claimed.status, "claimed");
+
+      const app = Fastify();
+      apps.push(app);
+      registerQueueRoutes(app, new FleetStore(), o);
+      const res = await app.inject({ method: "GET", url: "/api/v1/work/active" });
+      assert.equal(res.statusCode, 200);
+      const body = res.json();
+      assert.equal(body.count, 1);
+      const [row] = body.work;
+      assert.equal(row.issue, 81);
+      assert.equal(row.title, "research: X");
+      assert.equal(row.stage, "research");
+      assert.equal(row.handle, "worker-one");
+      assert.equal(row.harness, "codex");
+      assert.equal(typeof row.claimedAt, "string");
+      assert.ok(row.leaseSecondsLeft > 0, "live lease TTL surfaced");
+
+      // Released work leaves the panel.
+      await dispatch.releaseAssignment(o, new FleetStore(), { handle: "worker-one", issue: 81, outcome: "done" });
+      const after = await app.inject({ method: "GET", url: "/api/v1/work/active" });
+      assert.equal(after.json().count, 0);
+    });
+
     await t.test("open-issues snapshot route: fetch_open_issues shape, stale mirror → 503", async () => {
       await seed([
         {

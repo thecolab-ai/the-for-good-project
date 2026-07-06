@@ -153,6 +153,8 @@ export interface AgentPresence {
   connectedAt: string;
   lastSeen: string;
   task: TaskInfo | null;
+  /** When the CURRENT task (by ref/kind) started — "working on X for 34m". */
+  taskSince: string | null;
   session: SessionCounters;
   /** Current tokens/sec for this agent over the sliding window. */
   tps: number;
