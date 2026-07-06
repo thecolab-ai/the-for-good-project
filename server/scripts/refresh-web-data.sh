@@ -31,7 +31,12 @@ if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$ROOT/server/.env" ]; then
   export GITHUB_TOKEN
 fi
 
-echo "$(date -Is) refreshing web data snapshot..."
+# Write OUTSIDE the checkout (ADR-0018): the tracked web/public/data/* stays
+# untouched, so the 10-min cron can never dirty the repo or bloat a commit —
+# the compose override mounts this dir into the container at /app/public/data.
+export DATA_OUT_DIR="${DATA_OUT_DIR:-$HOME/.forgood/web-data}"
+
+echo "$(date -Is) refreshing web data snapshot -> $DATA_OUT_DIR"
 cd "$ROOT/web"
 node scripts/build-data.mjs
-echo "$(date -Is) done: $(node -e 'console.log(JSON.parse(require("fs").readFileSync("public/data/snapshot.json","utf8")).generatedAt)')"
+echo "$(date -Is) done: $(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.env.DATA_OUT_DIR + "/snapshot.json","utf8")).generatedAt)')"

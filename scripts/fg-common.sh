@@ -272,6 +272,23 @@ issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 # normal core quota, includes the fields we need, and returns PRs too, so filter
 # out `.pull_request` entries here.
 fetch_open_issues() {
+  # Mirror-first (ADR-0018): the fleet server serves this exact snapshot
+  # shape from its Mongo mirror — ONE unauthenticated HTTPS call, zero
+  # GitHub budget. With every runner loop on every machine drawing from the
+  # same per-identity GitHub pools, this read was the fleet's biggest
+  # rate-limit tax (and rate-limit stalls have taken the fleet down before —
+  # ADR-0016). Fall back to the direct GitHub read whenever the server is
+  # absent, stale (it answers 503 rather than serve a stale mirror), or
+  # returns anything malformed — a dead server can never stall the fleet.
+  # FLEET_SNAPSHOT=0 opts out (direct GitHub only).
+  if [ -n "${FLEET_SERVER:-}" ] && [ "${FLEET_SNAPSHOT:-1}" = "1" ]; then
+    local resp snap
+    if resp="$(curl -sS -m 5 "$FLEET_SERVER/api/v1/issues/open" 2>/dev/null)" \
+       && snap="$(printf '%s' "$resp" | jq -ce 'select(.ok == true) | .issues | select(type == "array")' 2>/dev/null)"; then
+      printf '%s' "$snap"
+      return 0
+    fi
+  fi
   gh api --paginate "repos/$OWNER/$NAME/issues?state=open&per_page=100" \
     --jq '[.[] | select(.pull_request|not) | {number, createdAt: .created_at, labels: [.labels[] | {name}], assignees: [.assignees[] | {login}]}]'
 }

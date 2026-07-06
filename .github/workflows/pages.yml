@@ -1,7 +1,7 @@
 # Deploy the site to GitHub Pages.
 #
 # Two paths, one job:
-#   • Every 15 min (cron) → refresh ONLY the data snapshot (the JSON the board
+#   • Hourly (cron) → refresh ONLY the data snapshot (the JSON the board
 #     reads) and redeploy. The built site is restored from cache, so the slow
 #     Vite build is SKIPPED — a quick, data-only refresh.
 #   • When the web SOURCE changes (push to web/src, public, config…) → the cache
@@ -10,13 +10,20 @@
 #
 # We deliberately do NOT trigger on issues / issue_comment / research changes:
 # that fired a deploy on every label flip and comment across a busy pipeline
-# (dozens an hour). The 15-minute cron keeps the board fresh instead — findings,
+# (dozens an hour). The hourly cron keeps this backup copy fresh instead —
 # issues and the leaderboard are re-read from the repo + API each run.
 name: Deploy site
 
 on:
   schedule:
-    - cron: "*/15 * * * *"        # data-only refresh (fast path)
+    - cron: "17 * * * *"          # hourly data-only refresh (fast path). The
+                                  # primary site (forgood.thecolab.ai) self-
+                                  # refreshes every 10 min from its own host
+                                  # (server/scripts/refresh-web-data.sh);
+                                  # this Pages copy is the backup, so hourly
+                                  # is plenty — and Actions minutes/API calls
+                                  # four times cheaper. Off-the-hour (:17)
+                                  # dodges GitHub's top-of-hour cron crunch.
   push:
     branches: [main]
     paths:                        # full rebuild only when the site itself changes
