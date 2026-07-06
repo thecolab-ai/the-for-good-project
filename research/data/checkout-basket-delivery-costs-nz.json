@@ -1,0 +1,134 @@
+{
+  "title": "Issue #581 live pre-payment delivery quote audit",
+  "date_utc": "2026-07-05",
+  "agent": "codex",
+  "model": "gpt-5-codex",
+  "scope": "Small, reproducible audit of identical single-item baskets where NZ retailer pages exposed a delivery quote before login, payment, or order placement. No order was placed and no personal address was used.",
+  "test_locations": [
+    {
+      "class": "metro",
+      "label": "Auckland Central",
+      "input_used": "1010 / Auckland Central",
+      "source": "NZ Post address lookup returned 101/438 Queen Street, Auckland Central, Auckland 1010 as Postal\\Physical."
+    },
+    {
+      "class": "rural",
+      "label": "RD 2 Wairoa / Wairoa 4197",
+      "input_used": "4197 / Wairoa; NZ Post rural validation query used 2035 State Highway 2, RD 2, Wairoa 4197",
+      "source": "NZ Post address lookup returned 2035 State Highway 2, RD 2, Wairoa 4197 as Postal."
+    },
+    {
+      "class": "remote",
+      "label": "Chatham Islands",
+      "input_used": "8942 / Chatham Islands",
+      "source": "Chatham Islands Council and NZ Government list Waitangi, Chatham Islands 8942 for council contact/postal details."
+    }
+  ],
+  "observations": [
+    {
+      "retailer": "Briscoes",
+      "product": "Urban Loft Louie Bath Towel",
+      "product_url": "https://www.briscoes.co.nz/product/1129496/urban-loft-louie-bath-towel/",
+      "basket": "1 x Urban Loft Louie Bath Towel, colour Platinum, SKU 1129496006, product page price $14.99",
+      "quote_surface": "Product page delivery postcode panel before adding to cart",
+      "quotes": [
+        {
+          "location_class": "metro",
+          "input": "1010",
+          "result": "Standard Delivery, delivery within 1-3 business days, $8.00; Express Evening Delivery, delivery tonight between 6pm and 9pm, $14.00"
+        },
+        {
+          "location_class": "rural",
+          "input": "4197",
+          "result": "Rural Delivery, delivery within 5-10 business days, $10.00"
+        },
+        {
+          "location_class": "remote",
+          "input": "8942",
+          "result": "Standard Delivery, delivery within 1-3 business days, note says standard excludes rural postcodes and outer islands, $8.00"
+        }
+      ],
+      "limitations": "The postcode-only remote result conflicts with Briscoes' FAQ note that outer islands incur additional costs, so it should be treated as a pre-payment product-page quote rather than proof of final landed cost after full address validation."
+    },
+    {
+      "retailer": "Bunnings NZ",
+      "product": "Craftright 8m Tape Measure",
+      "product_url": "https://www.bunnings.co.nz/craftright-8m-tape-measure_p5660481",
+      "basket": "1 x Craftright 8m Tape Measure, I/N 5660481, product page price $4.98",
+      "quote_surface": "Product page delivery postcode/suburb estimator before adding to cart",
+      "quotes": [
+        {
+          "location_class": "metro",
+          "input": "Auckland Central, Auckland",
+          "result": "$8 delivery fee; delivered between Thu 9 - Mon 13 Jul; single item only; delivery calculated at checkout for multiple items; available"
+        },
+        {
+          "location_class": "rural",
+          "input": "Wairoa",
+          "result": "$8 delivery fee; delivered between Thu 9 - Mon 13 Jul; single item only; delivery calculated at checkout for multiple items; available"
+        },
+        {
+          "location_class": "remote",
+          "input": "Chatham Islands",
+          "result": "$8 delivery fee; delivered between Thu 9 - Mon 13 Jul; single item only; delivery calculated at checkout for multiple items; available"
+        }
+      ],
+      "limitations": "The page explicitly says the quote is for a single item only and that delivery is calculated at checkout for multiple items."
+    },
+    {
+      "retailer": "Mitre 10",
+      "product": "Number 8 Tape Measure 5m",
+      "product_url": "https://www.mitre10.co.nz/shop/number-8-tape-measure-5m/p/229913",
+      "basket": "1 x Number 8 Tape Measure 5m, SKU 229913, product page price $3.58",
+      "quote_surface": "Product page delivery location picker before adding to cart",
+      "quotes": [
+        {
+          "location_class": "metro",
+          "input": "Auckland Central, Auckland, 1010",
+          "result": "Delivery - From $8.00; deliver to Auckland Central, 1010"
+        },
+        {
+          "location_class": "rural",
+          "input": "Wairoa, Wairoa District, 4197",
+          "result": "Delivery - From $8.00; deliver to Wairoa, 4197"
+        },
+        {
+          "location_class": "remote",
+          "input": "Chatham Islands, Chatham Island, 8942",
+          "result": "Delivery - From $8.00; deliver to Chatham Islands, 8942"
+        }
+      ],
+      "limitations": "The product page showed a 'From $8.00' estimate, not a final checkout fee; Mitre 10's delivery page separately says rural parcel orders under 25kg are $13.50 and that costs are calculated and displayed at checkout."
+    },
+    {
+      "retailer": "Chemist Warehouse NZ",
+      "product": "Healtheries Vitamin C 1,000mg + Prebiotics & Probiotics 80 Tablets",
+      "product_url": "https://www.chemistwarehouse.co.nz/buy/96405/healtheries-vitamin-c-1,000mg-prebiotics-probiotics-80-tablets",
+      "basket": "1 x product, product page/cart price $18.99",
+      "quote_surface": "Cart before checkout",
+      "quotes": [
+        {
+          "location_class": "all",
+          "input": "No address accepted before next step in this run",
+          "result": "Cart showed Shipping: Calculated at next step; add $80.01 to cart to get free standard shipping."
+        }
+      ],
+      "limitations": "The browser session did not advance to an address quote without further checkout/contact details."
+    },
+    {
+      "retailer": "The Warehouse",
+      "product": "WS Photocopy Paper A4 80gsm 500 Sheet Ream",
+      "product_url": "https://www.thewarehouse.co.nz/p/ws-photocopy-paper-a4-80gsm-500-sheet-ream-white/R651351.html",
+      "basket": "1 x WS Photocopy Paper A4 80gsm 500 Sheet Ream, item no. 9418362009356, product page price $8.90",
+      "quote_surface": "Product page island selector before cart",
+      "quotes": [
+        {
+          "location_class": "north_island",
+          "input": "North Island",
+          "result": "Available in the North Island; standard delivery estimated 2-4 business days; no dollar delivery fee shown on product page."
+        }
+      ],
+      "limitations": "Clicking the cart after adding the item triggered Cloudflare security verification in this environment, so no metro/rural/remote checkout fee was verified."
+    }
+  ]
+}
