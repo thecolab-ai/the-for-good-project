@@ -517,7 +517,21 @@ review_one() {  # $1 = PR number
   # diagnostic or touch the merge check (that's the false "failure" we were
   # spamming onto PRs like #174). Release the claim, back off, and let a later
   # loop re-review once the limit resets.
-  if was_usage_limited "$tmp"; then
+  #
+  # BUT: a run that PRODUCED a verdict was not usage-limited, whatever its
+  # transcript says — citation-heavy reviews legitimately DISCUSS rate
+  # limits ("Stats NZ returned 429, verified via Wayback"), and the phrase
+  # grep can't tell narration from failure (PR #565 lost a finished
+  # NEEDS_WORK verdict + slept an hour to exactly this). A written review
+  # file with a VERDICT line, or a VERDICT in the transcript tail, means the
+  # model finished its job; post it.
+  local produced_verdict=0
+  if { [ -s "$REVIEW_FILE" ] && grep -qE '^VERDICT: *(PASS|NEEDS_WORK|NEEDS_HUMAN)' "$REVIEW_FILE"; } \
+     || { [ -s "$fallback_review_file" ] && grep -qE '^VERDICT: *(PASS|NEEDS_WORK|NEEDS_HUMAN)' "$fallback_review_file"; } \
+     || tail -n 40 "$tmp" | grep -qE '^VERDICT: *(PASS|NEEDS_WORK|NEEDS_HUMAN)'; then
+    produced_verdict=1
+  fi
+  if [ "$produced_verdict" = 0 ] && was_usage_limited "$tmp"; then
     warn "Review of PR #$pr hit an API usage/rate limit — NOT posting a failure. Backing off ${USAGE_LIMIT_SLEEP}s before continuing."
     rm -f "$tmp" "$fallback_review_file"
     release_pr "$pr"; CLAIMED_PR=""
