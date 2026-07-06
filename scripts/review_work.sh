@@ -52,7 +52,7 @@
 #       REVIEW_CLAIM_TTL MAX_REVIEW_ROUNDS AGENT_TIMEOUT PROVIDER
 #       HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"

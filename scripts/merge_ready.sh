@@ -23,7 +23,7 @@
 # Env: MERGE PR TRUST_WHITELIST MIN_REVIEWER_CREDIT REQUIRED_APPROVALS
 #      FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 
 MERGE="${MERGE:-0}"

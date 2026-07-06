@@ -61,7 +61,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 cd "$ROOT"
 export FG_TEST_SOURCE_ONLY=1
 # frame_work.sh cd's to its own dir and sources fg-common; main is skipped.
-source ./frame_work.sh
+source ./scripts/frame_work.sh
 ME="test-framer"   # normally set by preflight
 
 # --- spawn_children: cap + normalisation + dedupe ---------------------------

@@ -50,7 +50,7 @@
 set -euo pipefail
 # BASH_SOURCE (not $0) so the test hook can source this file: identical when
 # executed, but still this script's own directory when sourced by a test.
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"

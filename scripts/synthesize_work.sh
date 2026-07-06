@@ -35,7 +35,7 @@
 # Env:  STREAM MAX POLL_SECONDS DRY_RUN AGENT MODEL AGENT_TIMEOUT
 #       FOLLOWUP_ROUNDS FOLLOWUP_PER_ROUND FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"

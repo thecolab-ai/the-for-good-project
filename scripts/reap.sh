@@ -19,7 +19,7 @@
 #
 # Env: CLAIM_TTL REWORK_TTL DRY_RUN FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 DRY_RUN="${DRY_RUN:-0}"
 

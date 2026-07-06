@@ -37,7 +37,7 @@
 #       ~/.forgood/). Falls back to the label-claim path on ANY failure.
 #       (autopilot.sh defaults FLEET_CLAIM=1; standalone runs stay opt-in.)
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"
