@@ -23,7 +23,15 @@
 import type { EventKind } from "../protocol.js";
 import type { Orchestrator } from "../orchestrator/stores.js";
 import type { GhIssue, GhPull, GhUser } from "./gh-api.js";
-import { issueDocFromRaw, pullDocFromRaw, type IssueDoc, type PullDoc } from "./sync.js";
+import {
+  issueDocFromRaw,
+  mergeReviewEntriesInto,
+  pullDocFromRaw,
+  pullDocUpdate,
+  type IssueDoc,
+  type PullDoc,
+  type PullReviewEntry,
+} from "./sync.js";
 
 /** A verified webhook delivery, as handed over by routes/webhooks.ts. */
 export interface WebhookDelivery {
@@ -60,7 +68,7 @@ interface WebhookPayload {
   issue?: (GhIssue & { pull_request?: unknown }) | null;
   pull_request?: GhPull | null;
   sender?: GhUser | null;
-  review?: { state?: unknown } | null;
+  review?: { state?: unknown; commit_id?: unknown; submitted_at?: unknown; user?: GhUser | null } | null;
   check_suite?: { conclusion?: unknown; head_branch?: unknown } | null;
   ref?: unknown;
   commits?: unknown;
@@ -98,9 +106,44 @@ async function upsertIssue(orch: Orchestrator, raw: GhIssue | null | undefined):
 
 async function upsertPull(orch: Orchestrator, raw: GhPull | null | undefined): Promise<void> {
   if (!raw || !Number.isInteger(raw.number)) return;
-  await orch.db
-    .collection<PullDoc>("pulls")
-    .replaceOne({ _id: raw.number }, pullDocFromRaw(raw, new Date().toISOString()), { upsert: true });
+  // $set (via the shared pullDocUpdate), NOT replace: the doc's accumulated
+  // `reviews`/`reviewsFetchedFor` must survive every pull_request refresh.
+  const { filter, update } = pullDocUpdate(pullDocFromRaw(raw, new Date().toISOString()));
+  await orch.db.collection<PullDoc>("pulls").updateOne(filter, update, { upsert: true });
+}
+
+const REVIEW_STATES: ReadonlySet<PullReviewEntry["state"]> = new Set([
+  "approved",
+  "changes_requested",
+  "commented",
+  "dismissed",
+]);
+
+/** payload.review → mirror review entry, or null when a field the entry
+ *  needs is missing/unrecognised (partial payloads must never poison the
+ *  doc). Webhook review states are lower case already; lowercase anyway so
+ *  a REST-shaped fixture converges too. */
+function reviewEntryFromPayload(p: WebhookPayload): PullReviewEntry | null {
+  const review = p.review;
+  const reviewer = typeof review?.user?.login === "string" ? review.user.login : null;
+  const state = typeof review?.state === "string" ? review.state.toLowerCase() : "";
+  const commitId = typeof review?.commit_id === "string" ? review.commit_id : null;
+  if (!reviewer || !commitId || !REVIEW_STATES.has(state as PullReviewEntry["state"])) return null;
+  return {
+    reviewer,
+    state: state as PullReviewEntry["state"],
+    commitId,
+    at: typeof review?.submitted_at === "string" ? review.submitted_at : new Date().toISOString(),
+  };
+}
+
+/** Append one review entry to the PR's mirror doc (dedupe + cap via the
+ *  shared CAS merge — a plain findOne→$set here raced both a concurrent
+ *  delivery of another review and dispatch's lazy REST fetch, silently
+ *  dropping entries). No-op when the doc doesn't exist yet — the same
+ *  delivery's upsertPull runs first, so it always does. */
+async function appendPullReview(orch: Orchestrator, pr: number, entry: PullReviewEntry): Promise<void> {
+  await mergeReviewEntriesInto(orch.db.collection<PullDoc>("pulls"), pr, [entry]);
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +174,14 @@ export async function reduceWebhook(orch: Orchestrator, delivery: WebhookDeliver
       return reducePullRequest(orch, action, p, sender);
     case "pull_request_review": {
       await upsertPull(orch, p.pull_request);
+      // Persist the review itself (reviewer/state/commitId) into the pulls
+      // doc — review dispatch reads these to skip PRs already reviewed at
+      // their current head. Dismissals arrive here too (action "dismissed",
+      // review.state "dismissed") and append as their own entry.
+      if (p.pull_request && Number.isInteger(p.pull_request.number)) {
+        const entry = reviewEntryFromPayload(p);
+        if (entry) await appendPullReview(orch, p.pull_request.number, entry);
+      }
       if (action !== "submitted" || !p.pull_request || !Number.isInteger(p.pull_request.number)) return null;
       const state = typeof p.review?.state === "string" ? p.review.state : "";
       const verb =

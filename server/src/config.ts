@@ -96,6 +96,19 @@ export const config = {
   maxActiveClaims: num(process.env.MAX_ACTIVE_CLAIMS, 3),
 
   leaseTtlSeconds: num(process.env.LEASE_TTL_SECONDS, 1800),
+  // Review-claim leases (kind: "review" dispatch — ADR-0019). Longer than the
+  // work lease: one adversarial review round routinely takes an hour.
+  reviewLeaseTtlSeconds: num(process.env.REVIEW_LEASE_TTL_SECONDS, 3600),
+  // A review claim the runner released `abandoned` (it skipped the PR locally
+  // — already passed, author==reviewer, parked, crash) cools down for this
+  // long before claimNextReview may serve that PR again. Without it, a PR the
+  // mirror deems eligible but every runner skips sits at the head of the
+  // oldest-first queue and burns one claim per runner per pass, forever.
+  reviewAbandonCooldownSeconds: num(process.env.REVIEW_ABANDON_COOLDOWN_SECONDS, 900),
+  // Review-round cap before a PR is a human maintainer's (#287). Same env var
+  // the shell reads (review_work.sh MAX_REVIEW_ROUNDS) so an operator
+  // override can't diverge the server's cap from the runners'.
+  maxReviewRounds: num(process.env.MAX_REVIEW_ROUNDS, 10),
   // One-shot fleet drain commands (stop/abort) expire after this long, so a
   // handle minted (or a runner restarted) weeks after a drain is never killed
   // by a months-old command. pause/resume represent STATE and persist.

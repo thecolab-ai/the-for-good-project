@@ -30,6 +30,23 @@ export function leaseKey(issue: number): string {
   return `lease:issue:${issue}`;
 }
 
+/** Redis key for a PR's review-claim lease (`SET NX EX
+ *  reviewLeaseTtlSeconds`). Distinct namespace from `lease:issue:` so a work
+ *  claim and a review claim can never collide on a number. */
+export function reviewLeaseKey(pr: number): string {
+  return `lease:review:${pr}`;
+}
+
+/** Redis key parking a PR out of review dispatch after an ABANDONED review
+ *  release (`SET EX reviewAbandonCooldownSeconds`). A runner that claims a
+ *  PR and then skips it locally (already passed at head, author == its gh
+ *  identity, parked for a human) releases `abandoned`; without a cooldown
+ *  the deterministic oldest-first queue re-serves that same PR to every
+ *  runner on every pass. */
+export function reviewCooldownKey(pr: number): string {
+  return `cooldown:review:${pr}`;
+}
+
 /** Redis key holding one handle's current command (JSON, or unset). */
 export function commandKey(handle: string): string {
   return `cmd:${handle}`;

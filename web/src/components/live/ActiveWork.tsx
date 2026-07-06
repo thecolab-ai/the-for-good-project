@@ -31,6 +31,7 @@ export function ActiveWorkFeed({ work }: { work: ActiveWorkItem[] }) {
       {work.map((w) => {
         const color = harnessColor(w.harness ?? "unknown", dark);
         const lease = leaseHealth(w.leaseSecondsLeft);
+        const isReview = w.kind === "review";
         return (
           <li key={`${w.issue}-${w.handle}-${w.claimedAt}`} className="flex items-center gap-2.5 py-2">
             <a href={`https://github.com/${w.handle}`} target="_blank" rel="noreferrer" className="shrink-0">
@@ -44,7 +45,7 @@ export function ActiveWorkFeed({ work }: { work: ActiveWorkItem[] }) {
                 <span className="shrink-0 font-medium">@{w.handle}</span>
                 <span className="shrink-0 text-muted-foreground">·</span>
                 <a
-                  href={`${REPO_URL}/issues/${w.issue}`}
+                  href={`${REPO_URL}/${isReview ? "pull" : "issues"}/${w.issue}`}
                   target="_blank"
                   rel="noreferrer"
                   className="shrink-0 font-mono text-foreground hover:underline"
@@ -54,6 +55,11 @@ export function ActiveWorkFeed({ work }: { work: ActiveWorkItem[] }) {
                 {w.title ? <span className="truncate text-foreground/60">{w.title}</span> : null}
               </div>
               <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                {isReview ? (
+                  <span className="rounded-full bg-violet-500/15 px-1.5 py-px font-medium text-violet-600 dark:text-violet-400">
+                    review
+                  </span>
+                ) : null}
                 {w.stage ? (
                   <span className="rounded-full bg-secondary/70 px-1.5 py-px font-medium">{w.stage}</span>
                 ) : null}

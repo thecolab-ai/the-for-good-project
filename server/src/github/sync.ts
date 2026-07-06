@@ -54,6 +54,24 @@ export interface IssueDoc {
   syncedAt: string;
 }
 
+/** One submitted review on a PR, as the mirror stores it. `commitId` is the
+ *  head SHA the review was submitted against — review dispatch compares it
+ *  with the PR's CURRENT `headSha` to decide "already reviewed at this
+ *  revision". `state` is the review's CURRENT state, not event history: a
+ *  dismissal supersedes the entry it dismisses (same reviewer+commitId), so
+ *  round counting over these entries matches the shell's GraphQL
+ *  `reviews(states:CHANGES_REQUESTED)` count, which also excludes DISMISSED
+ *  (review_work.sh review_rounds()). */
+export interface PullReviewEntry {
+  reviewer: string;
+  state: "approved" | "changes_requested" | "commented" | "dismissed";
+  commitId: string;
+  at: string;
+}
+
+/** The mirror keeps only the LAST this-many review entries per PR. */
+export const PULL_REVIEWS_CAP = 30;
+
 /** Mirror doc for a pull request (`pulls` collection, `_id` = number). */
 export interface PullDoc {
   _id: number;
@@ -65,6 +83,7 @@ export interface PullDoc {
   user: string | null;
   htmlUrl: string;
   headRef: string;
+  headSha: string;
   headRepoFullName: string | null;
   baseRef: string;
   merged: boolean;
@@ -72,6 +91,79 @@ export interface PullDoc {
   createdAt: string;
   updatedAt: string;
   syncedAt: string;
+  /** Submitted reviews, capped at the last PULL_REVIEWS_CAP. Fed by
+   *  pull_request_review webhooks + review dispatch's lazy fetch; sync never
+   *  backfills these (the REST pulls list doesn't carry them) and never
+   *  clobbers them (pull upserts $set the listed fields only). */
+  reviews?: PullReviewEntry[];
+  /** The head SHA the reviews were last fetched for via
+   *  `GET /pulls/{n}/reviews` — review dispatch fetches at most once per
+   *  head revision. */
+  reviewsFetchedFor?: string;
+}
+
+/** Fold `incoming` review entries into `existing`: dedupe by
+ *  reviewer+commitId keeping the LATEST entry (ties go to `incoming`, so a
+ *  dismissal — same reviewer+commitId, same `submitted_at` as the review it
+ *  dismisses — SUPERSEDES the changes_requested entry instead of coexisting
+ *  with it), order by `at` ascending, cap at the last PULL_REVIEWS_CAP.
+ *  Shared by the webhook reducer and review dispatch's lazy fetch so both
+ *  persist one shape. State is deliberately NOT part of the key: an entry is
+ *  "this reviewer's current standing at this commit", which is what both the
+ *  reviewed-at-head skip and the round count need. */
+export function mergeReviewEntries(
+  existing: PullReviewEntry[] | undefined,
+  incoming: PullReviewEntry[],
+): PullReviewEntry[] {
+  const byKey = new Map<string, PullReviewEntry>();
+  for (const entry of [...(existing ?? []), ...incoming]) {
+    const key = `${entry.reviewer}\u0000${entry.commitId}`;
+    const prior = byKey.get(key);
+    if (!prior || prior.at <= entry.at) byKey.set(key, entry);
+  }
+  return [...byKey.values()]
+    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
+    .slice(-PULL_REVIEWS_CAP);
+}
+
+/**
+ * Merge `incoming` review entries into the PR doc's CURRENT `reviews` array
+ * ATOMICALLY (guarded compare-and-set, bounded retries) and return the
+ * merged array, or null when the doc doesn't exist / stays contended.
+ *
+ * Both review-entry writers — the webhook reducer's append and review
+ * dispatch's lazy REST fetch — MUST go through this: a plain
+ * read → mergeReviewEntries → `$set` clobbers whatever the other writer
+ * persisted between the read and the write. Concretely, the lazy fetch used
+ * to erase a review a `pull_request_review` webhook appended while the REST
+ * response was in flight — and because it also stamped
+ * `reviewsFetchedFor: headSha`, nothing ever re-fetched at that head, so the
+ * just-reviewed PR looked unreviewed until the next push. The CAS re-reads
+ * and re-merges on conflict, so concurrent appends always survive.
+ */
+export async function mergeReviewEntriesInto(
+  pulls: Collection<PullDoc>,
+  pr: number,
+  incoming: PullReviewEntry[],
+  extraSet: Partial<Pick<PullDoc, "reviewsFetchedFor">> = {},
+): Promise<PullReviewEntry[] | null> {
+  const MAX_ATTEMPTS = 5;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const doc = await pulls.findOne({ _id: pr }, { projection: { reviews: 1 } });
+    if (!doc) return null; // no mirror doc — nothing to merge into
+    const merged = mergeReviewEntries(doc.reviews, incoming);
+    // The guard matches only while `reviews` still equals what we read
+    // (exact array equality via $eq; `$exists: false` when it was absent).
+    // A rival write in between → matchedCount 0 → re-read and re-merge.
+    const guard: Parameters<typeof pulls.updateOne>[0] =
+      doc.reviews === undefined
+        ? { _id: pr, reviews: { $exists: false } }
+        : { _id: pr, reviews: { $eq: doc.reviews } };
+    const res = await pulls.updateOne(guard, { $set: { reviews: merged, ...extraSet } });
+    if (res.matchedCount === 1) return merged;
+  }
+  console.error(`sync: review-entry merge for PR #${pr} stayed contended after 5 attempts`);
+  return null;
 }
 
 interface SyncStateDoc {
@@ -113,6 +205,7 @@ export function pullDocFromRaw(raw: GhPull, syncedAt: string): PullDoc {
     user: raw.user?.login ?? null,
     htmlUrl: raw.html_url,
     headRef: raw.head?.ref ?? "",
+    headSha: raw.head?.sha ?? "",
     headRepoFullName: raw.head?.repo?.full_name ?? null,
     baseRef: raw.base?.ref ?? "",
     merged: Boolean(raw.merged ?? raw.merged_at != null),
@@ -147,10 +240,19 @@ async function upsertIssues(orch: Orchestrator, docs: IssueDoc[]): Promise<numbe
   return docs.length;
 }
 
+/** Split a PullDoc into filter + $set fields. Pull upserts $set (NOT
+ *  replace) so `reviews`/`reviewsFetchedFor` — which only webhooks and the
+ *  lazy review fetch write — survive every sync/webhook refresh. Exported so
+ *  the webhook reducer's pull upsert stays convergent with sync's. */
+export function pullDocUpdate(doc: PullDoc): { filter: { _id: number }; update: { $set: Omit<PullDoc, "_id"> } } {
+  const { _id, ...fields } = doc;
+  return { filter: { _id }, update: { $set: fields } };
+}
+
 async function upsertPulls(orch: Orchestrator, docs: PullDoc[]): Promise<number> {
   if (docs.length === 0) return 0;
   await pullsCol(orch).bulkWrite(
-    docs.map((doc) => ({ replaceOne: { filter: { _id: doc._id }, replacement: doc, upsert: true } })),
+    docs.map((doc) => ({ updateOne: { ...pullDocUpdate(doc), upsert: true } })),
     { ordered: false },
   );
   return docs.length;
@@ -208,6 +310,7 @@ async function routeAndUpsert(
           $setOnInsert: {
             draft: false,
             headRef: "",
+            headSha: "",
             headRepoFullName: null,
             baseRef: "",
             merged: false,

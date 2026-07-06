@@ -54,10 +54,11 @@ import { ObjectId } from "mongodb";
 import type { Collection } from "mongodb";
 import { config } from "../config.js";
 import { GitHubApiError } from "../github/gh-api.js";
-import type { ClaimedIssue } from "../protocol.js";
+import { mergeReviewEntriesInto, PULL_REVIEWS_CAP, type PullDoc, type PullReviewEntry } from "../github/sync.js";
+import type { ClaimedIssue, ClaimedReview } from "../protocol.js";
 import type { FleetStore } from "../state.js";
 import type { AgentTier } from "./auth.js";
-import { leaseKey, type Orchestrator } from "./stores.js";
+import { leaseKey, reviewCooldownKey, reviewLeaseKey, type Orchestrator } from "./stores.js";
 
 const AVAILABLE_LABEL = "status: available";
 const CLAIMED_LABEL = "status: claimed";
@@ -68,6 +69,30 @@ const STREAM_PREFIX = "stream:";
 /** The stages dispatch may ever serve — discover is excluded by construction
  *  (ADR-0014 capability floor; frame_work.sh owns discover roots). */
 const DISPATCHABLE_STAGES = ["research", "ideate", "build"] as const;
+
+// Review dispatch (kind: "review", ADR-0019) — the skip rules replicate
+// scripts/review_work.sh; citations name the shell symbol first (grep for
+// it) with the line number of THIS branch's file as a secondary hint.
+/** review_work.sh HUMAN_ONLY_LABEL (L84): PRs a human maintainer reviews and
+ *  merges — never this loop (also skipped in review_one's human-only case,
+ *  L434–439). */
+const HUMAN_ONLY_LABEL = "review: human-only";
+/** review_work.sh REVIEW_CLAIMING_LABEL (L83): a walk-based reviewer is
+ *  holding this PR (label-path claim, claim_pr(), L136–170). Dispatch skips
+ *  it rather than double-reviewing; the walk's own TTL/stale-takeover
+ *  (review_claim_age(), L124–145) frees a crashed walker's label, after
+ *  which the PR becomes dispatchable again. */
+const REVIEW_CLAIMED_LABEL = "review: claimed";
+// The review-round cap is config.maxReviewRounds (env MAX_REVIEW_ROUNDS —
+// the SAME env var the shell reads at review_work.sh L86, so an operator
+// override can't diverge the two); the cap check itself is in
+// claimNextReview, mirroring review_one's round-cap block (L456–470, #287).
+/** Lazy review-state fetch budget: at most this many candidates get a
+ *  `GET /pulls/{n}/reviews` per claim call (spec "Mirror gains review
+ *  state"). Candidates beyond the budget whose review state is unknown are
+ *  skipped this pass — the fetches they got persist, so the next claim
+ *  starts further down the list. */
+const REVIEW_FETCH_BUDGET = 10;
 
 /** Mirror `issues` doc (see the data model in stores.ts / the spec). */
 interface IssueDoc {
@@ -91,6 +116,12 @@ interface IssueDoc {
  *  request — not in the spec's minimum shape, but public and useful. */
 interface AssignmentDoc {
   _id: ObjectId;
+  /** What was claimed. Docs from before review dispatch carry no field —
+   *  absent = "work" (read via kindOf below). */
+  kind?: "work" | "review";
+  /** For kind "work" the issue number; for kind "review" the PR NUMBER
+   *  (GitHub numbers issues and PRs from one sequence, so the two kinds can
+   *  never collide on a number). */
   issueNumber: number;
   handle: string;
   tier: AgentTier;
@@ -135,7 +166,18 @@ export type ClaimResult =
   /** Orchestration up but no githubToken — the route answers 503. */
   | { status: "disabled"; reason: string };
 
+/** claimNextReview's result — shaped like ClaimResult with `review` in place
+ *  of `issue` (the route maps the statuses identically). */
+export type ClaimReviewResult =
+  | { status: "claimed"; review: ClaimedReview; assignmentId: string; leaseTtlSeconds: number }
+  | { status: "capped" }
+  | { status: "empty" }
+  | { status: "rate-limited"; retryAfterSeconds: number }
+  | { status: "disabled"; reason: string };
+
 export type ReleaseOutcome = "done" | "abandoned" | "lease-expired" | "admin-released";
+
+export type AssignmentKind = "work" | "review";
 
 const nowIso = () => new Date().toISOString();
 
@@ -143,8 +185,32 @@ function issuesCol(orch: Orchestrator): Collection<IssueDoc> {
   return orch.db.collection<IssueDoc>("issues");
 }
 
+function pullsCol(orch: Orchestrator): Collection<PullDoc> {
+  return orch.db.collection<PullDoc>("pulls");
+}
+
 function assignmentsCol(orch: Orchestrator): Collection<AssignmentDoc> {
   return orch.db.collection<AssignmentDoc>("assignments");
+}
+
+/** An assignment's kind — docs from before review dispatch default "work". */
+function kindOf(doc: Pick<AssignmentDoc, "kind">): AssignmentKind {
+  return doc.kind ?? "work";
+}
+
+/** Mongo filter clause matching assignments of `kind` (absent = work). */
+function kindFilter(kind: AssignmentKind): Record<string, unknown> {
+  return kind === "review" ? { kind: "review" } : { kind: { $ne: "review" } };
+}
+
+/** The Redis lease key an assignment doc arbitrates on. */
+function assignmentLeaseKey(doc: Pick<AssignmentDoc, "kind" | "issueNumber">): string {
+  return kindOf(doc) === "review" ? reviewLeaseKey(doc.issueNumber) : leaseKey(doc.issueNumber);
+}
+
+/** The lease TTL for an assignment kind. */
+function kindLeaseTtl(kind: AssignmentKind): number {
+  return kind === "review" ? config.reviewLeaseTtlSeconds : config.leaseTtlSeconds;
 }
 
 /** First "stage: <s>" label value, or null (fg-common.sh `label_field`). */
@@ -265,8 +331,8 @@ function toClaimedIssue(doc: IssueDoc): ClaimedIssue {
 const RELEASE_LEASE_LUA =
   'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
 
-async function delLeaseIfOwned(orch: Orchestrator, issue: number, assignmentId: string): Promise<void> {
-  await orch.redis.eval(RELEASE_LEASE_LUA, 1, leaseKey(issue), assignmentId);
+async function delLeaseIfOwned(orch: Orchestrator, key: string, assignmentId: string): Promise<void> {
+  await orch.redis.eval(RELEASE_LEASE_LUA, 1, key, assignmentId);
 }
 
 /** Claim the next eligible issue for this agent (see module doc for the
@@ -320,7 +386,7 @@ export async function claimNext(
         // 404: the live issue is no longer "status: available" — a rival
         // claimed it or the mirror is stale. Nothing was written; free the
         // lease, refresh the mirror doc best-effort, next candidate.
-        await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+        await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
         continue;
       }
       step = 1; // available removed — from here, undo means re-adding it
@@ -352,7 +418,7 @@ export async function claimNext(
       };
       if (err instanceof GitHubApiError && err.isRateLimit) {
         await undoPartialWrites();
-        await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+        await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
         return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
       }
       if (err instanceof GitHubApiError && err.status === 403) {
@@ -363,17 +429,17 @@ export async function claimNext(
         // than burning one failing GitHub write per candidate across the
         // whole queue.
         await undoPartialWrites();
-        await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+        await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
         return { status: "disabled", reason: "github token lacks write access" };
       }
       if (err instanceof GitHubApiError && err.status >= 400 && err.status < 500) {
         // Per-issue 4xx: undo, free the lease, try the next candidate.
         await undoPartialWrites();
-        await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+        await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
         continue;
       }
       await undoPartialWrites();
-      await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+      await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
       throw err; // 5xx / network — surface to the route; lease is freed
     }
 
@@ -410,7 +476,7 @@ export async function claimNext(
     } catch (err) {
       await assignmentsCol(orch).deleteOne({ _id: assignmentId }).catch(() => undefined);
       await revertClaimLabels(orch, n, ctx.handle).catch(() => undefined);
-      await delLeaseIfOwned(orch, n, idStr).catch(() => undefined);
+      await delLeaseIfOwned(orch, leaseKey(n), idStr).catch(() => undefined);
       throw err; // the route answers 5xx honestly — the claim did NOT happen
     }
 
@@ -431,6 +497,248 @@ export async function claimNext(
   return { status: "empty" };
 }
 
+/** REST review states (UPPER CASE) → mirror entry states. "PENDING" is an
+ *  unsubmitted draft, not review state — it maps to nothing and is dropped. */
+const REST_REVIEW_STATES: Record<string, PullReviewEntry["state"]> = {
+  APPROVED: "approved",
+  CHANGES_REQUESTED: "changes_requested",
+  COMMENTED: "commented",
+  DISMISSED: "dismissed",
+};
+
+function toClaimedReview(doc: PullDoc): ClaimedReview {
+  return {
+    pr: doc.number,
+    title: doc.title,
+    author: doc.user,
+    headSha: doc.headSha,
+    htmlUrl: doc.htmlUrl,
+    baseRef: doc.baseRef,
+    headRef: doc.headRef,
+  };
+}
+
+/**
+ * Claim the next open PR needing an adversarial review (kind: "review",
+ * ADR-0019) — claimNext's shape, minus the GitHub label writes: the Redis
+ * lease `lease:review:<pr>` is the ONLY claim artifact (reviews hold no
+ * labels), so a claim costs zero GitHub writes and at most a few lazy
+ * review-state READS plus one liveness read for the winning candidate.
+ *
+ * Candidate selection approximates review_work.sh's skip rules over the
+ * mirror (shell symbols + this branch's line numbers cited inline): open,
+ * non-draft PRs (open_prs_needing_review(), L389–392) without
+ * "review: human-only" (the jq filter at L391 + review_one's case at
+ * L434–439), "do-not-automate", or a walk-based reviewer's "review: claimed"
+ * (claim_pr(), L136–170); never authored by the claiming handle (the
+ * INTEGRITY check, L441–447); not already reviewed at the current head
+ * (the check_state block, L448–455 — see the honest-divergence note at the
+ * skip below); under the review-round cap (L456–470, #287); and not inside
+ * the post-abandon cooldown (no shell equivalent — it stops a PR every
+ * runner locally skips from pinning the head of this deterministic queue).
+ * Oldest createdAt first, PR number as the deterministic tie-break. The
+ * winning candidate is verified still open against LIVE GitHub before it is
+ * handed out — a stale mirror (lost `closed` webhook) must not cost a full
+ * agent review of a merged PR.
+ */
+export async function claimNextReview(
+  orch: Orchestrator,
+  store: FleetStore,
+  ctx: ClaimContext,
+): Promise<ClaimReviewResult> {
+  const gh = orch.gh;
+  if (!gh) return { status: "disabled", reason: "no github token" };
+
+  // Same anti-grief bound as claimNext, over BOTH kinds: one handle holds at
+  // most maxActiveClaims live assignments, work and reviews combined.
+  const activeCount = await assignmentsCol(orch).countDocuments({ handle: ctx.handle, active: true });
+  if (activeCount >= config.maxActiveClaims) return { status: "capped" };
+
+  const open = await pullsCol(orch).find({ state: "open" }).toArray();
+  const candidates = open
+    .filter(
+      (p) =>
+        !p.draft &&
+        !(p.labels ?? []).includes(HUMAN_ONLY_LABEL) &&
+        !(p.labels ?? []).includes(DO_NOT_AUTOMATE_LABEL) &&
+        !(p.labels ?? []).includes(REVIEW_CLAIMED_LABEL) &&
+        p.user !== ctx.handle,
+    )
+    .sort((a, b) => {
+      if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+      return a.number - b.number;
+    });
+
+  // Post-abandon cooldowns, one MGET for the whole candidate page: a PR whose
+  // last claim was released `abandoned` (the runner skipped it locally —
+  // already passed at head, author == the runner's gh identity, parked) is
+  // parked out of dispatch for reviewAbandonCooldownSeconds. Without this,
+  // the oldest such PR is re-served to every runner on every pass: claim →
+  // local skip → abandon → re-claim, burning a claim + an assignment doc per
+  // runner per pass while never converging.
+  const cooldowns =
+    candidates.length > 0
+      ? await orch.redis.mget(candidates.map((c) => reviewCooldownKey(c.number)))
+      : [];
+
+  const ttl = config.reviewLeaseTtlSeconds;
+  let fetchBudget = REVIEW_FETCH_BUDGET;
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    if (!candidate) continue; // noUncheckedIndexedAccess appeasement — i is in range
+    const n = candidate.number;
+    if (cooldowns[i] !== null && cooldowns[i] !== undefined) continue; // cooling down after an abandoned claim
+
+    // A partially-upserted doc (sync's /issues fallback path) carries no
+    // head SHA yet — "reviewed at this revision" can't be evaluated and the
+    // runner can't check the head out. Skip; the next full sync repairs it.
+    const headSha = candidate.headSha;
+    if (!headSha) continue;
+
+    // Lazy review-state fetch: the REST pulls list never carries reviews, so
+    // a doc with NO data for its current head gets one GET /pulls/:n/reviews,
+    // persisted with reviewsFetchedFor = headSha (fetch once per revision).
+    // Bounded to REVIEW_FETCH_BUDGET candidates per claim call.
+    let reviews = candidate.reviews ?? [];
+    const hasDataForHead =
+      candidate.reviewsFetchedFor === headSha || reviews.some((r) => r.commitId === headSha);
+    if (!hasDataForHead) {
+      if (fetchBudget <= 0) continue; // state unknown, budget spent — next claim resumes here
+      fetchBudget--;
+      let fetched;
+      try {
+        fetched = await gh.listPullReviews(n);
+      } catch (err) {
+        if (err instanceof GitHubApiError && err.isRateLimit) {
+          return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
+        }
+        // A read failure on ONE candidate (PR deleted → 404, transient 5xx)
+        // must not fail the whole claim: skip it without persisting
+        // reviewsFetchedFor, so a later pass retries the fetch.
+        console.error(`dispatch: review-state fetch failed for PR #${n}:`, err);
+        continue;
+      }
+      const entries: PullReviewEntry[] = [];
+      for (const r of fetched) {
+        const state = REST_REVIEW_STATES[(r.state ?? "").toUpperCase()];
+        if (!state || !r.user?.login || !r.commit_id) continue;
+        entries.push({ reviewer: r.user.login, state, commitId: r.commit_id, at: r.submitted_at ?? nowIso() });
+      }
+      // Guarded CAS merge (shared with the webhook reducer): a plain $set of
+      // a locally-merged array would erase a review a pull_request_review
+      // webhook appended between the REST response and this write — and with
+      // reviewsFetchedFor stamped, nothing would re-fetch at this head, so
+      // the just-reviewed PR would be re-dispatched until the next push.
+      const merged = await mergeReviewEntriesInto(pullsCol(orch), n, entries, {
+        reviewsFetchedFor: headSha,
+      });
+      if (merged === null) continue; // doc vanished / hyper-contended — retry next claim
+      reviews = merged;
+    }
+
+    // Reviewed at this revision? The shell keys this off the per-commit
+    // "for-good/adversarial-review" STATUS (check_state block, review_one
+    // L448–455): skip on success (passed) or failure (waiting on rework) —
+    // the mirror approximates that with review objects. "commented" is
+    // deliberately NOT treated as reviewed: an inline-comment review sets no
+    // commit status, so the shell's check_state stays "none" and the walk
+    // WOULD review the PR — a drive-by comment must not starve it from
+    // dispatch. "approved" ≈ status success, "changes_requested" ≈ status
+    // failure, and "dismissed" keeps the skip because a dismissal does not
+    // clear the failure status at that SHA. A NEW head (rework pushed)
+    // carries no matching commitId, so the PR becomes eligible again.
+    if (reviews.some((r) => r.commitId === headSha && r.state !== "commented")) continue;
+
+    // Review-round cap (review_one's round-cap block, L456–470, #287):
+    // at/over config.maxReviewRounds change-requesting rounds the PR is a
+    // human maintainer's — never dispatch an (N+1)th agent round. Dismissed
+    // rounds don't count (mergeReviewEntries supersedes a CR entry with its
+    // dismissal), matching the shell's GraphQL states:CHANGES_REQUESTED
+    // count. When the entry array sits AT its storage cap the true count is
+    // unknowable from the mirror (older CR entries may have been evicted) —
+    // fail toward parking, exactly like review_rounds() echoing the cap on a
+    // gh error: skip the candidate and leave it to the walk.
+    if (reviews.length >= PULL_REVIEWS_CAP) continue;
+    if (reviews.filter((r) => r.state === "changes_requested").length >= config.maxReviewRounds) continue;
+
+    const assignmentId = new ObjectId();
+    const idStr = assignmentId.toHexString();
+
+    // The atomic lease IS the claim — no GitHub writes follow it.
+    const took = await orch.redis.set(reviewLeaseKey(n), idStr, "EX", ttl, "NX");
+    if (took !== "OK") continue; // another enrolled reviewer holds it — next candidate
+
+    // LIVENESS: verify the winner is still open before handing it out. The
+    // mirror can miss a close (lost webhook + claim inside the sync
+    // interval); the old walk listed live open PRs so it never dispatched a
+    // merged PR — one live read per CLAIM (not per candidate) keeps that
+    // property and self-heals the stale doc. Fail-open on non-rate-limit
+    // read errors: proceeding is exactly the pre-guard behaviour, and the
+    // runner's own state guard (review_one) still catches it.
+    try {
+      const live = await gh.getPull(n);
+      if (live.state !== "open") {
+        await pullsCol(orch).updateOne(
+          { _id: n },
+          {
+            $set: {
+              state: live.state,
+              merged: Boolean(live.merged ?? live.merged_at != null),
+              mergedAt: live.merged_at ?? null,
+              updatedAt: live.updated_at ?? nowIso(),
+            },
+          },
+        );
+        await delLeaseIfOwned(orch, reviewLeaseKey(n), idStr).catch(() => undefined);
+        continue;
+      }
+    } catch (err) {
+      if (err instanceof GitHubApiError && err.isRateLimit) {
+        await delLeaseIfOwned(orch, reviewLeaseKey(n), idStr).catch(() => undefined);
+        return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
+      }
+      console.error(`dispatch: liveness check failed for PR #${n} (dispatching anyway):`, err);
+    }
+
+    const now = nowIso();
+    const assignment: AssignmentDoc = {
+      _id: assignmentId,
+      kind: "review",
+      issueNumber: n, // the PR number — see AssignmentDoc.issueNumber
+      handle: ctx.handle,
+      tier: ctx.tier,
+      ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+      ...(ctx.harness ? { harness: ctx.harness } : {}),
+      ...(ctx.model ? { model: ctx.model } : {}),
+      claimedAt: now,
+      renewedAt: now,
+      active: true,
+    };
+    try {
+      await assignmentsCol(orch).insertOne(assignment);
+    } catch (err) {
+      await delLeaseIfOwned(orch, reviewLeaseKey(n), idStr).catch(() => undefined);
+      throw err; // the route answers 5xx honestly — the claim did NOT happen
+    }
+
+    store.addEvent("claim", `@${ctx.handle} claimed the review of PR #${n} — ${candidate.title}`, {
+      handle: ctx.handle,
+      ...(ctx.harness ? { harness: ctx.harness } : {}),
+      ref: `#${n}`,
+    });
+
+    return {
+      status: "claimed",
+      review: toClaimedReview(candidate),
+      assignmentId: idStr,
+      leaseTtlSeconds: ttl,
+    };
+  }
+
+  return { status: "empty" };
+}
+
 /** Compare-and-EXPIRE: extend the lease only while it still belongs to this
  *  assignment — never extend a rival's lease or a sweeper's takeover
  *  sentinel. Atomic, so there is no GET→EXPIRE gap to race through. */
@@ -439,46 +747,50 @@ const RENEW_LEASE_LUA =
 
 async function expireLeaseIfOwned(
   orch: Orchestrator,
-  issue: number,
+  key: string,
   owner: string,
+  ttlSeconds: number,
 ): Promise<boolean> {
   const extended = (await orch.redis.eval(
     RENEW_LEASE_LUA,
     1,
-    leaseKey(issue),
+    key,
     owner,
-    String(config.leaseTtlSeconds),
+    String(ttlSeconds),
   )) as number;
   return extended === 1;
 }
 
-/** Extend the lease for this handle's active assignment on the issue.
- *  Returns false when there is no such active assignment — 404. */
-export async function renewLease(orch: Orchestrator, handle: string, issue: number): Promise<boolean> {
+/** Extend the lease for this handle's active assignment on the issue (or,
+ *  for a kind:"review" assignment, the PR — one number space, so the doc
+ *  found by number decides which lease key/TTL applies). Returns the granted
+ *  TTL in seconds, or null when there is no such active assignment — 404. */
+export async function renewLease(orch: Orchestrator, handle: string, issue: number): Promise<number | null> {
   const assignments = assignmentsCol(orch);
   const doc = await assignments.findOne({ issueNumber: issue, handle, active: true });
-  if (!doc) return false;
+  if (!doc) return null;
 
-  const key = leaseKey(issue);
+  const key = assignmentLeaseKey(doc);
+  const ttl = kindLeaseTtl(kindOf(doc));
   const idStr = doc._id.toHexString();
-  const extended = await expireLeaseIfOwned(orch, issue, idStr);
+  const extended = await expireLeaseIfOwned(orch, key, idStr, ttl);
   if (!extended) {
     // The lease key expired but the sweeper hasn't released the claim yet —
     // re-take it for this assignment. NX so neither a rival's re-claim nor a
     // sweeper's takeover sentinel (sweep:<id>, set atomically in place of a
     // bare exists() check) is ever stolen: exactly one of {renew, sweep} wins.
-    const retaken = await orch.redis.set(key, idStr, "EX", config.leaseTtlSeconds, "NX");
-    if (retaken !== "OK") return false;
+    const retaken = await orch.redis.set(key, idStr, "EX", ttl, "NX");
+    if (retaken !== "OK") return null;
     // If the sweeper released the assignment between our findOne and the
     // re-take, don't resurrect an orphan lease.
     const stillActive = await assignments.findOne({ _id: doc._id, active: true });
     if (!stillActive) {
-      await delLeaseIfOwned(orch, issue, idStr);
-      return false;
+      await delLeaseIfOwned(orch, key, idStr);
+      return null;
     }
   }
   await assignments.updateOne({ _id: doc._id }, { $set: { renewedAt: nowIso() } });
-  return true;
+  return ttl;
 }
 
 type RevertResult = "reverted" | "skipped" | "failed";
@@ -561,9 +873,25 @@ async function finishAssignment(
     },
   );
   if (res.matchedCount === 0) return { finished: false, reverted: false };
-  await delLeaseIfOwned(orch, assignment.issueNumber, opts.leaseValue ?? assignment._id.toHexString());
+  await delLeaseIfOwned(orch, assignmentLeaseKey(assignment), opts.leaseValue ?? assignment._id.toHexString());
+  // An ABANDONED review means the runner claimed the PR and then skipped it
+  // locally (already passed at head, author == its posting identity, parked
+  // for a human, crash) — mirror state the server couldn't see. Re-serving
+  // the PR immediately would hand the deterministic oldest-first queue's
+  // head to every runner in a claim → skip → abandon loop, so park it out of
+  // dispatch for a cooldown instead (the walk can still reach it).
+  // Lease-expired releases deliberately DON'T cool down: the lease TTL
+  // itself already spaced that claim out, and a crashed reviewer's PR should
+  // re-queue promptly (ADR-0019 "back in the review queue").
+  if (kindOf(assignment) === "review" && outcome === "abandoned") {
+    await orch.redis
+      .set(reviewCooldownKey(assignment.issueNumber), assignment.handle, "EX", config.reviewAbandonCooldownSeconds)
+      .catch(() => undefined);
+  }
   let reverted = false;
-  if (opts.revert) {
+  // Label reverts are a kind:"work" concept only — review claims hold no
+  // labels (nothing was written on claim, so there is nothing to revert).
+  if (opts.revert && kindOf(assignment) === "work") {
     const result = await revertClaimLabels(orch, assignment.issueNumber, assignment.handle);
     reverted = result === "reverted";
     if (result === "failed") {
@@ -581,7 +909,10 @@ async function finishAssignment(
  * `lease-expired` / `admin-released` (with revertLabels): add
  * "status: available", remove "status: claimed", remove assignee, DEL lease,
  * mark inactive. `handle` is required for agent-initiated releases (must
- * match the assignment); admin release passes `handle: undefined`.
+ * match the assignment); admin release passes `handle: undefined` (and no
+ * `kind`, matching either — the number space is shared, so the doc found by
+ * number is unambiguous). Kind "review" releases (`issue` = the PR number)
+ * never touch labels for ANY outcome — review claims hold none.
  * Returns false when no matching active assignment exists — 404.
  */
 export async function releaseAssignment(
@@ -590,6 +921,8 @@ export async function releaseAssignment(
   opts: {
     issue: number;
     outcome: ReleaseOutcome;
+    /** Which kind the caller believes it is releasing; omitted = any. */
+    kind?: AssignmentKind;
     handle?: string;
     prNumber?: number;
     /** Admin-release only; agent "abandoned" always reverts. */
@@ -600,6 +933,7 @@ export async function releaseAssignment(
     issueNumber: opts.issue,
     active: true,
     ...(opts.handle ? { handle: opts.handle } : {}),
+    ...(opts.kind ? kindFilter(opts.kind) : {}),
   });
   if (!doc) return false;
 
@@ -615,9 +949,13 @@ export async function releaseAssignment(
   if (!finished) return false;
 
   const text =
-    opts.outcome === "done"
-      ? `@${doc.handle} finished #${opts.issue}${opts.prNumber ? ` → PR #${opts.prNumber}` : ""}`
-      : `@${doc.handle}'s claim on #${opts.issue} released (${opts.outcome})`;
+    kindOf(doc) === "review"
+      ? opts.outcome === "done"
+        ? `@${doc.handle} finished reviewing PR #${opts.issue}`
+        : `@${doc.handle}'s review claim on PR #${opts.issue} released (${opts.outcome})`
+      : opts.outcome === "done"
+        ? `@${doc.handle} finished #${opts.issue}${opts.prNumber ? ` → PR #${opts.prNumber}` : ""}`
+        : `@${doc.handle}'s claim on #${opts.issue} released (${opts.outcome})`;
   store.addEvent("claim", text, { handle: doc.handle, ref: `#${opts.issue}` });
   return true;
 }
@@ -634,22 +972,34 @@ export async function renewLeasesForHandle(orch: Orchestrator, handle: string): 
   try {
     const active = await assignmentsCol(orch).find({ handle, active: true }).toArray();
     for (const doc of active) {
-      const issue = await issuesCol(orch).findOne(
-        { _id: doc.issueNumber },
-        { projection: { labels: 1, assignees: 1 } },
-      );
-      // The assignee check only applies when the claim actually set one —
-      // auto-enrolled outside contributors can't be assignees on GitHub
-      // (assigneeSet:false), so for them "still claimed" is label-only.
-      const expectAssignee = doc.assigneeSet !== false;
-      if (
-        !issue ||
-        !(issue.labels ?? []).includes(CLAIMED_LABEL) ||
-        (expectAssignee && !(issue.assignees ?? []).includes(doc.handle))
-      ) {
-        continue; // no longer claimed by this handle — let the lease lapse
+      // The claimed-label mirror guard applies ONLY to kind "work" — a review
+      // claim writes no labels/assignees anywhere, so there is no mirror
+      // state to cross-check; an active review assignment renews while the
+      // agent heartbeats (compare-and-EXPIRE on lease:review:<n>, so a lapsed
+      // lease is still never resurrected).
+      if (kindOf(doc) === "work") {
+        const issue = await issuesCol(orch).findOne(
+          { _id: doc.issueNumber },
+          { projection: { labels: 1, assignees: 1 } },
+        );
+        // The assignee check only applies when the claim actually set one —
+        // auto-enrolled outside contributors can't be assignees on GitHub
+        // (assigneeSet:false), so for them "still claimed" is label-only.
+        const expectAssignee = doc.assigneeSet !== false;
+        if (
+          !issue ||
+          !(issue.labels ?? []).includes(CLAIMED_LABEL) ||
+          (expectAssignee && !(issue.assignees ?? []).includes(doc.handle))
+        ) {
+          continue; // no longer claimed by this handle — let the lease lapse
+        }
       }
-      const extended = await expireLeaseIfOwned(orch, doc.issueNumber, doc._id.toHexString());
+      const extended = await expireLeaseIfOwned(
+        orch,
+        assignmentLeaseKey(doc),
+        doc._id.toHexString(),
+        kindLeaseTtl(kindOf(doc)),
+      );
       if (extended) {
         await assignmentsCol(orch).updateOne({ _id: doc._id }, { $set: { renewedAt: nowIso() } });
       }
@@ -684,27 +1034,32 @@ export async function sweepExpiredLeases(orch: Orchestrator, store: FleetStore):
       try {
         const sentinel = `sweep:${doc._id.toHexString()}`;
         const took = await orch.redis.set(
-          leaseKey(doc.issueNumber),
+          assignmentLeaseKey(doc),
           sentinel,
           "EX",
           SWEEP_SENTINEL_TTL_SECONDS,
           "NX",
         );
         if (took !== "OK") continue; // a lease exists (live, or just re-taken by renew)
+        // Kind "review": no label revert (review claims hold no labels) —
+        // the PR simply becomes claimable again once the lease is gone.
+        const isReview = kindOf(doc) === "review";
         const { finished, reverted } = await finishAssignment(orch, doc, "lease-expired", {
-          revert: true,
+          revert: !isReview,
           leaseValue: sentinel,
         });
         if (!finished) {
-          await delLeaseIfOwned(orch, doc.issueNumber, sentinel).catch(() => undefined);
+          await delLeaseIfOwned(orch, assignmentLeaseKey(doc), sentinel).catch(() => undefined);
           continue;
         }
         expired++;
         store.addEvent(
           "claim",
-          reverted
-            ? `lease expired — #${doc.issueNumber} is back in the queue (was @${doc.handle})`
-            : `lease expired — released @${doc.handle}'s claim on #${doc.issueNumber} (labels left as-is)`,
+          isReview
+            ? `review lease expired — PR #${doc.issueNumber} back in the review queue (was @${doc.handle})`
+            : reverted
+              ? `lease expired — #${doc.issueNumber} is back in the queue (was @${doc.handle})`
+              : `lease expired — released @${doc.handle}'s claim on #${doc.issueNumber} (labels left as-is)`,
           { handle: doc.handle, ref: `#${doc.issueNumber}` },
         );
       } catch (err) {

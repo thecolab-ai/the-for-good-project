@@ -18,6 +18,13 @@
 # rework up. A PR already marked NEEDS_WORK at its current revision is skipped
 # until the author pushes rework (FORCE=1 to re-review anyway).
 #
+# FLEET-FIRST (ADR-0019): when fleet claiming is enabled (FLEET_SERVER +
+# FLEET_TOKEN + FLEET_CLAIM=1, see scripts/fg-common.sh), each pass first asks
+# the fleet server for ONE arbitrated PR (claim kind: "review") instead of
+# walking the open-PR list — the server-side lease stops enrolled reviewers
+# colliding, with no labels involved. Claim rc 1 (queue empty / server down /
+# not enrolled) falls straight through to the existing walk, unchanged.
+#
 # A PR labelled "review: human-only" is excluded from this loop entirely —
 # pipeline/governance changes are reviewed and merged by a HUMAN maintainer,
 # never by agent runners. The label is applied by a maintainer, not by agents.
@@ -78,19 +85,36 @@ HUMAN_ONLY_LABEL="review: human-only"  # PRs carrying this are reviewed by a hum
 REVIEW_CLAIM_TTL="${REVIEW_CLAIM_TTL:-1800}"  # secs a review claim is honoured before it's treated as stale
 MAX_REVIEW_ROUNDS="${MAX_REVIEW_ROUNDS:-10}"  # change-requesting rounds before the PR is parked for a human (#287)
 DID_REVIEW=0   # set once review_one claims a PR and spends real work on it; skips leave it 0
+VERDICT_POSTED=0  # set by review_one once a verdict (PASS or NEEDS_WORK) is posted — the fleet release maps it to done/abandoned
+FLEET_REVIEW_PR=""  # PR held under a fleet review lease; cleanup abandons it so an interrupt never strands the lease for its full TTL
 
 # Release any claim we hold, then clean up the worktree. cleanup runs on ANY
 # exit via the EXIT trap; the INT/TERM handlers must call `exit` themselves,
 # otherwise bash runs the handler and then RESUMES the loop — which is exactly
 # why Ctrl-C used to do nothing here. exit re-triggers the EXIT trap, so cleanup
 # still runs exactly once.
-cleanup() { [ -n "${CLAIMED_PR:-}" ] && release_pr "$CLAIMED_PR" || true; remove_worktree || true; }
+cleanup() {
+  [ -n "${FLEET_REVIEW_PR:-}" ] && fleet_release_review "$FLEET_REVIEW_PR" abandoned || true
+  [ -n "${CLAIMED_PR:-}" ] && release_pr "$CLAIMED_PR" || true
+  remove_worktree || true
+}
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Use a distinct reviewer identity if provided (recommended).
-if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then export GH_TOKEN="$REVIEW_GITHUB_TOKEN"; fi
+if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then
+  export GH_TOKEN="$REVIEW_GITHUB_TOKEN"
+  # Never authenticate fleet review claims with an INHERITED work-identity
+  # token: autopilot enrolls its WORK gh login and exports that FLEET_TOKEN,
+  # so keeping it here would make the server enforce its author != handle
+  # rule against the wrong identity (ADR-0019) — every PR authored by the
+  # work handle would be withheld from dispatch, and PRs authored by THIS
+  # reviewer would be dispatched only for review_one to hard-refuse them.
+  # Dropping it makes fleet_ensure_token load/enroll this reviewer identity's
+  # OWN token (the token file is keyed by host+handle in fg-common.sh).
+  unset FLEET_TOKEN FLEET_AGENT_ID_FILE
+fi
 
 # ---- concurrency: claim a PR before reviewing so parallel runners don't
 # collide on the same PR (or all pile onto the front of the list). A visible
@@ -381,16 +405,31 @@ set_check() {  # $1 sha, $2 state(success|failure), $3 desc, $4 url
 
 review_one() {  # $1 = PR number
   local pr="$1"
-  local sha author url title labels
+  local sha author url title labels state merged
   local meta
   meta="$(gh api "repos/$OWNER/$NAME/pulls/$pr" \
-    --jq '{sha:.head.sha, author:.user.login, url:.html_url, title:.title, labels:(.labels // [] | map(.name) | join(","))}' 2>/dev/null)" || return 1
+    --jq '{sha:.head.sha, author:.user.login, url:.html_url, title:.title, state:.state, merged:.merged, labels:(.labels // [] | map(.name) | join(","))}' 2>/dev/null)" || return 1
   sha="$(printf '%s' "$meta" | jq -r .sha)"
   author="$(printf '%s' "$meta" | jq -r .author)"
   url="$(printf '%s' "$meta" | jq -r .url)"
   title="$(printf '%s' "$meta" | jq -r .title)"
+  state="$(printf '%s' "$meta" | jq -r .state)"
+  merged="$(printf '%s' "$meta" | jq -r .merged)"
   labels="$(printf '%s' "$meta" | jq -r .labels)"
   rule; info "${c_bold}PR #$pr${c_reset} — $title ${c_dim}(by @$author)${c_reset}"
+
+  # STATE GUARD: never review a PR that is no longer open. The old walk was
+  # naturally immune (open_prs_needing_review lists live open PRs), but a
+  # fleet-dispatched PR comes from the server's MIRROR, which can be stale
+  # (lost `closed` webhook inside the sync interval) — and PR=<n> or a
+  # mid-pass merge can race the walk too. Without this, a full agent review
+  # lands on a merged PR and a NEEDS_WORK verdict would flip its already-DONE
+  # linked issue back to changes-requested. Skipping (rc 0, DID_REVIEW stays
+  # 0) releases a fleet lease as `abandoned` and preserves the walk's pacing.
+  if [ "$state" != open ]; then
+    log "#$pr is already $([ "$merged" = true ] && echo merged || echo closed) — nothing to review. Skipping."
+    return 0
+  fi
 
   # HUMAN-ONLY: pipeline/governance PRs are reviewed by a human maintainer, not
   # by this loop (also guards the PR=<n> single-PR path).
@@ -544,6 +583,9 @@ review_one() {  # $1 = PR number
 
   rm -f "$tmp"
   local body_flag=(--body-file "$body_file")
+  # A verdict is posted by whichever branch runs below — PASS and NEEDS_WORK
+  # both mean the review HAPPENED, so a fleet review lease releases as "done".
+  VERDICT_POSTED=1
 
   if [ "$verdict" = PASS ]; then
     ok "Verdict: PASS"
@@ -647,6 +689,54 @@ main() {
   fi
   local done=0
   while :; do
+    # FLEET-FIRST (ADR-0019): ask the fleet server for ONE arbitrated PR
+    # before walking the list. The server applies this loop's skip rules
+    # against its mirror (draft, human-only, author != reviewer, already
+    # reviewed at the current head) and its lease stops two enrolled
+    # reviewers colliding on one PR — no labels involved. Hard no-op unless
+    # fleet claiming is enabled (fg-common.sh); claim rc 1 (queue empty /
+    # server down / disabled) falls straight through to the walk, unchanged.
+    # PR=<n> and DRY_RUN keep the old paths (a dry run must not take leases).
+    local fclaim fpr fhandle frc
+    if [ -z "$ONLY_PR" ] && [ "$DRY_RUN" = 0 ] && fclaim="$(fleet_claim_review)"; then
+      fpr="$(printf '%s' "$fclaim" | jq -r '.pr // empty' 2>/dev/null || true)"
+      # IDENTITY GUARD: the server enforced author != <the token's handle>,
+      # but the review below is POSTED as @$ME. If the fleet token belongs to
+      # a different identity (e.g. an inherited work-identity token from a
+      # pre-identity-keyed setup), that rule was checked against the wrong
+      # account — abandon the claim and fall through to the walk, whose own
+      # author check ($ME) is authoritative.
+      fhandle="$(printf '%s' "$fclaim" | jq -r '.handle // empty' 2>/dev/null || true)"
+      if [ -n "$fpr" ] && [ -n "$fhandle" ] && [ "$fhandle" != "$ME" ]; then
+        warn "Fleet review claim was made for @$fhandle but reviews here post as @$ME — the fleet token belongs to a different identity."
+        warn "Re-enroll this reviewer (its token file is keyed by host+handle) or unset FLEET_TOKEN. Abandoning the claim and using the walk."
+        fleet_release_review "$fpr" abandoned
+        fpr=""
+      fi
+      if [ -n "$fpr" ]; then
+        info "Fleet server dispatched PR #$fpr for review (lease $(printf '%s' "$fclaim" | jq -r '.leaseTtlSeconds // "?"')s) — reviewing exactly that PR."
+        DID_REVIEW=0; VERDICT_POSTED=0; FLEET_REVIEW_PR="$fpr"
+        set +e; review_one "$fpr"; frc=$?; set -e
+        # done = a verdict was actually posted (PASS and NEEDS_WORK both mean
+        # the review happened); anything else — reviewer failure, usage
+        # limit, interrupt, or a local skip the mirror hadn't caught up
+        # with — abandons the lease so the PR returns to the review queue.
+        if [ "$VERDICT_POSTED" = 1 ]; then
+          fleet_release_review "$fpr" done
+        else
+          fleet_release_review "$fpr" abandoned
+        fi
+        FLEET_REVIEW_PR=""
+        was_interrupted "$frc" && { rule; warn "Interrupted — stopping."; exit 130; }
+        [ "$DID_REVIEW" = 1 ] && done=$((done+1))
+        [ "$MAX" -gt 0 ] && [ "$done" -ge "$MAX" ] && { rule; ok "Reached MAX=$MAX. Stopping."; exit 0; }
+        # A review that actually ran → straight back for the next claim. A
+        # local skip (stale mirror) falls through to the walk instead, so a
+        # pass keeps its old pacing rather than hot-looping claim → skip →
+        # claim on the same PR until the mirror catches up.
+        [ "$DID_REVIEW" = 1 ] && continue
+      fi
+    fi
     local prs
     if [ -n "$ONLY_PR" ]; then prs="$ONLY_PR"; else prs="$(open_prs_needing_review 2>/dev/null | shuffle_lines || true)"; fi
     if [ -z "$prs" ]; then

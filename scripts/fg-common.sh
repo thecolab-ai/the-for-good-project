@@ -51,11 +51,29 @@ rule() { printf '%s────────────────────�
 # live here so start_work.sh (which has no telemetry helpers) can claim,
 # renew and release too.
 # Where the auto-enrolled token lives (0600, owner-only). One file per
-# server host so pointing FLEET_SERVER elsewhere never replays a token minted
-# for a different server.
+# server host AND per identity: the server binds every token to one handle,
+# and two identities routinely share a box (autopilot's WORK login + the
+# distinct REVIEW_GITHUB_TOKEN reviewer). A host-only file made the reviewer
+# silently reuse the work identity's token, so the server's author != handle
+# review rule was enforced against the wrong account (ADR-0019).
+fleet_token_host() { printf '%s' "${FLEET_SERVER:-}" | sed 's|^[a-z]*://||; s|[/:].*$||'; }
+
 fleet_token_file() {
-  local host; host="$(printf '%s' "${FLEET_SERVER:-}" | sed 's|^[a-z]*://||; s|[/:].*$||')"
-  printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}}"
+  local host ident
+  host="$(fleet_token_host)"
+  ident="${ME:-${FLEET_HANDLE:-}}"
+  if [ -n "$ident" ]; then
+    printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}-${ident}}"
+  else
+    printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}}"
+  fi
+}
+
+# The pre-identity-keyed path — read once as a migration fallback when this
+# identity's enrollment 409s (its token was minted before per-identity files).
+fleet_legacy_token_file() {
+  local host; host="$(fleet_token_host)"
+  printf '%s/.forgood/fleet-token-%s' "$HOME" "${host:-default}"
 }
 
 # fleet_ensure_token — resolve FLEET_TOKEN: env var > stored file > TOFU
@@ -84,6 +102,25 @@ fleet_ensure_token() {
       + (if $m != "" then {model: $m[0:128]} else {} end)')" 2>/dev/null)" || return 1
   token="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .token // empty' 2>/dev/null || true)"
   if [ -z "$token" ]; then
+    # 409 "handle already enrolled" + a legacy host-only token file on disk:
+    # this identity enrolled before token files were keyed by handle — adopt
+    # its stored token once, migrating it to the per-identity path. Skipped
+    # when FLEET_TOKEN_FILE pins an explicit path (operator override), and
+    # harmless if the legacy file actually belongs to a DIFFERENT identity:
+    # the server still authenticates it as its bound handle, and the claim
+    # response's `handle` field exposes the mismatch to the runner.
+    if [ -z "${FLEET_TOKEN_FILE:-}" ] && printf '%s' "$resp" | grep -qi 'already enrolled'; then
+      local legacy; legacy="$(fleet_legacy_token_file)"
+      if [ "$legacy" != "$f" ] && [ -f "$legacy" ] && [ ! -L "$legacy" ] && [ -O "$legacy" ]; then
+        token="$(head -c 256 "$legacy" 2>/dev/null | tr -d '[:space:]')"
+        if [ -n "$token" ]; then
+          ( umask 077; mkdir -p "$(dirname "$f")" && printf '%s' "$token" > "$f" ) || true
+          FLEET_TOKEN="$token"; export FLEET_TOKEN
+          warn "Adopted the legacy host-keyed fleet token for @${ME:-${FLEET_HANDLE:-?}} (migrated to $f)."
+          return 0
+        fi
+      fi
+    fi
     warn "fleet enrollment failed for @${ME:-${FLEET_HANDLE:-?}}: $(printf '%s' "$resp" | jq -r '.error // "server unreachable"' 2>/dev/null || echo 'server unreachable') — using the label-claim path."
     return 1
   fi
@@ -155,6 +192,78 @@ fleet_release() {
   body="$(jq -cn --arg issue "${1:-}" --arg outcome "${2:-}" --arg pr "${3:-}" '
       {issue: ($issue | tonumber), outcome: $outcome}
     + (if $pr != "" then {prNumber: ($pr | tonumber)} else {} end)' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# ---- fleet server review-claim helpers (orchestrated review dispatch) ----
+# Same opt-in gate as the work-claim helpers above (FLEET_SERVER + FLEET_TOKEN
+# + FLEET_CLAIM=1 — fleet_claim_enabled): reviews reuse the /work/claim and
+# /work/release endpoints with kind:"review", so review_work.sh can take ONE
+# server-arbitrated PR instead of walking the whole open-PR list. A review
+# claim holds NO labels and writes nothing to GitHub — the server-side lease
+# alone stops two enrolled reviewers colliding on one PR.
+
+# fleet_claim_review — ask the server for the next PR needing adversarial
+# review. On success prints {pr, headSha, author, title, leaseTtlSeconds,
+# handle} (jq-shaped from the claim response; `handle` is the registry
+# identity the claim was made FOR — the caller must check it against the
+# identity that will post the review) and returns 0. Queue empty, non-200,
+# bad JSON or timeout → returns 1 (the caller falls back to its own
+# client-side PR walk, unchanged). A pre-ADR-0019 server strips the unknown
+# `kind` field and executes a WORK claim — see the skew guard inside.
+fleet_claim_review() {
+  fleet_claim_enabled || return 1
+  local agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    # claimRequestSchema wants a UUID — never let a stale/garbled stash 400 the claim.
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg harness "${AGENT:-}" --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      {kind: "review"}
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  if ! printf '%s' "$resp" | jq -e '.ok == true and .review != null' >/dev/null 2>&1; then
+    # DEPLOY-SKEW GUARD: a pre-ADR-0019 server's claim schema silently strips
+    # the unknown `kind` field (non-strict zod object) and executes a WORK
+    # claim — labelling "status: claimed" + assigning the handle on a REAL
+    # issue — while answering {ok:true, issue:{...}}. Detect that shape and
+    # release the accidental claim, or the issue strands claimed-by-nobody
+    # until the server's lease TTL sweeps it, once per review pass.
+    local oops
+    oops="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .issue.number // empty' 2>/dev/null || true)"
+    if [ -n "$oops" ]; then
+      warn "Fleet server predates kind:review (deploy skew) — releasing the accidental work claim on #$oops."
+      fleet_release "$oops" abandoned
+    fi
+    return 1
+  fi
+  printf '%s' "$resp" | jq -c '{pr: .review.pr, headSha: .review.headSha, author: .review.author, title: .review.title, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
+}
+
+# fleet_release_review <pr> <done|abandoned> — finish a fleet-claimed review.
+# done = a verdict was actually posted (PASS and NEEDS_WORK both count — the
+# review HAPPENED); abandoned = it didn't (reviewer failure / usage limit /
+# interrupt / local skip), so the PR goes straight back into the review
+# queue. No label ops either way (review claims never held any). The
+# release request's `issue` field carries the PR number (the server's
+# release schema reuses it for kind:"review"). Best-effort: failures are
+# swallowed — the lease TTL and the server-side sweeper backstop a lost
+# release.
+fleet_release_review() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg pr "${1:-}" --arg outcome "${2:-}" \
+      '{kind: "review", issue: ($pr | tonumber), outcome: $outcome}' 2>/dev/null)" || return 0
   curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
     -H 'content-type: application/json' \
     -H "authorization: Bearer $FLEET_TOKEN" \

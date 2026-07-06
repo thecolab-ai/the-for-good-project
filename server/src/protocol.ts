@@ -273,6 +273,10 @@ export const enrollRequestSchema = z.object({
 export type EnrollRequest = z.infer<typeof enrollRequestSchema>;
 
 export const claimRequestSchema = z.object({
+  /** What to claim: "work" = the next available issue (the default, and the
+   *  only kind before ADR-0019); "review" = the next open PR needing an
+   *  adversarial review. `stages` only applies to kind "work". */
+  kind: z.enum(["work", "review"]).default("work"),
   stages: z.array(z.enum(["research", "ideate", "build"])).optional(), // default: all three
   harness: z.string().max(32).optional(),
   model: z.string().max(128).optional(),
@@ -281,6 +285,9 @@ export const claimRequestSchema = z.object({
 export type ClaimRequest = z.infer<typeof claimRequestSchema>;
 
 export const releaseRequestSchema = z.object({
+  /** For kind "review", `issue` carries the PR number (one GitHub number
+   *  space — a number is never both an issue and a PR). */
+  kind: z.enum(["work", "review"]).default("work"),
   issue: z.number().int().positive(),
   outcome: z.enum(["done", "abandoned"]),
   prNumber: z.number().int().positive().optional(),
@@ -290,6 +297,13 @@ export type ReleaseRequest = z.infer<typeof releaseRequestSchema>;
 export interface ClaimedIssue {
   number: number; title: string; labels: string[]; body: string; htmlUrl: string;
   stage: string | null; stream: string | null;
+}
+
+/** What a kind:"review" claim hands the runner — enough to fetch the PR head
+ *  and run the existing per-PR review flow without any GitHub list calls. */
+export interface ClaimedReview {
+  pr: number; title: string; author: string | null; headSha: string; htmlUrl: string;
+  baseRef: string; headRef: string;
 }
 // Server->agent WS message (agents only, not watchers):
 //   { type: "command", command: FleetCommand }

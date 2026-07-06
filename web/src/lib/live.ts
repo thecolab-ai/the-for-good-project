@@ -105,7 +105,10 @@ export interface LogLine {
 /** One row of "who is working on what" — GET /api/v1/work/active (the
  *  orchestrator's live assignments joined with issue titles + lease TTLs). */
 export interface ActiveWorkItem {
+  /** For kind "review", `issue` carries the PR number. */
   issue: number;
+  /** Absent on rows from servers predating review dispatch = "work". */
+  kind?: "work" | "review";
   title: string | null;
   stage: string | null;
   handle: string;

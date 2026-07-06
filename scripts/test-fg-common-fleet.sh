@@ -9,6 +9,11 @@
 #   - fleet_release: sends done-with-prNumber vs abandoned payloads and
 #     swallows server failures
 #   - fleet_renew: fire-and-forget, always returns 0
+#   - fleet_claim_review: claims with kind:"review", emits {pr, headSha,
+#     author, title, leaseTtlSeconds}, and returns 1 on empty-queue /
+#     non-JSON / server down (the PR-walk fallback contract, ADR-0019)
+#   - fleet_release_review: sends kind:"review" done/abandoned payloads
+#     (issue = the PR number) and swallows server failures
 #   - fleet_pop_commands: drains the stash once, and REFUSES a stash file we
 #     don't own (the control hop is unauthenticated — a foreign /tmp file
 #     must never drive stop/pause)
@@ -65,6 +70,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         if mode == "empty":
             payload = {"ok": True, "issue": None}
+        elif mode == "review":
+            payload = {
+                "ok": True,
+                "review": {"pr": 456, "title": "stub PR", "author": "someauthor",
+                           "headSha": "0123456789abcdef0123456789abcdef01234567",
+                           "htmlUrl": "https://github.com/example/repo/pull/456",
+                           "baseRef": "main", "headRef": "research/stub"},
+                "assignmentId": "rev123",
+                "leaseTtlSeconds": 3600,
+                "handle": "review-bot",
+            }
+        elif mode == "review-empty":
+            payload = {"ok": True, "review": None}
         elif mode == "garbage":
             self.send_response(200); self.end_headers()
             self.wfile.write(b"this is not json"); return
@@ -162,6 +180,71 @@ printf '%s' "$req" | jq -e '.body | fromjson | .issue == 123' >/dev/null || fail
 ( FLEET_SERVER="http://127.0.0.1:9" fleet_renew 123 ) || fail "renew must swallow server failures"
 pass "fleet_renew is fire-and-forget"
 
+# --- fleet_claim_review (kind: "review", ADR-0019) ------------------------------
+# Disabled → documented no-op return codes (same contract as the work helpers).
+( FLEET_CLAIM=0 fleet_claim_review ) && fail "fleet_claim_review must return 1 when disabled"
+( FLEET_CLAIM=0 fleet_release_review 1 done ) || fail "fleet_release_review must return 0 when disabled"
+pass "disabled review helpers no-op with the right return codes"
+
+printf 'review' > "$MODE_FILE"
+resp="$(AGENT=claude MODEL=test-model fleet_claim_review)" \
+  || fail "fleet_claim_review should succeed against the stub"
+[ "$(printf '%s' "$resp" | jq -r '.pr')" = "456" ] \
+  || fail "fleet_claim_review must emit .pr (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.handle')" = "review-bot" ] \
+  || fail "fleet_claim_review must emit .handle — the caller checks it against the posting identity (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.headSha')" = "0123456789abcdef0123456789abcdef01234567" ] \
+  || fail "fleet_claim_review must emit .headSha (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.author')" = "someauthor" ] \
+  || fail "fleet_claim_review must emit .author (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.title')" = "stub PR" ] \
+  || fail "fleet_claim_review must emit .title (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.leaseTtlSeconds')" = "3600" ] \
+  || fail "fleet_claim_review must pass leaseTtlSeconds through (got: $resp)"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/claim" ] || fail "review claim path"
+printf '%s' "$req" | jq -e '.auth == "Bearer fgt_0123456789abcdef0123456789abcdef"' >/dev/null \
+  || fail "review claim must send the bearer token"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "review" and .harness == "claude" and .model == "test-model" and (has("stages") | not)' >/dev/null \
+  || fail "review claim body must carry kind:review + harness/model, no stages (got: $req)"
+pass "fleet_claim_review emits {pr, headSha, author, title, leaseTtlSeconds} and sends kind:review"
+
+# Fallback contract: empty review queue / garbage / server down → rc 1 (PR walk).
+printf 'review-empty' > "$MODE_FILE"
+fleet_claim_review && fail "empty review queue must return 1 (PR-walk fallback)"
+printf 'garbage' > "$MODE_FILE"
+fleet_claim_review && fail "non-JSON review claim response must return 1"
+printf 'review' > "$MODE_FILE"
+( FLEET_SERVER="http://127.0.0.1:9" fleet_claim_review ) && fail "server down must return 1"
+pass "fleet_claim_review returns 1 on empty/garbage/down (PR-walk fallback contract)"
+
+# DEPLOY-SKEW GUARD: a pre-ADR-0019 server strips the unknown `kind` and
+# executes a WORK claim ({ok:true, issue:{...}}, labels already written on a
+# real issue). fleet_claim_review must release that accidental claim
+# (abandoned → the server reverts the labels) and still return 1.
+printf 'claim' > "$MODE_FILE"
+fleet_claim_review && fail "a work-shaped claim response must return 1 (old server)"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/release" ] \
+  || fail "skew guard must release the accidental work claim (last request: $req)"
+printf '%s' "$req" | jq -e '.body | fromjson | .issue == 123 and .outcome == "abandoned"' >/dev/null \
+  || fail "skew release must abandon the claimed issue so its labels revert (got: $req)"
+pass "old-server skew: accidental work claim is released abandoned, rc 1 (walk fallback)"
+
+# --- fleet_release_review payloads ----------------------------------------------
+fleet_release_review 456 done || fail "fleet_release_review done must return 0"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/release" ] || fail "review release path"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "review" and .issue == 456 and .outcome == "done"' >/dev/null \
+  || fail "review release done payload — issue carries the PR number (got: $req)"
+fleet_release_review 456 abandoned || fail "fleet_release_review abandoned must return 0"
+req="$(tail -1 "$LOG_FILE")"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "review" and .issue == 456 and .outcome == "abandoned"' >/dev/null \
+  || fail "review release abandoned payload (got: $req)"
+( FLEET_SERVER="http://127.0.0.1:9" fleet_release_review 456 done ) || fail "review release must swallow server failures"
+printf 'claim' > "$MODE_FILE"
+pass "fleet_release_review sends kind:review done/abandoned payloads and swallows failures"
+
 # --- fleet_pop_commands: drain-once + ownership guard --------------------------
 FLEET_CMDS_FILE="$TMP/cmds"
 printf 'pause\nresume\n' > "$FLEET_CMDS_FILE"
@@ -226,5 +309,45 @@ fleet_claim_enabled && fail "409 enrollment must disable fleet claiming (label-p
 rm -f "$FLEET_TOKEN_FILE"
 printf 'claim' > "$MODE_FILE"
 pass "symlinked token file refused; enroll 409 falls back to the label path"
+
+# --- per-identity token files: two identities, one box (ADR-0019) --------------
+# The stored token is keyed by host AND handle: autopilot's WORK login and the
+# distinct REVIEW_GITHUB_TOKEN reviewer must never share a bearer token, or the
+# server's author != handle review rule is enforced against the wrong account.
+unset FLEET_TOKEN FLEET_TOKEN_FILE
+HOME_SAVE="$HOME"; export HOME="$TMP/home"; mkdir -p "$HOME"
+ME="worker-id"
+fleet_claim_enabled || fail "worker identity must auto-enroll"
+worker_file="$(fleet_token_file)"
+case "$worker_file" in
+  *"-worker-id") : ;;
+  *) fail "token file must be keyed by identity (got $worker_file)" ;;
+esac
+[ -f "$worker_file" ] || fail "worker token must be stored at its per-identity path"
+unset FLEET_TOKEN
+ME="reviewer-id"
+reviewer_file="$(fleet_token_file)"
+[ "$reviewer_file" != "$worker_file" ] || fail "distinct identities must not share a token file"
+fleet_claim_enabled || fail "reviewer identity must enroll its OWN token"
+[ -f "$reviewer_file" ] || fail "reviewer token must be stored at its own per-identity path"
+pass "two identities on one host get two token files (no cross-identity reuse)"
+
+# Migration: an identity enrolled before per-identity keying 409s on
+# re-enroll — its legacy host-only token is adopted once and migrated.
+unset FLEET_TOKEN
+ME="legacy-id"
+rm -f "$(fleet_token_file)"
+legacy_file="$(fleet_legacy_token_file)"
+mkdir -p "$(dirname "$legacy_file")"
+( umask 077; printf 'fgt_legacy0123456789abcdef01234567' > "$legacy_file" )
+printf 'enroll409' > "$MODE_FILE"
+fleet_claim_enabled || fail "enroll 409 with a legacy host-only token on disk must adopt it"
+[ "$FLEET_TOKEN" = "fgt_legacy0123456789abcdef01234567" ] \
+  || fail "adopted token must come from the legacy file (got ${FLEET_TOKEN:-unset})"
+[ -f "$(fleet_token_file)" ] || fail "legacy token must be migrated to the per-identity path"
+printf 'claim' > "$MODE_FILE"
+export HOME="$HOME_SAVE"
+unset ME FLEET_TOKEN
+pass "legacy host-only token adopted + migrated on enroll 409 (single-identity continuity)"
 
 echo "ALL FLEET CLIENT TESTS PASSED"
