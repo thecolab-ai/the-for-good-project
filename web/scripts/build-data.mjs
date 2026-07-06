@@ -19,7 +19,11 @@ import matter from "gray-matter";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.resolve(__dirname, "..");
 const REPO_ROOT = path.resolve(WEB_DIR, "..");
-const OUT_DIR = path.join(WEB_DIR, "public", "data");
+// DATA_OUT_DIR: self-hosted deployments write the live snapshot to an
+// UNTRACKED dir (mounted into the serving container) so the 10-min refresh
+// cron never dirties the checkout (ADR-0018). Default: the tracked path,
+// exactly as before (CI/Pages and local dev unchanged).
+const OUT_DIR = process.env.DATA_OUT_DIR || path.join(WEB_DIR, "public", "data");
 
 const REPO = process.env.FOR_GOOD_REPO || "thecolab-ai/the-for-good-project";
 const [OWNER, NAME] = REPO.split("/");

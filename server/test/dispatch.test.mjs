@@ -845,6 +845,59 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(board.openPrs, 1);
     });
 
+    await t.test("open-issues snapshot route: fetch_open_issues shape, stale mirror → 503", async () => {
+      await seed([
+        {
+          number: 91,
+          labels: ["status: available", "stage: research", "priority: high"],
+          assignees: ["worker-a"],
+          createdAt: "2026-06-01T00:00:00Z",
+        },
+        { number: 92, labels: ["status: claimed"], createdAt: "2026-06-02T00:00:00Z" },
+      ]);
+      const app = Fastify();
+      apps.push(app);
+      registerQueueRoutes(app, new FleetStore(), o);
+      const syncState = o.db.collection("sync_state");
+
+      // No sync has ever completed → the mirror may be INCOMPLETE (webhooks
+      // only cover touched issues) → refuse, runners fall back to GitHub.
+      await syncState.deleteMany({});
+      let res = await app.inject({ method: "GET", url: "/api/v1/issues/open" });
+      assert.equal(res.statusCode, 503, "no completed sync = untrusted mirror");
+
+      // Stale sync → 503 too.
+      await syncState.updateOne(
+        { _id: "sync" },
+        { $set: { lastIncrementalAt: new Date(Date.now() - 3_600_000).toISOString() } },
+        { upsert: true },
+      );
+      res = await app.inject({ method: "GET", url: "/api/v1/issues/open" });
+      assert.equal(res.statusCode, 503, "stale sync = untrusted mirror");
+
+      // Fresh sync → the snapshot, byte-compatible with fetch_open_issues():
+      // labels as [{name}], assignees as [{login}], createdAt present.
+      const freshAt = new Date().toISOString();
+      await syncState.updateOne({ _id: "sync" }, { $set: { lastIncrementalAt: freshAt } });
+      res = await app.inject({ method: "GET", url: "/api/v1/issues/open" });
+      assert.equal(res.statusCode, 200);
+      const body = res.json();
+      assert.equal(body.ok, true);
+      assert.equal(body.generatedAt, freshAt);
+      const i91 = body.issues.find((i) => i.number === 91);
+      assert.deepEqual(i91, {
+        number: 91,
+        createdAt: "2026-06-01T00:00:00Z",
+        labels: [
+          { name: "status: available" },
+          { name: "stage: research" },
+          { name: "priority: high" },
+        ],
+        assignees: [{ login: "worker-a" }],
+      });
+      assert.ok(body.issues.some((i) => i.number === 92), "ALL open issues included, not just available");
+    });
+
     await t.test("work routes (needs Implementer C's auth)", async () => {
       const auth = await import("../dist/orchestrator/auth.js");
       await seed([{ number: 121, labels: ["status: available", "stage: research"] }]);
