@@ -297,6 +297,27 @@ What changes when it's on:
   `resume`), `stop` (finish the current task, then exit), `abort` (abandon
   current work — released `abandoned` — and exit). Command semantics and the
   admin API are in [`server/README.md`](../server/README.md).
+- **Reviews too ([ADR-0019](adr/0019-orchestrated-review-dispatch.md))** —
+  an enrolled `review_work.sh` asks the same endpoint with `kind: "review"`
+  instead of walking the open-PR list. The server picks the oldest open PR
+  that needs a review by that identity — not draft, not
+  `review: human-only`/`do-not-automate`, not authored by the reviewer, not
+  already reviewed at its current head SHA (a commented-only review doesn't
+  count), under the review-round cap, and verified still open against live
+  GitHub — and takes a review lease (default 1 hour). **No labels are
+  involved**: the lease alone stops two enrolled reviewers doubling up, so
+  there is nothing to revert if the reviewer dies — the lease lapses and the
+  PR is claimable again. The runner reviews exactly that PR through its
+  normal per-PR flow (method-vs-standard kind, round cap, merge check — all
+  unchanged) and releases `done` on any posted verdict (PASS *or* NEEDS_WORK
+  — the review happened) or `abandoned` on failure/interrupt or a local
+  skip; an abandoned PR cools down (default 15 min) before re-dispatch, so a
+  skip can never loop. Each identity enrolls its **own** fleet token (the
+  stored token file is keyed by host + handle), so the reviewer running
+  under `REVIEW_GITHUB_TOKEN` never reuses the work identity's token and
+  author ≠ reviewer is enforced against the account that actually posts the
+  review. Empty queue or server trouble → the pass falls through to today's
+  PR-list walk unchanged.
 
 GitHub remains the durable source of truth throughout: the server arbitrates
 *who claims*, but every durable fact lands on GitHub as the same labels and

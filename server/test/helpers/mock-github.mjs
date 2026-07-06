@@ -11,6 +11,9 @@
  *                                               the real /issues endpoint)
  *  - GET    /repos/:repo/issues/:n             (single live issue)
  *  - GET    /repos/:repo/pulls                 (paginated, state filter)
+ *  - GET    /repos/:repo/pulls/:n              (single live pull)
+ *  - GET    /repos/:repo/pulls/:n/reviews      (seeded via makePull's
+ *                                               `reviews` / makeReview)
  *  - POST   /repos/:repo/issues/:n/labels      body {labels:[...]} | [...]
  *  - DELETE /repos/:repo/issues/:n/labels/:name
  *  - POST   /repos/:repo/issues/:n/assignees   body {assignees:[...]} —
@@ -67,7 +70,8 @@ export function makeIssue({
   };
 }
 
-/** Build a GitHub-REST-shaped pull request from a friendly spec. */
+/** Build a GitHub-REST-shaped pull request from a friendly spec. `reviews`
+ *  (makeReview output) back the GET /pulls/:n/reviews endpoint. */
 export function makePull({
   number,
   title = `PR #${number}`,
@@ -76,12 +80,14 @@ export function makePull({
   labels = [],
   user = "octocat",
   headRef = `branch-${number}`,
+  headSha = `sha-${number}-1`,
   headRepoFullName = "example/repo",
   baseRef = "main",
   merged = false,
   mergedAt = null,
   createdAt = nowIso(),
   updatedAt = createdAt,
+  reviews = [],
 } = {}) {
   if (!Number.isInteger(number)) throw new Error("makePull: number is required");
   return {
@@ -92,12 +98,30 @@ export function makePull({
     labels: labels.map((l) => (typeof l === "string" ? { name: l } : l)),
     user: { login: user },
     html_url: `https://github.com/example/repo/pull/${number}`,
-    head: { ref: headRef, repo: { full_name: headRepoFullName } },
+    head: { ref: headRef, sha: headSha, repo: { full_name: headRepoFullName } },
     base: { ref: baseRef },
     merged,
     merged_at: mergedAt,
     created_at: createdAt,
     updated_at: updatedAt,
+    reviews,
+  };
+}
+
+/** Build a GitHub-REST-shaped submitted review (as `GET /pulls/:n/reviews`
+ *  returns them — state in UPPER CASE, unlike webhook payloads). */
+export function makeReview({
+  reviewer = "reviewer",
+  state = "APPROVED",
+  commitId,
+  submittedAt = nowIso(),
+} = {}) {
+  if (!commitId) throw new Error("makeReview: commitId is required");
+  return {
+    user: { login: reviewer },
+    state,
+    commit_id: commitId,
+    submitted_at: submittedAt,
   };
 }
 
@@ -258,6 +282,28 @@ class MockGitHub {
       if (state !== "all") items = items.filter((p) => p.state === state);
       items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
       this.paginate(parsed, items, send);
+      return;
+    }
+
+    const singlePull = /^\/repos\/[^/]+\/[^/]+\/pulls\/(\d+)$/.exec(path);
+    if (method === "GET" && singlePull) {
+      const pull = this.pulls.get(Number(singlePull[1]));
+      if (!pull) {
+        send(404, { message: "Not Found" });
+        return;
+      }
+      send(200, pull);
+      return;
+    }
+
+    const pullReviews = /^\/repos\/[^/]+\/[^/]+\/pulls\/(\d+)\/reviews$/.exec(path);
+    if (method === "GET" && pullReviews) {
+      const pull = this.pulls.get(Number(pullReviews[1]));
+      if (!pull) {
+        send(404, { message: "Not Found" });
+        return;
+      }
+      this.paginate(parsed, pull.reviews ?? [], send);
       return;
     }
 

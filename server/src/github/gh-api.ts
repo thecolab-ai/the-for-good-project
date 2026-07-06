@@ -46,12 +46,23 @@ export interface GhPull {
   labels: GhLabel[];
   user: GhUser | null;
   html_url: string;
-  head: { ref: string; repo: { full_name: string } | null };
+  head: { ref: string; sha: string; repo: { full_name: string } | null };
   base: { ref: string };
   merged?: boolean;
   merged_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Raw REST pull-request review item (subset of
+ *  `GET /repos/{repo}/pulls/{n}/reviews`). REST reports `state` in UPPER
+ *  CASE ("APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED",
+ *  "PENDING"); webhook payloads use lower case — callers normalise. */
+export interface GhReview {
+  user: GhUser | null;
+  state: string;
+  commit_id: string;
+  submitted_at?: string | null;
 }
 
 export interface ListIssuesOpts {
@@ -232,12 +243,34 @@ export class GitHubApi {
     );
   }
 
+  /** `GET /repos/{repo}/pulls/{n}/reviews` — a PR's submitted reviews, oldest
+   *  first. Used by review dispatch's lazy review-state fetch (the pulls LIST
+   *  endpoint doesn't carry reviews, so the mirror fetches them on demand,
+   *  once per head SHA). */
+  async listPullReviews(pr: number, opts: { maxPages?: number; perPage?: number } = {}): Promise<GhReview[]> {
+    const q = new URLSearchParams();
+    q.set("per_page", String(opts.perPage ?? 100));
+    return this.listPaginated<GhReview>(
+      `${this.repoUrl(`/pulls/${pr}/reviews`)}?${q.toString()}`,
+      opts.maxPages ?? this.cfg.maxSyncPages,
+    );
+  }
+
   /** `GET /repos/{repo}/issues/{n}` — one issue, live. Used where GitHub (the
    *  durable truth) must be consulted rather than the possibly-stale mirror,
    *  e.g. before reverting claim labels. */
   async getIssue(issue: number): Promise<GhIssue> {
     const res = await this.request("GET", this.repoUrl(`/issues/${issue}`));
     return (await res.json()) as GhIssue;
+  }
+
+  /** `GET /repos/{repo}/pulls/{n}` — one pull request, live. Review dispatch
+   *  verifies a lease-winning candidate is still OPEN before handing it out:
+   *  a lost `pull_request closed` webhook inside the sync interval would
+   *  otherwise dispatch a merged/closed PR for a full (wasted) agent review. */
+  async getPull(pr: number): Promise<GhPull> {
+    const res = await this.request("GET", this.repoUrl(`/pulls/${pr}`));
+    return (await res.json()) as GhPull;
   }
 
   /** `POST /repos/{repo}/issues/{n}/labels` body `{labels}`. */

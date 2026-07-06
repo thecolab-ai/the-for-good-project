@@ -55,5 +55,6 @@ routine fixes, copy changes, or web styling.
 | [0016](0016-fleet-telemetry-defaults-and-merge-heal.md) | Fleet telemetry counters on by default (logs opt-in at every client) + deterministic index-cascade merge-healing in the runners | Proposed |
 | [0017](0017-server-orchestrated-pull-claim.md) | The fleet server arbitrates work claims for enrolled agents (pull-claim v1) | Proposed |
 | [0018](0018-mirror-backed-runner-reads.md) | Runner queue reads come from the fleet server's mirror, not GitHub | Proposed |
+| [0019](0019-orchestrated-review-dispatch.md) | The fleet server dispatches PR reviews to enrolled reviewers (kind: review) | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

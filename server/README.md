@@ -241,6 +241,28 @@ curl -s -X POST $URL/api/v1/work/claim -H "$TOK" -H "$JSON" -d '{"stages":["rese
 
 curl -s -X POST $URL/api/v1/work/renew   -H "$TOK" -H "$JSON" -d '{"issue":123}'
 curl -s -X POST $URL/api/v1/work/release -H "$TOK" -H "$JSON" -d '{"issue":123,"outcome":"done","prNumber":456}'
+
+# Review claim (ADR-0019): the oldest open PR needing a review by this identity —
+# not draft/human-only/do-not-automate, not self-authored, not already reviewed at
+# its current head SHA (a commented-only review doesn't count), under the round cap
+# (MAX_REVIEW_ROUNDS, same env the shell reads), not cooling down after an abandoned
+# claim, and verified still open against live GitHub. No labels move on claim: the
+# Redis lease alone (REVIEW_LEASE_TTL_SECONDS, default 3600) arbitrates among
+# enrolled reviewers. Every claim response echoes the `kind` it executed.
+# 200 {ok:true, kind:"review", review:{pr,title,author,headSha,htmlUrl,baseRef,headRef}, assignmentId, leaseTtlSeconds, handle}
+#     {ok:true, kind:"review", review:null} = nothing to review · 429 + retryAfterSeconds = GitHub rate-limited
+# NOTE: enroll each identity separately — the runner's stored token file is keyed by
+# host + handle, and `handle` in the response is who the claim was made FOR; a
+# reviewer must claim with ITS OWN token or the author-≠-reviewer rule is enforced
+# against the wrong account.
+curl -s -X POST $URL/api/v1/work/claim -H "$TOK" -H "$JSON" -d '{"kind":"review"}'
+
+# Release a review: `issue` carries the PR number. "done" on ANY posted verdict —
+# PASS or NEEDS_WORK, the review happened — "abandoned" on failure/interrupt/local
+# skip. No label writes either way (reviews hold none); an unreleased claim just
+# lapses at TTL. An abandoned PR cools down (REVIEW_ABANDON_COOLDOWN_SECONDS,
+# default 900) before it can be dispatched again.
+curl -s -X POST $URL/api/v1/work/release -H "$TOK" -H "$JSON" -d '{"kind":"review","issue":456,"outcome":"done"}'
 ```
 
 `release` with `"outcome":"done"` frees the lease and leaves labels to the normal

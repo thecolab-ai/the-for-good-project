@@ -76,15 +76,17 @@ export function registerQueueRoutes(
   });
 
   // Who is working on what, right now — the dashboard's "active claims"
-  // panel. Active assignments joined with the mirror's issue titles and the
-  // LIVE Redis lease TTL (a lease near zero with an active doc = a worker
-  // gone quiet; the sweeper will reap it). All public data: the same
-  // labels/assignees GitHub shows, plus timing.
+  // panel. Active assignments joined with the mirror's issue titles (PR
+  // titles for kind:"review" rows) and the LIVE Redis lease TTL (a lease
+  // near zero with an active doc = a worker gone quiet; the sweeper will
+  // reap it). All public data: the same labels/assignees GitHub shows, plus
+  // timing.
   app.get("/api/v1/work/active", async (req, reply) => {
     if (!limiter.allow(req.ip)) return reply.code(429).send({ ok: false, error: "slow down" });
     const active = await orch.db
       .collection<{
         _id: unknown;
+        kind?: "work" | "review";
         issueNumber: number;
         handle: string;
         harness?: string;
@@ -95,25 +97,41 @@ export function registerQueueRoutes(
       }>("assignments")
       .find(
         { active: true },
-        { projection: { issueNumber: 1, handle: 1, harness: 1, model: 1, tier: 1, claimedAt: 1, renewedAt: 1 } },
+        { projection: { kind: 1, issueNumber: 1, handle: 1, harness: 1, model: 1, tier: 1, claimedAt: 1, renewedAt: 1 } },
       )
       .sort({ claimedAt: 1 })
       .toArray();
+    // Review assignments' issueNumber is a PR number — titles come from the
+    // pulls mirror; work titles from issues. One number space, so two maps.
+    const workNumbers = active.filter((a) => a.kind !== "review").map((a) => a.issueNumber);
+    const reviewNumbers = active.filter((a) => a.kind === "review").map((a) => a.issueNumber);
     const titles = new Map<number, { title?: string; labels?: string[] }>(
       (
         await orch.db
           .collection<{ _id: number; title?: string; labels?: string[] }>("issues")
-          .find({ _id: { $in: active.map((a) => a.issueNumber) } }, { projection: { title: 1, labels: 1 } })
+          .find({ _id: { $in: workNumbers } }, { projection: { title: 1, labels: 1 } })
           .toArray()
       ).map((i) => [i._id, i]),
     );
+    const prTitles = new Map<number, { title?: string }>(
+      (
+        await orch.db
+          .collection<{ _id: number; title?: string }>("pulls")
+          .find({ _id: { $in: reviewNumbers } }, { projection: { title: 1 } })
+          .toArray()
+      ).map((p) => [p._id, p]),
+    );
     const work = await Promise.all(
       active.map(async (a) => {
-        const ttl = await orch.redis.ttl(`lease:issue:${a.issueNumber}`).catch(() => -2);
-        const issue = titles.get(a.issueNumber);
-        const stage = (issue?.labels ?? []).find((l) => l.startsWith("stage: "))?.slice(7) ?? null;
+        const kind = a.kind ?? "work";
+        const key = kind === "review" ? `lease:review:${a.issueNumber}` : `lease:issue:${a.issueNumber}`;
+        const ttl = await orch.redis.ttl(key).catch(() => -2);
+        const issue = kind === "review" ? prTitles.get(a.issueNumber) : titles.get(a.issueNumber);
+        const labels = kind === "review" ? [] : ((titles.get(a.issueNumber)?.labels ?? []) as string[]);
+        const stage = labels.find((l) => l.startsWith("stage: "))?.slice(7) ?? null;
         return {
           issue: a.issueNumber,
+          kind,
           title: issue?.title ?? null,
           stage,
           handle: a.handle,

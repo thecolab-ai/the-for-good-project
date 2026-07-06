@@ -13,7 +13,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { dockerAvailable, startRedis, startMongo } from "./helpers/containers.mjs";
-import { startMockGitHub, makeIssue } from "./helpers/mock-github.mjs";
+import { startMockGitHub, makeIssue, makePull, makeReview } from "./helpers/mock-github.mjs";
 
 // Must be set BEFORE dist/config.js is imported (config reads env at import
 // time) — hence the dynamic imports inside the test body.
@@ -45,6 +45,46 @@ function mirrorIssue({
     createdAt,
     updatedAt: createdAt,
     syncedAt: createdAt,
+  };
+}
+
+/** Mirror `pulls`-doc shape from the same friendly spec that seeds the mock
+ *  (see mirrorIssue). `reviews`/`reviewsFetchedFor` are the MIRROR fields;
+ *  `restReviews` (makeReview output) seeds the mock's reviews endpoint. */
+function mirrorPull({
+  number,
+  title = `PR #${number}`,
+  state = "open",
+  draft = false,
+  labels = [],
+  user = "octocat",
+  headRef = `branch-${number}`,
+  headSha = `sha-${number}-1`,
+  baseRef = "main",
+  createdAt = "2026-01-01T00:00:00Z",
+  reviews,
+  reviewsFetchedFor,
+}) {
+  return {
+    _id: number,
+    number,
+    title,
+    state,
+    draft,
+    labels,
+    user,
+    htmlUrl: `https://github.com/example/repo/pull/${number}`,
+    headRef,
+    headSha,
+    headRepoFullName: "example/repo",
+    baseRef,
+    merged: false,
+    mergedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+    syncedAt: createdAt,
+    ...(reviews ? { reviews } : {}),
+    ...(reviewsFetchedFor ? { reviewsFetchedFor } : {}),
   };
 }
 
@@ -86,7 +126,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
 
   try {
     const { config } = await import("../dist/config.js");
-    const { connectOrchestrator, leaseKey } = await import("../dist/orchestrator/stores.js");
+    const { connectOrchestrator, leaseKey, reviewLeaseKey, reviewCooldownKey } = await import("../dist/orchestrator/stores.js");
     const dispatch = await import("../dist/orchestrator/dispatch.js");
     const { FleetStore } = await import("../dist/state.js");
 
@@ -517,12 +557,12 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
 
       // Age the lease so a successful renew is observable.
       await o.redis.expire(leaseKey(61), 5);
-      assert.equal(await dispatch.renewLease(o, "alice", 61), true);
+      assert.equal(await dispatch.renewLease(o, "alice", 61), config.leaseTtlSeconds, "renew answers the granted TTL");
       const ttl = await o.redis.ttl(leaseKey(61));
       assert.ok(ttl > config.leaseTtlSeconds - 60, `TTL refreshed (got ${ttl})`);
 
-      assert.equal(await dispatch.renewLease(o, "bob", 61), false, "not bob's assignment");
-      assert.equal(await dispatch.renewLease(o, "alice", 999), false, "no such assignment");
+      assert.equal(await dispatch.renewLease(o, "bob", 61), null, "not bob's assignment");
+      assert.equal(await dispatch.renewLease(o, "alice", 999), null, "no such assignment");
     });
 
     await t.test("renewLeasesForHandle refreshes heartbeating agents, never throws", async () => {
@@ -543,14 +583,14 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
 
       // Key expired, assignment still active → re-take succeeds.
       await o.redis.del(leaseKey(112));
-      assert.equal(await dispatch.renewLease(o, "alice", 112), true, "expired key is re-taken");
+      assert.equal(await dispatch.renewLease(o, "alice", 112), config.leaseTtlSeconds, "expired key is re-taken");
       assert.equal(await o.redis.get(leaseKey(112)), claimed.assignmentId, "re-taken for THIS assignment");
       const ttl = await o.redis.ttl(leaseKey(112));
       assert.ok(ttl > config.leaseTtlSeconds - 60, `re-take carries a fresh TTL (got ${ttl})`);
 
       // A rival's lease is never stolen or extended.
       await o.redis.set(leaseKey(112), "rival-assignment-id", "EX", 30);
-      assert.equal(await dispatch.renewLease(o, "alice", 112), false, "rival's lease is untouchable");
+      assert.equal(await dispatch.renewLease(o, "alice", 112), null, "rival's lease is untouchable");
       assert.equal(await o.redis.get(leaseKey(112)), "rival-assignment-id");
       const rivalTtl = await o.redis.ttl(leaseKey(112));
       assert.ok(rivalTtl <= 30, "rival's TTL not extended by our renew");
@@ -559,7 +599,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       // renew must answer false so the agent re-claims instead of silently
       // working a claim the sweeper is releasing.
       await o.redis.set(leaseKey(112), `sweep:${claimed.assignmentId}`, "EX", 30);
-      assert.equal(await dispatch.renewLease(o, "alice", 112), false, "sweep sentinel wins the takeover race");
+      assert.equal(await dispatch.renewLease(o, "alice", 112), null, "sweep sentinel wins the takeover race");
       assert.equal(await o.redis.get(leaseKey(112)), `sweep:${claimed.assignmentId}`, "sentinel untouched");
     });
 
@@ -808,6 +848,467 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(assignment.outcome, "admin-released");
     });
 
+    // ---------------------------------------------------- review dispatch
+
+    /** Reset stores + mock and seed PULL fixtures from one spec list.
+     *  `restReviews` (makeReview output) seeds the mock's reviews endpoint;
+     *  `reviews`/`reviewsFetchedFor` seed the MIRROR doc. */
+    async function seedPulls(specs) {
+      await o.redis.flushdb();
+      await o.db.collection("issues").deleteMany({});
+      await o.db.collection("assignments").deleteMany({});
+      await o.db.collection("pulls").deleteMany({});
+      mock.reset();
+      mock.assignableUsers = null;
+      mock.seed({
+        pulls: specs.map(({ restReviews, reviews, reviewsFetchedFor, ...s }) =>
+          makePull({ ...s, reviews: restReviews ?? [] })),
+      });
+      if (specs.length) await o.db.collection("pulls").insertMany(specs.map(mirrorPull));
+    }
+
+    const reviewsFetches = (pr) =>
+      mock.requests.filter((r) => r.method === "GET" && r.path.endsWith(`/pulls/${pr}/reviews`)).length;
+
+    await t.test("claimNextReview: eligibility replicates review_work.sh, claim is lease-only", async () => {
+      const at = (d) => `2026-06-0${d}T00:00:00Z`;
+      await seedPulls([
+        // All of these predate #208 — each would be claimed first if eligible.
+        { number: 201, user: "alice", createdAt: at(1) }, // author == reviewer
+        { number: 202, labels: ["review: human-only"], createdAt: at(1) },
+        { number: 203, draft: true, createdAt: at(1) },
+        { number: 204, createdAt: at(1), reviews: [
+          { reviewer: "bob", state: "approved", commitId: "sha-204-1", at: at(2) },
+        ] }, // approved at current head
+        { number: 205, createdAt: at(1), reviews: [
+          { reviewer: "bob", state: "changes_requested", commitId: "sha-205-1", at: at(2) },
+        ] }, // waiting on rework at current head
+        { number: 206, labels: ["do-not-automate"], createdAt: at(1) },
+        { number: 207, labels: ["review: claimed"], createdAt: at(1) }, // a walk-based reviewer holds it
+        { number: 208, title: "research: finding X", createdAt: at(3), reviewsFetchedFor: "sha-208-1" },
+      ]);
+      const store = new FleetStore();
+
+      const result = await dispatch.claimNextReview(o, store, {
+        handle: "alice",
+        tier: "standard",
+        harness: "claude",
+        model: "claude-fable-5",
+      });
+      assert.equal(result.status, "claimed");
+      assert.deepEqual(result.review, {
+        pr: 208,
+        title: "research: finding X",
+        author: "octocat",
+        headSha: "sha-208-1",
+        htmlUrl: "https://github.com/example/repo/pull/208",
+        baseRef: "main",
+        headRef: "branch-208",
+      });
+      assert.equal(result.leaseTtlSeconds, config.reviewLeaseTtlSeconds);
+
+      // The lease IS the claim: zero GitHub writes, and no review fetches
+      // were needed (204/205 carry data at head; the rest never got that far).
+      assert.equal(mock.calls.length, 0, "review claims never write labels/assignees");
+      assert.equal(await o.redis.get(reviewLeaseKey(208)), result.assignmentId);
+      const ttl = await o.redis.ttl(reviewLeaseKey(208));
+      assert.ok(ttl > 0 && ttl <= config.reviewLeaseTtlSeconds);
+
+      const assignment = await activeAssignment(208);
+      assert.ok(assignment);
+      assert.equal(assignment.kind, "review");
+      assert.equal(assignment.handle, "alice");
+
+      const event = store.recentEvents().find((e) => e.kind === "claim");
+      assert.ok(event, "claim event emitted");
+      assert.ok(event.text.includes("review of PR #208"), event.text);
+
+      // Everything else stays excluded: the queue is now empty for bob too
+      // (208 is leased; 201 is bob-eligible by authorship? no — 201's author
+      // is alice, so for BOB it becomes eligible: prove author-exclusion is
+      // per-claimant by bob claiming 201).
+      const bob = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(bob.status, "claimed");
+      assert.equal(bob.review.pr, 201, "author exclusion applies per claiming handle");
+
+      const carol = await dispatch.claimNextReview(o, new FleetStore(), { handle: "carol", tier: "standard" });
+      assert.equal(carol.status, "empty", "human-only/draft/reviewed-at-head/do-not-automate/walk-claimed all excluded");
+    });
+
+    await t.test("claimNextReview: rework (new head) makes a changes-requested PR eligible again", async () => {
+      // Reviewed at the OLD head, then the author pushed sha-210-2: the
+      // mirror's reviewsFetchedFor still points at the old head, so dispatch
+      // re-fetches once and finds no review at the CURRENT head.
+      await seedPulls([
+        {
+          number: 210,
+          headSha: "sha-210-2",
+          createdAt: "2026-06-01T00:00:00Z",
+          reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-210-1", at: "2026-06-02T00:00:00Z" }],
+          reviewsFetchedFor: "sha-210-1",
+          restReviews: [makeReview({ reviewer: "bob", state: "CHANGES_REQUESTED", commitId: "sha-210-1" })],
+        },
+      ]);
+      const result = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "claimed");
+      assert.equal(result.review.pr, 210);
+      assert.equal(result.review.headSha, "sha-210-2");
+      assert.equal(reviewsFetches(210), 1, "the new head triggered exactly one re-fetch");
+      const doc = await o.db.collection("pulls").findOne({ _id: 210 });
+      assert.equal(doc.reviewsFetchedFor, "sha-210-2", "fetch marker moved to the new head");
+    });
+
+    await t.test("lazy review fetch: once per head, persisted, never re-fetched", async () => {
+      // The mirror doc has NO review data (fresh sync — the pulls list
+      // carries none), but GitHub knows the PR was approved at its head.
+      await seedPulls([
+        {
+          number: 220,
+          createdAt: "2026-06-01T00:00:00Z",
+          restReviews: [
+            makeReview({ reviewer: "bob", state: "APPROVED", commitId: "sha-220-1", submittedAt: "2026-06-02T00:00:00Z" }),
+            makeReview({ reviewer: "bob", state: "PENDING", commitId: "sha-220-1" }), // draft — dropped
+          ],
+        },
+      ]);
+
+      const first = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(first.status, "empty", "the fetch revealed an approval at head — not claimable");
+      assert.equal(reviewsFetches(220), 1);
+      const doc = await o.db.collection("pulls").findOne({ _id: 220 });
+      assert.equal(doc.reviewsFetchedFor, "sha-220-1");
+      assert.deepEqual(doc.reviews, [
+        { reviewer: "bob", state: "approved", commitId: "sha-220-1", at: "2026-06-02T00:00:00Z" },
+      ], "REST states normalised, PENDING dropped, persisted in mirror shape");
+
+      const second = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(second.status, "empty");
+      assert.equal(reviewsFetches(220), 1, "reviewsFetchedFor prevents a re-fetch at the same head");
+    });
+
+    await t.test("two concurrent review claims get distinct PRs", async () => {
+      await seedPulls([
+        { number: 231, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-231-1" },
+        { number: 232, createdAt: "2026-06-02T00:00:00Z", reviewsFetchedFor: "sha-232-1" },
+      ]);
+      const results = await Promise.all(
+        ["alice", "bob"].map((handle) =>
+          dispatch.claimNextReview(o, new FleetStore(), { handle, tier: "standard" }),
+        ),
+      );
+      for (const r of results) assert.equal(r.status, "claimed");
+      assert.deepEqual(
+        results.map((r) => r.review.pr).sort((a, b) => a - b),
+        [231, 232],
+        "the Redis NX review lease arbitrates — no double-reviews",
+      );
+    });
+
+    await t.test("review release done/abandoned: assignment closed, ZERO GitHub writes", async () => {
+      await seedPulls([
+        { number: 241, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-241-1" },
+        { number: 242, createdAt: "2026-06-02T00:00:00Z", reviewsFetchedFor: "sha-242-1" },
+      ]);
+      const store = new FleetStore();
+      const first = await dispatch.claimNextReview(o, store, { handle: "alice", tier: "standard" });
+      assert.equal(first.review.pr, 241);
+      const second = await dispatch.claimNextReview(o, store, { handle: "alice", tier: "standard" });
+      assert.equal(second.review.pr, 242);
+      mock.reset(); // count only post-claim GitHub traffic
+
+      // done — the review happened (PASS or NEEDS_WORK both count).
+      assert.equal(
+        await dispatch.releaseAssignment(o, store, { issue: 241, outcome: "done", kind: "review", handle: "alice" }),
+        true,
+      );
+      // abandoned — reviewer crashed/usage-limited; the PR just re-queues.
+      assert.equal(
+        await dispatch.releaseAssignment(o, store, { issue: 242, outcome: "abandoned", kind: "review", handle: "alice" }),
+        true,
+      );
+      assert.equal(mock.calls.length, 0, "neither outcome touches labels — review claims hold none");
+      assert.deepEqual(mock.requests, [], "no GitHub traffic at all (not even the revert's live read)");
+
+      for (const [pr, outcome] of [[241, "done"], [242, "abandoned"]]) {
+        const doc = await anyAssignment(pr);
+        assert.equal(doc.active, false);
+        assert.equal(doc.outcome, outcome);
+        assert.equal(await o.redis.exists(reviewLeaseKey(pr)), 0, `lease freed for PR #${pr}`);
+      }
+
+      assert.equal(
+        await dispatch.releaseAssignment(o, store, { issue: 241, outcome: "done", kind: "review", handle: "alice" }),
+        false,
+        "second release finds no active review assignment",
+      );
+      // A done-release alone does NOT mark the PR reviewed — the POSTED
+      // review does, arriving as a pull_request_review webhook. Simulate
+      // that for #241; #242 was abandoned (no review posted), so it — and
+      // only it — is claimable again once its abandon COOLDOWN lapses (an
+      // abandon usually means the runner skipped the PR locally, so serving
+      // it again immediately would just loop).
+      await o.db.collection("pulls").updateOne(
+        { _id: 241 },
+        { $set: { reviews: [{ reviewer: "alice", state: "approved", commitId: "sha-241-1", at: "2026-06-03T00:00:00Z" }] } },
+      );
+      const cooled = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(cooled.status, "empty", "an abandoned PR cools down before re-dispatch");
+      await o.redis.del(reviewCooldownKey(242)); // cooldown lapses, deterministically
+      const reclaim = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(reclaim.status, "claimed");
+      assert.equal(reclaim.review.pr, 242, "the abandoned PR re-queues after the cooldown; the reviewed one is skipped");
+    });
+
+    await t.test("sweeper: expired review lease → inactive, no label writes, review-queue event", async () => {
+      await seedPulls([{ number: 251, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-251-1" }]);
+      const store = new FleetStore();
+      const claimed = await dispatch.claimNextReview(o, store, { handle: "alice", tier: "standard" });
+      assert.equal(claimed.status, "claimed");
+      mock.reset();
+
+      // Lease still alive → nothing happens.
+      assert.equal(await dispatch.sweepExpiredLeases(o, store), 0);
+      assert.ok(await activeAssignment(251));
+
+      await o.redis.del(reviewLeaseKey(251)); // TTL expiry, deterministically
+      assert.equal(await dispatch.sweepExpiredLeases(o, store), 1);
+
+      const assignment = await anyAssignment(251);
+      assert.equal(assignment.active, false);
+      assert.equal(assignment.outcome, "lease-expired");
+      assert.equal(assignment.revertPending, undefined, "no revert is ever pending for a review");
+      assert.equal(mock.calls.length, 0, "no label writes");
+      assert.deepEqual(mock.requests, [], "no GitHub reads either — nothing to revert");
+      const event = store
+        .recentEvents()
+        .find((e) => e.kind === "claim" && e.text.includes("review lease expired"));
+      assert.ok(event, "expiry surfaces on the fleet feed");
+      assert.ok(event.text.includes("PR #251"), event.text);
+      assert.equal(event.ref, "#251");
+
+      assert.equal(await dispatch.sweepExpiredLeases(o, store), 0, "idempotent");
+    });
+
+    await t.test("renewLeasesForHandle extends an active review lease (no claimed-label guard)", async () => {
+      await seedPulls([{ number: 261, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-261-1" }]);
+      const claimed = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(claimed.status, "claimed");
+      // No `issues` mirror doc exists for #261 (it's a PR) — the kind:"work"
+      // claimed-label guard would let this lease lapse; review renewal must not.
+      await o.redis.expire(reviewLeaseKey(261), 5);
+      await dispatch.renewLeasesForHandle(o, "alice");
+      const ttl = await o.redis.ttl(reviewLeaseKey(261));
+      assert.ok(ttl > 5, `active review lease renewed by heartbeat hook (ttl=${ttl})`);
+      assert.ok(ttl <= config.reviewLeaseTtlSeconds, "renewed with the REVIEW TTL");
+
+      // Compare-and-EXPIRE only: an expired review lease is never resurrected.
+      await o.redis.del(reviewLeaseKey(261));
+      await dispatch.renewLeasesForHandle(o, "alice");
+      assert.equal(await o.redis.exists(reviewLeaseKey(261)), 0);
+
+      // renewLease (the /work/renew path) answers the review TTL by kind.
+      await dispatch.sweepExpiredLeases(o, new FleetStore()); // release the lapsed claim
+      const reclaimed = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(reclaimed.status, "claimed");
+      assert.equal(await dispatch.renewLease(o, "alice", 261), config.reviewLeaseTtlSeconds);
+    });
+
+    await t.test("abandoned review release parks the PR behind a dispatch cooldown", async () => {
+      // A PR the mirror deems eligible but every runner locally skips
+      // (already passed at head, author == the runner's posting identity,
+      // parked) is abandoned back to the FRONT of the oldest-first queue —
+      // without a cooldown it pins every enrolled reviewer's claim forever.
+      await seedPulls([
+        { number: 281, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-281-1" },
+        { number: 282, createdAt: "2026-06-02T00:00:00Z", reviewsFetchedFor: "sha-282-1" },
+      ]);
+      const store = new FleetStore();
+      const first = await dispatch.claimNextReview(o, store, { handle: "alice", tier: "standard" });
+      assert.equal(first.review.pr, 281, "oldest first");
+      await dispatch.releaseAssignment(o, store, { issue: 281, outcome: "abandoned", kind: "review", handle: "alice" });
+
+      const ttl = await o.redis.ttl(reviewCooldownKey(281));
+      assert.ok(
+        ttl > 0 && ttl <= config.reviewAbandonCooldownSeconds,
+        `abandon sets cooldown:review:<pr> with the configured TTL (got ${ttl})`,
+      );
+
+      // The very next claim — from ANY handle — skips the cooled-down PR.
+      const second = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(second.review.pr, 282, "cooled-down PR is not re-served; the queue advances");
+      await dispatch.releaseAssignment(o, new FleetStore(), { issue: 282, outcome: "abandoned", kind: "review", handle: "bob" });
+      const drained = await dispatch.claimNextReview(o, new FleetStore(), { handle: "carol", tier: "standard" });
+      assert.equal(drained.status, "empty", "both abandoned PRs are cooling down");
+
+      // Cooldown lapses → dispatchable again.
+      await o.redis.del(reviewCooldownKey(281));
+      const again = await dispatch.claimNextReview(o, new FleetStore(), { handle: "carol", tier: "standard" });
+      assert.equal(again.review.pr, 281, "the PR returns to dispatch once the cooldown lapses");
+
+      // A lease EXPIRY (crashed reviewer) deliberately does NOT cool down:
+      // the PR should promptly re-queue (ADR-0019).
+      await o.redis.del(reviewLeaseKey(281));
+      await dispatch.sweepExpiredLeases(o, new FleetStore());
+      assert.equal(await o.redis.exists(reviewCooldownKey(281)), 0, "lease-expired sets no cooldown");
+      const requeued = await dispatch.claimNextReview(o, new FleetStore(), { handle: "dave", tier: "standard" });
+      assert.equal(requeued.review.pr, 281, "an expired lease re-queues immediately");
+    });
+
+    await t.test("lazy fetch persist survives a concurrent webhook review append (CAS)", async () => {
+      // The race: dispatch snapshots the doc, calls GET /pulls/:n/reviews,
+      // and a pull_request_review webhook lands BETWEEN the REST response
+      // and the persist. A plain $set of the locally-merged array erased the
+      // webhook's entry — and with reviewsFetchedFor stamped, nothing ever
+      // re-fetched at that head, so the just-reviewed PR was re-dispatched.
+      const { reduceWebhook } = await import("../dist/github/reduce.js");
+      await seedPulls([{ number: 291, createdAt: "2026-06-01T00:00:00Z" }]); // no review data → lazy fetch
+      const raw = makePull({ number: 291, headSha: "sha-291-1", createdAt: "2026-06-01T00:00:00Z" });
+
+      const orig = o.gh.listPullReviews.bind(o.gh);
+      o.gh.listPullReviews = async (...args) => {
+        const out = await orig(...args); // REST answers (empty list)…
+        await reduceWebhook(o, {
+          // …and the webhook for a review submitted at head reduces before
+          // dispatch persists its merge.
+          event: "pull_request_review",
+          action: "submitted",
+          payload: {
+            action: "submitted",
+            pull_request: raw,
+            review: { user: { login: "carol" }, state: "approved", commit_id: "sha-291-1", submitted_at: "2026-06-02T00:00:00Z" },
+            sender: { login: "carol" },
+          },
+        });
+        return out;
+      };
+      try {
+        const result = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+        assert.equal(result.status, "empty", "the merged state shows carol's review at head — not claimable");
+      } finally {
+        delete o.gh.listPullReviews;
+      }
+
+      const doc = await o.db.collection("pulls").findOne({ _id: 291 });
+      assert.deepEqual(
+        doc.reviews,
+        [{ reviewer: "carol", state: "approved", commitId: "sha-291-1", at: "2026-06-02T00:00:00Z" }],
+        "the concurrently-appended webhook entry SURVIVES the lazy-fetch persist",
+      );
+      assert.equal(doc.reviewsFetchedFor, "sha-291-1", "fetch marker still stamped");
+
+      const second = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(second.status, "empty", "second claim skips the reviewed PR");
+      assert.equal(reviewsFetches(291), 1, "…without re-fetching at the same head");
+    });
+
+    await t.test("a commented-only review at head does not block dispatch (shell parity)", async () => {
+      // review_work.sh keys reviewed-at-revision off the merge-check STATUS
+      // (check_state, success|failure) — an inline-comment review sets no
+      // status, so the walk reviews the PR. Dispatch must not starve it.
+      await seedPulls([
+        // Oldest: dismissed at head — stays skipped (a dismissal does not
+        // clear the shell's failure status at that SHA).
+        { number: 301, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-301-1", reviews: [
+          { reviewer: "bob", state: "dismissed", commitId: "sha-301-1", at: "2026-06-02T00:00:00Z" },
+        ] },
+        // Commented at head — including by the PR AUTHOR — still needs review.
+        { number: 302, createdAt: "2026-06-02T00:00:00Z", reviewsFetchedFor: "sha-302-1", reviews: [
+          { reviewer: "bob", state: "commented", commitId: "sha-302-1", at: "2026-06-03T00:00:00Z" },
+          { reviewer: "octocat", state: "commented", commitId: "sha-302-1", at: "2026-06-04T00:00:00Z" },
+        ] },
+      ]);
+      const result = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "claimed");
+      assert.equal(result.review.pr, 302, "commented-only head is claimable; dismissed-at-head is not");
+      const none = await dispatch.claimNextReview(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(none.status, "empty", "the dismissed-at-head PR stays skipped");
+    });
+
+    await t.test("round cap: dismissals lower the count; an entry array at its cap is not trusted", async () => {
+      const { reduceWebhook } = await import("../dist/github/reduce.js");
+      // #311 sits AT the round cap (10 CR rounds at old heads, none at the
+      // current head) → not dispatched.
+      const crEntries = Array.from({ length: config.maxReviewRounds }, (_, i) => ({
+        reviewer: `rev-${i}`,
+        state: "changes_requested",
+        commitId: "sha-311-1",
+        at: `2026-06-0${(i % 8) + 1}T00:00:00Z`,
+      }));
+      await seedPulls([
+        { number: 311, headSha: "sha-311-2", createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-311-2", reviews: crEntries },
+      ]);
+      const capped = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(capped.status, "empty", "at the round cap the PR is a human's — never dispatched");
+
+      // A maintainer dismisses one stale changes-request (the #307 unwedge):
+      // the webhook's dismissal SUPERSEDES that CR entry, the count drops
+      // under the cap, and the PR becomes dispatchable at its new head —
+      // instead of the mirror counting dismissed rounds forever.
+      await reduceWebhook(o, {
+        event: "pull_request_review",
+        action: "dismissed",
+        payload: {
+          action: "dismissed",
+          pull_request: makePull({ number: 311, headSha: "sha-311-2", createdAt: "2026-06-01T00:00:00Z" }),
+          review: { user: { login: "rev-0" }, state: "dismissed", commit_id: "sha-311-1", submitted_at: "2026-06-01T00:00:00Z" },
+          sender: { login: "maintainer" },
+        },
+      });
+      const doc = await o.db.collection("pulls").findOne({ _id: 311 });
+      assert.equal(
+        doc.reviews.filter((r) => r.state === "changes_requested").length,
+        config.maxReviewRounds - 1,
+        "the dismissal replaced the CR entry rather than coexisting with it",
+      );
+      const freed = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(freed.status, "claimed");
+      assert.equal(freed.review.pr, 311, "dismissal releases the PR back to dispatch");
+      await dispatch.releaseAssignment(o, new FleetStore(), { issue: 311, outcome: "done", kind: "review", handle: "alice" });
+
+      // #312's entry array sits AT the storage cap (PULL_REVIEWS_CAP): older
+      // CR entries may have been evicted, so the mirror's CR count is a
+      // floor, not the truth. Fail toward parking (skip; the walk still
+      // reaches it) — matching review_rounds() echoing the cap on error.
+      const manyEntries = Array.from({ length: 30 }, (_, i) => ({
+        reviewer: `r-${i}`,
+        state: i < 8 ? "changes_requested" : "approved", // visible CRs UNDER the round cap
+        commitId: "sha-312-1",
+        at: `2026-06-${String((i % 27) + 1).padStart(2, "0")}T00:00:00Z`,
+      }));
+      await seedPulls([
+        { number: 312, headSha: "sha-312-2", createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-312-2", reviews: manyEntries },
+      ]);
+      const untrusted = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(untrusted.status, "empty", "a capped entry array is an unreliable rounds source — skipped");
+    });
+
+    await t.test("stale mirror: a merged PR is never dispatched; the live check heals the doc", async () => {
+      // The pull_request `closed` webhook was lost and a reviewer claims
+      // inside the sync interval: the mirror still says open. The old walk
+      // listed LIVE open PRs so this could never happen — the live check on
+      // the lease winner restores that property.
+      await seedPulls([
+        { number: 321, createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-321-1" },
+        { number: 322, createdAt: "2026-06-02T00:00:00Z", reviewsFetchedFor: "sha-322-1" },
+      ]);
+      // GitHub truth: #321 was merged by hand.
+      mock.addPull(makePull({
+        number: 321,
+        state: "closed",
+        merged: true,
+        mergedAt: "2026-06-03T00:00:00Z",
+        createdAt: "2026-06-01T00:00:00Z",
+      }));
+      const result = await dispatch.claimNextReview(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "claimed");
+      assert.equal(result.review.pr, 322, "the merged PR is skipped, the next candidate serves");
+      assert.equal(await o.redis.exists(reviewLeaseKey(321)), 0, "the probe lease on the merged PR was freed");
+      const healed = await o.db.collection("pulls").findOne({ _id: 321 });
+      assert.equal(healed.state, "closed", "mirror self-healed from the live read");
+      assert.equal(healed.merged, true);
+      assert.equal(await anyAssignment(321), null, "no assignment recorded for the merged PR");
+    });
+
     // ------------------------------------------------------------- routes
 
     const Fastify = (await import("fastify")).default;
@@ -850,6 +1351,13 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
         { number: 81, title: "research: X", labels: ["status: available", "stage: research"], createdAt: "2026-05-01T00:00:00Z" },
         { number: 82, title: "research: Y", labels: ["status: available", "stage: ideate"], createdAt: "2026-05-02T00:00:00Z" },
       ]);
+      // A review claim shows up alongside work claims, badged by `kind` and
+      // titled from the PULLS mirror (its number is a PR number).
+      await o.db.collection("pulls").insertMany([
+        mirrorPull({ number: 89, title: "feat: Z", createdAt: "2026-05-03T00:00:00Z", reviewsFetchedFor: "sha-89-1" }),
+      ]);
+      mock.addPull(makePull({ number: 89, title: "feat: Z" }));
+
       const claimed = await dispatch.claimNext(o, new FleetStore(), {
         handle: "worker-one",
         tier: "standard",
@@ -857,6 +1365,12 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
         model: "gpt-x",
       });
       assert.equal(claimed.status, "claimed");
+      const reviewClaimed = await dispatch.claimNextReview(o, new FleetStore(), {
+        handle: "reviewer-two",
+        tier: "standard",
+        harness: "claude",
+      });
+      assert.equal(reviewClaimed.status, "claimed");
 
       const app = Fastify();
       apps.push(app);
@@ -864,8 +1378,8 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       const res = await app.inject({ method: "GET", url: "/api/v1/work/active" });
       assert.equal(res.statusCode, 200);
       const body = res.json();
-      assert.equal(body.count, 1);
-      const [row] = body.work;
+      assert.equal(body.count, 2);
+      const row = body.work.find((w) => w.kind === "work");
       assert.equal(row.issue, 81);
       assert.equal(row.title, "research: X");
       assert.equal(row.stage, "research");
@@ -873,9 +1387,24 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(row.harness, "codex");
       assert.equal(typeof row.claimedAt, "string");
       assert.ok(row.leaseSecondsLeft > 0, "live lease TTL surfaced");
+      const reviewRow = body.work.find((w) => w.kind === "review");
+      assert.ok(reviewRow, "review claims appear with kind: review");
+      assert.equal(reviewRow.issue, 89, "`issue` carries the PR number");
+      assert.equal(reviewRow.title, "feat: Z", "title joined from the pulls mirror");
+      assert.equal(reviewRow.stage, null);
+      assert.equal(reviewRow.handle, "reviewer-two");
+      assert.ok(reviewRow.leaseSecondsLeft > 0, "review lease TTL read from lease:review:<n>");
 
-      // Released work leaves the panel.
+      // Released claims leave the panel (each kind independently).
       await dispatch.releaseAssignment(o, new FleetStore(), { handle: "worker-one", issue: 81, outcome: "done" });
+      const afterWork = await app.inject({ method: "GET", url: "/api/v1/work/active" });
+      assert.equal(afterWork.json().count, 1);
+      await dispatch.releaseAssignment(o, new FleetStore(), {
+        handle: "reviewer-two",
+        issue: 89,
+        outcome: "done",
+        kind: "review",
+      });
       const after = await app.inject({ method: "GET", url: "/api/v1/work/active" });
       assert.equal(after.json().count, 0);
     });
@@ -1008,6 +1537,87 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       });
       assert.equal(emptyClaim.statusCode, 200);
       assert.equal(emptyClaim.json().issue, null, "empty queue is ok:true, issue:null");
+    });
+
+    await t.test("work routes, kind review: claim/renew/release round-trip", async () => {
+      const auth = await import("../dist/orchestrator/auth.js");
+      await seedPulls([
+        { number: 271, title: "research: Y", createdAt: "2026-06-01T00:00:00Z", reviewsFetchedFor: "sha-271-1" },
+      ]);
+      const app = Fastify();
+      apps.push(app);
+      registerDispatchRoutes(app, new FleetStore(), o);
+      const { token } = await auth.mintAgentToken(o, { handle: "reviewbot", tier: "standard" });
+      const authz = { authorization: `Bearer ${token}` };
+
+      const claim = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/claim",
+        headers: authz,
+        payload: { kind: "review", harness: "claude" },
+      });
+      assert.equal(claim.statusCode, 200);
+      const claimBody = claim.json();
+      assert.equal(claimBody.ok, true);
+      assert.equal(claimBody.issue, undefined, "review claims carry `review`, not `issue`");
+      assert.deepEqual(claimBody.review, {
+        pr: 271,
+        title: "research: Y",
+        author: "octocat",
+        headSha: "sha-271-1",
+        htmlUrl: "https://github.com/example/repo/pull/271",
+        baseRef: "main",
+        headRef: "branch-271",
+      });
+      assert.ok(claimBody.assignmentId);
+      assert.equal(claimBody.leaseTtlSeconds, config.reviewLeaseTtlSeconds);
+      assert.equal(claimBody.handle, "reviewbot");
+
+      // Renew answers the REVIEW TTL (kind resolved from the assignment).
+      const renew = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/renew",
+        headers: authz,
+        payload: { issue: 271 },
+      });
+      assert.equal(renew.statusCode, 200);
+      assert.equal(renew.json().leaseTtlSeconds, config.reviewLeaseTtlSeconds);
+
+      // Empty review queue answers review:null (the runner's fall-through).
+      const emptyClaim = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/claim",
+        headers: authz,
+        payload: { kind: "review" },
+      });
+      assert.equal(emptyClaim.statusCode, 200);
+      assert.equal(emptyClaim.json().review, null, "empty review queue is ok:true, review:null");
+
+      // Releasing with the WRONG kind must not find the review assignment.
+      const wrongKind = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/release",
+        headers: authz,
+        payload: { issue: 271, outcome: "done" }, // kind defaults to "work"
+      });
+      assert.equal(wrongKind.statusCode, 404, "a review assignment is not releasable as kind work");
+
+      const release = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/release",
+        headers: authz,
+        payload: { kind: "review", issue: 271, outcome: "done" },
+      });
+      assert.equal(release.statusCode, 200);
+      assert.equal(await o.redis.exists(reviewLeaseKey(271)), 0);
+
+      const renewGone = await app.inject({
+        method: "POST",
+        url: "/api/v1/work/renew",
+        headers: authz,
+        payload: { issue: 271 },
+      });
+      assert.equal(renewGone.statusCode, 404, "released review can't be renewed");
     });
 
     await t.test("enroll route: TOFU mint once, 409 after, strict handle shape, config-off → 403", async () => {

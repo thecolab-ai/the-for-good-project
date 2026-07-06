@@ -233,6 +233,7 @@ test("webhooks", { skip: docker ? false : "docker unavailable" }, async (t) => {
       user: "octocat",
       htmlUrl: raw.html_url,
       headRef: raw.head.ref,
+      headSha: raw.head.sha,
       headRepoFullName: "example/repo",
       baseRef: "main",
       merged: true,
@@ -302,6 +303,91 @@ test("webhooks", { skip: docker ? false : "docker unavailable" }, async (t) => {
     const event = store.recentEvents()[0];
     assert.equal(event.kind, "gh_activity");
     assert.ok(event.text.includes("requested changes"), event.text);
+  });
+
+  await t.test("pull_request_review persists reviewer/state/commitId; synchronize moves headSha", async () => {
+    const raw = makePull({ number: 209, headSha: "sha-209-1" });
+    let res = await post("pull_request_review", {
+      action: "submitted",
+      review: { state: "changes_requested", commit_id: "sha-209-1", submitted_at: "2026-07-01T00:00:00Z", user: { login: "dave" } },
+      pull_request: raw,
+      sender: { login: "dave" },
+    });
+    assert.equal(res.statusCode, 202);
+    let doc = await pulls().findOne({ _id: 209 });
+    assert.equal(doc.headSha, "sha-209-1", "pull_request payload's head.sha mirrored");
+    assert.deepEqual(doc.reviews, [
+      { reviewer: "dave", state: "changes_requested", commitId: "sha-209-1", at: "2026-07-01T00:00:00Z" },
+    ]);
+
+    // A second reviewer APPENDS; the same reviewer+commit dedupes
+    // keep-latest instead of growing the array.
+    res = await post("pull_request_review", {
+      action: "submitted",
+      review: { state: "approved", commit_id: "sha-209-1", submitted_at: "2026-07-02T00:00:00Z", user: { login: "erin" } },
+      pull_request: raw,
+      sender: { login: "erin" },
+    });
+    assert.equal(res.statusCode, 202);
+    res = await post("pull_request_review", {
+      action: "edited",
+      review: { state: "changes_requested", commit_id: "sha-209-1", submitted_at: "2026-07-03T00:00:00Z", user: { login: "dave" } },
+      pull_request: raw,
+      sender: { login: "dave" },
+    });
+    assert.equal(res.statusCode, 202);
+    doc = await pulls().findOne({ _id: 209 });
+    assert.deepEqual(
+      doc.reviews.map((r) => [r.reviewer, r.state, r.at]),
+      [
+        ["erin", "approved", "2026-07-02T00:00:00Z"],
+        ["dave", "changes_requested", "2026-07-03T00:00:00Z"],
+      ],
+      "dedupe by reviewer+commitId keeps the latest; distinct reviewers append",
+    );
+
+    // A DISMISSAL supersedes the entry it dismisses (same reviewer+commit,
+    // same submitted_at — the payload carries the original review's) instead
+    // of coexisting with it — so review dispatch's round count drops when a
+    // maintainer dismisses stale changes-requests, matching the shell's
+    // GraphQL states:CHANGES_REQUESTED count.
+    res = await post("pull_request_review", {
+      action: "dismissed",
+      review: { state: "dismissed", commit_id: "sha-209-1", submitted_at: "2026-07-03T00:00:00Z", user: { login: "dave" } },
+      pull_request: raw,
+      sender: { login: "maintainer" },
+    });
+    assert.equal(res.statusCode, 202);
+    doc = await pulls().findOne({ _id: 209 });
+    assert.deepEqual(
+      doc.reviews.map((r) => [r.reviewer, r.state]),
+      [
+        ["erin", "approved"],
+        ["dave", "dismissed"],
+      ],
+      "the dismissal REPLACED dave's changes_requested entry (no ghost CR round)",
+    );
+
+    // Rework pushed: pull_request synchronize moves the mirrored head and
+    // must NOT wipe the accumulated reviews ($set upsert, not replace).
+    const rebased = makePull({ number: 209, headSha: "sha-209-2" });
+    res = await post("pull_request", { action: "synchronize", pull_request: rebased, sender: { login: "octocat" } });
+    assert.equal(res.statusCode, 202);
+    doc = await pulls().findOne({ _id: 209 });
+    assert.equal(doc.headSha, "sha-209-2", "synchronize updated headSha");
+    assert.equal(doc.reviews.length, 2, "reviews survive the pull refresh");
+
+    // A payload without the fields an entry needs (the minimal fixtures
+    // elsewhere in this file) refreshes the mirror but appends nothing.
+    res = await post("pull_request_review", {
+      action: "submitted",
+      review: { state: "approved" },
+      pull_request: rebased,
+      sender: { login: "erin" },
+    });
+    assert.equal(res.statusCode, 202);
+    doc = await pulls().findOne({ _id: 209 });
+    assert.equal(doc.reviews.length, 2, "partial review payloads never poison the doc");
   });
 
   await t.test("unknown event: stored, 202, no feed", async () => {

@@ -14,10 +14,13 @@
  *    `gh` login, which may differ for bot-handle tokens);
  *    {ok:true, issue:null} when the queue is empty; 503 when no github
  *    token; 429 {ok:false, retryAfterSeconds} on GitHub rate-limit.
+ *    kind:"review" (ADR-0019) answers {ok:true, review: ClaimedReview, ...}
+ *    / {ok:true, review:null} instead, same statuses otherwise.
  *  - POST /api/v1/work/renew   — body {issue}. 404 when this handle has no
- *    active assignment on the issue.
+ *    active assignment on the issue (for reviews, `issue` = the PR number).
  *  - POST /api/v1/work/release — body releaseRequestSchema. done = mark
  *    inactive + DEL lease, labels untouched; abandoned = revert labels too.
+ *    kind:"review" releases never touch labels for either outcome.
  *
  * index.ts registers this only when orchestration is connected (otherwise
  * the paths answer 503 "orchestration disabled").
@@ -28,7 +31,14 @@ import { config } from "../config.js";
 import { GitHubApiError } from "../github/gh-api.js";
 import { IpRateLimiter } from "../guards.js";
 import { bearerToken, enrollAgent, verifyAgentToken, type AgentIdentity } from "../orchestrator/auth.js";
-import { claimNext, releaseAssignment, renewLease, type ClaimResult } from "../orchestrator/dispatch.js";
+import {
+  claimNext,
+  claimNextReview,
+  releaseAssignment,
+  renewLease,
+  type ClaimResult,
+  type ClaimReviewResult,
+} from "../orchestrator/dispatch.js";
 import type { Orchestrator } from "../orchestrator/stores.js";
 import { claimRequestSchema, enrollRequestSchema, releaseRequestSchema } from "../protocol.js";
 import type { FleetStore } from "../state.js";
@@ -103,16 +113,20 @@ export function registerDispatchRoutes(
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
     }
-    let result: ClaimResult;
+    const ctx = {
+      handle: identity.handle,
+      tier: identity.tier,
+      ...(parsed.data.stages ? { stages: parsed.data.stages } : {}),
+      ...(parsed.data.harness ? { harness: parsed.data.harness } : {}),
+      ...(parsed.data.model ? { model: parsed.data.model } : {}),
+      ...(parsed.data.agentId ? { agentId: parsed.data.agentId } : {}),
+    };
+    let result: ClaimResult | ClaimReviewResult;
     try {
-      result = await claimNext(orch, store, {
-        handle: identity.handle,
-        tier: identity.tier,
-        ...(parsed.data.stages ? { stages: parsed.data.stages } : {}),
-        ...(parsed.data.harness ? { harness: parsed.data.harness } : {}),
-        ...(parsed.data.model ? { model: parsed.data.model } : {}),
-        ...(parsed.data.agentId ? { agentId: parsed.data.agentId } : {}),
-      });
+      result =
+        parsed.data.kind === "review"
+          ? await claimNextReview(orch, store, ctx)
+          : await claimNext(orch, store, ctx);
     } catch (err) {
       // Never serialize upstream error messages to the client — they embed
       // the GitHub API path and upstream error text. Log server-side only.
@@ -122,21 +136,28 @@ export function registerDispatchRoutes(
       }
       return reply.code(500).send({ ok: false, error: "internal error" });
     }
+    // kind:"review" responses carry `review` where work carries `issue` —
+    // same statuses, so a runner's queue-empty/error handling is one path.
+    // Every response ECHOES the kind it executed, so a runner can detect a
+    // server that silently dropped an unknown kind (deploy skew — the
+    // pre-ADR-0019 schema stripped `kind` and ran a WORK claim).
+    const emptyPayload = parsed.data.kind === "review" ? { review: null } : { issue: null };
     switch (result.status) {
       case "claimed":
         return {
           ok: true,
-          issue: result.issue,
+          kind: parsed.data.kind,
+          ...("review" in result ? { review: result.review } : { issue: result.issue }),
           assignmentId: result.assignmentId,
           leaseTtlSeconds: result.leaseTtlSeconds,
           handle: identity.handle,
         };
       case "empty":
-        return { ok: true, issue: null };
+        return { ok: true, kind: parsed.data.kind, ...emptyPayload };
       case "capped":
-        // Shaped like empty (issue:null) so every runner just falls into its
-        // queue-empty path; the reason lets an operator see why.
-        return { ok: true, issue: null, reason: "active-claim-cap" };
+        // Shaped like empty (issue:null / review:null) so every runner just
+        // falls into its queue-empty path; the reason lets an operator see why.
+        return { ok: true, kind: parsed.data.kind, ...emptyPayload, reason: "active-claim-cap" };
       case "rate-limited":
         return reply.code(429).send({
           ok: false,
@@ -156,11 +177,13 @@ export function registerDispatchRoutes(
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
     }
-    const renewed = await renewLease(orch, identity.handle, parsed.data.issue);
-    if (!renewed) {
+    // renewLease answers the GRANTED TTL (review leases run longer than work
+    // leases), or null when this handle holds nothing active on the number.
+    const grantedTtl = await renewLease(orch, identity.handle, parsed.data.issue);
+    if (grantedTtl === null) {
       return reply.code(404).send({ ok: false, error: "no active assignment for this handle+issue" });
     }
-    return { ok: true, leaseTtlSeconds: config.leaseTtlSeconds };
+    return { ok: true, leaseTtlSeconds: grantedTtl };
   });
 
   app.post("/api/v1/work/release", async (req, reply) => {
@@ -174,6 +197,7 @@ export function registerDispatchRoutes(
     const released = await releaseAssignment(orch, store, {
       issue: parsed.data.issue,
       outcome: parsed.data.outcome,
+      kind: parsed.data.kind,
       handle: identity.handle,
       ...(parsed.data.prNumber ? { prNumber: parsed.data.prNumber } : {}),
     });
