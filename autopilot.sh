@@ -313,7 +313,7 @@ while :; do
     for _ in $(seq 1 "$REVIEW_PER_WORK"); do
       fleet_handle_commands || break 2
       info "review pass…"
-      run_pass review env MAX=1 POLL_SECONDS=0 ./review_work.sh "$@" && did_something=1
+      run_pass review env MAX=1 POLL_SECONDS=0 ./scripts/review_work.sh "$@" && did_something=1
     done
   elif [ "$review_disabled_reported" = 0 ]; then
     fleet_send "idle" "" "review disabled: REVIEW_GITHUB_TOKEN missing" 0 0 0 0 0 0 0
@@ -327,14 +327,14 @@ while :; do
     for _ in $(seq 1 "$FRAME_PER_WORK"); do
       fleet_handle_commands || break 2
       info "frame pass…"
-      run_pass frame env MAX=1 POLL_SECONDS=0 ./frame_work.sh "$@" && did_something=1
+      run_pass frame env MAX=1 POLL_SECONDS=0 ./scripts/frame_work.sh "$@" && did_something=1
     done
   fi
 
   # Work side (your normal identity).
   fleet_handle_commands || break
   info "work pass…"
-  run_pass work env MAX=1 POLL_SECONDS=0 ./start_work.sh "$@" && did_something=1
+  run_pass work env MAX=1 POLL_SECONDS=0 ./scripts/start_work.sh "$@" && did_something=1
 
   if [ "$MAX_CYCLES" != 0 ] && [ "$cycle" -ge "$MAX_CYCLES" ]; then
     ok "Reached MAX_CYCLES=$MAX_CYCLES — stopping."; break
