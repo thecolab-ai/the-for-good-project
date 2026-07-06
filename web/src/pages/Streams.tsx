@@ -233,11 +233,11 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                     ) : null}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{s.stream}</TableCell>
-                  <TableCell className="min-w-[240px] max-w-[380px]">
-                    <div className="flex items-center gap-3">
-                      {s.image ? <img src={publicAsset(s.image)} alt="" loading="lazy" className="h-10 w-16 shrink-0 rounded-md border border-border/60 object-cover" /> : null}
+                  <TableCell className="min-w-[280px] max-w-[480px] align-top">
+                    <div className="flex items-start gap-3">
+                      {s.image ? <img src={publicAsset(s.image)} alt="" loading="lazy" className="mt-0.5 h-10 w-16 shrink-0 rounded-md border border-border/60 object-cover" /> : null}
                       <div className="min-w-0">
-                        <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
+                        <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} title={s.title} className="block font-medium leading-snug hover:text-brand-cyan-dark">{s.title}</Link>
                         <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
                       </div>
                     </div>
