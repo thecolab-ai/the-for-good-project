@@ -37,13 +37,6 @@ export type TeamMember = {
 // people replace these one signed-off consent at a time (see header above).
 export const TEAM: TeamMember[] = [
   {
-    id: "gligorkot",
-    role: "Contributor",
-    focus: "Reviews and contributes to the open project, keeping the public work tied to real people.",
-    name: "Gligor Kotushevski",
-    photo: "team/gligorkot.jpg",
-  },
-  {
     id: "steward",
     role: "Founder & steward",
     focus: "Sets direction, makes the human gate calls, and carries the relationships.",
@@ -51,11 +44,11 @@ export const TEAM: TeamMember[] = [
     photo: "team/adam91holt.jpg",
   },
   {
-    id: "research-lead",
-    role: "Research lead",
-    focus: "Owns the cited-and-honest standard — what we investigate and how hard we check it.",
-    name: null,
-    photo: null,
+    id: "gligorkot",
+    role: "Contributor",
+    focus: "Reviews and contributes to the open project, keeping the public work tied to real people.",
+    name: "Gligor Kotushevski",
+    photo: "team/gligorkot.jpg",
   },
   {
     id: "engineering",
@@ -71,13 +64,6 @@ export const TEAM: TeamMember[] = [
     focus: "Brings charities, councils and agencies the real problems worth working on.",
     name: "Rachel McBride",
     photo: "team/rachelmcbride.jpg",
-  },
-  {
-    id: "ethics",
-    role: "Method & ethics",
-    focus: "Guards the guardrails: no personal data, no overstatement, a human at every gate.",
-    name: null,
-    photo: null,
   },
 ];
 
