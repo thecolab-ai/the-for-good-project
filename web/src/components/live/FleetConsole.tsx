@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, Bot, ChevronLeft, CircleDot, Cpu, Eye, FileText, GitBranch, GitPullRequest, Globe,
-  Link2, MessageSquare, Moon, Pause, Play, Radio, Signal, Sun, Wifi, WifiOff, Wrench, Zap,
+  Hammer, Link2, MessageSquare, Moon, Pause, Play, Radio, Signal, Sun, Wifi, WifiOff, Wrench, Zap,
 } from "lucide-react";
+import { ActiveWorkFeed } from "./ActiveWork";
 import { LogoMark, GitHubIcon } from "@/components/layout/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/hooks/useTheme";
@@ -23,7 +24,7 @@ import { FleetGlobe, type GlobePoint } from "./FleetGlobe";
 import { harnessColor, useIsDark } from "./harness";
 
 type CommentFilter = "all" | "issues" | "prs";
-type FeedTab = "activity" | "comments" | "findings";
+type FeedTab = "activity" | "claims" | "comments" | "findings";
 
 const CONFIDENCE_STYLE: Record<string, string> = {
   High: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
@@ -486,6 +487,7 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
                 <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
                   {([
                     { k: "activity", label: "Activity", icon: Radio, count: live.events.length },
+                    { k: "claims", label: "Claims", icon: Hammer, count: live.activeWork.length },
                     { k: "comments", label: "Comments", icon: MessageSquare, count: filteredComments.length },
                     { k: "findings", label: "Findings", icon: FileText, count: recentFindings.length },
                   ] as const).map(({ k, label, icon: Icon, count }) => (
@@ -527,8 +529,9 @@ export function FleetConsole({ snapshot }: { snapshot: Snapshot }) {
               </div>
               <div className="console-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-3">
                 {feedTab === "activity" ? <LiveEventFeed events={live.events} />
-                  : feedTab === "comments" ? <CommentFeed comments={filteredComments} />
-                    : <FindingsFeed findings={recentFindings} />}
+                  : feedTab === "claims" ? <ActiveWorkFeed work={live.activeWork} />
+                    : feedTab === "comments" ? <CommentFeed comments={filteredComments} />
+                      : <FindingsFeed findings={recentFindings} />}
               </div>
             </section>
           </div>

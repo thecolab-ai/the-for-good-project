@@ -40,6 +40,8 @@ export interface AgentPresence {
   connectedAt: string;
   lastSeen: string;
   task: TaskInfo | null;
+  /** When the CURRENT task (by ref/kind) started — "working on X for 34m". */
+  taskSince: string | null;
   session: SessionCounters;
   tps: number;
   lastTps: number;
@@ -98,6 +100,21 @@ export interface EventItem {
 export interface LogLine {
   at: string;
   line: string;
+}
+
+/** One row of "who is working on what" — GET /api/v1/work/active (the
+ *  orchestrator's live assignments joined with issue titles + lease TTLs). */
+export interface ActiveWorkItem {
+  issue: number;
+  title: string | null;
+  stage: string | null;
+  handle: string;
+  harness: string | null;
+  model: string | null;
+  claimedAt: string;
+  renewedAt: string;
+  /** Live Redis lease TTL; <= 0 means expiring/stalled (sweeper will reap). */
+  leaseSecondsLeft: number;
 }
 
 export interface FleetSnapshot {
@@ -178,6 +195,8 @@ export interface LiveFleet {
   /** Short per-agent TPS trails for the card sparklines. */
   agentTrails: Record<string, number[]>;
   logs: Record<string, LogLine[]>;
+  /** Live claims: who is working on which issue, since when, lease health. */
+  activeWork: ActiveWorkItem[];
 }
 
 const MAX_TPS_POINTS = 90; // ~3 minutes of 2s ticks
@@ -198,6 +217,7 @@ const EMPTY: LiveFleet = {
   historyTotals: null,
   agentTrails: {},
   logs: {},
+  activeWork: [],
 };
 
 export async function fetchAgentLogs(agentId: string): Promise<LogLine[]> {
@@ -237,6 +257,17 @@ export function useLiveFleet(): LiveFleet {
         setState((prev) => ({ ...prev, historicalTps, historyTotals: json.totals ?? null }));
       } catch {
         /* history is optional */
+      }
+    };
+
+    const fetchActiveWork = async () => {
+      try {
+        const res = await fetch(`${base}/api/v1/work/active`);
+        if (!res.ok) return; // 503 = orchestration off — panel just stays empty
+        const json = (await res.json()) as { work?: ActiveWorkItem[] };
+        setState((prev) => ({ ...prev, activeWork: json.work ?? [] }));
+      } catch {
+        /* active-work is optional */
       }
     };
 
@@ -329,10 +360,13 @@ export function useLiveFleet(): LiveFleet {
 
     connect();
     void fetchHistory();
+    void fetchActiveWork();
     const historyTimer = setInterval(() => void fetchHistory(), 30_000);
+    const workTimer = setInterval(() => void fetchActiveWork(), 15_000);
     return () => {
       closed = true;
       clearInterval(historyTimer);
+      clearInterval(workTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };
@@ -343,6 +377,16 @@ export function useLiveFleet(): LiveFleet {
 
 // ---------------------------------------------------------------------------
 // Formatting helpers for the live views
+
+/** "2h 05m" / "34m" / "45s" since an ISO timestamp (clamped at 0). */
+export function formatSince(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return "—";
+  const ms = Math.max(0, now - new Date(iso).getTime());
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return `${Math.floor(ms / 1000)}s`;
+  if (mins < 60) return `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
+}
 
 export function compactNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;

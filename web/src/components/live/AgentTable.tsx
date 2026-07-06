@@ -2,7 +2,7 @@ import { Bot, GitPullRequest, Hammer, Layers, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { compactNumber, type AgentPresence } from "@/lib/live";
+import { compactNumber, formatSince, type AgentPresence } from "@/lib/live";
 import { harnessColor, useIsDark } from "./harness";
 
 const KIND_META = {
@@ -107,6 +107,11 @@ function AgentRow({ agent, trail, selected, onSelect }:
             </a>
           ) : null}
           {agent.task?.title ? <span className="truncate text-foreground/60">· {agent.task.title}</span> : null}
+          {agent.task && agent.task.kind !== "idle" && agent.taskSince ? (
+            <span className="shrink-0 whitespace-nowrap font-mono text-[10px] tabular-nums text-foreground/50">
+              {formatSince(agent.taskSince)}
+            </span>
+          ) : null}
         </div>
       </td>
 

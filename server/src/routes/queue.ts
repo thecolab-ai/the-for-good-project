@@ -75,6 +75,60 @@ export function registerQueueRoutes(
     return { ok: true, statuses, openIssues: open.length, openPrs };
   });
 
+  // Who is working on what, right now — the dashboard's "active claims"
+  // panel. Active assignments joined with the mirror's issue titles and the
+  // LIVE Redis lease TTL (a lease near zero with an active doc = a worker
+  // gone quiet; the sweeper will reap it). All public data: the same
+  // labels/assignees GitHub shows, plus timing.
+  app.get("/api/v1/work/active", async (req, reply) => {
+    if (!limiter.allow(req.ip)) return reply.code(429).send({ ok: false, error: "slow down" });
+    const active = await orch.db
+      .collection<{
+        _id: unknown;
+        issueNumber: number;
+        handle: string;
+        harness?: string;
+        model?: string;
+        tier: string;
+        claimedAt: string;
+        renewedAt: string;
+      }>("assignments")
+      .find(
+        { active: true },
+        { projection: { issueNumber: 1, handle: 1, harness: 1, model: 1, tier: 1, claimedAt: 1, renewedAt: 1 } },
+      )
+      .sort({ claimedAt: 1 })
+      .toArray();
+    const titles = new Map<number, { title?: string; labels?: string[] }>(
+      (
+        await orch.db
+          .collection<{ _id: number; title?: string; labels?: string[] }>("issues")
+          .find({ _id: { $in: active.map((a) => a.issueNumber) } }, { projection: { title: 1, labels: 1 } })
+          .toArray()
+      ).map((i) => [i._id, i]),
+    );
+    const work = await Promise.all(
+      active.map(async (a) => {
+        const ttl = await orch.redis.ttl(`lease:issue:${a.issueNumber}`).catch(() => -2);
+        const issue = titles.get(a.issueNumber);
+        const stage = (issue?.labels ?? []).find((l) => l.startsWith("stage: "))?.slice(7) ?? null;
+        return {
+          issue: a.issueNumber,
+          title: issue?.title ?? null,
+          stage,
+          handle: a.handle,
+          harness: a.harness ?? null,
+          model: a.model ?? null,
+          claimedAt: a.claimedAt,
+          renewedAt: a.renewedAt,
+          /** -1/-2 = lease missing (expiring/reaped); dashboards show stalled. */
+          leaseSecondsLeft: ttl,
+        };
+      }),
+    );
+    return { ok: true, count: work.length, work };
+  });
+
   // The runners' whole-queue snapshot (ADR-0018). Shape is BYTE-COMPATIBLE
   // with fg-common's fetch_open_issues() so every downstream jq filter
   // (rework_issues, issues_with_status, pick_available) works unchanged —

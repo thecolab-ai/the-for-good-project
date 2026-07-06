@@ -138,6 +138,7 @@ export class FleetStore extends EventEmitter {
       connectedAt: nowIso,
       lastSeen: nowIso,
       task: hello.task ?? null,
+      taskSince: hello.task ? nowIso : null,
       session: emptyCounters(),
       lastTps: 0,
       lastTpsAt: null,
@@ -151,7 +152,10 @@ export class FleetStore extends EventEmitter {
     rec.lastSeen = nowIso;
     rec.expiresAt = now + config.agentTtlSeconds * 1000;
     if (resolvedLocation) rec.location = resolvedLocation;
-    if (hello.task) rec.task = hello.task;
+    if (hello.task) {
+      if (hello.task.ref !== rec.task?.ref || hello.task.kind !== rec.task?.kind) rec.taskSince = nowIso;
+      rec.task = hello.task;
+    }
     this.agents.set(agentId, rec);
     if (!existing) {
       this.addEvent("agent_online", `@${hello.handle} came online (${hello.harness} · ${hello.model})`, {
@@ -200,6 +204,7 @@ export class FleetStore extends EventEmitter {
 
     if (hb.task) {
       const changed = hb.task.ref !== rec.task?.ref || hb.task.kind !== rec.task?.kind;
+      if (changed) rec.taskSince = new Date(now).toISOString();
       rec.task = hb.task;
       if (changed && (hb.task.ref || hb.task.title)) this.emitTaskEvent(rec, hb.task);
     }
@@ -215,6 +220,7 @@ export class FleetStore extends EventEmitter {
     const rec = this.agents.get(id);
     if (!rec) return;
     const changed = task.ref !== rec.task?.ref || task.kind !== rec.task?.kind;
+    if (changed) rec.taskSince = new Date().toISOString();
     rec.task = task;
     rec.lastSeen = new Date().toISOString();
     rec.expiresAt = Date.now() + config.agentTtlSeconds * 1000;
