@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DomainBadge } from "@/components/shared/Badges";
-import { CONFIDENCE_COLOR, domainLabel } from "@/lib/meta";
+import { CONFIDENCE_COLOR, domainLabel, domainColor } from "@/lib/meta";
 import { cn } from "@/lib/utils";
 import type { Finding } from "@/lib/types";
 
@@ -18,16 +18,6 @@ const VIEW_KEY = "fgp-findings-view";
 const readView = (): View => { try { return (localStorage.getItem(VIEW_KEY) as View) || "grid"; } catch { return "grid"; } };
 const writeView = (v: View) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
 
-// A per-domain tint so the distribution bar and facet dots read at a glance.
-const DOMAIN_TINT: Record<string, string> = {
-  "child-welfare": "#DB2777",
-  "grant-access": "#0E8A16",
-  "civic-transparency": "#1D76DB",
-  "ai-policy": "#8B5CF6",
-  biosecurity: "#0EA5E9",
-  other: "#78716C",
-};
-const domainTint = (d: string) => DOMAIN_TINT[d] || "#78716C";
 const CONF_RANK: Record<string, number> = { High: 3, Medium: 2, Low: 1, Unknown: 0 };
 
 // A compact confidence dot + label used across both views.
@@ -99,9 +89,9 @@ function ListRow({ f }: { f: Finding }) {
       to={`/findings/${f.slug}`}
       className="group flex items-center gap-3 border-b border-border/60 px-3 py-2.5 transition-colors hover:bg-secondary/50 sm:gap-4"
     >
-      <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: domainTint(f.domain) }} />
+      <span className="h-8 w-1 shrink-0 rounded-full" title={domainLabel(f.domain)} style={{ backgroundColor: domainColor(f.domain) }} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium leading-snug group-hover:text-brand-cyan-dark">{f.title}</div>
+        <div className="truncate font-medium leading-snug group-hover:text-brand-cyan-dark" title={f.title}>{f.title}</div>
         <div className="truncate text-xs text-muted-foreground">{f.summary}</div>
       </div>
       <div className="hidden w-32 shrink-0 md:block"><DomainBadge domain={f.domain} /></div>
@@ -167,13 +157,13 @@ export default function Findings() {
   return (
     <div className="full-bleed px-4 md:px-6">
       {/* Command bar — sticky, dense, app-console feel */}
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+      <div className="sticky top-16 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand-cyan-dark" />
             <h1 className="font-serif text-lg font-bold">Research findings</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="hidden flex-wrap items-center gap-1.5 md:flex">
             <Vital icon={BookOpen} value={all.length} label="findings" accent="#2E4057" />
             <Vital icon={Layers} value={domainCounts.length} label="domains" accent="#8B5CF6" />
             <Vital icon={Link2} value={totalSources} label="sources" accent="#0EA5E9" />
@@ -181,20 +171,20 @@ export default function Findings() {
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[180px]">
+            <div className="relative min-w-[180px] flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search findings…" value={q} onChange={(e) => setQ(e.target.value)} className="h-9 pl-9" />
+              <Input aria-label="Search findings" placeholder="Search findings…" value={q} onChange={(e) => setQ(e.target.value)} className="h-9 pl-9" />
             </div>
             <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">
               {([["recent", "Recent"], ["sources", "Sources"], ["confidence", "Confidence"]] as [SortKey, string][]).map(([k, lbl]) => (
-                <button key={k} type="button" onClick={() => setSort(k)} className={cn("inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors", sort === k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                <button key={k} type="button" onClick={() => setSort(k)} aria-pressed={sort === k} className={cn("inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors", sort === k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                   {k === "recent" ? null : <ArrowUpDown className="h-3 w-3" />}{lbl}
                 </button>
               ))}
             </div>
             <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">
-              <button type="button" onClick={() => setViewPersist("grid")} title="Grid" className={cn("rounded-md p-1.5 transition-colors", view === "grid" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutGrid className="h-4 w-4" /></button>
-              <button type="button" onClick={() => setViewPersist("list")} title="List" className={cn("rounded-md p-1.5 transition-colors", view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Rows3 className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setViewPersist("grid")} aria-label="Grid view" aria-pressed={view === "grid"} title="Grid" className={cn("rounded-md p-1.5 transition-colors", view === "grid" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutGrid className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setViewPersist("list")} aria-label="List view" aria-pressed={view === "list"} title="List" className={cn("rounded-md p-1.5 transition-colors", view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Rows3 className="h-4 w-4" /></button>
             </div>
           </div>
         </div>
@@ -204,23 +194,25 @@ export default function Findings() {
       <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         {/* Facet rail */}
         <aside className="hidden lg:block">
-          <div className="sticky top-[4.75rem] space-y-5">
+          <div className="sticky top-[8rem] space-y-5">
             {/* Domain distribution bar */}
-            <div>
-              <div className="hud-label mb-2">Coverage</div>
-              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                {domainCounts.map(([d, n]) => (
-                  <span key={d} title={`${domainLabel(d)}: ${n}`} style={{ width: `${(n / all.length) * 100}%`, backgroundColor: domainTint(d) }} />
-                ))}
+            {domainCounts.length > 1 ? (
+              <div>
+                <div className="hud-label mb-2">Coverage</div>
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                  {domainCounts.map(([d, n]) => (
+                    <span key={d} title={`${domainLabel(d)}: ${n}`} style={{ width: `${(n / all.length) * 100}%`, backgroundColor: domainColor(d) }} />
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <div>
               <div className="hud-label mb-1.5">Domain</div>
               <div className="space-y-0.5">
                 <Facet label="All domains" count={all.length} active={domain === "all"} onClick={() => setDomain("all")} />
                 {domainCounts.map(([d, n]) => (
-                  <Facet key={d} label={domainLabel(d)} count={n} tint={domainTint(d)} active={domain === d} onClick={() => setDomain(domain === d ? "all" : d)} />
+                  <Facet key={d} label={domainLabel(d)} count={n} tint={domainColor(d)} active={domain === d} onClick={() => setDomain(domain === d ? "all" : d)} />
                 ))}
               </div>
             </div>
@@ -239,6 +231,17 @@ export default function Findings() {
 
         {/* Results */}
         <section className="min-w-0">
+          {/* Mobile domain filter — the facet rail is desktop-only, so surface
+              domain filtering here below lg. */}
+          <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+            <button type="button" onClick={() => setDomain("all")} aria-pressed={domain === "all"} className={cn("shrink-0 rounded-full border px-3 py-1 text-xs font-medium", domain === "all" ? "border-transparent bg-secondary text-foreground" : "border-border text-muted-foreground")}>All</button>
+            {domainCounts.map(([d, n]) => (
+              <button key={d} type="button" onClick={() => setDomain(domain === d ? "all" : d)} aria-pressed={domain === d} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", domain === d ? "border-transparent bg-secondary text-foreground" : "border-border text-muted-foreground")}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: domainColor(d) }} />{domainLabel(d)} <span className="tabular-nums opacity-60">{n}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="mb-3 flex items-center justify-between gap-2 text-sm text-muted-foreground">
             <span><span className="font-medium text-foreground">{filtered.length}</span> {filtered.length === 1 ? "finding" : "findings"}{hasFilter ? " matched" : ""}</span>
             {hasFilter ? <button type="button" onClick={clearAll} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="h-3.5 w-3.5" /> Clear filters</button> : null}

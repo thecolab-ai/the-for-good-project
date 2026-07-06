@@ -285,7 +285,7 @@ function Segmented({ children }: { children: React.ReactNode }) {
 
 function SegButton({ active, onClick, title, children }: { active: boolean; onClick: () => void; title?: string; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} title={title} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+    <button type="button" onClick={onClick} title={title} aria-pressed={active} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
       {children}
     </button>
   );
@@ -357,7 +357,7 @@ export default function Streams() {
       ) : (
         <>
           {/* Stats */}
-          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7">
             <StatCard label="Streams" value={totals.count} icon={Network} accent="#2E4057" />
             <StatCard label="Awaiting direction" value={totals.decisions} icon={UserCheck} accent="#D97706" />
             <StatCard label="In progress" value={totals.inProgress} icon={Loader2} accent="#0EA5E9" />
@@ -368,7 +368,7 @@ export default function Streams() {
           </section>
 
           {/* Controls — sticky so search/filter/view stay reachable while scrolling */}
-          <div className="sticky top-0 z-20 mb-6 -mx-4 flex flex-wrap items-center gap-3 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+          <div className="sticky top-16 z-20 mb-6 -mx-4 flex flex-wrap items-center gap-3 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
             <div className="relative min-w-[180px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Search streams…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />

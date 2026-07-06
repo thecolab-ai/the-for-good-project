@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DomainBadge } from "@/components/shared/Badges";
-import { domainLabel } from "@/lib/meta";
+import { domainLabel, domainColor } from "@/lib/meta";
 import { cn } from "@/lib/utils";
 import type { SourceRef } from "@/lib/types";
 
@@ -15,16 +15,6 @@ type View = "hosts" | "list";
 const VIEW_KEY = "fgp-sources-view";
 const readView = (): View => { try { return (localStorage.getItem(VIEW_KEY) as View) || "hosts"; } catch { return "hosts"; } };
 const writeView = (v: View) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
-
-const DOMAIN_TINT: Record<string, string> = {
-  "child-welfare": "#DB2777",
-  "grant-access": "#0E8A16",
-  "civic-transparency": "#1D76DB",
-  "ai-policy": "#8B5CF6",
-  biosecurity: "#0EA5E9",
-  other: "#78716C",
-};
-const domainTint = (d: string) => DOMAIN_TINT[d] || "#78716C";
 
 function Vital({ icon: Icon, value, label, accent = "#2E4057" }: { icon: typeof Database; value: React.ReactNode; label: string; accent?: string }) {
   return (
@@ -123,13 +113,13 @@ export default function Sources() {
   return (
     <div className="full-bleed px-4 md:px-6">
       {/* Command bar */}
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+      <div className="sticky top-16 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-2">
             <Database className="h-5 w-5 text-brand-cyan-dark" />
             <h1 className="font-serif text-lg font-bold">Data sources</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="hidden flex-wrap items-center gap-1.5 md:flex">
             <Vital icon={Link2} value={sources.length} label="sources" accent="#0EA5E9" />
             <Vital icon={Globe} value={hostCounts.length} label="sites" accent="#2E4057" />
             <Vital icon={Layers} value={domainCounts.length} label="domains" accent="#8B5CF6" />
@@ -137,13 +127,13 @@ export default function Sources() {
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[180px]">
+            <div className="relative min-w-[180px] flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search sources…" value={q} onChange={(e) => setQ(e.target.value)} className="h-9 pl-9" />
+              <Input aria-label="Search sources" placeholder="Search sources…" value={q} onChange={(e) => setQ(e.target.value)} className="h-9 pl-9" />
             </div>
             <div className="inline-flex items-center gap-1 rounded-lg bg-secondary p-1">
-              <button type="button" onClick={() => setViewPersist("hosts")} title="Grouped by site" className={cn("rounded-md p-1.5 transition-colors", view === "hosts" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutGrid className="h-4 w-4" /></button>
-              <button type="button" onClick={() => setViewPersist("list")} title="Flat list" className={cn("rounded-md p-1.5 transition-colors", view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Rows3 className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setViewPersist("hosts")} aria-label="Grouped by site" aria-pressed={view === "hosts"} title="Grouped by site" className={cn("rounded-md p-1.5 transition-colors", view === "hosts" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutGrid className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setViewPersist("list")} aria-label="Flat list" aria-pressed={view === "list"} title="Flat list" className={cn("rounded-md p-1.5 transition-colors", view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Rows3 className="h-4 w-4" /></button>
             </div>
           </div>
         </div>
@@ -152,22 +142,24 @@ export default function Sources() {
       {/* Body: facet rail + results */}
       <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
-          <div className="sticky top-[4.75rem] space-y-5">
-            <div>
-              <div className="hud-label mb-2">Coverage</div>
-              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                {domainCounts.map(([d, n]) => (
-                  <span key={d} title={`${domainLabel(d)}: ${n}`} style={{ width: `${(n / sources.length) * 100}%`, backgroundColor: domainTint(d) }} />
-                ))}
+          <div className="sticky top-[8rem] space-y-5">
+            {domainCounts.length > 1 ? (
+              <div>
+                <div className="hud-label mb-2">Coverage</div>
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                  {domainCounts.map(([d, n]) => (
+                    <span key={d} title={`${domainLabel(d)}: ${n}`} style={{ width: `${(n / sources.length) * 100}%`, backgroundColor: domainColor(d) }} />
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <div>
               <div className="hud-label mb-1.5">Domain</div>
               <div className="space-y-0.5">
                 <Facet label="All domains" count={sources.length} active={domain === "all"} onClick={() => setDomain("all")} />
                 {domainCounts.map(([d, n]) => (
-                  <Facet key={d} label={domainLabel(d)} count={n} tint={domainTint(d)} active={domain === d} onClick={() => setDomain(domain === d ? "all" : d)} />
+                  <Facet key={d} label={domainLabel(d)} count={n} tint={domainColor(d)} active={domain === d} onClick={() => setDomain(domain === d ? "all" : d)} />
                 ))}
               </div>
             </div>
@@ -184,6 +176,16 @@ export default function Sources() {
         </aside>
 
         <section className="min-w-0">
+          {/* Mobile domain filter — facet rail is desktop-only. */}
+          <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+            <button type="button" onClick={() => setDomain("all")} aria-pressed={domain === "all"} className={cn("shrink-0 rounded-full border px-3 py-1 text-xs font-medium", domain === "all" ? "border-transparent bg-secondary text-foreground" : "border-border text-muted-foreground")}>All</button>
+            {domainCounts.map(([d, n]) => (
+              <button key={d} type="button" onClick={() => setDomain(domain === d ? "all" : d)} aria-pressed={domain === d} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", domain === d ? "border-transparent bg-secondary text-foreground" : "border-border text-muted-foreground")}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: domainColor(d) }} />{domainLabel(d)} <span className="tabular-nums opacity-60">{n}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="mb-3 flex items-center justify-between gap-2 text-sm text-muted-foreground">
             <span><span className="font-medium text-foreground">{filtered.length}</span> {filtered.length === 1 ? "source" : "sources"}{view === "hosts" ? ` · ${groups.length} ${groups.length === 1 ? "site" : "sites"}` : ""}{hasFilter ? " matched" : ""}</span>
             {hasFilter ? <button type="button" onClick={clearAll} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="h-3.5 w-3.5" /> Clear filters</button> : null}
@@ -196,8 +198,8 @@ export default function Sources() {
               {groups.map(([h, items]) => (
                 <Card key={h} className="flex flex-col">
                   <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                      <img src={`https://icons.duckduckgo.com/ip3/${h}.ico`} alt="" className="h-4 w-4 shrink-0 rounded" onError={(e) => (e.currentTarget.style.display = "none")} />
+                    <CardTitle className="flex min-w-0 items-center gap-2 text-base" title={h}>
+                      <img src={`https://icons.duckduckgo.com/ip3/${h}.ico`} alt="" className="h-4 w-4 shrink-0 rounded" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
                       <span className="truncate">{h}</span>
                     </CardTitle>
                     <Badge variant="secondary" className="shrink-0">{items.length}</Badge>
@@ -219,13 +221,13 @@ export default function Sources() {
               </div>
               {filtered.map((s, i) => (
                 <a key={i} href={s.url} target="_blank" rel="noreferrer" className="group flex items-center gap-3 border-b border-border/60 px-3 py-2 text-sm transition-colors hover:bg-secondary/50">
-                  <span className="hidden w-40 shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+                  <span className="hidden w-40 shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex" title={s.host}>
                     <img src={`https://icons.duckduckgo.com/ip3/${s.host}.ico`} alt="" className="h-3.5 w-3.5 shrink-0 rounded" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
                     <span className="truncate">{s.host}</span>
                   </span>
-                  <span className="min-w-0 flex-1 truncate group-hover:text-brand-cyan-dark">{s.label}</span>
+                  <span className="min-w-0 flex-1 truncate group-hover:text-brand-cyan-dark" title={s.label}>{s.label}</span>
                   <span className="hidden w-32 shrink-0 md:block"><DomainBadge domain={s.domain} /></span>
-                  <span className="hidden w-56 shrink-0 truncate text-xs text-muted-foreground lg:block">{s.findingTitle}</span>
+                  <span className="hidden w-56 shrink-0 truncate text-xs text-muted-foreground lg:block" title={s.findingTitle}>{s.findingTitle}</span>
                   <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </a>
               ))}
