@@ -1,5 +1,5 @@
 ---
-title: "Logs and meat by-products are NZ's hardest China exposure to substitute; dairy, sheepmeat, and kiwifruit have more options but every alternative market is capped well below the size of a 25-50% China shock"
+title: "Logs and meat by-products are NZ's hardest China exposure to substitute; sheepmeat has EU headroom, while dairy, beef, and kiwifruit alternatives are capped below a 25-50% China shock"
 domain: "other"
 issue: "#502"
 confidence: "Medium"
@@ -10,7 +10,7 @@ date: "2026-07-05"
 status: "draft"
 ---
 
-# Logs and meat by-products are NZ's hardest China exposure to substitute; dairy, sheepmeat, and kiwifruit have more options but every alternative market is capped well below the size of a 25-50% China shock
+# Logs and meat by-products are NZ's hardest China exposure to substitute; sheepmeat has EU headroom, while dairy, beef, and kiwifruit alternatives are capped below a 25-50% China shock
 
 ## Scope
 
@@ -123,7 +123,7 @@ Both substitute on visa policy, provider/aviation capacity, and marketing lead t
 
 | Claim | Source 1 | Source 2 | Confidence |
 |---|---|---|---|
-| The EU's existing WTO-only sheepmeat quota (125,769t) was less than half-used by NZ in 2025 (69,837t), leaving genuine unused headroom before the FTA top-up is counted. | [MFAT, NZ-EU FTA Key Outcomes PDF](https://www.mfat.govt.nz/assets/Trade-agreements/EU-NZ-FTA/NZ-EU-FTA-Key-Outcomes-.pdf) (fetched directly) | [MIA, 2025 red meat export release](https://mia.co.nz/new-zealand-red-meat-exports-reached-record-levels-during-2025/) (fetched directly) | High |
+| The EU's existing WTO-only sheepmeat quota (125,769t) was a little over half-used by NZ in 2025 (69,837t), leaving roughly 55,900t of unused existing quota before the FTA top-up is counted. | [MFAT, NZ-EU FTA Key Outcomes PDF](https://www.mfat.govt.nz/assets/Trade-agreements/EU-NZ-FTA/NZ-EU-FTA-Key-Outcomes-.pdf) (fetched directly) | [MIA, 2025 red meat export release](https://mia.co.nz/new-zealand-red-meat-exports-reached-record-levels-during-2025/) (fetched directly) | High |
 | India's now-signed NZ-India FTA excludes bulk milk powder, butter, cheese, and liquid milk from tariff relief, while India is also near self-sufficient in bulk dairy — a double structural closure, not a temporary gap. | [MFAT, NZ-India FTA Key Outcomes](https://www.mfat.govt.nz/en/trade/free-trade-agreements/free-trade-agreements-concluded-but-not-in-force/new-zealand-india-free-trade-agreement/key-outcomes) (fetched directly) | [USDA ERS, India dairy](https://www.ers.usda.gov/topics/international-markets-us-trade/countries-regions/india) | High |
 | The US WTO beef quota was exceeded in 2023 and materially exceeded again in 2024, meaning that swing capacity was already used up before any further China shock, and a 2025 US tariff hike raised the out-of-quota tariff to roughly 42%. | [NZ Meat Board, US Beef and Veal](https://www.nzmeatboard.org/quotas/us-beef-and-veal) for 213,402t quota and base tariff mechanics | [Beef Magazine, "Global beef roundup: Focus on New Zealand"](https://www.beefmagazine.com/market-news/global-beef-roundup-focus-on-new-zealand) for 2023/2024 over-quota export volumes; [Beef + Lamb NZ](https://beeflambnz.com/news/us-tariff-hike-what-it-means-nz-red-meat) for 2025 tariff rates only | Medium — 2023/2024 overage comes from trade press rather than raw customs data; Beef + Lamb NZ's tariff page appears internally stale on historical fill status |
 | A 2022 NZ domestic biosecurity rule (methyl bromide emission recapture) — not a trade barrier imposed by India — is what collapsed NZ's log trade with India from ~$250m/year to $9.5m in 2023. | [Wood Central, "Fumigation Could Reboot NZ's $250m Log Trade with India"](https://woodcentral.com.au/fumigation-could-reboot-nzs-250m-log-trade-with-india/) | [MPI, fumigating with methyl bromide](https://www.mpi.govt.nz/export/timber-wood-products/timber-wood-products/fumigating-with-methyl-bromide) confirms the underlying NZ rule exists; India's own PQ Order 2003 fumigation requirement not independently re-verified against a primary Indian regulatory source in this pass | Medium |
