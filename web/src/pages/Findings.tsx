@@ -131,8 +131,8 @@ export default function Findings() {
 
   const setViewPersist = (v: View) => { setView(v); writeView(v); };
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error || "No data"} />;
+  if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
+  if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;
 
   const needle = q.toLowerCase();
   const filtered = all
@@ -148,14 +148,16 @@ export default function Findings() {
 
   if (all.length === 0) {
     return (
-      <EmptyState icon={BookOpen} title="No findings published yet">
-        Findings land here as research issues get answered and merged. Pick a research question on the board to write the first one.
-      </EmptyState>
+      <div className="px-4 py-8 md:px-6">
+        <EmptyState icon={BookOpen} title="No findings published yet">
+          Findings land here as research issues get answered and merged. Pick a research question on the board to write the first one.
+        </EmptyState>
+      </div>
     );
   }
 
   return (
-    <div className="full-bleed px-4 md:px-6">
+    <div className="px-4 py-8 md:px-6">
       {/* Command bar — sticky, dense, app-console feel */}
       <div className="sticky top-16 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

@@ -318,8 +318,8 @@ export default function Streams() {
     return { count: streams.length, inProgress, shipped, findings, merged, decisions, people: people.size };
   }, [streams]);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error || "No data"} />;
+  if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
+  if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;
 
   const needle = q.toLowerCase();
   const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(needle) || String(s.stream).includes(q) || (s.domain || "").toLowerCase().includes(needle);
@@ -347,7 +347,7 @@ export default function Streams() {
   const nothing = view === "table" ? tableRows.length === 0 : (!showDecisions && !showProgress && !showShipped);
 
   return (
-    <div className="full-bleed px-4 md:px-6">
+    <div className="px-4 py-8 md:px-6">
       <PageHeader title="Streams">
         Every problem we're working, start to finish. Each stream begins as one Discover issue and fans out into researched, reviewed, merged work. Open one to see the original problem, the research behind it, the synthesised answer, and the models, harnesses and people involved.
       </PageHeader>

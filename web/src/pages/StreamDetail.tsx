@@ -94,8 +94,8 @@ export default function StreamDetail() {
 
   const group = useMemo(() => (data ? buildStreamChains(data.issues).find((g) => g.stream === streamNum) : undefined), [data, streamNum]);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error || "No data"} />;
+  if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
+  if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;
 
   const summary = data.streamsSummary?.find((s) => s.stream === streamNum);
   const doc = data.streamDocs?.find((d) => d.stream === streamNum);
@@ -103,7 +103,7 @@ export default function StreamDetail() {
 
   if (!summary && !group && !doc) {
     return (
-      <div>
+      <div className="px-4 py-8 md:px-6">
         <Link to="/streams" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> All streams</Link>
         <EmptyState icon={Network} title={`Stream #${streamNum} not found`}>It may not exist yet, or the data hasn't rebuilt. Head back to all streams.</EmptyState>
       </div>
@@ -129,7 +129,7 @@ export default function StreamDetail() {
   const image = doc?.image || summary?.image || "";
 
   return (
-    <div className="full-bleed px-4 md:px-6">
+    <div className="px-4 py-8 md:px-6">
       {/* Sticky command bar — keeps title, status & key stats in view while scrolling */}
       <div className="sticky top-16 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <Link to="/streams" className="mb-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> All streams</Link>

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ContainedPage } from "@/components/layout/ContainedPage";
 import Dashboard from "@/pages/Dashboard";
 import Live from "@/pages/Live";
 import Board from "@/pages/Board";
@@ -28,24 +29,32 @@ export const router = createBrowserRouter([
   {
     element: <AppLayout />,
     children: [
-      { path: "/", element: <Dashboard /> },
-      { path: "/board", element: <Board /> },
+      // Full-bleed app-shell pages: rendered directly in AppLayout's
+      // unconstrained <main> so they can genuinely span the viewport at any
+      // screen width, instead of a max-width `.container` capping them.
       { path: "/streams", element: <Streams /> },
       { path: "/streams/:stream", element: <StreamDetail /> },
-      { path: "/issue/:number", element: <IssueDetail /> },
       { path: "/findings", element: <Findings /> },
-      { path: "/findings/*", element: <FindingDetail /> },
       { path: "/sources", element: <Sources /> },
-      { path: "/leaderboard", element: <Leaderboard /> },
-      { path: "/review", element: <Review /> },
-      { path: "/submit", element: <Navigate to="/live" replace /> },
-      { path: "/methodology", element: <Methodology /> },
-      { path: "/contribute", element: <Contribute /> },
-      { path: "/partners", element: <Partners /> },
-      { path: "/team", element: <Team /> },
-      { path: "/brand-kit", element: <BrandKit /> },
-      { path: "/decisions", element: <Decisions /> },
-      { path: "*", element: <NotFound /> },
+      {
+        element: <ContainedPage />,
+        children: [
+          { path: "/", element: <Dashboard /> },
+          { path: "/board", element: <Board /> },
+          { path: "/issue/:number", element: <IssueDetail /> },
+          { path: "/findings/*", element: <FindingDetail /> },
+          { path: "/leaderboard", element: <Leaderboard /> },
+          { path: "/review", element: <Review /> },
+          { path: "/submit", element: <Navigate to="/live" replace /> },
+          { path: "/methodology", element: <Methodology /> },
+          { path: "/contribute", element: <Contribute /> },
+          { path: "/partners", element: <Partners /> },
+          { path: "/team", element: <Team /> },
+          { path: "/brand-kit", element: <BrandKit /> },
+          { path: "/decisions", element: <Decisions /> },
+          { path: "*", element: <NotFound /> },
+        ],
+      },
     ],
   },
 ], {
