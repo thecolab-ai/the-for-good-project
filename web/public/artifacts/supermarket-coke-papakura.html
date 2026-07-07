@@ -1,36 +1,186 @@
-<!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
-<title>Supermarket price watch — Coca-Cola 1.5L, Papakura</title>
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex"/>
+<title>The "special" is the price — Coca-Cola 1.5L, Papakura</title>
+<meta property="og:title" content="The 'special' is the price — Coca-Cola 1.5L, Papakura"/>
+<meta property="og:image" content="supermarket-coke-papakura.png"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{
+  colors:{cream:'#faf8f3',ink:'#1b1b22',navy:'#1e3a5f',muted:'#5b5b66',line:'#e4ded2',ww:'#178a3f',nw:'#d4121a',orange:'#c2410c'},
+  fontFamily:{serif:['Georgia','Times New Roman','serif'],sans:['Inter','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','sans-serif']}
+}}}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#faf8f3;--ink:#1b1b22;--muted:#5b5b66;--line:#e4ded2;--card:#fff;--navy:#1e3a5f;--blue:#2563eb}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding:26px 16px 70px}
-.wrap{max-width:920px;margin:0 auto}
-.pill{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin-bottom:14px;background:#fff}
-h1{font-family:Georgia,"Times New Roman",serif;font-size:27px;line-height:1.15;margin:0 0 6px;color:var(--navy)}
-.sub{color:var(--muted);margin:0 0 22px;max-width:68ch}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 22px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-img.chart{display:block;width:100%;height:auto;border-radius:8px}
-table{width:100%;border-collapse:collapse;font-size:14.5px}
-th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
-td:not(:first-child),th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
-h2{font-family:Georgia,serif;font-size:18px;color:var(--navy);margin:26px 0 8px}
-.take{background:#12261b;color:#eafff2;border-radius:14px;padding:16px 18px}
-.take b{color:#fff}
-.foot{margin-top:30px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
-a{color:var(--blue)}
-</style></head><body><div class="wrap">
-<span class="pill">The For Good Project · supermarket price watch</span>
-<h1>The "special" is the price: Coca-Cola 1.5L in Papakura</h1>
-<p class="sub">Two years of real shelf prices for one bottle at two "competing" supermarkets a few kilometres apart, from grocer.nz public price history. Part of <a href="https://github.com/thecolab-ai/the-for-good-project/issues/61">stream #61 — supermarket price &amp; promotion transparency</a>.</p>
-<div class="card"><img class="chart" alt="Coca-Cola Classic 1.5L shelf price, Woolworths vs New World Papakura, Jul 2024–Jul 2026" src="supermarket-coke-papakura.png" loading="lazy"></div>
-<div class="card"><table>
-<tr><th>Store</th><th>Now (Jul&nbsp;2026)</th><th>2-yr range</th><th>2-yr avg</th><th>Data points</th></tr>
-<tr><td style='color:#178a3f;font-weight:600'>Woolworths Papakura</td><td>$3.49</td><td>$2.25 – $4.99</td><td>$3.96</td><td>715</td></tr><tr><td style='color:#d4121a;font-weight:600'>New World Papakura</td><td>$4.99</td><td>$2.25 – $4.99</td><td>$3.95</td><td>723</td></tr>
-</table></div>
-<h2>What it shows</h2>
-<p>Both stores cycle the <em>same</em> bottle endlessly between a ~$4.79–$4.99 "full" price and $2.25–$3.50 "specials" — identical floor, identical ceiling, and a near-identical two-year average (~$3.95) across a supposed duopoly. They're simply caught at different points in the cycle: right now New World sits at the full $4.99 while Woolworths is mid-cycle at $3.49. The "special" is effectively the default state, and the "regular" price is the one you rarely actually pay — the exact "was/now" mechanic the Commerce Commission and the Fair Trading Act are concerned with.</p>
-<div class="take"><b>Why it matters:</b> a "$4.99 → SPECIAL $2.99" sticker implies you're saving against a price that's seldom charged. Multiply this pattern across a full grocery basket and it shapes what every household pays. This is one worked example; the project is now gathering more (cross-store gaps, promo-cycling on a staples basket, store-location dispersion) to build a cited, evidence-backed picture.</div>
-<p class="foot">Source: grocer.nz public price history (product 6655; stores 118 Woolworths Papakura, 307 New World Papakura). Prices are recorded shelf prices at each store; a per-store snapshot is a claim about that store at that time. Analysis and small cited examples only — not a bulk republication of Grocer data. Generated for The For Good Project · <a href="https://github.com/thecolab-ai/the-for-good-project">github.com/thecolab-ai/the-for-good-project</a>.</p>
-</div></body></html>
+  body{background:#faf8f3}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  input[type=range]{-webkit-appearance:none;height:6px;border-radius:9999px;background:#e4ded2;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:9999px;background:#1e3a5f;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:9999px;background:#1e3a5f;border:3px solid #fff;cursor:pointer}
+</style>
+</head>
+<body class="text-ink font-sans antialiased">
+<div class="mx-auto max-w-4xl px-5 pb-24 pt-8">
+
+  <!-- hero -->
+  <span class="inline-block rounded-full border border-line bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted">The For Good Project · supermarket price watch</span>
+  <h1 class="mt-4 font-serif text-4xl font-bold leading-tight text-navy sm:text-5xl">The "special" <span class="italic text-orange">is</span> the price.</h1>
+  <p class="mt-3 max-w-2xl text-lg text-muted">One bottle of Coca-Cola — the same 1.5L — at two "competing" supermarkets a few kilometres apart in Papakura. Here's every price it's worn since 2022, straight from grocer.nz. Watch where it actually lives.</p>
+
+  <!-- stat cards -->
+  <div id="stats" class="reveal mt-9 grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+  <!-- chart -->
+  <section class="reveal mt-10 rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="font-serif text-xl font-bold text-navy">Every shelf price, 2022 → 2026</h2>
+        <p class="text-sm text-muted">Hover the line. It flips endlessly between two zones and almost never rests in the middle.</p>
+      </div>
+      <div class="flex gap-3 text-sm">
+        <label class="inline-flex cursor-pointer items-center gap-1.5"><input type="checkbox" id="tgl-ww" checked class="accent-ww"/><span class="font-medium text-ww">Woolworths</span></label>
+        <label class="inline-flex cursor-pointer items-center gap-1.5"><input type="checkbox" id="tgl-nw" checked class="accent-nw"/><span class="font-medium text-nw">New World</span></label>
+      </div>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-4 text-[11px] font-medium text-muted">
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-4 rounded-sm" style="background:rgba(212,18,26,.14)"></span>"Full" price zone</span>
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-4 rounded-sm" style="background:rgba(23,138,63,.14)"></span>"Special" zone</span>
+    </div>
+    <div class="relative mt-2" style="height:340px"><canvas id="chart"></canvas></div>
+
+    <!-- scrubber -->
+    <div class="mt-5 rounded-xl bg-cream p-4">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-semibold text-navy">🎚️ Rewind the shelf</div>
+        <div id="scrub-date" class="font-mono text-sm font-semibold text-ink"></div>
+      </div>
+      <input type="range" id="scrub" class="mt-3 w-full"/>
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <div class="rounded-lg border border-line bg-white p-3 text-center">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-ww">Woolworths</div>
+          <div id="scrub-ww" class="font-mono text-2xl font-bold text-ink">—</div>
+        </div>
+        <div class="rounded-lg border border-line bg-white p-3 text-center">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-nw">New World</div>
+          <div id="scrub-nw" class="font-mono text-2xl font-bold text-ink">—</div>
+        </div>
+      </div>
+      <div id="scrub-gap" class="mt-2 text-center text-xs text-muted"></div>
+    </div>
+  </section>
+
+  <!-- distribution -->
+  <section class="reveal mt-10">
+    <h2 class="font-serif text-2xl font-bold text-navy">So how often is it actually cheap?</h2>
+    <p class="mt-1 max-w-2xl text-muted">Weighted by time, here's the share of the last four years each store spent in each zone. The "special" is not the exception — it's roughly half the calendar.</p>
+    <div id="dist" class="mt-5 space-y-5"></div>
+  </section>
+
+  <!-- takeaway -->
+  <section class="reveal mt-10 rounded-2xl bg-[#12261b] p-6 text-[#eafff2] sm:p-8">
+    <h2 class="font-serif text-2xl font-bold text-white">Why this matters</h2>
+    <p class="mt-3 leading-relaxed">A "<span class="font-semibold text-white">$4.99 → SPECIAL $2.99</span>" sticker implies you're saving against a price that's <em>rarely actually charged</em>. Both chains share an almost identical floor, ceiling and time-weighted average across a supposed duopoly — they're just caught at different points in the same cycle. Multiply this one bottle across a whole grocery basket and it quietly shapes what every household pays.</p>
+    <p class="mt-3 leading-relaxed text-[#bfe0cb]">This is one worked example. The project is now gathering more — worst same-day cross-store gaps, promo-cycling across a staples basket, and the "store-location tax" — to build a cited, evidence-backed picture.</p>
+    <div class="mt-5 flex flex-wrap gap-2 text-sm">
+      <a href="https://github.com/thecolab-ai/the-for-good-project/issues/61" class="rounded-lg bg-white/10 px-3 py-1.5 font-medium text-white hover:bg-white/20">Stream #61 →</a>
+      <a href="https://github.com/thecolab-ai/the-for-good-project/issues/694" class="rounded-lg bg-white/10 px-3 py-1.5 font-medium text-white hover:bg-white/20">The $5-vs-$15 hunt →</a>
+      <a href="https://github.com/thecolab-ai/the-for-good-project" class="rounded-lg bg-white/10 px-3 py-1.5 font-medium text-white hover:bg-white/20">See the work in the open →</a>
+    </div>
+  </section>
+
+  <p class="mt-9 border-t border-line pt-5 text-xs text-muted">Source: grocer.nz public price history (product 6655; stores 118 Woolworths Papakura, 307 New World Papakura). Recorded shelf prices; a per-store snapshot is a claim about that store at that time. Analysis and small cited examples only — not a bulk republication of Grocer data. <a class="underline" href="https://github.com/thecolab-ai/the-for-good-project">thecolab-ai/the-for-good-project</a></p>
+</div>
+
+<script>
+const DATA={"s118":[[1655204400000,4.0],[1655676000000,2.5],[1656270000000,4.0],[1656874800000,3.0],[1657476000000,4.0],[1658019600000,3.25],[1658167200000,2.5],[1658620800000,3.25],[1658775600000,4.0],[1659405600000,3.0],[1659895200000,4.0],[1660590000000,2.0],[1661191200000,4.0],[1663092000000,2.5],[1663610400000,4.0],[1664121600000,3.0],[1664726400000,4.0],[1665331200000,3.0],[1665936000000,4.0],[1666490400000,3.5],[1666627200000,3.0],[1667149200000,4.0],[1667836800000,2.5],[1668441600000,4.0],[1668960000000,3.0],[1669568400000,4.0],[1670180400000,2.5],[1671390000000,4.0],[1672596000000,2.45],[1673200800000,4.0],[1673805600000,3.0],[1674410400000,4.0],[1675036800000,2.4],[1675641600000,4.0],[1676224800000,2.5],[1676829600000,4.0],[1677434400000,2.0],[1678042800000,4.0],[1678647600000,3.0],[1679198400000,3.5],[1679284800000,4.0],[1679878800000,3.0],[1680411600000,3.5],[1680498000000,4.0],[1681621200000,2.67],[1681707600000,2.0],[1682226000000,3.33],[1682312400000,4.0],[1682859600000,3.5],[1682917200000,3.0],[1683439200000,3.33],[1683525600000,4.17],[1683612000000,4.5],[1684044000000,3.5],[1684130400000,3.0],[1684648800000,3.75],[1684724400000,4.5],[1685253600000,3.17],[1685340000000,2.5],[1685865600000,3.83],[1685944800000,4.5],[1686463200000,3.5],[1686549600000,3.0],[1687068000000,4.0],[1687154400000,4.5],[1687672800000,3.5],[1687759200000,3.0],[1688277600000,4.0],[1688364000000,4.5],[1688882400000,4.0],[1688968800000,3.0],[1689487200000,3.5],[1689573600000,4.5],[1690092000000,3.5],[1690178400000,3.0],[1690696800000,4.0],[1690783200000,4.5],[1691301600000,3.0],[1691388000000,2.25],[1691906400000,3.75],[1691992800000,4.5],[1692511200000,4.0],[1692597600000,3.0],[1693116000000,4.0],[1693202400000,4.5],[1693720800000,3.17],[1693807200000,2.5],[1694325600000,3.83],[1694412000000,4.5],[1694498400000,4.49],[1694930400000,3.5],[1695016800000,3.0],[1695531600000,3.99],[1695618000000,4.49],[1696136400000,3.99],[1696222800000,3.0],[1696741200000,3.5],[1696827600000,4.49],[1697346000000,2.96],[1697432400000,2.2],[1697950800000,3.73],[1698037200000,4.49],[1698555600000,3.3],[1698642000000,2.7],[1699160400000,3.89],[1699246800000,4.49],[1699765200000,3.5],[1699851600000,3.0],[1700370000000,3.99],[1700456400000,4.49],[1700974800000,3.83],[1701064800000,2.5],[1701579600000,3.16],[1701666000000,4.49],[1702184400000,3.83],[1702270800000,2.5],[1702789200000,3.16],[1702875600000,4.49],[1703739600000,3.83],[1703826000000,2.5],[1704603600000,3.16],[1704690000000,4.49],[1705208400000,3.83],[1705294800000,2.5],[1705813200000,3.16],[1705899600000,4.49],[1706418000000,3.5],[1706504400000,3.0],[1707022800000,3.99],[1707109200000,4.49],[1707627600000,3.5],[1707714000000,3.0],[1708232400000,3.99],[1708318800000,4.49],[1708837200000,3.03],[1708923600000,2.3],[1709442000000,3.76],[1709528400000,4.49],[1710651600000,3.83],[1710738000000,2.5],[1711317600000,4.49],[1712469600000,3.5],[1712556000000,3.0],[1713679200000,3.74],[1713852000000,4.49],[1714284000000,3.5],[1714370400000,3.0],[1714888800000,3.99],[1714975200000,4.49],[1715497200000,3.74],[1715583600000,2.24],[1716163200000,4.49],[1716256800000,4.79],[1716800400000,3.0],[1717380000000,4.79],[1717898400000,4.36],[1717984800000,3.5],[1718503200000,3.93],[1718593200000,4.79],[1719111600000,4.36],[1719194400000,3.5],[1719709200000,3.93],[1719799200000,4.79],[1720314000000,4.19],[1720400400000,3.0],[1720918800000,3.6],[1721008800000,4.79],[1721527200000,4.36],[1721613600000,3.5],[1722132000000,3.93],[1722218400000,4.79],[1722751200000,4.18],[1722866400000,2.95],[1723356000000,3.56],[1723442400000,4.79],[1723960800000,3.93],[1724047200000,3.5],[1724565600000,4.36],[1724652000000,4.79],[1725170400000,4.03],[1725256800000,2.5],[1725775200000,3.26],[1725861600000,4.79],[1726380000000,3.93],[1726470000000,3.5],[1726988400000,4.36],[1727074800000,4.79],[1727636400000,3.0],[1728259200000,4.79],[1728846000000,2.5],[1729450800000,4.79],[1730055600000,3.0],[1730628000000,3.9],[1730689200000,4.79],[1731265200000,3.0],[1731870000000,4.79],[1732474800000,3.5],[1733083200000,4.79],[1733655600000,2.8],[1734260400000,4.79],[1735470000000,2.8],[1736074800000,3.8],[1736132400000,4.79],[1736679600000,3.0],[1737284400000,4.79],[1737889200000,2.5],[1738494000000,4.79],[1739098800000,3.5],[1739703600000,4.79],[1740308400000,2.5],[1740913200000,4.79],[1741518000000,3.0],[1742122800000,3.9],[1742184000000,4.79],[1742756400000,3.5],[1743332400000,4.79],[1743940800000,3.0],[1744563600000,4.79],[1745802000000,3.5],[1746378000000,4.79],[1746982800000,3.5],[1747587600000,4.79],[1748192400000,2.7],[1748797200000,4.79],[1749402000000,3.5],[1750006800000,4.79],[1750611600000,3.5],[1751230800000,4.79],[1751821200000,3.5],[1752426000000,4.79],[1753030800000,3.0],[1753635600000,4.79],[1754240400000,3.0],[1754809200000,3.9],[1754874000000,4.79],[1755450000000,2.8],[1756054800000,4.79],[1756659600000,3.0],[1757260800000,4.79],[1757894400000,2.5],[1758499200000,4.79],[1759071600000,3.5],[1759705200000,4.79],[1760310000000,3.5],[1760900400000,4.79],[1761519600000,2.5],[1762124400000,4.79],[1762729200000,3.5],[1763334000000,4.79],[1763938800000,3.0],[1764514800000,4.79],[1765119600000,3.0],[1765274400000,2.62],[1765378800000,2.25],[1765551600000,3.0],[1765670400000,3.9],[1765810800000,4.79],[1766934000000,3.0],[1767538800000,4.79],[1768147200000,3.0],[1768752000000,4.79],[1769619600000,2.5],[1769965200000,4.79],[1770570000000,3.5],[1771171200000,4.79],[1771776000000,2.5],[1772380800000,4.79],[1772985600000,3.0],[1773590400000,4.79],[1774195200000,3.0],[1774803600000,4.79],[1776013200000,3.5],[1776618000000,4.79],[1777222800000,3.5],[1777827600000,4.79],[1778432400000,3.0],[1779037200000,4.79],[1779642000000,3.0],[1780246800000,4.79],[1780275600000,4.89],[1780419600000,4.99],[1780851600000,2.99],[1781456400000,4.99],[1782061200000,2.99],[1782666000000,4.99],[1783270800000,3.49],[1783299600000,3.49]],"s307":[[1655204400000,2.79],[1655676000000,3.99],[1656270000000,2.5],[1656874800000,3.99],[1657476000000,2.79],[1658019600000,3.39],[1658167200000,3.99],[1658620800000,3.49],[1658775600000,2.99],[1659405600000,3.99],[1659895200000,2.5],[1660500000000,3.99],[1661108400000,2.5],[1661706000000,3.99],[1662318000000,2.49],[1662919200000,3.99],[1663524000000,2.99],[1664121600000,3.99],[1665936000000,2.49],[1666490400000,3.24],[1666627200000,3.99],[1667149200000,2.99],[1667750400000,3.99],[1668355200000,2.99],[1668960000000,3.99],[1669568400000,2.5],[1670180400000,3.99],[1671390000000,1.99],[1672596000000,3.99],[1673200800000,2.5],[1673805600000,3.99],[1674410400000,2.0],[1675036800000,3.99],[1675641600000,2.99],[1676224800000,3.99],[1676829600000,2.99],[1677434400000,3.99],[1678042800000,2.99],[1678647600000,3.99],[1679198400000,3.24],[1679284800000,2.5],[1679878800000,3.99],[1680411600000,2.99],[1680498000000,1.99],[1681621200000,2.66],[1681707600000,3.99],[1682226000000,3.66],[1682312400000,2.99],[1682859600000,3.49],[1682917200000,3.99],[1683003600000,4.16],[1683244800000,4.49],[1683439200000,3.99],[1683525600000,3.0],[1684044000000,3.99],[1684130400000,4.49],[1684724400000,2.99],[1686463200000,3.99],[1686549600000,4.49],[1688277600000,3.99],[1688364000000,2.99],[1688882400000,3.49],[1688968800000,4.49],[1689487200000,3.83],[1689573600000,2.5],[1690092000000,3.16],[1690178400000,4.49],[1690696800000,3.99],[1690783200000,3.0],[1691301600000,3.99],[1691388000000,4.49],[1691906400000,3.83],[1691992800000,2.5],[1692511200000,3.16],[1692597600000,4.49],[1693116000000,3.99],[1693202400000,2.99],[1693720800000,3.99],[1693807200000,4.49],[1694325600000,3.99],[1694412000000,3.0],[1694930400000,3.99],[1695016800000,4.49],[1695531600000,3.99],[1695618000000,2.99],[1696136400000,3.49],[1696222800000,4.49],[1696741200000,3.83],[1696827600000,2.5],[1697346000000,3.16],[1697432400000,4.49],[1699160400000,3.99],[1699246800000,3.0],[1699765200000,3.99],[1699851600000,4.49],[1700370000000,3.99],[1700456400000,2.99],[1700974800000,3.99],[1701064800000,4.49],[1701579600000,3.82],[1701666000000,2.49],[1702184400000,3.82],[1702270800000,4.49],[1702789200000,3.66],[1702875600000,1.99],[1703998800000,3.66],[1704085200000,4.49],[1704603600000,3.83],[1704690000000,2.5],[1705208400000,3.83],[1705294800000,4.49],[1705813200000,3.83],[1705899600000,2.5],[1706418000000,3.83],[1706504400000,4.49],[1707022800000,3.99],[1707109200000,2.99],[1707627600000,3.99],[1707714000000,4.49],[1708232400000,3.99],[1708318800000,2.99],[1708837200000,3.99],[1708923600000,4.49],[1709442000000,3.99],[1709528400000,2.99],[1710651600000,3.99],[1710738000000,4.49],[1711317600000,2.25],[1712469600000,3.74],[1712556000000,4.49],[1713852000000,2.49],[1714284000000,3.16],[1714370400000,4.49],[1714888800000,3.99],[1714975200000,2.99],[1715497200000,3.49],[1715583600000,4.49],[1716163200000,3.49],[1716800400000,4.79],[1718503200000,4.19],[1718593200000,2.99],[1719111600000,3.59],[1719194400000,4.79],[1719709200000,4.36],[1719799200000,3.49],[1720314000000,3.92],[1720400400000,4.79],[1720918800000,4.36],[1721008800000,3.49],[1721527200000,3.92],[1721613600000,4.79],[1722132000000,4.19],[1722218400000,2.99],[1722751200000,4.19],[1722866400000,4.79],[1723356000000,4.36],[1723442400000,3.49],[1723960800000,4.36],[1724047200000,4.79],[1724565600000,4.19],[1724652000000,2.99],[1725170400000,4.19],[1725256800000,4.79],[1725775200000,4.19],[1725861600000,2.99],[1726380000000,4.19],[1726470000000,4.79],[1728259200000,2.99],[1728846000000,4.79],[1729450800000,3.49],[1731265200000,4.79],[1731870000000,3.0],[1732474800000,4.79],[1733083200000,2.79],[1733655600000,4.79],[1734260400000,2.25],[1735470000000,4.79],[1737284400000,3.0],[1737889200000,4.79],[1738494000000,2.99],[1739098800000,4.79],[1739703600000,2.99],[1740308400000,4.79],[1740913200000,3.49],[1741518000000,4.79],[1742122800000,3.49],[1742756400000,4.79],[1743332400000,3.49],[1743940800000,4.79],[1744563600000,2.49],[1745773200000,4.79],[1746378000000,3.49],[1746982800000,4.79],[1747587600000,2.75],[1748192400000,4.79],[1750006800000,3.49],[1750611600000,4.79],[1751227200000,3.49],[1751821200000,4.79],[1752426000000,2.99],[1753030800000,4.79],[1753635600000,3.49],[1754240400000,4.79],[1754805600000,3.89],[1754874000000,2.99],[1755450000000,4.79],[1756054800000,2.75],[1756659600000,4.79],[1757260800000,3.49],[1757865600000,4.79],[1758470400000,3.49],[1759071600000,4.79],[1759676400000,2.99],[1760281200000,4.79],[1760886000000,3.49],[1762700400000,4.79],[1763305200000,2.99],[1763910000000,4.79],[1764514800000,2.49],[1765119600000,4.79],[1765724400000,2.4],[1766934000000,4.79],[1767538800000,3.0],[1768147200000,4.79],[1768752000000,2.99],[1769356800000,4.79],[1769961600000,3.0],[1770566400000,4.79],[1771171200000,3.49],[1771776000000,4.79],[1772380800000,3.0],[1772985600000,4.79],[1773590400000,3.49],[1774195200000,4.79],[1774800000000,2.5],[1776013200000,4.79],[1777827600000,3.0],[1778432400000,4.79],[1779037200000,3.49],[1779642000000,4.99],[1780851600000,3.49],[1782061200000,4.99],[1782666000000,3.49],[1783270800000,4.99],[1783296000000,4.99]],"stats":{"118":{"mn":2.0,"mx":4.99,"cur":3.49,"avg":3.76,"pctSpecial":47,"pctFull":30,"distinct":48,"n":1409,"first":1655204400000,"last":1783299600000},"307":{"mn":1.99,"mx":4.99,"cur":4.99,"avg":3.74,"pctSpecial":48,"pctFull":26,"distinct":29,"n":1446,"first":1655204400000,"last":1783296000000}},"meta":{"product":"Coca-Cola Classic 1.5L","first":1655204400000,"last":1783299600000}};
+const $=(id)=>document.getElementById(id);
+const fmt$=(v)=>'$'+Number(v).toFixed(2);
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate=(ms)=>{const d=new Date(ms);return d.getDate()+' '+MON[d.getMonth()]+' '+String(d.getFullYear()).slice(2)};
+const fmtMon=(ms)=>{const d=new Date(ms);return MON[d.getMonth()]+' '+String(d.getFullYear()).slice(2)};
+const toXY=(arr)=>arr.map(([t,p])=>({x:t,y:p}));
+
+// ---- stat cards ----
+const s=DATA.stats;
+const avg=((s['118'].avg+s['307'].avg)/2);
+const cheapest=Math.min(s['118'].mn,s['307'].mn);
+const dearest=Math.max(s['118'].mx,s['307'].mx);
+const pctSpecial=Math.round((s['118'].pctSpecial+s['307'].pctSpecial)/2);
+const cards=[
+  {label:'Typical price paid',v:avg,pre:'$',dp:2,hint:'time-weighted, both stores'},
+  {label:'Cheapest it dropped',v:cheapest,pre:'$',dp:2,hint:'a real special'},
+  {label:'Full-price ceiling',v:dearest,pre:'$',dp:2,hint:'now, at New World'},
+  {label:'Time on "special"',v:pctSpecial,pre:'',suf:'%',dp:0,hint:'~half the calendar'}
+];
+$('stats').innerHTML=cards.map((c,i)=>`
+  <div class="rounded-xl border border-line bg-white p-4 shadow-sm">
+    <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">${c.label}</div>
+    <div class="mt-1 font-mono text-2xl font-bold text-navy"><span id="n${i}">0</span></div>
+    <div class="mt-0.5 text-[11px] text-muted">${c.hint}</div>
+  </div>`).join('');
+function animate(){cards.forEach((c,i)=>{const el=$('n'+i);const end=c.v;const t0=performance.now();
+  function step(now){let k=Math.min(1,(now-t0)/900);k=1-Math.pow(1-k,3);const val=end*k;
+    el.textContent=(c.pre||'')+val.toFixed(c.dp)+(c.suf||'');if(k<1)requestAnimationFrame(step)}requestAnimationFrame(step)})}
+
+// ---- chart ----
+const state={scrubT:DATA.meta.last};
+const bands={id:'bands',beforeDatasetsDraw(ch){const{ctx,chartArea,scales}=ch;const y=scales.y;if(!y)return;
+  const band=(lo,hi,col)=>{const a=y.getPixelForValue(hi),b=y.getPixelForValue(lo);ctx.save();ctx.fillStyle=col;ctx.fillRect(chartArea.left,a,chartArea.right-chartArea.left,b-a);ctx.restore()};
+  band(4.65,5.15,'rgba(212,18,26,.07)');band(2.05,3.55,'rgba(23,138,63,.07)')}};
+const scrub={id:'scrub',afterDatasetsDraw(ch){const{ctx,chartArea,scales}=ch;const x=scales.x;if(!x||state.scrubT==null)return;
+  const px=x.getPixelForValue(state.scrubT);if(px<chartArea.left||px>chartArea.right)return;ctx.save();ctx.strokeStyle='#1e3a5f';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(px,chartArea.top);ctx.lineTo(px,chartArea.bottom);ctx.stroke();ctx.restore()}};
+const chart=new Chart($('chart'),{
+  type:'line',
+  data:{datasets:[
+    {label:'Woolworths Papakura',data:toXY(DATA.s118),borderColor:'#178a3f',backgroundColor:'#178a3f',stepped:true,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,tension:0},
+    {label:'New World Papakura',data:toXY(DATA.s307),borderColor:'#d4121a',backgroundColor:'#d4121a',stepped:true,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,tension:0}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+    interaction:{mode:'nearest',intersect:false,axis:'x'},
+    scales:{
+      x:{type:'linear',min:DATA.meta.first,max:DATA.meta.last,grid:{display:false},
+         ticks:{maxTicksLimit:7,color:'#5b5b66',font:{size:11},callback:(v)=>fmtMon(v)}},
+      y:{min:2,max:5.2,grid:{color:'#eee6da'},ticks:{color:'#5b5b66',font:{size:11},callback:(v)=>fmt$(v)}}
+    },
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{title:(it)=>fmtDate(it[0].parsed.x),label:(it)=>' '+it.dataset.label+': '+fmt$(it.parsed.y)}}}
+  },
+  plugins:[bands,scrub]
+});
+$('tgl-ww').onchange=(e)=>{chart.data.datasets[0].hidden=!e.target.checked;chart.update()};
+$('tgl-nw').onchange=(e)=>{chart.data.datasets[1].hidden=!e.target.checked;chart.update()};
+
+// ---- scrubber ----
+function priceAt(arr,t){let v=null;for(const[ts,p]of arr){if(ts<=t)v=p;else break}return v}
+const sc=$('scrub');sc.min=DATA.meta.first;sc.max=DATA.meta.last;sc.step=86400000;sc.value=DATA.meta.last;
+function updateScrub(){const t=+sc.value;state.scrubT=t;$('scrub-date').textContent=fmtDate(t);
+  const w=priceAt(DATA.s118,t),n=priceAt(DATA.s307,t);
+  $('scrub-ww').textContent=w==null?'—':fmt$(w);$('scrub-ww').className='font-mono text-2xl font-bold '+(w!=null&&w<=3.5?'text-ww':'text-ink');
+  $('scrub-nw').textContent=n==null?'—':fmt$(n);$('scrub-nw').className='font-mono text-2xl font-bold '+(n!=null&&n<=3.5?'text-nw':'text-ink');
+  let g='';if(w!=null&&n!=null){const diff=Math.abs(w-n);g=diff<0.01?'Same price at both that day.':('A '+fmt$(diff)+' gap between the two stores that day — same bottle.')}
+  $('scrub-gap').textContent=g;chart.update('none')}
+sc.oninput=updateScrub;
+
+// ---- distribution bars ----
+const names={'118':['Woolworths','#178a3f'],'307':['New World','#d4121a']};
+$('dist').innerHTML=['118','307'].map(k=>{const st=s[k];const spec=st.pctSpecial,full=st.pctFull,mid=Math.max(0,100-spec-full);
+  return `<div><div class="mb-1.5 flex items-center justify-between text-sm"><span class="font-semibold" style="color:${names[k][1]}">${names[k][0]} Papakura</span><span class="text-muted">${st.distinct} different prices</span></div>
+  <div class="flex h-8 w-full overflow-hidden rounded-lg text-[11px] font-semibold text-white">
+    <div class="flex items-center justify-center" style="width:${spec}%;background:#178a3f">${spec}%</div>
+    <div class="flex items-center justify-center bg-stone-300 text-stone-600" style="width:${mid}%">${mid}%</div>
+    <div class="flex items-center justify-center" style="width:${full}%;background:#d4121a">${full}%</div>
+  </div>
+  <div class="mt-1 flex justify-between text-[11px] text-muted"><span>on special (≤$3.50)</span><span>in between</span><span>full (≥$4.50)</span></div></div>`}).join('');
+
+// ---- reveal on scroll ----
+const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+  if(e.target.id==='stats')animate();io.unobserve(e.target)}}),{threshold:0.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+updateScrub();
+</script>
+</body></html>
