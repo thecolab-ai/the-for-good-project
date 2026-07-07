@@ -48,6 +48,24 @@ source "scripts/fg-common.sh"
 parse_agent_args "$@"
 export AGENT MODEL
 
+# Rotating fetch proxy (ADR-0006). If ~/.forgood/proxy.env exists it exports
+# FETCH_PROXY (a rotating-IP proxy URL — a SECRET, git-ignored, never committed),
+# which scripts/fetch.mjs + cloak-fetch.mjs use as a retry-rotation rung to clear
+# IP-reputation bot walls (Incapsula/Cloudflare) the local egress can't. Sourcing
+# it here makes it available to every worker/skill subprocess. PROXY_ALL=1 ALSO
+# routes ALL curl + python-urllib traffic through it (every skill "for free") —
+# OFF by default because a rotating proxy is metered; the fetch ladder uses it
+# selectively as a fallback, which is cheaper and usually enough.
+[ -f "$HOME/.forgood/proxy.env" ] && . "$HOME/.forgood/proxy.env" 2>/dev/null || true
+[ -n "${FETCH_PROXY:-}" ] && export FETCH_PROXY
+if [ -n "${FETCH_PROXY:-}" ] && [ "${PROXY_ALL:-0}" = "1" ]; then
+  export HTTPS_PROXY="$FETCH_PROXY" HTTP_PROXY="$FETCH_PROXY" ALL_PROXY="$FETCH_PROXY"
+  export https_proxy="$FETCH_PROXY" http_proxy="$FETCH_PROXY" all_proxy="$FETCH_PROXY"
+  warn "PROXY_ALL=1 — routing ALL curl + urllib traffic through the rotating proxy (it's metered)."
+elif [ -n "${FETCH_PROXY:-}" ]; then
+  log "Rotating fetch proxy available (FETCH_PROXY) — used selectively by the fetch ladder. PROXY_ALL=1 to route everything."
+fi
+
 REVIEW_PER_WORK="${REVIEW_PER_WORK:-2}"   # review passes per work pass — bias to review; it's the bottleneck
 FRAME_PER_WORK="${FRAME_PER_WORK:-1}"       # framing/discover rework passes per cycle; frame_work owns discover roots
 FRAMING="${FRAMING:-false}"                  # OFF by default — set FRAMING=true to enable discover-root framing at all

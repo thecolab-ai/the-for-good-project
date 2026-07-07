@@ -32,7 +32,27 @@ try {
   process.exit(1);
 }
 
+// Optional rotating proxy (ADR-0006): FETCH_PROXY / HTTPS_PROXY =
+// http://user:pass@host:port. A stealth browser through a rotating residential
+// IP clears the IP-reputation blocks (Incapsula/Cloudflare) the local egress
+// can't. Credentials come from the env only — never hard-coded. Returns the
+// Playwright proxy shape {server, username?, password?} or null.
+function proxyConfig() {
+  const raw = process.env.FETCH_PROXY || process.env.HTTPS_PROXY || process.env.https_proxy || "";
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    const cfg = { server: `${u.protocol}//${u.host}` };
+    if (u.username) cfg.username = decodeURIComponent(u.username);
+    if (u.password) cfg.password = decodeURIComponent(u.password);
+    return cfg;
+  } catch {
+    return null;
+  }
+}
+
 const profile = mkdtempSync(path.join(tmpdir(), "fg-cloak-"));
+const proxy = proxyConfig();
 let ctx;
 try {
   // en-NZ locale + Auckland timezone + humanize help pass geo/bot checks.
@@ -43,6 +63,7 @@ try {
     locale: "en-NZ",
     timezone: "Pacific/Auckland",
     humanize: true,
+    ...(proxy ? { proxy } : {}),
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   const page = ctx.pages()[0] || (await ctx.newPage());
@@ -56,7 +77,8 @@ try {
   const body = text.replace(/\n{3,}/g, "\n\n").trim();
   // The `# status:` line lets callers (fetch.mjs) tell a real 404 from a rendered
   // page — a branded 404 still has readable text, so text length alone can't.
-  console.log(`# ${title}\n# ${finalUrl}\n# status: ${status}\n`);
+  // proxy.server is host:port only (no credentials) — safe to print.
+  console.log(`# ${title}\n# ${finalUrl}\n# status: ${status}${proxy ? `\n# proxy: ${proxy.server}` : ""}\n`);
   console.log(body.length > MAX ? body.slice(0, MAX) + "\n…[truncated — raise MAX_CHARS]" : body);
 } catch (e) {
   console.error("Fetch failed:", e?.message || e);

@@ -7,8 +7,11 @@
 // runs the browser side of the ladder and tells you HOW it fetched:
 //
 //   1. plain HTTP        (fast; a browser-shaped User-Agent)
-//   2. agent-browser     (real Chrome: JS, redirects, cookies, most WAFs)
-//   3. cloak-fetch.mjs   (stealth Chromium: the gates the others can't clear)
+//   2. rotating proxy    (retry through FETCH_PROXY — a fresh IP per try clears
+//                         IP-reputation blocks; only runs if FETCH_PROXY is set)
+//   3. agent-browser     (real Chrome: JS, redirects, cookies, most WAFs)
+//   4. cloak-fetch.mjs   (stealth Chromium — also through FETCH_PROXY: the
+//                         gates the others can't clear)
 //
 // If your agent harness has a built-in WebFetch/WebSearch tool, try THAT between
 // plain curl and reaching for this script — it's more capable than curl and needs
@@ -101,7 +104,38 @@ async function httpRung() {
   }
 }
 
-// ---- Rung 2: agent-browser (real Chrome) -----------------------------------
+// ---- Rung 2: rotating proxy + retry (ADR-0006) -----------------------------
+// A big share of official NZ sources sit behind Incapsula/Cloudflare that block
+// by IP reputation. A ROTATING proxy gives a fresh IP per request, so retrying
+// through it clears those blocks probabilistically (some rotated IPs are clean).
+// Only runs when FETCH_PROXY (or HTTPS_PROXY) is set. curl reads the proxy from
+// the ENV — never argv — so the credential never lands in `ps`/shell history.
+function proxiedRung() {
+  const proxy = process.env.FETCH_PROXY || process.env.HTTPS_PROXY || process.env.https_proxy || "";
+  if (!proxy) return { ok: false, unavailable: true, note: "no FETCH_PROXY set" };
+  const tries = Math.max(1, Number(process.env.PROXY_RETRIES || 4));
+  const env = { ...process.env, ALL_PROXY: proxy, https_proxy: proxy, http_proxy: proxy, HTTPS_PROXY: proxy, HTTP_PROXY: proxy };
+  let lastStatus = 0;
+  for (let i = 0; i < tries; i++) {
+    const r = spawnSync(
+      "curl",
+      ["-sS", "-L", "-A", UA, "-m", "25", "-H", "Accept: text/html,application/json,*/*", "-w", "\n#HTTP_STATUS:%{http_code}", url],
+      { encoding: "utf8", timeout: 30000, maxBuffer: 24 * 1024 * 1024, env },
+    );
+    const out = r.stdout || "";
+    const m = /\n#HTTP_STATUS:(\d+)\s*$/.exec(out);
+    const status = m ? Number(m[1]) : 0;
+    const body = m ? out.slice(0, m.index) : out;
+    lastStatus = status || lastStatus;
+    if (status === 404 || status === 410) return { ok: false, status, dead: true };
+    if (status >= 200 && status < 400 && looksReal(body))
+      return { ok: true, status, text: body, note: `rotating proxy, attempt ${i + 1}/${tries}` };
+    // else: blocked/challenge on this IP — the next iteration rotates to a new one
+  }
+  return { ok: false, status: lastStatus || undefined, blocked: true, note: `${tries} rotated IPs, still blocked/challenged` };
+}
+
+// ---- Rung 3: agent-browser (real Chrome) -----------------------------------
 function agentBrowserRung() {
   // --no-sandbox is required to launch Chrome in containers/VMs/CI (agent-browser
   // itself recommends it); harmless on a desktop. Without it the rung silently
@@ -169,6 +203,7 @@ function snapshot() {
 // ---- Drive the ladder ------------------------------------------------------
 const ladder = [
   ["plain HTTP", httpRung, false],
+  ["rotating proxy (retry)", proxiedRung, false],
   ["agent-browser (real Chrome)", agentBrowserRung, true],
   ["cloak-fetch (stealth Chromium)", cloakRung, true],
 ];

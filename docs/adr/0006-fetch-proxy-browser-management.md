@@ -56,6 +56,21 @@ robots/ToS, and no leaking of credentials or the runner's identity/location.
 The exact mechanism (residential proxy pool vs run-on-residential-machine vs
 per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 
+> **Amended 2026-07-07 — the follow-up mechanism, implemented.** The egress
+> mechanism is now a **rotating-IP proxy** wired into the fetch ladder, resolving
+> the open point above. `scripts/fetch.mjs` gains a **retry-through-proxy rung**
+> (a fresh IP per attempt clears IP-reputation walls probabilistically) and
+> `scripts/cloak-fetch.mjs` browses **through** the proxy (stealth browser + fresh
+> IP — the strongest bypass). It is **selective by default** (only when direct
+> fails); `PROXY_ALL=1` routes all `curl` + Python `urllib` (every `.skills` CLI)
+> through it for those who want blanket coverage, off by default because the proxy
+> is metered. The proxy URL is a **secret**: it lives git-ignored in
+> `~/.forgood/proxy.env` (sourced by `autopilot.sh`), read only from the
+> `FETCH_PROXY` env — never hard-coded, never committed, never printed with its
+> credentials (the tooling prints host:port only). Verified: it retrieves the real
+> `catalogue.data.govt.nz` CKAN JSON that a direct fetch gets an Incapsula
+> challenge for.
+
 ## Consequences
 
 **Positive**
