@@ -15,7 +15,7 @@ import { renewLeasesForHandle } from "./orchestrator/dispatch.js";
 import type { Orchestrator } from "./orchestrator/stores.js";
 import { agentMessageSchema } from "./protocol.js";
 import { redactLines } from "./redact.js";
-import type { FleetStore } from "./state.js";
+import { sessionAgentId, type FleetStore } from "./state.js";
 
 const HELLO_TIMEOUT_MS = 10_000;
 const PING_INTERVAL_MS = 25_000;
@@ -110,7 +110,11 @@ export function registerAgentSocket(app: FastifyInstance, store: FleetStore, orc
         case "hello": {
           // City-level only; req.ip is read once here and never stored (#398).
           const location = config.watcherGeo ? roughLocate(req.ip) : null;
-          const id = store.upsertAgent(msg, "ws", agentId ?? undefined, location);
+          // Reuse this socket's id if it re-hello'd; otherwise, a stable session
+          // id makes a dropped-and-reconnected socket land on the same record
+          // instead of a fresh one lingering to TTL beside the live one (#398).
+          const stableId = agentId ?? (msg.session ? sessionAgentId(msg.handle, msg.session) : undefined);
+          const id = store.upsertAgent(msg, "ws", stableId, location);
           if (!id) {
             socket.send(JSON.stringify({ type: "error", error: "fleet full" }));
             socket.close(1013, "fleet full");

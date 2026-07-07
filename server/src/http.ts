@@ -11,7 +11,7 @@ import { renewLeasesForHandle } from "./orchestrator/dispatch.js";
 import type { Orchestrator } from "./orchestrator/stores.js";
 import { logPostSchema, telemetryPostSchema, type FleetCommand } from "./protocol.js";
 import { redactLines } from "./redact.js";
-import type { FleetStore } from "./state.js";
+import { sessionAgentId, type FleetStore } from "./state.js";
 
 /**
  * Orchestration side-channel on the telemetry heartbeat: when the POST
@@ -86,11 +86,16 @@ export function registerHttpRoutes(app: FastifyInstance, store: FleetStore, orch
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.issues[0]?.message ?? "invalid body" });
     }
-    const { agentId, heartbeat, ...hello } = parsed.data;
+    const { agentId, heartbeat, session, ...hello } = parsed.data;
     // Unknown/expired agentId (e.g. server restarted): fall through to a fresh
     // session rather than erroring the worker.
     const knownId = agentId && store.getAgent(agentId) ? agentId : undefined;
-    const id = store.upsertAgent({ type: "hello", ...hello }, "http", knownId);
+    // Prefer the echoed id; else, when the worker sent a stable session id,
+    // derive a deterministic id so a not-yet-saved / raced first post lands on
+    // one record instead of spawning a duplicate (#398). Only fully identity-less
+    // posts still mint a random id.
+    const stableId = knownId ?? (session ? sessionAgentId(hello.handle, session) : undefined);
+    const id = store.upsertAgent({ type: "hello", ...hello }, "http", stableId);
     if (!id) return reply.code(503).send({ ok: false, error: "fleet full" });
     if (heartbeat) store.applyHeartbeat(id, heartbeat);
     // Token-authed posts additionally renew leases and drain pending

@@ -48,6 +48,8 @@ const hello = {
 // Hello-only upsert: refreshes presence without a no-op heartbeat frame.
 const resp = await post("/api/v1/telemetry", {
   ...(state.agentId ? { agentId: state.agentId } : {}),
+  // Stable per-session key so the server dedups first/raced posts (#398).
+  session: sessionKey,
   ...hello,
 });
 if (resp?.agentId) state.agentId = resp.agentId;
