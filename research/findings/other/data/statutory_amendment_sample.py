@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reproduce the seeded pilot sample and classified provision breakdown for #676.
 
-The frame is the 63 Royal Assent results from:
+The frame is the 62 Royal Assent results from:
 
     python3 .skills/skills/nz-parliament/scripts/cli.py bills \
         --keyword Amendment --all --limit 50 --page <1..10> --json
@@ -45,7 +45,7 @@ FRAME = [
     ("2025-09-23", "203-1", "Income Tax (FamilyBoost) Amendment Bill"),
     ("2025-09-23", "292-3", "Privacy Amendment Bill"),
     ("2025-09-23", "112-1", "Customs (Levies and Other Matters) Amendment Bill"),
-    ("2025-09-23", "174-2", "Climate Change Response (Emissions Trading Scheme-Forestry Conversion) Amendment Bill"),
+    ("2025-09-23", "174-2", "Climate Change Response (Emissions Trading Scheme—Forestry Conversion) Amendment Bill"),
     ("2025-09-17", "206-1", "Adoption Amendment Bill"),
     ("2025-08-26", "32-2", "Employment Relations (Employee Remuneration Disclosure) Amendment Bill"),
     ("2025-08-26", "149-3", "Public Works (Critical Infrastructure) Amendment Bill"),

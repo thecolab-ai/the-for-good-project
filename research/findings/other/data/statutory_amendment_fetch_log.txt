@@ -1,0 +1,70 @@
+Fetch log for issue #676 rework
+================================
+
+Accessed 7 July 2026 from this PR worktree after adversarial review on PR #684.
+
+Live Parliament frame
+---------------------
+
+Command:
+
+```bash
+for p in 1 2 3 4 5 6 7 8 9 10; do
+  python3 .skills/skills/nz-parliament/scripts/cli.py bills \
+    --keyword Amendment --all --limit 50 --page "$p" --json
+done | jq -s '[.[].results[] | select(.status=="Royal Assent" and (.last_activity|startswith("2025"))) | [.last_activity,.bill_number,.title,.url]] | {count:length, rows:.}'
+```
+
+Result: `count` was `62`. The live rows matched the embedded frame in `statutory_amendment_sample.py`; the earlier finding prose saying `63` was wrong.
+
+legislation-nz XML attempts
+---------------------------
+
+Commands:
+
+```bash
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/52 --json
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/25 --json
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/72 --json
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/58 --json
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/85 --json
+```
+
+All five returned `status: error`, `error: upstream_unexpected_html`, with the message that upstream returned HTML instead of legislation XML and that this may be bot protection or a not-found page. The reported XML URLs were:
+
+- `https://www.legislation.govt.nz/act/public/2025/52/en/latest.xml/`
+- `https://www.legislation.govt.nz/act/public/2025/25/en/latest.xml/`
+- `https://www.legislation.govt.nz/act/public/2025/72/en/latest.xml/`
+- `https://www.legislation.govt.nz/act/public/2025/58/en/latest.xml/`
+- `https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/`
+
+Direct HTTP attempts
+--------------------
+
+Commands:
+
+```bash
+curl -L -I https://www.legislation.govt.nz/act/public/2025/52/en/latest/
+curl -L -I https://www.legislation.govt.nz/act/public/2025/25/en/latest/
+curl -L -I https://www.legislation.govt.nz/act/public/2025/72/en/latest/
+curl -L -I https://www.legislation.govt.nz/act/public/2025/58/en/latest/
+curl -L -I https://www.legislation.govt.nz/act/public/2025/85/en/2025-12-19.pdf
+```
+
+Each response was `HTTP/2 202` with `x-amzn-waf-action: challenge` and `x-cache: Error from cloudfront`.
+
+Repository fetch helper
+-----------------------
+
+Commands:
+
+```bash
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/52/en/latest/"
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/25/en/latest/"
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/72/en/latest/"
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/58/en/latest/"
+```
+
+The helper printed `# fetched via plain HTTP`, but the returned body was the AWS WAF JavaScript challenge page, including `window.gokuProps`, an AWS WAF `challenge.js` URL, and the `noscript` text: "In order to continue, we need to verify that you're not a robot."
+
+This log supports only a tooling/access limitation in this worktree. It does not prove the official sources are dead, and it does not contradict the reviewer having successful access from a different environment.
