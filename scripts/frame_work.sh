@@ -204,11 +204,15 @@ Fetching sources — escalate fast → heavy (ADR-0006; details in AGENTS.md):
 2. Your built-in WebFetch/WebSearch tool — more capable than curl, no browser; try it
    before reaching for a browser (WebSearch can also find a cached/alternate copy).
 3. Browser rungs, one command:
-     node scripts/fetch.mjs "<url>"            # real Chrome → stealth Chromium
+     node scripts/fetch.mjs "<url>"            # HTTP → proxy → r.jina.ai → stealth Chromium
      node scripts/fetch.mjs --archive "<url>"  # also snapshot to Wayback on success
    Prints HOW it fetched; exit 4 = genuinely DEAD (404 even in a browser), exit 3 =
    BLOCKED (403/bot-challenge/timeout — TOOLING or IP, NOT a dead link). It can't call
    your WebFetch tool (it's a subprocess), so run that yourself at step 2.
+   Still blocked, or no browser? Try the Jina reader directly — WebFetch (or curl)
+   \`https://r.jina.ai/<url>\`: it fetches from its own egress and renders JS, clearing
+   many IP/bot walls. Public URLs only (external service); a Jina failure is tooling,
+   never a dead link.
 4. For a fragile or date-stamped source, run  node scripts/archive-cite.mjs "<url>"  and
    cite the snapshot beside the live link.
 Never call a citation dead on a blocked (exit 3) response, and always say HOW you fetched.

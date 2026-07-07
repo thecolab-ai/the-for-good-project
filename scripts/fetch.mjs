@@ -9,7 +9,11 @@
 //   1. plain HTTP        (fast; a browser-shaped User-Agent)
 //   2. rotating proxy    (retry through FETCH_PROXY — a fresh IP per try clears
 //                         IP-reputation blocks; only runs if FETCH_PROXY is set)
-//   3. cloak-fetch.mjs   (stealth Chromium, JS + cookies + WAFs, also through
+//   3. jina reader       (r.jina.ai — a hosted reader that fetches from its own
+//                         egress, renders JS, and returns clean text; a light,
+//                         no-local-browser way past many IP/JS walls. External
+//                         service, public URLs only; NO_JINA=1 disables it)
+//   4. cloak-fetch.mjs   (stealth Chromium, JS + cookies + WAFs, also through
 //                         FETCH_PROXY — the gates the others can't clear)
 //
 // If your agent harness has a built-in WebFetch/WebSearch tool, try THAT between
@@ -128,7 +132,40 @@ function proxiedRung() {
   return { ok: false, status: lastStatus || undefined, blocked: true, note: `${tries} rotated IPs, still blocked/challenged` };
 }
 
-// ---- Rung 3: cloak-fetch.mjs (stealth Chromium — through the proxy too) -----
+// ---- Rung 3: Jina Reader (r.jina.ai) ---------------------------------------
+// A hosted reader proxy: it fetches the URL from its OWN reputable egress,
+// renders JS, and hands back clean text/markdown. A fresh third-party IP + real
+// rendering clears many of the IP-reputation and JS-challenge walls
+// (Incapsula/Cloudflare) that block us — without spinning up a local browser, so
+// it's a lighter rung to try before stealth Chromium.
+//
+// It's an EXTERNAL service: only ever send it PUBLIC URLs — never a URL carrying
+// a token/credential/session (that would leak it to a third party). Set
+// JINA_API_KEY for higher rate limits (sent as a Bearer header, never printed);
+// NO_JINA=1 skips this rung entirely.
+async function jinaRung() {
+  if (process.env.NO_JINA) return { ok: false, unavailable: true, note: "disabled (NO_JINA)" };
+  const headers = { "User-Agent": UA, Accept: "text/plain, text/markdown, */*" };
+  if (process.env.JINA_API_KEY) headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`;
+  try {
+    const res = await fetch("https://r.jina.ai/" + url, {
+      redirect: "follow",
+      headers,
+      signal: AbortSignal.timeout(45000),
+    });
+    const body = await res.text();
+    if (res.ok && looksReal(body) && !looksNotFound(body))
+      return { ok: true, status: res.status, text: body };
+    // Jina is a PROXY, not the origin: a non-200 (or a rendered not-found) here is
+    // a reader/tooling failure, NEVER proof the citation is dead. Only a real
+    // browser rung is allowed to conclude DEAD (ADR-0006), so never set `dead`.
+    return { ok: false, status: res.status, blocked: true };
+  } catch (e) {
+    return { ok: false, status: 0, blocked: true, note: e?.name || String(e) };
+  }
+}
+
+// ---- Rung 4: cloak-fetch.mjs (stealth Chromium — through the proxy too) -----
 function cloakRung() {
   const r = spawnSync("node", [path.join(here, "cloak-fetch.mjs"), url], {
     encoding: "utf8",
@@ -162,6 +199,7 @@ function snapshot() {
 const ladder = [
   ["plain HTTP", httpRung, false],
   ["rotating proxy (retry)", proxiedRung, false],
+  ["jina reader (r.jina.ai)", jinaRung, false],
   ["cloak-fetch (stealth Chromium)", cloakRung, true],
 ];
 

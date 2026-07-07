@@ -285,12 +285,15 @@ FETCH LADDER (ADR-0006) — before flagging ANY citation as dead or unverifiable
 you MUST have escalated fast → heavy:
 1. curl / quick HTTP.
 2. Your built-in WebFetch/WebSearch tool — more capable than curl, no browser.
-3. Browser rungs: node scripts/fetch.mjs "<url>"  (real Chrome → stealth Chromium).
-It prints HOW it fetched and exits 4 = genuinely DEAD (404 even in a real browser),
-exit 3 = BLOCKED (403 / bot-challenge / timeout — likely tooling or IP, NOT a citation
-defect). Only an exit-4 DEAD result justifies flagging a link dead; on exit 3, try
+3. Browser rungs: node scripts/fetch.mjs "<url>"  (HTTP → proxy → r.jina.ai → stealth
+Chromium). It prints HOW it fetched and exits 4 = genuinely DEAD (404 even in a real
+browser), exit 3 = BLOCKED (403 / bot-challenge / timeout — likely tooling or IP, NOT a
+citation defect). Only an exit-4 DEAD result justifies flagging a link dead; on exit 3, try
   node scripts/archive-cite.mjs "<url>"  for a Wayback snapshot before you conclude.
 fetch.mjs can't call your WebFetch tool (subprocess), so run that yourself at step 2.
+Still blocked, or no browser in your env? WebFetch \`https://r.jina.ai/<url>\` directly —
+the Jina reader fetches from its own egress and renders JS, clearing many IP/bot walls
+(public URLs only; a Jina failure is tooling, never the author's dead link).
 If a browser rung is unavailable in YOUR environment, that is YOUR tooling gap,
 never the author's defect — say "could not verify (reviewer tooling)" instead of
 failing the citation. Your review must state HOW you fetched.
@@ -358,12 +361,13 @@ Judge it on:
 
 FETCH LADDER (ADR-0006) — before flagging ANY link as dead you MUST have escalated
 fast → heavy: 1) curl; 2) your built-in WebFetch/WebSearch tool (more capable than
-curl, no browser); 3) the browser rungs via  node scripts/fetch.mjs "<url>"  (real
-Chrome → stealth Chromium). fetch.mjs prints HOW it fetched: exit 4 = genuinely DEAD
-(404 even in a browser), exit 3 = BLOCKED (403/bot-challenge/timeout — tooling, NOT a
-defect). On exit 3, try node scripts/archive-cite.mjs "<url>" before concluding. A
-browser rung missing from YOUR environment is your tooling gap, never the author's
-defect. State HOW you fetched.
+curl, no browser); 3) the browser rungs via  node scripts/fetch.mjs "<url>"  (HTTP →
+proxy → r.jina.ai → stealth Chromium). fetch.mjs prints HOW it fetched: exit 4 = genuinely
+DEAD (404 even in a browser), exit 3 = BLOCKED (403/bot-challenge/timeout — tooling, NOT a
+defect). On exit 3, try node scripts/archive-cite.mjs "<url>" before concluding. No browser
+in your env? WebFetch \`https://r.jina.ai/<url>\` directly — it renders JS from its own
+egress and clears many IP/bot walls (public URLs only). A browser rung missing from YOUR
+environment is your tooling gap, never the author's defect. State HOW you fetched.
 
 SCOPE: judge ONLY what this PR changes — pre-existing repo state is not this
 author's defect (one out-of-scope note is fine; a failed verdict for it is not).

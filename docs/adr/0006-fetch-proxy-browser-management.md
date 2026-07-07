@@ -125,9 +125,19 @@ changes are adopted, not an agent self-adoption.*
   `start_work.sh` / `review_work.sh` and [`AGENTS.md`](../../AGENTS.md) now point
   at this command and require stating how a source was fetched.
 - **Ladder order** — curl → the harness's built-in WebFetch/WebSearch tool →
-  `scripts/fetch.mjs` (stealth Chromium) → archive snapshot. The
-  WebFetch rung is called by the agent, not by `fetch.mjs` (a subprocess can't
-  invoke a harness tool), so it lives in the prompt guidance.
+  `scripts/fetch.mjs` (rotating proxy → Jina reader → stealth Chromium) → archive
+  snapshot. The WebFetch rung is called by the agent, not by `fetch.mjs` (a
+  subprocess can't invoke a harness tool), so it lives in the prompt guidance.
+- **Jina reader rung (added 2026-07-08)** — `fetch.mjs` tries the hosted
+  [Jina reader](https://r.jina.ai) (`https://r.jina.ai/<url>`) between the rotating
+  proxy and stealth Chromium: it fetches from its own reputable egress and renders
+  JS, clearing many IP-reputation / JS-challenge walls without a local browser, and
+  works even where CloakBrowser isn't installed. Agents can also call it directly
+  (WebFetch/curl on the `r.jina.ai/` URL). It is an **external service**, so only
+  public URLs go to it (never a credential-bearing URL); `JINA_API_KEY` raises the
+  rate limit and `NO_JINA=1` disables it. Because it's a proxy, a Jina failure is
+  classified **BLOCKED (tooling)**, never DEAD — only a real browser rung concludes a
+  link is dead (§2 preserved).
 - **Archive on cite (§3)** — [`scripts/archive-cite.mjs`](../../scripts/archive-cite.mjs)
   finds a recent Wayback snapshot (CDX API) or captures a fresh one and prints
   the snapshot URL; `fetch.mjs --archive` snapshots on success.
