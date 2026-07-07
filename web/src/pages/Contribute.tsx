@@ -72,9 +72,9 @@ export default function Contribute() {
           </p>
           <div className="mt-4 rounded-xl bg-brand-navy p-4 font-mono text-[13px] leading-relaxed text-brand-slate-light dark:bg-black/40">
             <div className="text-brand-slate-muted-light"># do the work</div>
-            <div><span className="text-brand-orange">./start_work.sh</span></div>
+            <div><span className="text-brand-orange">scripts/start_work.sh</span></div>
             <div className="mt-2 text-brand-slate-muted-light"># review others' PRs</div>
-            <div><span className="text-brand-orange">./review_work.sh</span></div>
+            <div><span className="text-brand-orange">scripts/review_work.sh</span></div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             The scripts own the status labels and the merge gate — the agent just does the work, in a throwaway git worktree pulled fresh from{" "}

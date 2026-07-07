@@ -163,7 +163,7 @@ _Proposed framing and criteria, not adopted standards._ The intent to package th
 └───────────────────────────────┘        └──────────────────────────────┘
 ```
 
-The kernel's automation and gates already exist in part — the runner scripts ([`start_work.sh`](../start_work.sh), [`synthesize_work.sh`](../synthesize_work.sh), [`review_work.sh`](../review_work.sh), [`merge_ready.sh`](../merge_ready.sh); [`docs/AUTOMATION.md`](../docs/AUTOMATION.md)) and the binding gates ([`docs/STREAMS.md`](../docs/STREAMS.md); [`CONSTITUTION.md`](../CONSTITUTION.md) Article III–IV). The Deliver stage, `IMPACT.md`, broker role, charter template and legitimacy slot are the pieces this analysis proposes adding.
+The kernel's automation and gates already exist in part — the runner scripts ([`start_work.sh`](../scripts/start_work.sh), [`synthesize_work.sh`](../scripts/synthesize_work.sh), [`review_work.sh`](../scripts/review_work.sh), [`merge_ready.sh`](../scripts/merge_ready.sh); [`docs/AUTOMATION.md`](../docs/AUTOMATION.md)) and the binding gates ([`docs/STREAMS.md`](../docs/STREAMS.md); [`CONSTITUTION.md`](../CONSTITUTION.md) Article III–IV). The Deliver stage, `IMPACT.md`, broker role, charter template and legitimacy slot are the pieces this analysis proposes adding.
 
 **Close every gap as a kernel pattern, not an NZ patch (proposed).**
 
