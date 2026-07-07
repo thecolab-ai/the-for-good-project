@@ -605,13 +605,27 @@ collective keeps itself unblocked.
 
 ## Cost & safety notes
 
-- The agent runs with your local CLI auth (your subscription/tokens). `codex`
-  runs with `--dangerously-bypass-approvals-and-sandbox`, `claude` with
-  `--permission-mode bypassPermissions`, and `hermes` with `--yolo --source tool`
-  by default so it can use git/gh unattended — run these on a repo clone you
-  trust, not arbitrary input. Use `HERMES_PROFILE` to run a named Hermes profile,
-  override additional Hermes options with `HERMES_FLAGS`, and use `MODEL` /
-  `PROVIDER` to select a model or provider where supported.
+- The agent runs with your local CLI auth (your subscription/tokens). Default
+  sandbox/permission modes (ADR-0005, implemented by ADR-0022), all overridable:
+  - `codex` — on **Linux**, the native OS sandbox
+    `--sandbox workspace-write` with network re-enabled
+    (`-c sandbox_workspace_write.network_access=true`) and the worktree's git
+    common dir added as writable; on **macOS**, seatbelt disables network in
+    workspace-write ([openai/codex#10390](https://github.com/openai/codex/issues/10390))
+    so it stays on `--dangerously-bypass-approvals-and-sandbox` (unchanged) with
+    a one-line warning — the real macOS isolation is the Linux container.
+    Override with `CODEX_FLAGS`.
+  - `claude` — `--permission-mode auto` (an injection-aware classifier that
+    blocks actions driven by hostile content, keeps network, and doesn't hang
+    headless). Override with `CLAUDE_PERMISSION_MODE`; use `bypassPermissions`
+    inside a locked-down container.
+  - `hermes` — `--yolo --source tool`. Override with `HERMES_FLAGS`; use
+    `HERMES_PROFILE` for a named profile.
+
+  These reduce but do not eliminate blast radius — still run on a repo clone you
+  trust, not arbitrary input; the container + credential scoping (issue #686) is
+  the real boundary. Use `MODEL` / `PROVIDER` to select a model or provider
+  where supported.
 - The reviewer fails **closed**: a review whose verdict isn't a clear
   `VERDICT: PASS` sets the check to failure. (A reviewer *crash* that produces
   no review at all leaves the check unset so a later loop retries — merge is
