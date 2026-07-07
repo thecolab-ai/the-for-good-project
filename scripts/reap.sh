@@ -115,11 +115,15 @@ reap_synthesis_claims() {
 #    we are not taking outside fork branches into the automated pipeline for
 #    now. Close the PR with an explanatory comment and release the issue to
 #    `available` so a fresh worker picks it up clean on a same-repo branch (the
-#    recorded review stays on the closed PR as reference). A `review: human-only`
-#    PR is left for the human maintainer.
+#    recorded review stays on the closed PR as reference). Left alone: a
+#    `review: human-only` PR (a human maintainer's), and — critically — a
+#    `synthesis/*` or `discover/*` fork PR: those reworks route to
+#    synthesize_work.sh / frame_work.sh under their capability floors (ADR-0011
+#    / ADR-0014), and a discover root must never be flipped to `available` by a
+#    generic cron. Those are surfaced for a human instead of auto-closed.
 reap_fork_reworks() {
   [ "$CLOSE_FORK_REWORKS" = 1 ] || return 0
-  local n pr owner labels who a
+  local n pr owner branch labels who a
   for n in $(gh issue list --repo "$REPO" --state open --label "status: changes-requested" \
       --json number --limit 100 --jq '.[].number'); do
     pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
@@ -127,6 +131,15 @@ reap_fork_reworks() {
     # Empty owner = couldn't read (rate limit / transient) — fail closed, skip.
     [ -n "$owner" ] || continue
     [ "$owner" = "$OWNER" ] && continue   # same-repo branch — adoptable, leave it
+    # NEVER auto-close a synthesis/framing fork PR: those belong to
+    # synthesize_work.sh / frame_work.sh (ADR-0011 / ADR-0014), and closing a
+    # framing PR would flip a stream ROOT to `available`. Flag for a human.
+    branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null || true)"
+    case "$branch" in
+      synthesis/*|discover/*)
+        warn "#$n's fork PR #$pr is a ${branch%%/*} branch on a fork ($owner) — leaving it for a human (belongs to $([ "${branch%%/*}" = synthesis ] && echo synthesize_work.sh || echo frame_work.sh))."
+        continue ;;
+    esac
     labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
     case ",$labels," in *",review: human-only,"*) log "#$n's fork PR #$pr is review: human-only — leaving it for a human."; continue ;; esac
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would close fork PR #$pr ($owner) and release #$n → available"; continue; fi
