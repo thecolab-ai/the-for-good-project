@@ -9,9 +9,8 @@
 //   1. plain HTTP        (fast; a browser-shaped User-Agent)
 //   2. rotating proxy    (retry through FETCH_PROXY — a fresh IP per try clears
 //                         IP-reputation blocks; only runs if FETCH_PROXY is set)
-//   3. agent-browser     (real Chrome: JS, redirects, cookies, most WAFs)
-//   4. cloak-fetch.mjs   (stealth Chromium — also through FETCH_PROXY: the
-//                         gates the others can't clear)
+//   3. cloak-fetch.mjs   (stealth Chromium, JS + cookies + WAFs, also through
+//                         FETCH_PROXY — the gates the others can't clear)
 //
 // If your agent harness has a built-in WebFetch/WebSearch tool, try THAT between
 // plain curl and reaching for this script — it's more capable than curl and needs
@@ -33,17 +32,11 @@
 // dead); 4 = genuinely dead (404). Non-zero is deliberately actionable.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-// Prefer the locally-installed agent-browser (node_modules/.bin) so `node
-// scripts/fetch.mjs` works after a plain `npm install`, without needing the CLI
-// on the global PATH; fall back to a global install if there's no local one.
-const localAgentBrowser = path.join(here, "..", "node_modules", ".bin", "agent-browser");
-const AGENT_BROWSER = existsSync(localAgentBrowser) ? localAgentBrowser : "agent-browser";
 const MAX = Number(process.env.MAX_CHARS || 20000);
 const args = process.argv.slice(2);
 const archive = args.includes("--archive");
@@ -135,42 +128,7 @@ function proxiedRung() {
   return { ok: false, status: lastStatus || undefined, blocked: true, note: `${tries} rotated IPs, still blocked/challenged` };
 }
 
-// ---- Rung 3: agent-browser (real Chrome) -----------------------------------
-function agentBrowserRung() {
-  // --no-sandbox is required to launch Chrome in containers/VMs/CI (agent-browser
-  // itself recommends it); harmless on a desktop. Without it the rung silently
-  // fails to launch in the agent environment and we'd fall through to cloak.
-  const env = { ...process.env, AGENT_BROWSER_ARGS: process.env.AGENT_BROWSER_ARGS || "--no-sandbox,--disable-dev-shm-usage" };
-  const run = (a) => spawnSync(AGENT_BROWSER, a, { encoding: "utf8", timeout: 60000, env });
-  const probe = run(["--version"]);
-  if (probe.error) return { ok: false, unavailable: true, note: "agent-browser not installed" };
-  try {
-    const opened = run(["open", url]);
-    run(["wait", "3500"]); // let a JS/redirect bot-challenge auto-settle before reading
-    // AUTHORITATIVE: the navigation's real HTTP status. A branded 404 renders
-    // readable text, so status — not text length — is what tells dead from alive.
-    const statusRaw = run(["eval", "performance.getEntriesByType('navigation')[0]?.responseStatus ?? 0"]);
-    const status = Number((/(\d{3})/.exec(statusRaw.stdout || "") || [])[1] || 0);
-    const got = run(["get", "text", "body"]);
-    run(["close", "--all"]);
-    const text = (got.stdout || "").trim();
-    // Surface a launch failure (e.g. missing sandbox flag) rather than mislabelling it.
-    const launchErr = `${opened.stderr || ""}\n${got.stderr || ""}`;
-    if (!text && !status && /sandbox|Failed to launch|No usable|chrome/i.test(launchErr))
-      return { ok: false, unavailable: true, note: "agent-browser could not launch Chrome (sandbox?)" };
-    if (status === 404 || status === 410) return { ok: false, status, dead: true };
-    if (status >= 200 && status < 400 && looksReal(text)) return { ok: true, status, text };
-    // Status unknown (0) — fall back to content: a not-found page is dead, otherwise
-    // real-looking non-challenge text passes.
-    if (looksNotFound(`${opened.stdout || ""}\n${text}`)) return { ok: false, dead: true };
-    if (!status && looksReal(text)) return { ok: true, text };
-    return { ok: false, status: status || undefined, blocked: true };
-  } catch (e) {
-    return { ok: false, blocked: true, note: e?.message || String(e) };
-  }
-}
-
-// ---- Rung 3: cloak-fetch.mjs (stealth Chromium) ----------------------------
+// ---- Rung 3: cloak-fetch.mjs (stealth Chromium — through the proxy too) -----
 function cloakRung() {
   const r = spawnSync("node", [path.join(here, "cloak-fetch.mjs"), url], {
     encoding: "utf8",
@@ -204,7 +162,6 @@ function snapshot() {
 const ladder = [
   ["plain HTTP", httpRung, false],
   ["rotating proxy (retry)", proxiedRung, false],
-  ["agent-browser (real Chrome)", agentBrowserRung, true],
   ["cloak-fetch (stealth Chromium)", cloakRung, true],
 ];
 

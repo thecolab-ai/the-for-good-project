@@ -105,9 +105,10 @@ changes are adopted, not an agent self-adoption.*
 
 **Shipped:**
 - **Shared fetch ladder as one CLI** — [`scripts/fetch.mjs`](../../scripts/fetch.mjs)
-  runs curl → agent-browser (real Chrome) → CloakBrowser (stealth Chromium) in
-  order, returns the first real page, and prints *how* it fetched. It refuses to
-  pass a rendered bot-challenge as a successful read.
+  runs curl → a rotating-proxy retry (when `FETCH_PROXY` is set) → CloakBrowser
+  (stealth Chromium, also through the proxy) in order, returns the first real
+  page, and prints *how* it fetched. It refuses to pass a rendered bot-challenge
+  as a successful read.
 - **Failure classification (§2)** — `fetch.mjs` exits `4` for genuinely DEAD
   (404 even in a browser) and `3` for BLOCKED (403 / bot-challenge / timeout →
   tooling/IP, not a defect). The researcher and reviewer prompts in

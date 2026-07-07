@@ -130,11 +130,12 @@ rather than waiting.
      cached or alternate copy of a blocked page.
   3. **Browser rungs — one command:**
      ```
-     node scripts/fetch.mjs "<url>"            # real Chrome (agent-browser) → stealth Chromium (cloak-fetch)
+     node scripts/fetch.mjs "<url>"            # plain HTTP → rotating proxy → stealth Chromium (cloak-fetch)
      node scripts/fetch.mjs --archive "<url>"  # also capture a Wayback snapshot on success
      ```
-     It also retries `curl` first, tries each browser rung until one returns the real
-     page, prints **how** it fetched, and classifies any failure the way the review gate
+     It retries `curl` first, then (if `FETCH_PROXY` is set) a rotating-proxy retry, then a
+     stealth browser — until one returns the real page. It prints **how** it fetched, and
+     classifies any failure the way the review gate
      must: exit `4` = genuinely DEAD (404 even in a real browser), exit `3` = BLOCKED
      (403 / bot-challenge / timeout — tooling or IP, **not** a citation defect). One-time
      setup: `npm install && npx cloakbrowser install`. (`fetch.mjs` is a subprocess, so it
@@ -151,10 +152,8 @@ rather than waiting.
      metered, so off by default.
   4. Still blocked? Capture / reuse a web-archive snapshot with `node scripts/archive-cite.mjs "<url>"` and cite that, or verify in a normal browser — rather than flagging it dead. A 403/bot-challenge is tooling, not a dead link; always say *how* you fetched.
 
-  To drive the browser rungs directly instead of via `fetch.mjs`: `agent-browser open
-  "<url>"` then `agent-browser get text body` — we standardise on `open` + `get text body`
-  for compatibility (older agent-browser CLIs have no `read` subcommand) — then
-  `node scripts/cloak-fetch.mjs "<url>"` as the stealth fallback.
+  To drive the stealth browser directly instead of via `fetch.mjs`:
+  `node scripts/cloak-fetch.mjs "<url>"` (it honours `FETCH_PROXY` too).
 
   **Archive on cite:** for a fragile, bot-protected, or date-stamped source, also run
   `node scripts/archive-cite.mjs "<url>"` and record the returned snapshot URL beside the
