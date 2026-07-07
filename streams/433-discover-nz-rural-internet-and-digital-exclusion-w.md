@@ -5,7 +5,7 @@ state: awaiting-direction
 steward: ""
 domain: other
 updated: 2026-07-07
-image: /images/streams/stream-433-rural-connectivity.jpg
+image: ""
 ---
 
 # Rural internet gaps are about usable service, not just coverage
