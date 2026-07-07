@@ -249,7 +249,20 @@ Two TTLs are enforced:
   `synthesize_work.sh`, for a synthesis draft (ADR-0011) — can pick up the
   rework.
 
-It also **closes fork-origin stale reworks** (ADR-0020 §5): a
+It also **reconciles unrouted change-requests** (ADR-0021): any open PR whose
+*current* review is `CHANGES_REQUESTED` (no commit after it) whose worked
+research/ideate/build issue is still `status: in-review`/`claimed` gets that
+issue flipped to `status: changes-requested`. `start_work.sh`'s reconcile
+(ADR-0008) only handles the *running identity's own* PRs, so an **absent
+author's** reviewed work never reached `changes-requested` and ADR-0020
+adoption couldn't see it — this author-agnostic sweep is what lets that work
+re-enter the queue. It flips status only (keeps the assignee; the `REWORK_TTL`
+unassign and adoption handle absence), is currency- and canonical-PR-guarded,
+skips `synthesis/*`/`discover/*` and human-only/do-not-automate, and runs
+**before** the fork sweep so a flipped fork issue is closed in the same pass.
+Opt out with `RECONCILE_UNROUTED=0`.
+
+And it **closes fork-origin stale reworks** (ADR-0020 §5): a
 `changes-requested` PR whose branch lives on a **fork** can't be adopted (only
 its author can push it), and the project isn't taking outside fork branches
 into the automated pipeline for now — so the PR is closed with an explanatory

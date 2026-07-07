@@ -22,12 +22,20 @@
 #     can push its rework, so it can never be adopted). Opt out with
 #     CLOSE_FORK_REWORKS=0.
 #
-# Env: CLAIM_TTL REWORK_TTL CLOSE_FORK_REWORKS DRY_RUN FOR_GOOD_REPO REPO_DIR
+#   - Any open PR carrying a CURRENT change-request whose worked (research/
+#     ideate/build) issue is still `status: in-review`/`claimed` → the issue is
+#     flipped to `status: changes-requested` (ADR-0021). This is start_work.sh's
+#     ADR-0008 reconcile made author-agnostic: it's what lets an ABSENT author's
+#     reviewed work re-enter the queue so ADR-0020 adoption can route it. Opt
+#     out with RECONCILE_UNROUTED=0.
+#
+# Env: CLAIM_TTL REWORK_TTL CLOSE_FORK_REWORKS RECONCILE_UNROUTED DRY_RUN FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 DRY_RUN="${DRY_RUN:-0}"
 CLOSE_FORK_REWORKS="${CLOSE_FORK_REWORKS:-1}"   # 1 = close fork-origin changes-requested PRs + release the issue (ADR-0020 §5)
+RECONCILE_UNROUTED="${RECONCILE_UNROUTED:-1}"   # 1 = flip ANY current-change-requested PR's work issue → changes-requested (ADR-0021)
 
 hrs() { echo $(( ${1:-0} / 3600 )); }
 
@@ -110,7 +118,54 @@ reap_synthesis_claims() {
   done
 }
 
-# 5) A changes-requested PR that lives on a FORK can never be adopted (only its
+# 5) Author-agnostic rework reconcile (ADR-0021): any open PR whose CURRENT
+#    review decision is CHANGES_REQUESTED (no commit landed after the last such
+#    review) whose worked issue is still `status: in-review`/`claimed` gets that
+#    issue flipped to `status: changes-requested`. start_work.sh's reconcile
+#    (ADR-0008) only does the RUNNING identity's own PRs, so an absent author's
+#    reviewed work never reaches changes-requested and ADR-0020 adoption can't
+#    see it — this closes that gap. Fails closed: work issues only (never a
+#    stream root / discover), skips synthesis/framing PRs and human-only/
+#    do-not-automate, currency- and canonical-PR-guarded. Flips status only
+#    (keeps the assignee — reap_reworks/adoption handle absence); runs BEFORE
+#    the fork sweep so a flipped fork issue is closed in the same pass.
+reap_unrouted_reworks() {
+  [ "$RECONCILE_UNROUTED" = 1 ] || return 0
+  local pr branch labels lastcr headdate iss ilabels stage
+  for pr in $(gh pr list --repo "$REPO" --state open --json number,reviewDecision \
+      --jq '.[] | select(.reviewDecision=="CHANGES_REQUESTED") | .number' --limit 100); do
+    branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null || true)"
+    # Synthesis/framing rework routes elsewhere (ADR-0011 / ADR-0014).
+    case "$branch" in synthesis/*|discover/*) continue ;; esac
+    labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
+    case ",$labels," in *",review: human-only,"*) continue ;; esac
+    # Currency: a commit after the last change-request means it's awaiting
+    # RE-review, not rework — leave it. ISO-8601 timestamps compare lexically.
+    lastcr="$(gh pr view "$pr" --repo "$REPO" --json reviews --jq '[.reviews[]|select(.state=="CHANGES_REQUESTED")]|last|.submittedAt // ""' 2>/dev/null || true)"
+    [ -z "$lastcr" ] && continue
+    headdate="$(gh pr view "$pr" --repo "$REPO" --json commits --jq '.commits[-1].committedDate // ""' 2>/dev/null || true)"
+    [ -n "$headdate" ] && [[ "$headdate" > "$lastcr" ]] && continue
+    iss="$(issue_addressed_by_pr "$pr" || true)"; [ -z "$iss" ] && continue
+    # A stale sibling PR must never route the issue (the #305/#307 protection).
+    [ "$(pr_for_issue "$iss" || true)" = "$pr" ] || continue
+    ilabels="$(issue_labels "$iss" 2>/dev/null || true)"
+    case ",$ilabels," in *",do-not-automate,"*) continue ;; esac
+    # WORK issues only — never a stream root / discover (their statuses differ).
+    stage="$(label_field "$ilabels" "stage: ")"
+    case "$stage" in research|ideate|build) : ;; *) continue ;; esac
+    case ",$ilabels," in
+      *",status: changes-requested,"*) continue ;;   # already routed — no-op
+      *",status: in-review,"*|*",status: claimed,"*)
+        if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would reconcile #$iss ($stage) → changes-requested (unrouted change-request on PR #$pr)"; continue; fi
+        set_status_label "$iss" "changes-requested" "in-review" "claimed" 2>/dev/null || true
+        gh issue comment "$iss" --repo "$REPO" --body "🔁 PR #$pr carries an unaddressed change-request but this issue wasn't routed back to rework — flipping to **changes-requested** so the author's loop, any worker's \`start_work.sh\`, or ADR-0020 adoption can pick it up. (Automated reconcile — ADR-0021.)" >/dev/null 2>&1 || true
+        ok "Reconciled #$iss → changes-requested (unrouted change-request on PR #$pr)"
+        ;;
+    esac
+  done
+}
+
+# 6) A changes-requested PR that lives on a FORK can never be adopted (only its
 #    author can push its branch) and — per the maintainer's direction (#656) —
 #    we are not taking outside fork branches into the automated pipeline for
 #    now. Close the PR with an explanatory comment and release the issue to
@@ -155,11 +210,12 @@ reap_fork_reworks() {
 
 main() {
   preflight
-  info "reap.sh · repo=$REPO · claim-ttl=$(hrs "$CLAIM_TTL")h · rework-ttl=$(hrs "$REWORK_TTL")h$([ "$CLOSE_FORK_REWORKS" = 1 ] && printf " · close-fork-reworks")$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
+  info "reap.sh · repo=$REPO · claim-ttl=$(hrs "$CLAIM_TTL")h · rework-ttl=$(hrs "$REWORK_TTL")h$([ "$RECONCILE_UNROUTED" = 1 ] && printf " · reconcile-unrouted")$([ "$CLOSE_FORK_REWORKS" = 1 ] && printf " · close-fork-reworks")$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   reap_claims
   reap_reworks
   reap_status_conflicts
   reap_synthesis_claims
+  reap_unrouted_reworks    # ADR-0021: route absent-authors' unaddressed change-requests → changes-requested (before the fork sweep)
   reap_fork_reworks
   ok "Reap complete."
 }
