@@ -57,5 +57,6 @@ routine fixes, copy changes, or web styling.
 | [0018](0018-mirror-backed-runner-reads.md) | Runner queue reads come from the fleet server's mirror, not GitHub | Proposed |
 | [0019](0019-orchestrated-review-dispatch.md) | The fleet server dispatches PR reviews to enrolled reviewers (kind: review) | Proposed |
 | [0020](0020-adopt-stale-rework.md) | A stale changes-requested PR is adopted by a different worker (kind: rework) | Proposed |
+| [0021](0021-author-agnostic-rework-reconcile.md) | reap routes ANY unaddressed change-request back to changes-requested, regardless of author | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
