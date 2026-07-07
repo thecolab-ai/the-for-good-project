@@ -55,13 +55,18 @@ import type { Collection } from "mongodb";
 import { config } from "../config.js";
 import { GitHubApiError } from "../github/gh-api.js";
 import { mergeReviewEntriesInto, PULL_REVIEWS_CAP, type PullDoc, type PullReviewEntry } from "../github/sync.js";
-import type { ClaimedIssue, ClaimedReview } from "../protocol.js";
+import type { ClaimedIssue, ClaimedReview, ClaimedRework } from "../protocol.js";
 import type { FleetStore } from "../state.js";
 import type { AgentTier } from "./auth.js";
-import { leaseKey, reviewCooldownKey, reviewLeaseKey, type Orchestrator } from "./stores.js";
+import { leaseKey, reviewCooldownKey, reviewLeaseKey, reworkCooldownKey, type Orchestrator } from "./stores.js";
 
 const AVAILABLE_LABEL = "status: available";
 const CLAIMED_LABEL = "status: claimed";
+/** Rework dispatch (ADR-0020) claims FROM this status (the test-and-set that
+ *  arbitrates adopters) and reverts BACK to it on abandon/expiry — the review
+ *  feedback still stands and the PR still exists, so it is never sent to
+ *  `available`. */
+const CHANGES_REQUESTED_LABEL = "status: changes-requested";
 const DO_NOT_AUTOMATE_LABEL = "do-not-automate";
 const HIGH_PRIORITY_LABEL = "priority: high";
 const STAGE_PREFIX = "stage: ";
@@ -94,6 +99,22 @@ const REVIEW_CLAIMED_LABEL = "review: claimed";
  *  starts further down the list. */
 const REVIEW_FETCH_BUDGET = 10;
 
+// Rework dispatch (kind: "rework", ADR-0020). Skip rules mirror the guards the
+// generic start_work.sh rework path already applies (pr_is_synthesis /
+// pr_is_framing / fork check in fg-common.sh), enforced server-side so a stale
+// worker never even sees a protected or unpushable PR.
+/** synthesize_work.sh mints synthesis draft branches `synthesis/<slug>`;
+ *  their rework belongs to synthesize_work.sh alone (ADR-0011). */
+const SYNTHESIS_BRANCH_PREFIX = "synthesis/";
+/** frame_work.sh mints discover framing branches `discover/<slug>`; their
+ *  rework belongs to frame_work.sh alone (ADR-0014). */
+const DISCOVER_BRANCH_PREFIX = "discover/";
+/** Bound on live `GET /pulls/{n}` reads per rework claim call (issue resolution
+ *  + liveness for a lease-winning candidate), mirroring REVIEW_FETCH_BUDGET.
+ *  A contended queue can burn a few; the first adoptable candidate normally
+ *  wins on the first read. */
+const REWORK_CANDIDATE_BUDGET = 8;
+
 /** Mirror `issues` doc (see the data model in stores.ts / the spec). */
 interface IssueDoc {
   _id: number;
@@ -118,10 +139,12 @@ interface AssignmentDoc {
   _id: ObjectId;
   /** What was claimed. Docs from before review dispatch carry no field —
    *  absent = "work" (read via kindOf below). */
-  kind?: "work" | "review";
+  kind?: "work" | "review" | "rework";
   /** For kind "work" the issue number; for kind "review" the PR NUMBER
    *  (GitHub numbers issues and PRs from one sequence, so the two kinds can
-   *  never collide on a number). */
+   *  never collide on a number); for kind "rework" the WORKED ISSUE number
+   *  (whose labels the claim moved and whose lease it holds — the PR is in
+   *  `prNumber`). */
   issueNumber: number;
   handle: string;
   tier: AgentTier;
@@ -175,9 +198,18 @@ export type ClaimReviewResult =
   | { status: "rate-limited"; retryAfterSeconds: number }
   | { status: "disabled"; reason: string };
 
+/** claimNextRework's result — shaped like ClaimResult with `rework` in place
+ *  of `issue` (the route maps the statuses identically). */
+export type ClaimReworkResult =
+  | { status: "claimed"; rework: ClaimedRework; assignmentId: string; leaseTtlSeconds: number }
+  | { status: "capped" }
+  | { status: "empty" }
+  | { status: "rate-limited"; retryAfterSeconds: number }
+  | { status: "disabled"; reason: string };
+
 export type ReleaseOutcome = "done" | "abandoned" | "lease-expired" | "admin-released";
 
-export type AssignmentKind = "work" | "review";
+export type AssignmentKind = "work" | "review" | "rework";
 
 const nowIso = () => new Date().toISOString();
 
@@ -198,19 +230,28 @@ function kindOf(doc: Pick<AssignmentDoc, "kind">): AssignmentKind {
   return doc.kind ?? "work";
 }
 
-/** Mongo filter clause matching assignments of `kind` (absent = work). */
+/** Mongo filter clause matching assignments of `kind` (absent = work). "work"
+ *  must exclude BOTH tagged kinds, or a rework/review doc would satisfy a work
+ *  release/lookup. */
 function kindFilter(kind: AssignmentKind): Record<string, unknown> {
-  return kind === "review" ? { kind: "review" } : { kind: { $ne: "review" } };
+  if (kind === "review") return { kind: "review" };
+  if (kind === "rework") return { kind: "rework" };
+  return { kind: { $nin: ["review", "rework"] } };
 }
 
-/** The Redis lease key an assignment doc arbitrates on. */
+/** The Redis lease key an assignment doc arbitrates on. Rework reuses the WORK
+ *  lease on its ISSUE number — a rework and a work claim can never target the
+ *  same issue (their statuses differ), so sharing `lease:issue:` is safe and
+ *  even makes them mutually exclude. */
 function assignmentLeaseKey(doc: Pick<AssignmentDoc, "kind" | "issueNumber">): string {
   return kindOf(doc) === "review" ? reviewLeaseKey(doc.issueNumber) : leaseKey(doc.issueNumber);
 }
 
 /** The lease TTL for an assignment kind. */
 function kindLeaseTtl(kind: AssignmentKind): number {
-  return kind === "review" ? config.reviewLeaseTtlSeconds : config.leaseTtlSeconds;
+  if (kind === "review") return config.reviewLeaseTtlSeconds;
+  if (kind === "rework") return config.reworkLeaseTtlSeconds;
+  return config.leaseTtlSeconds;
 }
 
 /** First "stage: <s>" label value, or null (fg-common.sh `label_field`). */
@@ -739,6 +780,314 @@ export async function claimNextReview(
   return { status: "empty" };
 }
 
+/** The worked issue linked by a PR body — a closing ref (closes/fixes/resolves)
+ *  first, else a `Part of #n` link (discover PRs deliberately don't close their
+ *  root). Mirrors fg-common.sh `issue_addressed_by_pr`. */
+function issueFromBody(body: string | null | undefined): number | null {
+  const text = body ?? "";
+  const closing = text.match(/(?:closes|fixes|resolves)\s*#(\d+)/i);
+  if (closing?.[1]) return Number(closing[1]);
+  const partOf = text.match(/part of\s*#(\d+)/i);
+  if (partOf?.[1]) return Number(partOf[1]);
+  return null;
+}
+
+/** The head repo owner login from "owner/repo", or null. */
+function headRepoOwner(fullName: string | null): string | null {
+  if (!fullName) return null;
+  return fullName.split("/")[0] ?? null;
+}
+
+function toClaimedRework(doc: PullDoc, issue: number): ClaimedRework {
+  return {
+    pr: doc.number,
+    issue,
+    title: doc.title,
+    author: doc.user,
+    headSha: doc.headSha,
+    htmlUrl: doc.htmlUrl,
+    headRef: doc.headRef,
+  };
+}
+
+/**
+ * Claim the next stale `changes-requested` PR a DIFFERENT worker may adopt
+ * (kind: "rework", ADR-0020). It is claimNext's shape (it WRITES issue labels
+ * and an assignee — a rework moves the worked issue `changes-requested →
+ * claimed`) selecting over the PULLS mirror like claimNextReview.
+ *
+ * Adoptability, evaluated on the mirror (fails toward NOT adopting):
+ *  - open, not draft; labels exclude `review: human-only` / `do-not-automate`;
+ *  - head branch is not `synthesis/*` (ADR-0011) or `discover/*` (ADR-0014) —
+ *    those reworks belong to synthesize_work.sh / frame_work.sh;
+ *  - head repo is the MAIN repo, not a fork — only a fork PR's author can push
+ *    its branch (forks are closed + released by reap.sh, ADR-0020 §5);
+ *  - the claiming handle is neither the PR author nor the last reviewer at head
+ *    (preserves author ≠ reviewer: the adopter becomes the author of the fix);
+ *  - the PR AUTHOR is not currently online (an online author is presumed to be
+ *    working their own rework);
+ *  - the LAST review at the current head SHA is `changes_requested` (a newer
+ *    commit means the author already pushed rework — awaiting re-review, not
+ *    adoption), and that change-request is older than reworkAdoptSeconds.
+ *
+ * The winning candidate's worked issue is resolved from its body via ONE live
+ * `GET /pulls/{n}` (bounded per call), which doubles as the ADR-0019 liveness
+ * check. The lease is `lease:issue:<worked-issue>` and the atomic claim is the
+ * `status: changes-requested` removal (test-and-set) exactly as claimNext
+ * arbitrates against `status: available`.
+ */
+export async function claimNextRework(
+  orch: Orchestrator,
+  store: FleetStore,
+  ctx: ClaimContext,
+): Promise<ClaimReworkResult> {
+  const gh = orch.gh;
+  if (!gh) return { status: "disabled", reason: "no github token" };
+
+  // Same anti-grief bound as claimNext/claimNextReview, over ALL kinds.
+  const activeCount = await assignmentsCol(orch).countDocuments({ handle: ctx.handle, active: true });
+  if (activeCount >= config.maxActiveClaims) return { status: "capped" };
+
+  const idleCutoffMs = Date.now() - config.reworkAdoptSeconds * 1000;
+  // The main repo's owner (this orchestrator's actual repo — NOT the module
+  // config, which a test/multi-repo deploy overrides per connection). A PR
+  // whose head repo is not this owner lives on a fork: only its author can push
+  // its branch, so it is never adoptable (ADR-0020 §5 — forks are closed +
+  // released to `available` by reap.sh, not reworked here).
+  const mainOwner = (gh.cfg.githubRepo ?? "").split("/")[0] ?? "";
+
+  const open = await pullsCol(orch).find({ state: "open" }).toArray();
+  const candidates = open
+    .filter((p) => {
+      if (p.draft) return false;
+      const labels = p.labels ?? [];
+      if (labels.includes(HUMAN_ONLY_LABEL) || labels.includes(DO_NOT_AUTOMATE_LABEL)) return false;
+      const head = p.headRef ?? "";
+      if (head.startsWith(SYNTHESIS_BRANCH_PREFIX) || head.startsWith(DISCOVER_BRANCH_PREFIX)) return false;
+      if (headRepoOwner(p.headRepoFullName) !== mainOwner) return false; // fork — unpushable
+      if (!p.headSha) return false; // partially-upserted doc — can't evaluate head
+      if (p.user && p.user === ctx.handle) return false; // never adopt my own frozen PR
+      if (p.user && store.isHandleOnline(p.user)) return false; // author is around — leave it to them
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+      return a.number - b.number;
+    });
+
+  // Post-abandon cooldowns (one MGET), keyed by ISSUE number — but the cooldown
+  // was set against the issue, and here we only have PRs whose issue we resolve
+  // lazily. So cool down by PR too: reworkCooldownKey takes the ISSUE, but an
+  // abandoned rework's PR head-SHA logic already re-filters most cases; the
+  // cooldown backstops crash/usage-limit loops and is checked AFTER we resolve
+  // the issue (below), so no per-PR MGET here.
+
+  const ttl = config.reworkLeaseTtlSeconds;
+  let liveBudget = REWORK_CANDIDATE_BUDGET;
+  let fetchBudget = REVIEW_FETCH_BUDGET;
+
+  for (const candidate of candidates) {
+    const n = candidate.number;
+    const headSha = candidate.headSha;
+
+    // --- Review-state gate (mirror, with a bounded lazy fetch) --------------
+    // Need the review(s) at the CURRENT head to decide changes-requested-at-head
+    // + idle + last-reviewer. Reuse the same lazy-fetch contract as
+    // claimNextReview (fetch once per revision, bounded per call).
+    let reviews = candidate.reviews ?? [];
+    const hasDataForHead =
+      candidate.reviewsFetchedFor === headSha || reviews.some((r) => r.commitId === headSha);
+    if (!hasDataForHead) {
+      if (fetchBudget <= 0) continue; // state unknown, budget spent — next claim resumes here
+      fetchBudget--;
+      let fetched;
+      try {
+        fetched = await gh.listPullReviews(n);
+      } catch (err) {
+        if (err instanceof GitHubApiError && err.isRateLimit) {
+          return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
+        }
+        console.error(`dispatch: rework review-state fetch failed for PR #${n}:`, err);
+        continue;
+      }
+      const entries: PullReviewEntry[] = [];
+      for (const r of fetched) {
+        const state = REST_REVIEW_STATES[(r.state ?? "").toUpperCase()];
+        if (!state || !r.user?.login || !r.commit_id) continue;
+        entries.push({ reviewer: r.user.login, state, commitId: r.commit_id, at: r.submitted_at ?? nowIso() });
+      }
+      const merged = await mergeReviewEntriesInto(pullsCol(orch), n, entries, { reviewsFetchedFor: headSha });
+      if (merged === null) continue;
+      reviews = merged;
+    }
+
+    // The last review at head must be a change-request with nothing newer: an
+    // approval at head means it passed; a changes_requested at head with no
+    // approval means waiting-on-rework — the adoptable state. (A new commit
+    // after the review carries a different SHA, so it simply isn't "at head".)
+    const atHead = reviews.filter((r) => r.commitId === headSha);
+    if (atHead.some((r) => r.state === "approved")) continue; // passed at head
+    const changeReqs = atHead.filter((r) => r.state === "changes_requested");
+    if (changeReqs.length === 0) continue; // not in a change-requested-at-head state
+    const lastChangeReq = changeReqs.reduce((m, r) => (r.at > m.at ? r : m), changeReqs[0]!);
+    if (lastChangeReq.at > new Date(idleCutoffMs).toISOString()) continue; // not idle long enough
+    if (lastChangeReq.reviewer === ctx.handle) continue; // adopter would re-review its own fix
+
+    // --- Resolve the worked issue + liveness (one live read; bounded) -------
+    if (liveBudget <= 0) continue;
+    liveBudget--;
+    let live;
+    try {
+      live = await gh.getPull(n);
+    } catch (err) {
+      if (err instanceof GitHubApiError && err.isRateLimit) {
+        return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
+      }
+      console.error(`dispatch: rework getPull failed for PR #${n}:`, err);
+      continue;
+    }
+    if (live.state !== "open") {
+      // Heal the mirror and skip — never adopt a merged/closed PR.
+      await pullsCol(orch)
+        .updateOne(
+          { _id: n },
+          {
+            $set: {
+              state: live.state,
+              merged: Boolean(live.merged ?? live.merged_at != null),
+              mergedAt: live.merged_at ?? null,
+              updatedAt: live.updated_at ?? nowIso(),
+            },
+          },
+        )
+        .catch(() => undefined);
+      continue;
+    }
+    const issue = issueFromBody(live.body);
+    if (issue === null) continue; // no worked-issue link — can't route the status
+
+    // Never adopt a `do-not-automate` issue — the label-path rework filters
+    // the same on the issue (fg-common.sh unassigned_reworks/rework_issues),
+    // and the PR often doesn't carry the label the ISSUE does. Mirror read is
+    // enough (the label is rarely toggled; the changes-requested test-and-set
+    // below is the hard gate). A mirror miss (null) proceeds — that gate stands.
+    const issueLabels = await issuesCol(orch).findOne({ _id: issue }, { projection: { labels: 1 } });
+    if (issueLabels?.labels.includes(DO_NOT_AUTOMATE_LABEL)) continue;
+
+    // Cooldown after a prior abandoned adoption of THIS issue (crash / usage
+    // limit / author returned mid-window). Checked here, once we know the issue.
+    const cooling = await orch.redis.get(reworkCooldownKey(issue));
+    if (cooling !== null && cooling !== undefined) continue;
+
+    // --- Atomic claim: lease the issue, test-and-set its label --------------
+    const assignmentId = new ObjectId();
+    const idStr = assignmentId.toHexString();
+
+    const took = await orch.redis.set(leaseKey(issue), idStr, "EX", ttl, "NX");
+    if (took !== "OK") continue; // another worker/adopter holds this issue
+
+    let step = 0; // 0 = nothing written; 1 = changes-requested removed; 2 = claimed added
+    let assigneeSet = false;
+    try {
+      const removed = await gh.removeLabel(issue, CHANGES_REQUESTED_LABEL);
+      if (!removed) {
+        // Live issue is no longer changes-requested (already adopted / author
+        // came back / stale mirror). Nothing written — free the lease, skip.
+        await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+        continue;
+      }
+      step = 1;
+      await gh.addLabels(issue, [CLAIMED_LABEL]);
+      step = 2;
+      try {
+        await gh.addAssignees(issue, [ctx.handle]);
+        assigneeSet = true;
+      } catch (err) {
+        if (err instanceof GitHubApiError && err.code === "assignee-ignored") {
+          // Auto-enrolled outside contributor without repo access — the lease +
+          // assignment doc carry the claim identity; labels still gate. Proceed.
+        } else {
+          throw err;
+        }
+      }
+    } catch (err) {
+      const undoPartialWrites = async (): Promise<void> => {
+        if (step >= 2) await gh.removeLabel(issue, CLAIMED_LABEL).catch(() => undefined);
+        if (step >= 1) await gh.addLabels(issue, [CHANGES_REQUESTED_LABEL]).catch(() => undefined);
+      };
+      if (err instanceof GitHubApiError && err.isRateLimit) {
+        await undoPartialWrites();
+        await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+        return { status: "rate-limited", retryAfterSeconds: err.retryAfterSeconds ?? 60 };
+      }
+      if (err instanceof GitHubApiError && err.status === 403) {
+        await undoPartialWrites();
+        await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+        return { status: "disabled", reason: "github token lacks write access" };
+      }
+      if (err instanceof GitHubApiError && err.status >= 400 && err.status < 500) {
+        await undoPartialWrites();
+        await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+        continue;
+      }
+      await undoPartialWrites();
+      await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+      throw err; // 5xx / network — surface to the route; lease is freed
+    }
+
+    // --- Durable audit + optimistic issue-mirror + fleet feed ---------------
+    const now = nowIso();
+    const assignment: AssignmentDoc = {
+      _id: assignmentId,
+      kind: "rework",
+      issueNumber: issue, // the WORKED issue — see AssignmentDoc.issueNumber
+      handle: ctx.handle,
+      tier: ctx.tier,
+      ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+      ...(ctx.harness ? { harness: ctx.harness } : {}),
+      ...(ctx.model ? { model: ctx.model } : {}),
+      claimedAt: now,
+      renewedAt: now,
+      active: true,
+      assigneeSet,
+      prNumber: n,
+    };
+    try {
+      await assignmentsCol(orch).insertOne(assignment);
+      const issueDoc = await issuesCol(orch).findOne({ _id: issue });
+      if (issueDoc) {
+        const labels = issueDoc.labels.filter((l) => l !== CHANGES_REQUESTED_LABEL);
+        if (!labels.includes(CLAIMED_LABEL)) labels.push(CLAIMED_LABEL);
+        const assignees =
+          !assigneeSet || issueDoc.assignees.includes(ctx.handle)
+            ? issueDoc.assignees
+            : [...issueDoc.assignees, ctx.handle];
+        await issuesCol(orch).updateOne({ _id: issue }, { $set: { labels, assignees, updatedAt: now } });
+      }
+    } catch (err) {
+      await assignmentsCol(orch).deleteOne({ _id: assignmentId }).catch(() => undefined);
+      await revertClaimLabels(orch, issue, ctx.handle, CHANGES_REQUESTED_LABEL).catch(() => undefined);
+      await delLeaseIfOwned(orch, leaseKey(issue), idStr).catch(() => undefined);
+      throw err;
+    }
+
+    store.addEvent(
+      "claim",
+      `@${ctx.handle} adopted rework of PR #${n} (issue #${issue}) from @${candidate.user ?? "?"} — ${candidate.title}`,
+      { handle: ctx.handle, ...(ctx.harness ? { harness: ctx.harness } : {}), ref: `#${issue}` },
+    );
+
+    return {
+      status: "claimed",
+      rework: toClaimedRework(candidate, issue),
+      assignmentId: idStr,
+      leaseTtlSeconds: ttl,
+    };
+  }
+
+  return { status: "empty" };
+}
+
 /** Compare-and-EXPIRE: extend the lease only while it still belongs to this
  *  assignment — never extend a rival's lease or a sweeper's takeover
  *  sentinel. Atomic, so there is no GET→EXPIRE gap to race through. */
@@ -816,6 +1165,9 @@ async function revertClaimLabels(
   orch: Orchestrator,
   issue: number,
   handle: string,
+  /** The status to restore. Work claims go back to `available`; rework claims
+   *  go back to `changes-requested` (ADR-0020 — the review still stands). */
+  restoreLabel: string = AVAILABLE_LABEL,
 ): Promise<RevertResult> {
   const gh = orch.gh;
   if (!gh) return "skipped";
@@ -829,7 +1181,7 @@ async function revertClaimLabels(
   const liveLabels = (live.labels ?? []).map((l) => l.name);
   if (live.state !== "open" || !liveLabels.includes(CLAIMED_LABEL)) return "skipped";
   try {
-    await gh.addLabels(issue, [AVAILABLE_LABEL]);
+    await gh.addLabels(issue, [restoreLabel]);
     await gh.removeLabel(issue, CLAIMED_LABEL);
     await gh.removeAssignees(issue, [handle]);
   } catch (err) {
@@ -839,12 +1191,17 @@ async function revertClaimLabels(
   const doc = await issuesCol(orch).findOne({ _id: issue });
   if (!doc) return "reverted";
   const labels = doc.labels.filter((l) => l !== CLAIMED_LABEL);
-  if (!labels.includes(AVAILABLE_LABEL)) labels.push(AVAILABLE_LABEL);
+  if (!labels.includes(restoreLabel)) labels.push(restoreLabel);
   await issuesCol(orch).updateOne(
     { _id: issue },
     { $set: { labels, assignees: doc.assignees.filter((a) => a !== handle), updatedAt: nowIso() } },
   );
   return "reverted";
+}
+
+/** The status a kind's claim reverts to on abandon/expiry. */
+function revertTargetLabel(kind: AssignmentKind): string {
+  return kind === "rework" ? CHANGES_REQUESTED_LABEL : AVAILABLE_LABEL;
 }
 
 /** Mark one assignment inactive (race-safe on `active: true`), free its
@@ -874,25 +1231,27 @@ async function finishAssignment(
   );
   if (res.matchedCount === 0) return { finished: false, reverted: false };
   await delLeaseIfOwned(orch, assignmentLeaseKey(assignment), opts.leaseValue ?? assignment._id.toHexString());
-  // An ABANDONED review means the runner claimed the PR and then skipped it
+  // An ABANDONED review/rework means the runner claimed and then skipped it
   // locally (already passed at head, author == its posting identity, parked
-  // for a human, crash) — mirror state the server couldn't see. Re-serving
-  // the PR immediately would hand the deterministic oldest-first queue's
-  // head to every runner in a claim → skip → abandon loop, so park it out of
-  // dispatch for a cooldown instead (the walk can still reach it).
-  // Lease-expired releases deliberately DON'T cool down: the lease TTL
-  // itself already spaced that claim out, and a crashed reviewer's PR should
-  // re-queue promptly (ADR-0019 "back in the review queue").
-  if (kindOf(assignment) === "review" && outcome === "abandoned") {
-    await orch.redis
-      .set(reviewCooldownKey(assignment.issueNumber), assignment.handle, "EX", config.reviewAbandonCooldownSeconds)
-      .catch(() => undefined);
+  // for a human, the author pushed mid-window, crash) — mirror state the
+  // server couldn't see. Re-serving immediately would hand the deterministic
+  // oldest-first queue's head to every runner in a claim → skip → abandon
+  // loop, so park it out of dispatch for a cooldown (the walk can still reach
+  // it). Lease-expired releases deliberately DON'T cool down: the lease TTL
+  // itself already spaced that claim out, and a crashed worker's item should
+  // re-queue promptly.
+  const kind = kindOf(assignment);
+  if (outcome === "abandoned" && (kind === "review" || kind === "rework")) {
+    const cooldownKey = kind === "review" ? reviewCooldownKey(assignment.issueNumber) : reworkCooldownKey(assignment.issueNumber);
+    const cooldownSecs = kind === "review" ? config.reviewAbandonCooldownSeconds : config.reworkAbandonCooldownSeconds;
+    await orch.redis.set(cooldownKey, assignment.handle, "EX", cooldownSecs).catch(() => undefined);
   }
   let reverted = false;
-  // Label reverts are a kind:"work" concept only — review claims hold no
-  // labels (nothing was written on claim, so there is nothing to revert).
-  if (opts.revert && kindOf(assignment) === "work") {
-    const result = await revertClaimLabels(orch, assignment.issueNumber, assignment.handle);
+  // Review claims hold no labels — nothing to revert. Work and rework claims
+  // BOTH write `status: claimed` + an assignee, and revert to their own
+  // status: work → available, rework → changes-requested.
+  if (opts.revert && kind !== "review") {
+    const result = await revertClaimLabels(orch, assignment.issueNumber, assignment.handle, revertTargetLabel(kind));
     reverted = result === "reverted";
     if (result === "failed") {
       await assignmentsCol(orch)
@@ -948,14 +1307,19 @@ export async function releaseAssignment(
   });
   if (!finished) return false;
 
+  const kind = kindOf(doc);
   const text =
-    kindOf(doc) === "review"
+    kind === "review"
       ? opts.outcome === "done"
         ? `@${doc.handle} finished reviewing PR #${opts.issue}`
         : `@${doc.handle}'s review claim on PR #${opts.issue} released (${opts.outcome})`
-      : opts.outcome === "done"
-        ? `@${doc.handle} finished #${opts.issue}${opts.prNumber ? ` → PR #${opts.prNumber}` : ""}`
-        : `@${doc.handle}'s claim on #${opts.issue} released (${opts.outcome})`;
+      : kind === "rework"
+        ? opts.outcome === "done"
+          ? `@${doc.handle} pushed adopted rework of #${opts.issue}${opts.prNumber ? ` → PR #${opts.prNumber}` : doc.prNumber ? ` → PR #${doc.prNumber}` : ""}`
+          : `@${doc.handle}'s adopted rework of #${opts.issue} released (${opts.outcome}) — back to changes-requested`
+        : opts.outcome === "done"
+          ? `@${doc.handle} finished #${opts.issue}${opts.prNumber ? ` → PR #${opts.prNumber}` : ""}`
+          : `@${doc.handle}'s claim on #${opts.issue} released (${opts.outcome})`;
   store.addEvent("claim", text, { handle: doc.handle, ref: `#${opts.issue}` });
   return true;
 }
@@ -972,12 +1336,13 @@ export async function renewLeasesForHandle(orch: Orchestrator, handle: string): 
   try {
     const active = await assignmentsCol(orch).find({ handle, active: true }).toArray();
     for (const doc of active) {
-      // The claimed-label mirror guard applies ONLY to kind "work" — a review
-      // claim writes no labels/assignees anywhere, so there is no mirror
-      // state to cross-check; an active review assignment renews while the
-      // agent heartbeats (compare-and-EXPIRE on lease:review:<n>, so a lapsed
-      // lease is still never resurrected).
-      if (kindOf(doc) === "work") {
+      // The claimed-label mirror guard applies to kind "work" AND "rework" —
+      // both write `status: claimed` + an assignee on their issue, so the
+      // mirror can be cross-checked. A review claim writes no labels/assignees
+      // anywhere, so there is nothing to check; an active review assignment
+      // renews while the agent heartbeats (compare-and-EXPIRE on
+      // lease:review:<n>, so a lapsed lease is still never resurrected).
+      if (kindOf(doc) !== "review") {
         const issue = await issuesCol(orch).findOne(
           { _id: doc.issueNumber },
           { projection: { labels: 1, assignees: 1 } },
@@ -1042,8 +1407,10 @@ export async function sweepExpiredLeases(orch: Orchestrator, store: FleetStore):
         );
         if (took !== "OK") continue; // a lease exists (live, or just re-taken by renew)
         // Kind "review": no label revert (review claims hold no labels) —
-        // the PR simply becomes claimable again once the lease is gone.
-        const isReview = kindOf(doc) === "review";
+        // the PR simply becomes claimable again once the lease is gone. Work
+        // and rework both revert (to available / changes-requested resp.).
+        const swKind = kindOf(doc);
+        const isReview = swKind === "review";
         const { finished, reverted } = await finishAssignment(orch, doc, "lease-expired", {
           revert: !isReview,
           leaseValue: sentinel,
@@ -1057,9 +1424,13 @@ export async function sweepExpiredLeases(orch: Orchestrator, store: FleetStore):
           "claim",
           isReview
             ? `review lease expired — PR #${doc.issueNumber} back in the review queue (was @${doc.handle})`
-            : reverted
-              ? `lease expired — #${doc.issueNumber} is back in the queue (was @${doc.handle})`
-              : `lease expired — released @${doc.handle}'s claim on #${doc.issueNumber} (labels left as-is)`,
+            : swKind === "rework"
+              ? reverted
+                ? `rework lease expired — #${doc.issueNumber} back to changes-requested (was @${doc.handle})`
+                : `rework lease expired — released @${doc.handle}'s adoption of #${doc.issueNumber} (labels left as-is)`
+              : reverted
+                ? `lease expired — #${doc.issueNumber} is back in the queue (was @${doc.handle})`
+                : `lease expired — released @${doc.handle}'s claim on #${doc.issueNumber} (labels left as-is)`,
           { handle: doc.handle, ref: `#${doc.issueNumber}` },
         );
       } catch (err) {
@@ -1075,13 +1446,15 @@ export async function sweepExpiredLeases(orch: Orchestrator, store: FleetStore):
       .toArray();
     for (const doc of pending) {
       try {
-        const result = await revertClaimLabels(orch, doc.issueNumber, doc.handle);
+        const result = await revertClaimLabels(orch, doc.issueNumber, doc.handle, revertTargetLabel(kindOf(doc)));
         if (result === "failed") continue; // try again next pass
         await assignmentsCol(orch).updateOne({ _id: doc._id }, { $unset: { revertPending: "" } });
         if (result === "reverted") {
           store.addEvent(
             "claim",
-            `#${doc.issueNumber} is back in the queue (was @${doc.handle}; revert retried)`,
+            kindOf(doc) === "rework"
+              ? `#${doc.issueNumber} back to changes-requested (was @${doc.handle}; revert retried)`
+              : `#${doc.issueNumber} is back in the queue (was @${doc.handle}; revert retried)`,
             { handle: doc.handle, ref: `#${doc.issueNumber}` },
           );
         }

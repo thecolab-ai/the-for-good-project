@@ -60,6 +60,7 @@ function mirrorPull({
   user = "octocat",
   headRef = `branch-${number}`,
   headSha = `sha-${number}-1`,
+  headRepoFullName = "example/repo",
   baseRef = "main",
   createdAt = "2026-01-01T00:00:00Z",
   reviews,
@@ -76,7 +77,7 @@ function mirrorPull({
     htmlUrl: `https://github.com/example/repo/pull/${number}`,
     headRef,
     headSha,
-    headRepoFullName: "example/repo",
+    headRepoFullName,
     baseRef,
     merged: false,
     mergedAt: null,
@@ -126,7 +127,7 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
 
   try {
     const { config } = await import("../dist/config.js");
-    const { connectOrchestrator, leaseKey, reviewLeaseKey, reviewCooldownKey } = await import("../dist/orchestrator/stores.js");
+    const { connectOrchestrator, leaseKey, reviewLeaseKey, reviewCooldownKey, reworkCooldownKey } = await import("../dist/orchestrator/stores.js");
     const dispatch = await import("../dist/orchestrator/dispatch.js");
     const { FleetStore } = await import("../dist/state.js");
 
@@ -1307,6 +1308,240 @@ test("dispatch (real redis+mongo, mock github)", async (t) => {
       assert.equal(healed.state, "closed", "mirror self-healed from the live read");
       assert.equal(healed.merged, true);
       assert.equal(await anyAssignment(321), null, "no assignment recorded for the merged PR");
+    });
+
+    // ---------------------------------------------------- rework dispatch
+    // (ADR-0020 — adopt a stale changes-requested PR from an absent author)
+
+    /** Seed a rework scenario: PULL fixtures (mirror + mock, body carries the
+     *  `Closes #issue` link the winner is resolved from) AND the linked ISSUE
+     *  fixtures (mirror + mock, carrying `status: changes-requested`). */
+    async function seedReworks(pullSpecs, issueSpecs) {
+      await o.redis.flushdb();
+      await o.db.collection("issues").deleteMany({});
+      await o.db.collection("assignments").deleteMany({});
+      await o.db.collection("pulls").deleteMany({});
+      mock.reset();
+      mock.assignableUsers = null;
+      mock.seed({
+        issues: issueSpecs.map((s) => makeIssue(s)),
+        pulls: pullSpecs.map(({ restReviews, reviews, reviewsFetchedFor, ...s }) =>
+          makePull({ ...s, reviews: restReviews ?? [] })),
+      });
+      if (issueSpecs.length) await o.db.collection("issues").insertMany(issueSpecs.map(mirrorIssue));
+      if (pullSpecs.length) await o.db.collection("pulls").insertMany(pullSpecs.map(mirrorPull));
+    }
+
+    const hoursAgo = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
+    const IDLE = hoursAgo(10); // older than the 6h default → adoptable
+    const FRESH = hoursAgo(1); // within 6h → NOT idle enough
+
+    // A single clean adoptable candidate (PR 460 → issue 234), plus a bag of
+    // UNCONDITIONALLY ineligible ones — each predates it and would win if
+    // eligible, and each is ineligible for ANY claimant (author/last-reviewer
+    // exclusion is claimant-specific and is tested separately). All authored by
+    // "carol", reviewed by "bob", so no claimant below (alice/erin) is ever the
+    // author or reviewer of these.
+    const cleanRework = (over = {}) => ({
+      pulls: [
+        { number: 443, user: "carol", headSha: "sha-443-1", body: "Closes #243", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-443-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-443-1", at: FRESH }] }, // not idle
+        { number: 444, user: "carol", headSha: "sha-444-1", headRef: "synthesis/x", body: "Part of #244", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-444-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-444-1", at: IDLE }] }, // synthesis
+        { number: 445, user: "carol", headSha: "sha-445-1", headRef: "discover/x", body: "Part of #245", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-445-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-445-1", at: IDLE }] }, // framing
+        { number: 446, user: "carol", headSha: "sha-446-1", headRepoFullName: "someforker/repo", body: "Closes #246", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-446-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-446-1", at: IDLE }] }, // fork
+        { number: 447, user: "carol", headSha: "sha-447-1", labels: ["review: human-only"], body: "Closes #247", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-447-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-447-1", at: IDLE }] }, // human-only
+        { number: 448, user: "carol", headSha: "sha-448-2", body: "Closes #248", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-448-2", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-448-1", at: IDLE }] }, // author pushed since review (new head)
+        { number: 449, user: "carol", headSha: "sha-449-1", body: "Closes #249", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-449-1", reviews: [{ reviewer: "bob", state: "approved", commitId: "sha-449-1", at: IDLE }] }, // approved at head
+        { number: 450, user: "carol", headSha: "sha-450-1", labels: ["do-not-automate"], body: "Closes #250", createdAt: "2026-06-01T00:00:00Z",
+          reviewsFetchedFor: "sha-450-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-450-1", at: IDLE }] }, // do-not-automate
+        // The clean winner — newest createdAt so it only wins once all the
+        // older ones are correctly excluded.
+        { number: 460, user: "dave", headSha: "sha-460-1", body: "Closes #234", title: "research: finding Y", createdAt: "2026-06-09T00:00:00Z",
+          reviewsFetchedFor: "sha-460-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-460-1", at: IDLE }], ...over },
+      ],
+      issues: [
+        { number: 243, labels: ["status: changes-requested"] },
+        { number: 246, labels: ["status: changes-requested"] },
+        { number: 247, labels: ["status: changes-requested"] },
+        { number: 248, labels: ["status: changes-requested"] },
+        { number: 249, labels: ["status: changes-requested"] },
+        { number: 250, labels: ["status: changes-requested"] },
+        { number: 234, labels: ["status: changes-requested"], title: "research: finding Y" },
+      ],
+    });
+
+    await t.test("claimNextRework: adopts an idle stale rework, moves labels, skips every ineligible", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const store = new FleetStore();
+
+      const result = await dispatch.claimNextRework(o, store, {
+        handle: "alice", tier: "standard", harness: "claude", model: "claude-opus-4-8",
+      });
+      assert.equal(result.status, "claimed");
+      assert.deepEqual(result.rework, {
+        pr: 460, issue: 234, title: "research: finding Y", author: "dave",
+        headSha: "sha-460-1", htmlUrl: "https://github.com/example/repo/pull/460", headRef: "branch-460",
+      });
+      assert.equal(result.leaseTtlSeconds, config.reworkLeaseTtlSeconds);
+
+      // Issue 234 moved changes-requested → claimed + adopter assigned.
+      const liveIssue = await mock.getIssue(234);
+      const names = liveIssue.labels;
+      assert.ok(names.includes("status: claimed") && !names.includes("status: changes-requested"), names.join(","));
+      assert.ok(liveIssue.assignees.includes("alice"), "adopter assigned");
+
+      // Lease on the ISSUE (reused work lease), assignment kind "rework" w/ PR.
+      assert.equal(await o.redis.get(leaseKey(234)), result.assignmentId);
+      const assignment = await activeAssignment(234);
+      assert.equal(assignment.kind, "rework");
+      assert.equal(assignment.handle, "alice");
+      assert.equal(assignment.prNumber, 460);
+
+      // Mirror optimistically updated.
+      const mirror = await o.db.collection("issues").findOne({ _id: 234 });
+      assert.ok(mirror.labels.includes("status: claimed") && !mirror.labels.includes("status: changes-requested"));
+
+      const event = store.recentEvents().find((e) => e.kind === "claim");
+      assert.ok(event && event.text.includes("adopted rework of PR #460") && event.text.includes("from @dave"), event?.text);
+
+      // Nothing else is adoptable now (all the others are unconditionally
+      // ineligible, and 460 is now leased).
+      const again = await dispatch.claimNextRework(o, new FleetStore(), { handle: "erin", tier: "standard" });
+      assert.equal(again.status, "empty", "idle/synthesis/framing/fork/human-only/new-head/approved/dna all excluded");
+    });
+
+    await t.test("claimNextRework: excludes the PR's OWN author and its last reviewer (per claimant)", async () => {
+      // One adoptable PR authored by @dave, last-reviewed by @bob. It is
+      // adoptable by a THIRD party, but never by dave (author) or bob (reviewer)
+      // — that's what keeps author ≠ reviewer after the fix is re-reviewed.
+      await seedReworks(
+        [{ number: 480, user: "dave", headSha: "sha-480-1", body: "Closes #280", createdAt: "2026-06-01T00:00:00Z",
+           reviewsFetchedFor: "sha-480-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-480-1", at: IDLE }] }],
+        [{ number: 280, labels: ["status: changes-requested"] }],
+      );
+      const asAuthor = await dispatch.claimNextRework(o, new FleetStore(), { handle: "dave", tier: "standard" });
+      assert.equal(asAuthor.status, "empty", "the author can't adopt their own frozen PR");
+      const asReviewer = await dispatch.claimNextRework(o, new FleetStore(), { handle: "bob", tier: "standard" });
+      assert.equal(asReviewer.status, "empty", "the last reviewer can't adopt (would re-review their own fix)");
+      const asThird = await dispatch.claimNextRework(o, new FleetStore(), { handle: "erin", tier: "standard" });
+      assert.equal(asThird.status, "claimed", "a third identity adopts it");
+      assert.equal(asThird.rework.pr, 480);
+    });
+
+    await t.test("claimNextRework: an ONLINE author is skipped; an OFFLINE author is adopted", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const store = new FleetStore();
+      // Bring @dave (author of PR 460) online in this store.
+      store.upsertAgent({ type: "hello", handle: "dave", harness: "claude", model: "x" }, "http");
+
+      const skipped = await dispatch.claimNextRework(o, store, { handle: "alice", tier: "standard" });
+      assert.equal(skipped.status, "empty", "author online → not adopted (they're presumed to be reworking it)");
+
+      // Offline store → adopted.
+      const adopted = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(adopted.status, "claimed");
+      assert.equal(adopted.rework.pr, 460);
+    });
+
+    await t.test("claimNextRework: the lease stops two adopters colliding on one PR", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const results = await Promise.all([
+        dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" }),
+        dispatch.claimNextRework(o, new FleetStore(), { handle: "erin", tier: "standard" }),
+      ]);
+      const claimed = results.filter((r) => r.status === "claimed");
+      assert.equal(claimed.length, 1, "exactly one adopter wins the single candidate");
+      assert.equal(claimed[0].rework.pr, 460);
+    });
+
+    await t.test("rework release done: labels left claimed (runner flips to in-review itself), lease gone", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const claim = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(claim.status, "claimed");
+      const ok = await dispatch.releaseAssignment(o, new FleetStore(), {
+        issue: 234, outcome: "done", kind: "rework", handle: "alice", prNumber: 460,
+      });
+      assert.equal(ok, true);
+      const live = await mock.getIssue(234);
+      const names = live.labels;
+      assert.ok(names.includes("status: claimed"), "done never reverts — the runner owns the → in-review flip");
+      assert.equal(await o.redis.exists(leaseKey(234)), 0, "lease freed");
+      const a = await anyAssignment(234);
+      assert.equal(a.active, false);
+      assert.equal(a.outcome, "done");
+    });
+
+    await t.test("rework release abandoned: reverts to changes-requested, assignee removed, cools down", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const claim = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(claim.status, "claimed");
+      const ok = await dispatch.releaseAssignment(o, new FleetStore(), {
+        issue: 234, outcome: "abandoned", kind: "rework", handle: "alice", prNumber: 460,
+      });
+      assert.equal(ok, true);
+      const live = await mock.getIssue(234);
+      const names = live.labels;
+      assert.ok(names.includes("status: changes-requested") && !names.includes("status: claimed"),
+        "abandon reverts to changes-requested (NOT available), so the PR/feedback still stands");
+      assert.ok(!live.assignees.includes("alice"), "adopter unassigned");
+      assert.equal(await o.redis.exists(leaseKey(234)), 0, "lease freed");
+      // Cooldown parks it out of re-adoption immediately.
+      assert.equal(await o.redis.exists(reworkCooldownKey(234)), 1, "cooldown set");
+      const again = await dispatch.claimNextRework(o, new FleetStore(), { handle: "erin", tier: "standard" });
+      assert.equal(again.status, "empty", "cooling down → not re-served");
+    });
+
+    await t.test("sweeper: an expired rework lease reverts the issue to changes-requested", async () => {
+      const { pulls, issues } = cleanRework();
+      await seedReworks(pulls, issues);
+      const claim = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(claim.status, "claimed");
+      await o.redis.del(leaseKey(234)); // simulate a crashed adopter's lapsed lease
+      const expired = await dispatch.sweepExpiredLeases(o, new FleetStore());
+      assert.ok(expired >= 1);
+      const live = await mock.getIssue(234);
+      const names = live.labels;
+      assert.ok(names.includes("status: changes-requested") && !names.includes("status: claimed"),
+        "sweeper reverts a rework to changes-requested, not available");
+      const a = await anyAssignment(234);
+      assert.equal(a.active, false);
+      assert.equal(a.outcome, "lease-expired");
+    });
+
+    await t.test("claimNextRework: a do-not-automate ISSUE is never adopted (label lives on the issue, not the PR)", async () => {
+      await seedReworks(
+        [{ number: 490, user: "dave", headSha: "sha-490-1", body: "Closes #290", createdAt: "2026-06-01T00:00:00Z",
+           reviewsFetchedFor: "sha-490-1", reviews: [{ reviewer: "bob", state: "changes_requested", commitId: "sha-490-1", at: IDLE }] }],
+        [{ number: 290, labels: ["status: changes-requested", "do-not-automate"] }],
+      );
+      const result = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "empty", "do-not-automate on the worked issue blocks adoption");
+    });
+
+    await t.test("claimNextRework: lazy-fetches review state when the mirror lacks it at head", async () => {
+      // No mirror `reviews`/`reviewsFetchedFor` — only the mock's REST reviews.
+      // Dispatch must fetch once to discover the idle changes-request at head.
+      await seedReworks(
+        [{ number: 470, user: "dave", headSha: "sha-470-1", body: "Closes #270", createdAt: "2026-06-01T00:00:00Z",
+           restReviews: [makeReview({ reviewer: "bob", state: "CHANGES_REQUESTED", commitId: "sha-470-1", submittedAt: IDLE })] }],
+        [{ number: 270, labels: ["status: changes-requested"] }],
+      );
+      const result = await dispatch.claimNextRework(o, new FleetStore(), { handle: "alice", tier: "standard" });
+      assert.equal(result.status, "claimed");
+      assert.equal(result.rework.pr, 470);
+      const doc = await o.db.collection("pulls").findOne({ _id: 470 });
+      assert.equal(doc.reviewsFetchedFor, "sha-470-1", "fetch marker persisted");
     });
 
     // ------------------------------------------------------------- routes

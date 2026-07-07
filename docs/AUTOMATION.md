@@ -215,6 +215,25 @@ pushed after it) but whose worked issue still sits `in-review` gets flipped to
 another bot) or a hand-off lost to a reviewer crash still route back to you.
 A freshly reworked PR awaiting re-review is left alone.
 
+**Adopting a stale rework (ADR-0020 / #656).** Rework used to advance only when
+the PR's *own author* re-ran — so a `changes-requested` PR whose author went
+offline could freeze for days while idle workers had nothing to do. After its
+own rework queue and any TTL-freed unassigned reworks, an enrolled worker can
+now **adopt** a stale changes-requested PR from an *absent* author: the fleet
+server hands out (under an atomic lease) the oldest PR that has sat in
+changes-requested for more than `REWORK_ADOPT_HOURS` (default 6h) since its
+last review, whose author is **not currently online**, and where the adopter is
+**neither the author nor the last reviewer** (so the eventual re-review still
+lands on a third identity). Synthesis (`synthesis/*`) and framing (`discover/*`)
+PRs are never adopted this way, and fork PRs aren't either (see the fork note
+under `reap.sh`). Before pushing, the adopter re-checks that no new author
+commit landed since the review — a returning author is never clobbered
+(`--force-with-lease` backstops a concurrent push). It is gated by
+`REWORK_ADOPT` **and** server claiming (`FLEET_CLAIM`), so the atomic lease —
+not a label race — arbitrates who adopts; `autopilot.sh` defaults it on,
+standalone `start_work.sh` is opt-in. Full contract:
+[server dispatch — kind `rework`](#server-orchestrated-claiming-opt-in).
+
 ## `reap.sh` — release stale claims and rework
 
 `reap.sh` keeps abandoned queue items from staying stuck forever. It is safe to
@@ -229,6 +248,15 @@ Two TTLs are enforced:
   hours) is unassigned, so any worker's `start_work.sh` loop — or
   `synthesize_work.sh`, for a synthesis draft (ADR-0011) — can pick up the
   rework.
+
+It also **closes fork-origin stale reworks** (ADR-0020 §5): a
+`changes-requested` PR whose branch lives on a **fork** can't be adopted (only
+its author can push it), and the project isn't taking outside fork branches
+into the automated pipeline for now — so the PR is closed with an explanatory
+comment and its issue released to `status: available` for a fresh same-repo
+attempt (the recorded review stays on the closed PR as reference). A
+`review: human-only` fork PR is left for the human maintainer. Opt out with
+`CLOSE_FORK_REWORKS=0`.
 
 Run it manually when you want an immediate sweep:
 
@@ -318,6 +346,23 @@ What changes when it's on:
   author ≠ reviewer is enforced against the account that actually posts the
   review. Empty queue or server trouble → the pass falls through to today's
   PR-list walk unchanged.
+- **Rework adoption too ([ADR-0020](adr/0020-adopt-stale-rework.md))** — an
+  enrolled `start_work.sh` with `REWORK_ADOPT=1` asks the same endpoint with
+  `kind: "rework"`. The server picks the oldest open `changes-requested` PR
+  that a *different* worker may adopt: idle more than `REWORK_ADOPT_HOURS`
+  (default 6h) since its last review-at-head, author **not currently online**,
+  adopter **neither the author nor the last reviewer**, not draft, not
+  `synthesis/*`/`discover/*`, not a fork, not `review: human-only`/
+  `do-not-automate`. Unlike a review, a rework **writes labels**: the server
+  leases the worked issue and moves it `changes-requested → claimed` +
+  assigns the adopter (the atomic `status: changes-requested` removal is the
+  test-and-set), then hands back the PR + issue. The runner reworks the PR
+  through its adopter flow (provenance comment; the finding's `agent`/`model`
+  become the adopter's; `--force-with-lease` so a returning author is never
+  clobbered) and releases `done` on push — the issue flips to `in-review` —
+  or `abandoned` if it pushed nothing / the author returned mid-window, which
+  reverts the issue to `changes-requested` and cools it down (default 15 min).
+  Empty queue or server trouble → the loop simply skips adoption, unchanged.
 
 GitHub remains the durable source of truth throughout: the server arbitrates
 *who claims*, but every durable fact lands on GitHub as the same labels and

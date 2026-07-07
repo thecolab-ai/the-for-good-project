@@ -275,8 +275,10 @@ export type EnrollRequest = z.infer<typeof enrollRequestSchema>;
 export const claimRequestSchema = z.object({
   /** What to claim: "work" = the next available issue (the default, and the
    *  only kind before ADR-0019); "review" = the next open PR needing an
-   *  adversarial review. `stages` only applies to kind "work". */
-  kind: z.enum(["work", "review"]).default("work"),
+   *  adversarial review; "rework" = the next stale `changes-requested` PR a
+   *  DIFFERENT worker may adopt (ADR-0020). `stages` only applies to kind
+   *  "work". */
+  kind: z.enum(["work", "review", "rework"]).default("work"),
   stages: z.array(z.enum(["research", "ideate", "build"])).optional(), // default: all three
   harness: z.string().max(32).optional(),
   model: z.string().max(128).optional(),
@@ -286,8 +288,10 @@ export type ClaimRequest = z.infer<typeof claimRequestSchema>;
 
 export const releaseRequestSchema = z.object({
   /** For kind "review", `issue` carries the PR number (one GitHub number
-   *  space — a number is never both an issue and a PR). */
-  kind: z.enum(["work", "review"]).default("work"),
+   *  space — a number is never both an issue and a PR). For kind "rework"
+   *  `issue` is the WORKED issue number (whose labels the claim moved), and
+   *  `prNumber` the PR being reworked. */
+  kind: z.enum(["work", "review", "rework"]).default("work"),
   issue: z.number().int().positive(),
   outcome: z.enum(["done", "abandoned"]),
   prNumber: z.number().int().positive().optional(),
@@ -304,6 +308,16 @@ export interface ClaimedIssue {
 export interface ClaimedReview {
   pr: number; title: string; author: string | null; headSha: string; htmlUrl: string;
   baseRef: string; headRef: string;
+}
+
+/** What a kind:"rework" claim hands the runner (ADR-0020): the PR to rework
+ *  AND the worked issue whose status the claim moved to `claimed` (the runner
+ *  flips it back to `in-review` on push). `author` is the PR author the
+ *  rework is being adopted FROM, `headSha` the revision the adopter must not
+ *  clobber if the author quietly returns (the pre-push guard). */
+export interface ClaimedRework {
+  pr: number; issue: number; title: string; author: string | null; headSha: string;
+  htmlUrl: string; headRef: string;
 }
 // Server->agent WS message (agents only, not watchers):
 //   { type: "command", command: FleetCommand }

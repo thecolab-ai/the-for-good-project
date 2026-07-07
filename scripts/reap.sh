@@ -16,12 +16,18 @@
 #     synthesize_work.sh runner claims the root while drafting and releases
 #     it when done; a lingering assignment means it crashed, and other
 #     runners refuse to contest a live claim — ADR-0012).
+#   - CHANGES-REQUESTED but its PR lives on a FORK → the PR is closed and the
+#     issue released to `available` (ADR-0020 §5: we don't take outside fork
+#     branches into the automated pipeline for now — only a fork PR's author
+#     can push its rework, so it can never be adopted). Opt out with
+#     CLOSE_FORK_REWORKS=0.
 #
-# Env: CLAIM_TTL REWORK_TTL DRY_RUN FOR_GOOD_REPO REPO_DIR
+# Env: CLAIM_TTL REWORK_TTL CLOSE_FORK_REWORKS DRY_RUN FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 DRY_RUN="${DRY_RUN:-0}"
+CLOSE_FORK_REWORKS="${CLOSE_FORK_REWORKS:-1}"   # 1 = close fork-origin changes-requested PRs + release the issue (ADR-0020 §5)
 
 hrs() { echo $(( ${1:-0} / 3600 )); }
 
@@ -104,13 +110,44 @@ reap_synthesis_claims() {
   done
 }
 
+# 5) A changes-requested PR that lives on a FORK can never be adopted (only its
+#    author can push its branch) and — per the maintainer's direction (#656) —
+#    we are not taking outside fork branches into the automated pipeline for
+#    now. Close the PR with an explanatory comment and release the issue to
+#    `available` so a fresh worker picks it up clean on a same-repo branch (the
+#    recorded review stays on the closed PR as reference). A `review: human-only`
+#    PR is left for the human maintainer.
+reap_fork_reworks() {
+  [ "$CLOSE_FORK_REWORKS" = 1 ] || return 0
+  local n pr owner labels who a
+  for n in $(gh issue list --repo "$REPO" --state open --label "status: changes-requested" \
+      --json number --limit 100 --jq '.[].number'); do
+    pr="$(pr_for_issue "$n" || true)"; [ -z "$pr" ] && continue
+    owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
+    # Empty owner = couldn't read (rate limit / transient) — fail closed, skip.
+    [ -n "$owner" ] || continue
+    [ "$owner" = "$OWNER" ] && continue   # same-repo branch — adoptable, leave it
+    labels="$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null || true)"
+    case ",$labels," in *",review: human-only,"*) log "#$n's fork PR #$pr is review: human-only — leaving it for a human."; continue ;; esac
+    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would close fork PR #$pr ($owner) and release #$n → available"; continue; fi
+    gh pr comment "$pr" --repo "$REPO" --body "🔁 Closing this fork PR: the project isn't taking outside fork branches into the automated pipeline right now — a changes-requested fork PR can't be adopted by another worker (only its author can push its branch), so it stalls (ADR-0020 §5, #656). The linked issue #$n is being released back to **available** for a maintainer-identity worker to pick up clean; this review stays here as reference. To contribute through the fleet, run as a maintainer identity with push access." >/dev/null 2>&1 || true
+    gh pr close "$pr" --repo "$REPO" >/dev/null 2>&1 || { warn "Couldn't close fork PR #$pr — skipping #$n."; continue; }
+    set_status_label "$n" "available" "changes-requested" "claimed" "in-review" 2>/dev/null || true
+    who="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '.assignees[].login' 2>/dev/null || true)"
+    for a in $who; do gh issue edit "$n" --repo "$REPO" --remove-assignee "$a" >/dev/null 2>&1 || true; done
+    gh issue comment "$n" --repo "$REPO" --body "♻️ The fork PR #$pr addressing this was closed (no outside fork branches in the automated pipeline for now — ADR-0020 §5). Released back to **available** for a fresh same-repo attempt; the prior review on #$pr is reference." >/dev/null 2>&1 || true
+    ok "Closed fork PR #$pr ($owner) and released #$n → available"
+  done
+}
+
 main() {
   preflight
-  info "reap.sh · repo=$REPO · claim-ttl=$(hrs "$CLAIM_TTL")h · rework-ttl=$(hrs "$REWORK_TTL")h$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
+  info "reap.sh · repo=$REPO · claim-ttl=$(hrs "$CLAIM_TTL")h · rework-ttl=$(hrs "$REWORK_TTL")h$([ "$CLOSE_FORK_REWORKS" = 1 ] && printf " · close-fork-reworks")$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   reap_claims
   reap_reworks
   reap_status_conflicts
   reap_synthesis_claims
+  reap_fork_reworks
   ok "Reap complete."
 }
 main "$@"
