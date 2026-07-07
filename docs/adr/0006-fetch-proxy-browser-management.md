@@ -56,20 +56,29 @@ robots/ToS, and no leaking of credentials or the runner's identity/location.
 The exact mechanism (residential proxy pool vs run-on-residential-machine vs
 per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 
-> **Amended 2026-07-07 — the follow-up mechanism, implemented.** The egress
-> mechanism is now a **rotating-IP proxy** wired into the fetch ladder, resolving
-> the open point above. `scripts/fetch.mjs` gains a **retry-through-proxy rung**
-> (a fresh IP per attempt clears IP-reputation walls probabilistically) and
-> `scripts/cloak-fetch.mjs` browses **through** the proxy (stealth browser + fresh
-> IP — the strongest bypass). It is **selective by default** (only when direct
-> fails); `PROXY_ALL=1` routes all `curl` + Python `urllib` (every `.skills` CLI)
-> through it for those who want blanket coverage, off by default because the proxy
-> is metered. The proxy URL is a **secret**: it lives git-ignored in
+> **Proposed 2026-07-07 — a candidate mechanism for the open follow-up above
+> (issue #118), pending maintainer ratification.** Issue #118 reserves the
+> egress-architecture decision (residential proxy pool vs run-on-residential
+> vs per-site rules) for a human infra sign-off — this PR does **not** settle
+> that decision; it ships a working *implementation* of one option (a metered
+> rotating-IP proxy, `p.webshare.io`) behind an off-by-default switch, as a
+> concrete proposal for the maintainer to accept, reject, or replace. It is
+> routed `review: human-only` for exactly that reason, and stays a proposal in
+> this record until a maintainer adds a dated ratification line here (as the
+> 2026-07-03 line below was added) and closes/updates #118. **What it does:**
+> `scripts/fetch.mjs` gains a **retry-through-proxy rung** (a fresh IP per
+> attempt clears IP-reputation walls probabilistically) and
+> `scripts/cloak-fetch.mjs` can browse **through** the proxy (stealth browser +
+> fresh IP — the strongest bypass). It is **selective by default** (only when
+> direct fails); `PROXY_ALL=1` routes all `curl` + Python `urllib` (every
+> `.skills` CLI) through it for blanket coverage, off by default because the
+> proxy is metered. The proxy URL is a **secret**: it lives git-ignored in
 > `~/.forgood/proxy.env` (sourced by `autopilot.sh`), read only from the
 > `FETCH_PROXY` env — never hard-coded, never committed, never printed with its
-> credentials (the tooling prints host:port only). Verified: it retrieves the real
-> `catalogue.data.govt.nz` CKAN JSON that a direct fetch gets an Incapsula
-> challenge for.
+> credentials (the tooling prints host:port only). **Verified working:** it
+> retrieves the real `catalogue.data.govt.nz` CKAN JSON that a direct fetch gets
+> an Incapsula challenge for. **Cost/ethics/ToS** (the substance #118 asks a
+> human to weigh) are **not** resolved here and remain open on #118.
 
 ## Consequences
 
