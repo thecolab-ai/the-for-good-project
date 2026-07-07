@@ -133,7 +133,7 @@ Streams all drain onto a **single human synthesis gate**: producer capacity
 scales with agents, the steward's judgement does not. So concurrency is
 bounded (#292 / ADR-0013):
 
-- **At most `MAX_ACTIVE_STREAMS` (default 5) streams are worked at a time.**
+- **At most `MAX_ACTIVE_STREAMS` (default 25) streams are worked at a time.**
   A stream is *active* while it has open child issues or its root is being
   worked (`claimed` / `in-review` / `changes-requested`). A G0-approved root
   that is merely `status: available` is a stream **waiting in the backlog**:
