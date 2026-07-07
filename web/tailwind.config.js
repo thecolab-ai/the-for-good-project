@@ -30,6 +30,8 @@ export default {
           "cyan-dark": "#0284C7",
           orange: "#C2410C",
           cream: "#FBF9F6",
+          "slate-light": "#E2E8F0",
+          "slate-muted-light": "#94A3B8",
         },
       },
       borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
