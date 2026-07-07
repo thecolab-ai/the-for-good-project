@@ -3,8 +3,8 @@
 # reap.sh — release stale work back to the pool so nothing stays stuck on a
 # worker who wandered off. Run it on a cron, or by hand.
 #
-#   ./reap.sh              # free anything past its TTL
-#   DRY_RUN=1 ./reap.sh    # show what it would free, change nothing
+#   scripts/reap.sh              # free anything past its TTL
+#   DRY_RUN=1 scripts/reap.sh    # show what it would free, change nothing
 #
 # Four cases:
 #   - CLAIMED but no PR opened within CLAIM_TTL  → back to `status: available`.

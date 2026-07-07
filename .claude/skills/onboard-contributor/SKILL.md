@@ -6,10 +6,10 @@ description: Use when a new person or their AI agent wants to start contributing
 # Onboard a contributor: paste-this-and-go
 
 The runner scripts already automate contributing here, so **do not hand-claim
-issues or juggle status labels.** Run `./start_work.sh`; it claims available work, runs an agent in a
+issues or juggle status labels.** Run `scripts/start_work.sh`; it claims available work, runs an agent in a
 fresh throwaway git worktree, and moves the issue through the status lifecycle
 described in [`docs/AUTOMATION.md`](../../../docs/AUTOMATION.md). For review,
-run `./review_work.sh`; it reviews open PRs in fresh worktrees and owns the
+run `scripts/review_work.sh`; it reviews open PRs in fresh worktrees and owns the
 adversarial-review check.
 
 ## When to use
@@ -25,7 +25,7 @@ adversarial-review check.
 
 | You have | Do this |
 |---|---|
-| Write/triage access plus a terminal and AI CLI | **Autopilot**: run `./start_work.sh` — the scripts do the claiming and PR routing for you. |
+| Write/triage access plus a terminal and AI CLI | **Autopilot**: run `scripts/start_work.sh` — the scripts do the claiming and PR routing for you. |
 | Write access but no AI CLI | **Manual claim**: use the GitHub UI to assign yourself, move `status: available` to `status: claimed`, do one issue, and open a PR that says `Closes #<n>` unless the issue is a Discover stream root. |
 | No write access | **Fork + PR**: follow [`AGENTS.md`](../../../AGENTS.md#no-write-access-most-contributors). You can still contribute, but the upstream queue runner cannot claim issues without permission. |
 
@@ -58,7 +58,7 @@ Do this, checking with me only if something genuinely needs a human decision:
    confidence High/Medium/Low, end with what would change the conclusion, never
    invent sources or publish personal data, and respect the human gates.
 4. Run the work loop:
-   ./start_work.sh
+   scripts/start_work.sh
    It picks up your assigned rework first, otherwise claims the next available
    issue, creates a fresh worktree, gives the issue to the agent, and moves the
    issue to in-review once the PR is open. The script owns status labels,
@@ -66,12 +66,12 @@ Do this, checking with me only if something genuinely needs a human decision:
    anything past the adversarial review gate.
 
    Common options:
-   - One task then stop:       MAX=1 ./start_work.sh
-   - Only one stage:           STAGE=research ./start_work.sh
-   - A specific CLI:           ./start_work.sh codex
-   - A specific model:         ./start_work.sh codex --model gpt-5.5
-   - Stop when queue is empty: POLL_SECONDS=0 ./start_work.sh
-   - Dry run:                  DRY_RUN=1 ./start_work.sh
+   - One task then stop:       MAX=1 scripts/start_work.sh
+   - Only one stage:           STAGE=research scripts/start_work.sh
+   - A specific CLI:           scripts/start_work.sh codex
+   - A specific model:         scripts/start_work.sh codex --model gpt-5.5
+   - Stop when queue is empty: POLL_SECONDS=0 scripts/start_work.sh
+   - Dry run:                  DRY_RUN=1 scripts/start_work.sh
 5. When it opens a PR, show me the PR URL and a two-line summary.
 ```
 
@@ -82,7 +82,7 @@ branch protection requires a non-author approval, and `review_work.sh` refuses
 to review a PR authored by the reviewer identity.
 
 ```bash
-REVIEW_GITHUB_TOKEN=<second-account-or-bot-PAT-with-write> ./review_work.sh
+REVIEW_GITHUB_TOKEN=<second-account-or-bot-PAT-with-write> scripts/review_work.sh
 ```
 
 `review_work.sh` claims an open PR with `review: claimed`, checks out the PR
@@ -91,11 +91,11 @@ review, sets the required `for-good/adversarial-review` status check, and
 merges on PASS by default. Useful options:
 
 ```bash
-REVIEW_GITHUB_TOKEN=<token> ./review_work.sh codex
-REVIEW_GITHUB_TOKEN=<token> ./review_work.sh hermes --model <name>
-REVIEW_GITHUB_TOKEN=<token> AUTO_MERGE=0 ./review_work.sh
-PR=7 ./review_work.sh
-MAX=1 POLL_SECONDS=0 ./review_work.sh
+REVIEW_GITHUB_TOKEN=<token> scripts/review_work.sh codex
+REVIEW_GITHUB_TOKEN=<token> scripts/review_work.sh hermes --model <name>
+REVIEW_GITHUB_TOKEN=<token> AUTO_MERGE=0 scripts/review_work.sh
+PR=7 scripts/review_work.sh
+MAX=1 POLL_SECONDS=0 scripts/review_work.sh
 ```
 
 If you run without `REVIEW_GITHUB_TOKEN`, the script reviews as the currently

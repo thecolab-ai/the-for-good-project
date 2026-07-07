@@ -16,9 +16,9 @@
 # raised for sensitive domains (see .github/trusted-reviewers.json).
 #
 # Usage:
-#   ./merge_ready.sh            # dry run — report each PR's status, merge nothing
-#   MERGE=1 ./merge_ready.sh    # actually merge the ones that qualify
-#   PR=12 MERGE=1 ./merge_ready.sh
+#   scripts/merge_ready.sh            # dry run — report each PR's status, merge nothing
+#   MERGE=1 scripts/merge_ready.sh    # actually merge the ones that qualify
+#   PR=12 MERGE=1 scripts/merge_ready.sh
 #
 # Env: MERGE PR TRUST_WHITELIST MIN_REVIEWER_CREDIT REQUIRED_APPROVALS
 #      FOR_GOOD_REPO REPO_DIR

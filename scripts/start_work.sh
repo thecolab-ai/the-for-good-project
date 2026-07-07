@@ -12,20 +12,20 @@
 # agent runs or how it behaves.
 #
 # Usage:
-#   ./start_work.sh                 # work the queue with the default agent (claude)
-#   ./start_work.sh codex           # use `codex exec` instead
-#   ./start_work.sh hermes          # use `hermes chat` instead
-#   ./start_work.sh --model <name>  # override the agent model
-#   ./start_work.sh codex --model gpt-5.5
-#   STAGE=research ./start_work.sh  # only pick up research-stage issues
+#   scripts/start_work.sh                 # work the queue with the default agent (claude)
+#   scripts/start_work.sh codex           # use `codex exec` instead
+#   scripts/start_work.sh hermes          # use `hermes chat` instead
+#   scripts/start_work.sh --model <name>  # override the agent model
+#   scripts/start_work.sh codex --model gpt-5.5
+#   STAGE=research scripts/start_work.sh  # only pick up research-stage issues
 #                                    # (stage: discover is NEVER picked up here —
 #                                    # framing is frame_work.sh's, ADR-0014)
-#   MAX=1 ./start_work.sh           # do a single issue and stop
-#   ISSUE=390 ./start_work.sh       # work THIS issue first (one shot), then fall
+#   MAX=1 scripts/start_work.sh           # do a single issue and stop
+#   ISSUE=390 scripts/start_work.sh       # work THIS issue first (one shot), then fall
 #                                    # back into the normal queue loop
-#   ISSUE=390 MAX=1 ./start_work.sh # work only that one issue, then stop
-#   DRY_RUN=1 ./start_work.sh       # show what it would do, touch nothing
-#   POLL_SECONDS=0 ./start_work.sh  # exit instead of polling when queue empty
+#   ISSUE=390 MAX=1 scripts/start_work.sh # work only that one issue, then stop
+#   DRY_RUN=1 scripts/start_work.sh       # show what it would do, touch nothing
+#   POLL_SECONDS=0 scripts/start_work.sh  # exit instead of polling when queue empty
 #                                    # (default: poll every 3 min and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
@@ -840,7 +840,7 @@ main() {
   # Discover is not this runner's stage at all (ADR-0014) — refuse loudly
   # rather than poll an empty queue forever.
   if [ "${STAGE:-}" = "discover" ]; then
-    err "STAGE=discover is frame_work.sh territory (ADR-0014) — start_work.sh never claims discover roots. Run ./frame_work.sh instead."
+    err "STAGE=discover is frame_work.sh territory (ADR-0014) — start_work.sh never claims discover roots. Run scripts/frame_work.sh instead."
     exit 1
   fi
   info "start_work.sh · repo=$REPO · agent=$AGENT${STAGE:+ · stage=$STAGE}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"

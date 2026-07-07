@@ -37,11 +37,11 @@
 # spawned child issue record who/what framed the stream.
 #
 # Usage:
-#   ./frame_work.sh                     # frame available discover roots (default agent: claude)
-#   ./frame_work.sh claude --model claude-fable-5
-#   MAX=1 ./frame_work.sh               # one root, then stop
-#   DRY_RUN=1 ./frame_work.sh           # show what it would do, touch nothing
-#   POLL_SECONDS=0 ./frame_work.sh      # exit instead of polling when queue empty
+#   scripts/frame_work.sh                     # frame available discover roots (default agent: claude)
+#   scripts/frame_work.sh claude --model claude-fable-5
+#   MAX=1 scripts/frame_work.sh               # one root, then stop
+#   DRY_RUN=1 scripts/frame_work.sh           # show what it would do, touch nothing
+#   POLL_SECONDS=0 scripts/frame_work.sh      # exit instead of polling when queue empty
 #                                        # (default: poll every 3 min and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
@@ -668,7 +668,7 @@ main() {
   info "frame_work.sh · repo=$REPO · agent=$AGENT${MODEL:+ · model=$MODEL}$([ "$DRY_RUN" = 1 ] && printf " · DRY_RUN")"
   local done=0
   # One-shot: let an operator target a stuck discover root/framing rework
-  # directly, e.g. ISSUE=441 PR=469 ./frame_work.sh codex. Normal autopilot
+  # directly, e.g. ISSUE=441 PR=469 scripts/frame_work.sh codex. Normal autopilot
   # still uses the queue below.
   if [ -n "${ISSUE:-}" ]; then
     local forced_pr="${PR:-}"

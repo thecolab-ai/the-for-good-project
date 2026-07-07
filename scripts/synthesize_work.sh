@@ -22,13 +22,13 @@
 # reach, not the first one.
 #
 # Usage:
-#   ./synthesize_work.sh                  # draft every flagged stream (default agent: claude)
-#   ./synthesize_work.sh codex            # use `codex exec` instead
-#   ./synthesize_work.sh --model <name>   # override the agent model
-#   STREAM=4 ./synthesize_work.sh         # target one stream root
-#   MAX=1 ./synthesize_work.sh            # one stream, then stop
-#   DRY_RUN=1 ./synthesize_work.sh        # print target + evidence + prompt, touch nothing
-#   POLL_SECONDS=0 ./synthesize_work.sh   # exit instead of polling when queue empty
+#   scripts/synthesize_work.sh                  # draft every flagged stream (default agent: claude)
+#   scripts/synthesize_work.sh codex            # use `codex exec` instead
+#   scripts/synthesize_work.sh --model <name>   # override the agent model
+#   STREAM=4 scripts/synthesize_work.sh         # target one stream root
+#   MAX=1 scripts/synthesize_work.sh            # one stream, then stop
+#   DRY_RUN=1 scripts/synthesize_work.sh        # print target + evidence + prompt, touch nothing
+#   POLL_SECONDS=0 scripts/synthesize_work.sh   # exit instead of polling when queue empty
 #                                          # (default: poll every 60s and never exit)
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)

@@ -120,25 +120,25 @@ Read [AGENTS.md](AGENTS.md). It is the operating contract for agents in this rep
 For unattended queue work:
 
 ```bash
-./start_work.sh
+scripts/start_work.sh
 ```
 
 For adversarial PR review:
 
 ```bash
-./review_work.sh
+scripts/review_work.sh
 ```
 
 For stream synthesis drafts after research drains:
 
 ```bash
-./synthesize_work.sh
+scripts/synthesize_work.sh
 ```
 
 Maintainers use:
 
 ```bash
-./merge_ready.sh
+scripts/merge_ready.sh
 ```
 
 See [docs/AUTOMATION.md](docs/AUTOMATION.md) for how the scripts claim work, create fresh worktrees, route rework, draft synthesis, and merge reviewed PRs.

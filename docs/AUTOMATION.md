@@ -101,11 +101,11 @@ where model strength matters most — framing a stream and gating a merge —
 both get a floor (ADR-0014).
 
 ```bash
-./frame_work.sh                          # frame available discover roots (default agent: claude)
-./frame_work.sh claude --model <name>    # pin the framing model explicitly
-MAX=1 ./frame_work.sh                    # one root, then stop
-DRY_RUN=1 ./frame_work.sh                # show what it would do, change nothing
-FANOUT_MAX=6 ./frame_work.sh             # cap on child issues opened per framing (default 6)
+scripts/frame_work.sh                          # frame available discover roots (default agent: claude)
+scripts/frame_work.sh claude --model <name>    # pin the framing model explicitly
+MAX=1 scripts/frame_work.sh                    # one root, then stop
+DRY_RUN=1 scripts/frame_work.sh                # show what it would do, change nothing
+FANOUT_MAX=6 scripts/frame_work.sh             # cap on child issues opened per framing (default 6)
 ```
 
 One framing run:
@@ -150,15 +150,15 @@ never picked up here** — framing is `frame_work.sh`'s alone (ADR-0014;
 `STAGE=discover` refuses to run).
 
 ```bash
-./start_work.sh                 # work the queue until it's empty (default agent: claude)
-./start_work.sh codex           # use `codex exec` instead
-./start_work.sh hermes          # use `hermes chat` instead
-./start_work.sh --model <name>  # override the agent model
-./start_work.sh codex --model gpt-5.5
-HERMES_PROFILE=reviewer ./start_work.sh hermes
-STAGE=research ./start_work.sh  # only pick up research-stage issues
-MAX=1 ./start_work.sh           # one issue, then stop
-DRY_RUN=1 ./start_work.sh       # show what it would do, change nothing
+scripts/start_work.sh                 # work the queue until it's empty (default agent: claude)
+scripts/start_work.sh codex           # use `codex exec` instead
+scripts/start_work.sh hermes          # use `hermes chat` instead
+scripts/start_work.sh --model <name>  # override the agent model
+scripts/start_work.sh codex --model gpt-5.5
+HERMES_PROFILE=reviewer scripts/start_work.sh hermes
+STAGE=research scripts/start_work.sh  # only pick up research-stage issues
+MAX=1 scripts/start_work.sh           # one issue, then stop
+DRY_RUN=1 scripts/start_work.sh       # show what it would do, change nothing
 ```
 
 The agent can be given as a positional word (`claude`, `codex`, or `hermes`)
@@ -261,8 +261,8 @@ attempt (the recorded review stays on the closed PR as reference). A
 Run it manually when you want an immediate sweep:
 
 ```bash
-./reap.sh              # release stale items
-DRY_RUN=1 ./reap.sh    # report what would be released
+scripts/reap.sh              # release stale items
+DRY_RUN=1 scripts/reap.sh    # report what would be released
 ```
 
 The workflow can also be started manually from GitHub's Actions tab, including
@@ -402,12 +402,12 @@ already injected into every reviewer prompt as untrusted context, so a fresh
 reviewer must bring *new* evidence rather than re-litigate resolved points.
 
 ```bash
-REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
-REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=hermes ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> HERMES_PROFILE=reviewer AGENT=hermes ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh # merge on PASS
-PR=7 ./review_work.sh                                       # one PR
+REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh              # review all open PRs
+REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=hermes scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> HERMES_PROFILE=reviewer AGENT=hermes scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 scripts/review_work.sh # merge on PASS
+PR=7 scripts/review_work.sh                                       # one PR
 ```
 
 ### `review: human-only` — keep a PR out of the agent loop
@@ -462,11 +462,11 @@ the plain-language overview in `streams/` — **as a PR for a human steward to
 edit, decide direction on, and merge.**
 
 ```bash
-./synthesize_work.sh                  # draft every flagged stream (default agent: claude)
-./synthesize_work.sh codex            # use `codex exec` instead
-STREAM=4 ./synthesize_work.sh         # target one stream root
-MAX=1 ./synthesize_work.sh            # one stream, then stop
-DRY_RUN=1 ./synthesize_work.sh        # print target + evidence + prompt, change nothing
+scripts/synthesize_work.sh                  # draft every flagged stream (default agent: claude)
+scripts/synthesize_work.sh codex            # use `codex exec` instead
+STREAM=4 scripts/synthesize_work.sh         # target one stream root
+MAX=1 scripts/synthesize_work.sh            # one stream, then stop
+DRY_RUN=1 scripts/synthesize_work.sh        # print target + evidence + prompt, change nothing
 ```
 
 The judgement stays human, structurally:
@@ -540,9 +540,9 @@ The flow:
 ### `merge_ready.sh` — the merge gate
 
 ```bash
-./merge_ready.sh            # dry run: report every PR's status, merge nothing
-MERGE=1 ./merge_ready.sh    # merge the ones that qualify
-PR=12 MERGE=1 ./merge_ready.sh
+scripts/merge_ready.sh            # dry run: report every PR's status, merge nothing
+MERGE=1 scripts/merge_ready.sh    # merge the ones that qualify
+PR=12 MERGE=1 scripts/merge_ready.sh
 ```
 
 A PR qualifies when it has **≥ N** reviews where each review is:
