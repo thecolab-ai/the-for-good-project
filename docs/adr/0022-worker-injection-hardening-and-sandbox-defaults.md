@@ -49,26 +49,27 @@ brings the high-privilege worker up to at least the reviewer's bar and is free.
 **2. Implement ADR-0005's host sandbox defaults in `run_agent`**, both
 overridable via the existing env hooks:
 
-- **Codex** → native OS sandbox in `workspace-write` mode (was
-  `--dangerously-bypass-approvals-and-sandbox`), verified against codex-cli
-  0.142.5. Three corrections to ADR-0005's sketch, each confirmed on the CLI:
-  - ADR-0005 wrote `--ask-for-approval never`, but **`codex exec` has no such
-    flag** (it lives on the top-level command; passing it to `exec` exits 2).
-    `exec` is already non-interactive, so we drop it.
-  - `workspace-write` disables network by default, so we re-enable it with
-    `-c sandbox_workspace_write.network_access=true` — the config key ADR-0005
-    omitted, without which every research/citation fetch fails.
-  - Workers run in a **git worktree** whose real `.git` is in the main clone,
-    *outside* the worktree; `workspace-write` confines writes to the worktree, so
-    `git commit`/`push` would fail. We add the git common dir
-    (`git rev-parse --path-format=absolute --git-common-dir`) via `--add-dir`.
-  - **Platform gate:** on **macOS**, the seatbelt sandbox unconditionally
-    disables network in `workspace-write` (openai/codex#10390), so sandbox and
-    network cannot coexist on a macOS host. Since research *and* review both need
-    network, macOS keeps the full-access default (behaviour unchanged) with a
-    one-line warning pointing to the Linux container; only **Linux** gets the
-    real sandbox by default. Override either with `CODEX_FLAGS=`. Hook trust
-    (`--dangerously-bypass-hook-trust`, ADR-0016) is separate and unchanged.
+- **Codex** → the native OS sandbox (`--sandbox workspace-write`) is **opt-in
+  (`FG_CODEX_SANDBOX=1`, Linux only), NOT the default.** The default stays
+  `--dangerously-bypass-approvals-and-sandbox`. This is a deliberate walk-back
+  from the first cut of this ADR, which defaulted Linux to the sandbox and
+  **broke the fleet in production**: the fleet server runs codex inside an
+  *unprivileged container*, where workspace-write's sandbox helper cannot create
+  user namespaces (`bwrap: setting up uid map: Permission denied`), so every
+  shell command failed before it ran and the worker couldn't even create a
+  branch (issue #713). On macOS the seatbelt path separately disables network in
+  workspace-write (openai/codex#10390), breaking research fetches. The lesson:
+  **the container is the isolation boundary (ADR-0005); an OS sandbox nested
+  inside it is redundant and broken.** So we default to full-access and expose
+  the OS sandbox only to a bare-Linux host with a sandbox-capable kernel that
+  opts in. When enabled, the flags are (verified against codex-cli 0.142.5):
+  `--sandbox workspace-write -c sandbox_workspace_write.network_access=true`
+  (network is off in workspace-write by default) plus `--add-dir <git common
+  dir>` (the worktree's real `.git` is in the main clone, outside the worktree,
+  so commits fail without it). Note `codex exec` has **no** `--ask-for-approval`
+  flag — an earlier draft copied it from ADR-0005 and it exits 2. `CODEX_FLAGS=`
+  overrides everything; hook trust (`--dangerously-bypass-hook-trust`, ADR-0016)
+  is separate and unchanged.
 - **Claude** → `--permission-mode auto` (was `bypassPermissions`). `auto` was
   the maintainer's originally stated intent in ADR-0005's discussion ("we should
   be running on auto mode"); it was unavailable/unreliable then, so 0005 landed
@@ -89,9 +90,10 @@ documented in-container override, where blast radius is the throwaway container.
   from public text; every privileged prompt across `start_work.sh`,
   `frame_work.sh`, `synthesize_work.sh`, and `review_work.sh` now carries the
   same untrusted-data boundary.
-- On Linux, an injected Codex worker can no longer write outside the worktree
-  (+ its `.git`) or run unsandboxed; on every platform an injected Claude worker
-  is checked by the `auto` classifier. Research network egress still works.
+- On every platform an injected Claude worker is checked by the `auto`
+  classifier (no OS-sandbox dependency, so it works everywhere including the
+  container). The codex OS sandbox is available (opt-in) for bare-Linux hosts
+  but is explicitly NOT relied on as the boundary — the container is.
 - Implements a decision (ADR-0005) that had been accepted but not shipped, and
   corrects three flag/config errors in it that would have broken `codex exec`.
 
@@ -102,17 +104,20 @@ documented in-container override, where blast radius is the throwaway container.
   that.
 - `auto` mode is fail-closed: it may occasionally block a legitimate action,
   reducing task completion. It's overridable per run.
-- The Codex flag strings and config key are verified against codex-cli 0.142.5
-  (arg parsing, and the `workspace-write`/`network_access` docs), and Claude
-  `auto` is confirmed to run headless. What is **not** yet validated end-to-end:
-  a full Linux `codex exec` task completing under `workspace-write` with the
-  `.git` writable root (the authoring machine is macOS, which takes the
-  full-access path). Smoke-test one Linux worker before trusting the Linux
-  default fleet-wide; `CODEX_FLAGS=` is the fallback.
+- The codex OS sandbox default was shipped, broke the fleet (#713), and was
+  reverted to opt-in within hours — a reminder that a sandbox change must be
+  smoke-tested in the *actual* runtime (unprivileged container), not just
+  arg-parsed. `FG_CODEX_SANDBOX=1` remains available but is now the contributor's
+  explicit choice on a host they've confirmed supports it.
+- The net security gain that stands unconditionally is the prompt fencing (all
+  workers) and Claude `auto`. Codex-worker isolation is deferred to the container
+  (#686). `auto` mode is fail-closed and may occasionally block a legitimate
+  action; it's overridable per run.
 
 **Tripwire** — revisit if `auto` mode blocks enough legitimate work that
 contributors routinely set `CLAUDE_PERMISSION_MODE=bypassPermissions` outside a
-container (defeating the purpose), or if the Codex network config key changes.
+container (defeating the purpose); or when the container work (#686) lands, at
+which point the codex OS sandbox opt-in can likely be retired entirely.
 
 ## Follow-ups (tracked in #686, not here)
 

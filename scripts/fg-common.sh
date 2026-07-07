@@ -807,35 +807,35 @@ run_agent() {
       # checkout actually carries the repo hook config.
       local hook_trust=""
       [ -f "$dir/.codex/hooks.json" ] && hook_trust="--dangerously-bypass-hook-trust"
-      # Sandbox (ADR-0005, implemented by ADR-0022). Codex's OS sandbox in
-      # workspace-write mode confines writes to the workspace + tmp. Two facts
-      # verified against codex-cli 0.142.5 shape how we apply it:
-      #   * `codex exec` is non-interactive and has NO --ask-for-approval flag
-      #     (that lives on the top-level command; passing it to `exec` errors).
-      #     So we do not pass it — exec simply runs sandboxed without prompting.
-      #   * Research and review both need network. workspace-write disables it by
-      #     default, so we re-enable it (sandbox_workspace_write.network_access) —
-      #     BUT on macOS the seatbelt sandbox unconditionally disables network in
-      #     workspace-write (openai/codex#10390), so there sandbox+network can't
-      #     coexist; we fall back to full-access and leave real isolation to the
-      #     Linux container (ADR-0005). Override either way with CODEX_FLAGS=.
-      #   * Workers run in a git worktree whose real .git lives in the MAIN clone,
-      #     OUTSIDE the worktree — so we add the git common dir to the writable
-      #     roots, else git commit/push fail under the sandbox.
+      # Sandbox (ADR-0005 / ADR-0022). Codex's OS sandbox is OPT-IN, not the
+      # default — because it does not work in the environments the fleet actually
+      # runs in:
+      #   * The fleet server runs codex inside an UNPRIVILEGED container, where
+      #     workspace-write's sandbox helper can't create user namespaces —
+      #     "bwrap: setting up uid map: Permission denied" — so EVERY shell
+      #     command fails before it starts and the worker can't even make a branch
+      #     (this broke real work: #713).
+      #   * On macOS the seatbelt path disables network in workspace-write
+      #     (openai/codex#10390), breaking research fetches.
+      # The real isolation boundary is the container itself (ADR-0005), so nesting
+      # an OS sandbox inside it is both redundant and broken. We therefore default
+      # to full-access and expose the sandbox only to a bare-Linux host with a
+      # sandbox-capable kernel that sets FG_CODEX_SANDBOX=1. CODEX_FLAGS= still
+      # overrides everything. Verified against codex-cli 0.142.5: `codex exec` has
+      # no --ask-for-approval flag; workspace-write disables network unless
+      # network_access=true; and our worktree's real .git lives in the MAIN clone
+      # (outside the worktree), so it must be added to the writable roots or
+      # git commit/push fail.
       local -a codex_args
       if [ -n "${CODEX_FLAGS:-}" ]; then
         read -r -a codex_args <<< "$CODEX_FLAGS"
-      elif [ "$(uname -s)" = "Linux" ]; then
+      elif [ "${FG_CODEX_SANDBOX:-0}" = 1 ] && [ "$(uname -s)" = "Linux" ]; then
         codex_args=(--sandbox workspace-write -c sandbox_workspace_write.network_access=true)
         local gitcommon
         gitcommon="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
         [ -n "$gitcommon" ] && codex_args+=(--add-dir "$gitcommon")
       else
         codex_args=(--dangerously-bypass-approvals-and-sandbox)
-        if [ -z "${FG_CODEX_SANDBOX_WARNED:-}" ]; then
-          printf 'fg: codex host sandbox unavailable on %s — workspace-write disables network here (openai/codex#10390), breaking research fetches; running full-access. Use the Linux container for isolation, or set CODEX_FLAGS=.\n' "$(uname -s)" >&2
-          export FG_CODEX_SANDBOX_WARNED=1
-        fi
       fi
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
         $tmo codex exec --json --cd "$dir" --skip-git-repo-check $hook_trust \

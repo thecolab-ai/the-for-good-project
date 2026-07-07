@@ -607,14 +607,14 @@ collective keeps itself unblocked.
 
 - The agent runs with your local CLI auth (your subscription/tokens). Default
   sandbox/permission modes (ADR-0005, implemented by ADR-0022), all overridable:
-  - `codex` — on **Linux**, the native OS sandbox
-    `--sandbox workspace-write` with network re-enabled
-    (`-c sandbox_workspace_write.network_access=true`) and the worktree's git
-    common dir added as writable; on **macOS**, seatbelt disables network in
-    workspace-write ([openai/codex#10390](https://github.com/openai/codex/issues/10390))
-    so it stays on `--dangerously-bypass-approvals-and-sandbox` (unchanged) with
-    a one-line warning — the real macOS isolation is the Linux container.
-    Override with `CODEX_FLAGS`.
+  - `codex` — `--dangerously-bypass-approvals-and-sandbox` (unchanged default).
+    Codex's native OS sandbox is **opt-in** via `FG_CODEX_SANDBOX=1` on a
+    bare-Linux host with a sandbox-capable kernel — it is *not* on by default
+    because it can't create user namespaces inside the unprivileged fleet
+    container (`bwrap: setting up uid map`, #713) and disables network on macOS
+    ([openai/codex#10390](https://github.com/openai/codex/issues/10390)). The
+    isolation boundary is the container itself (ADR-0005), not a nested OS
+    sandbox. Override with `CODEX_FLAGS`.
   - `claude` — `--permission-mode auto` (an injection-aware classifier that
     blocks actions driven by hostile content, keeps network, and doesn't hang
     headless). Override with `CLAUDE_PERMISSION_MODE`; use `bypassPermissions`
