@@ -263,11 +263,29 @@ curl -s -X POST $URL/api/v1/work/claim -H "$TOK" -H "$JSON" -d '{"kind":"review"
 # lapses at TTL. An abandoned PR cools down (REVIEW_ABANDON_COOLDOWN_SECONDS,
 # default 900) before it can be dispatched again.
 curl -s -X POST $URL/api/v1/work/release -H "$TOK" -H "$JSON" -d '{"kind":"review","issue":456,"outcome":"done"}'
+
+# Rework adoption (ADR-0020): the oldest stale `changes-requested` PR a DIFFERENT worker
+# may adopt — idle > REWORK_ADOPT_HOURS (default 6h) since its last review-at-head, author
+# NOT currently online, adopter neither author nor last reviewer, not draft, not
+# synthesis/*//discover/*, not a fork, not human-only/do-not-automate. UNLIKE a review it
+# WRITES labels: the server leases the WORKED issue and moves it changes-requested →
+# claimed + assigns the adopter (the atomic `status: changes-requested` removal is the
+# test-and-set), then hands back the PR + issue.
+# 200 {ok:true, kind:"rework", rework:{pr,issue,title,author,headSha,htmlUrl,headRef}, assignmentId, leaseTtlSeconds, handle}
+#     {ok:true, kind:"rework", rework:null} = nothing to adopt · 429 + retryAfterSeconds = rate-limited
+curl -s -X POST $URL/api/v1/work/claim -H "$TOK" -H "$JSON" -d '{"kind":"rework"}'
+
+# Release an adopted rework: `issue` is the WORKED issue number, `prNumber` the PR. "done"
+# on push (the runner flips the issue to in-review itself); "abandoned" reverts the issue
+# to changes-requested (author returned mid-window / crash / usage limit) and cools it down
+# (REWORK_ABANDON_COOLDOWN_SECONDS, default 900).
+curl -s -X POST $URL/api/v1/work/release -H "$TOK" -H "$JSON" -d '{"kind":"rework","issue":234,"prNumber":456,"outcome":"done"}'
 ```
 
 `release` with `"outcome":"done"` frees the lease and leaves labels to the normal
-PR/Actions transitions; `"abandoned"` also reverts the labels (`status: available` back,
-assignee removed). A telemetry heartbeat (`POST /api/v1/telemetry`) sent **with** the
+PR/Actions transitions; `"abandoned"` also reverts the labels (a work claim to
+`status: available`, a rework to `status: changes-requested`, assignee removed; a review
+holds no labels). A telemetry heartbeat (`POST /api/v1/telemetry`) sent **with** the
 bearer token additionally auto-renews the handle's active leases and piggybacks pending
 `commands` in its response; without a token it behaves exactly as before.
 
@@ -368,6 +386,12 @@ label + open PR count). Both answer 503 when orchestration is disabled.
 | `WEBHOOK_SECRET` | unset | HMAC secret for `/api/v1/webhooks/github`; unset = route 404 |
 | `ADMIN_TOKEN` | unset | Bearer token for `/api/v1/admin/*`; unset = routes 404 |
 | `LEASE_TTL_SECONDS` | `1800` | Claim lease TTL; auto-renewed by authed heartbeats. Enrolled runners derive their renew cadence from the TTL the claim response returns (TTL/3, floor 15s) |
+| `REVIEW_LEASE_TTL_SECONDS` | `3600` | `kind:"review"` lease TTL (a review round routinely takes ~an hour) |
+| `REVIEW_ABANDON_COOLDOWN_SECONDS` | `900` | Cooldown before an abandoned review PR is re-dispatched |
+| `MAX_REVIEW_ROUNDS` | `10` | Change-requesting review rounds before a PR is a human's (#287; same env the shell reads) |
+| `REWORK_LEASE_TTL_SECONDS` | `1800` | `kind:"rework"` adoption lease TTL (one agent run, like a work claim — ADR-0020) |
+| `REWORK_ADOPT_HOURS` | `6` | How long a `changes-requested` PR must sit idle before a *different* worker may adopt it |
+| `REWORK_ABANDON_COOLDOWN_SECONDS` | `900` | Cooldown before an abandoned rework issue is re-dispatched |
 | `FLEET_CMD_TTL_SECONDS` | `3600` | Expiry for one-shot `stop`/`abort` commands (`pause`/`resume` persist) |
 | `SYNC_INTERVAL_SECONDS` | `60` | Incremental mirror sync interval (±10% jitter) |
 | `SYNC_FULL_INTERVAL_SECONDS` | `900` | Full reconciliation sync interval (±10% jitter) |

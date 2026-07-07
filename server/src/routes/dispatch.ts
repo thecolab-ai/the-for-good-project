@@ -34,10 +34,12 @@ import { bearerToken, enrollAgent, verifyAgentToken, type AgentIdentity } from "
 import {
   claimNext,
   claimNextReview,
+  claimNextRework,
   releaseAssignment,
   renewLease,
   type ClaimResult,
   type ClaimReviewResult,
+  type ClaimReworkResult,
 } from "../orchestrator/dispatch.js";
 import type { Orchestrator } from "../orchestrator/stores.js";
 import { claimRequestSchema, enrollRequestSchema, releaseRequestSchema } from "../protocol.js";
@@ -121,12 +123,14 @@ export function registerDispatchRoutes(
       ...(parsed.data.model ? { model: parsed.data.model } : {}),
       ...(parsed.data.agentId ? { agentId: parsed.data.agentId } : {}),
     };
-    let result: ClaimResult | ClaimReviewResult;
+    let result: ClaimResult | ClaimReviewResult | ClaimReworkResult;
     try {
       result =
         parsed.data.kind === "review"
           ? await claimNextReview(orch, store, ctx)
-          : await claimNext(orch, store, ctx);
+          : parsed.data.kind === "rework"
+            ? await claimNextRework(orch, store, ctx)
+            : await claimNext(orch, store, ctx);
     } catch (err) {
       // Never serialize upstream error messages to the client — they embed
       // the GitHub API path and upstream error text. Log server-side only.
@@ -136,18 +140,28 @@ export function registerDispatchRoutes(
       }
       return reply.code(500).send({ ok: false, error: "internal error" });
     }
-    // kind:"review" responses carry `review` where work carries `issue` —
-    // same statuses, so a runner's queue-empty/error handling is one path.
-    // Every response ECHOES the kind it executed, so a runner can detect a
-    // server that silently dropped an unknown kind (deploy skew — the
-    // pre-ADR-0019 schema stripped `kind` and ran a WORK claim).
-    const emptyPayload = parsed.data.kind === "review" ? { review: null } : { issue: null };
+    // kind:"review" responses carry `review`, kind:"rework" carry `rework`,
+    // where work carries `issue` — same statuses, so a runner's
+    // queue-empty/error handling is one path. Every response ECHOES the kind it
+    // executed, so a runner can detect a server that silently dropped an unknown
+    // kind (deploy skew — the pre-ADR-0019 schema stripped `kind` and ran a
+    // WORK claim).
+    const emptyPayload =
+      parsed.data.kind === "review"
+        ? { review: null }
+        : parsed.data.kind === "rework"
+          ? { rework: null }
+          : { issue: null };
     switch (result.status) {
       case "claimed":
         return {
           ok: true,
           kind: parsed.data.kind,
-          ...("review" in result ? { review: result.review } : { issue: result.issue }),
+          ...("review" in result
+            ? { review: result.review }
+            : "rework" in result
+              ? { rework: result.rework }
+              : { issue: result.issue }),
           assignmentId: result.assignmentId,
           leaseTtlSeconds: result.leaseTtlSeconds,
           handle: identity.handle,

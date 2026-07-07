@@ -83,6 +83,19 @@ class Handler(BaseHTTPRequestHandler):
             }
         elif mode == "review-empty":
             payload = {"ok": True, "review": None}
+        elif mode == "rework":
+            payload = {
+                "ok": True,
+                "rework": {"pr": 456, "issue": 234, "title": "stub PR", "author": "someauthor",
+                           "headSha": "0123456789abcdef0123456789abcdef01234567",
+                           "htmlUrl": "https://github.com/example/repo/pull/456",
+                           "headRef": "research/stub"},
+                "assignmentId": "rw123",
+                "leaseTtlSeconds": 1800,
+                "handle": "rework-bot",
+            }
+        elif mode == "rework-empty":
+            payload = {"ok": True, "rework": None}
         elif mode == "garbage":
             self.send_response(200); self.end_headers()
             self.wfile.write(b"this is not json"); return
@@ -244,6 +257,63 @@ printf '%s' "$req" | jq -e '.body | fromjson | .kind == "review" and .issue == 4
 ( FLEET_SERVER="http://127.0.0.1:9" fleet_release_review 456 done ) || fail "review release must swallow server failures"
 printf 'claim' > "$MODE_FILE"
 pass "fleet_release_review sends kind:review done/abandoned payloads and swallows failures"
+
+# --- fleet_claim_rework (kind: "rework", ADR-0020) ------------------------------
+# Disabled → documented no-op return codes (same contract as the other helpers).
+( FLEET_CLAIM=0 fleet_claim_rework ) && fail "fleet_claim_rework must return 1 when disabled"
+( FLEET_CLAIM=0 fleet_release_rework 234 done 456 ) || fail "fleet_release_rework must return 0 when disabled"
+pass "disabled rework helpers no-op with the right return codes"
+
+printf 'rework' > "$MODE_FILE"
+resp="$(AGENT=claude MODEL=test-model fleet_claim_rework)" \
+  || fail "fleet_claim_rework should succeed against the stub"
+[ "$(printf '%s' "$resp" | jq -r '.pr')" = "456" ] || fail "fleet_claim_rework must emit .pr (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.issue')" = "234" ] || fail "fleet_claim_rework must emit .issue (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.author')" = "someauthor" ] || fail "fleet_claim_rework must emit .author (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.headSha')" = "0123456789abcdef0123456789abcdef01234567" ] || fail "fleet_claim_rework must emit .headSha (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.headRef')" = "research/stub" ] || fail "fleet_claim_rework must emit .headRef (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.leaseTtlSeconds')" = "1800" ] || fail "fleet_claim_rework must pass leaseTtlSeconds through (got: $resp)"
+[ "$(printf '%s' "$resp" | jq -r '.handle')" = "rework-bot" ] || fail "fleet_claim_rework must emit .handle (got: $resp)"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/claim" ] || fail "rework claim path"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "rework" and .harness == "claude" and .model == "test-model" and (has("stages") | not)' >/dev/null \
+  || fail "rework claim body must carry kind:rework + harness/model, no stages (got: $req)"
+pass "fleet_claim_rework emits {pr, issue, author, headSha, headRef, leaseTtlSeconds, handle} and sends kind:rework"
+
+# Fallback contract: empty adopt queue / garbage / server down → rc 1 (skip adoption).
+printf 'rework-empty' > "$MODE_FILE"
+fleet_claim_rework && fail "empty rework queue must return 1 (skip adoption)"
+printf 'garbage' > "$MODE_FILE"
+fleet_claim_rework && fail "non-JSON rework claim response must return 1"
+printf 'rework' > "$MODE_FILE"
+( FLEET_SERVER="http://127.0.0.1:9" fleet_claim_rework ) && fail "server down must return 1"
+pass "fleet_claim_rework returns 1 on empty/garbage/down (skip-adoption fallback contract)"
+
+# DEPLOY-SKEW GUARD: a pre-ADR-0020 server strips the unknown `kind` and runs a
+# WORK claim ({ok:true, issue:{...}}). fleet_claim_rework must release that
+# accidental claim (abandoned) and return 1.
+printf 'claim' > "$MODE_FILE"
+fleet_claim_rework && fail "a work-shaped claim response must return 1 (old server)"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/release" ] \
+  || fail "skew guard must release the accidental work claim (last request: $req)"
+printf '%s' "$req" | jq -e '.body | fromjson | .issue == 123 and .outcome == "abandoned"' >/dev/null \
+  || fail "skew release must abandon the claimed issue (got: $req)"
+pass "old-server skew: accidental work claim is released abandoned, rc 1"
+
+# --- fleet_release_rework payloads ----------------------------------------------
+fleet_release_rework 234 done 456 || fail "fleet_release_rework done must return 0"
+req="$(tail -1 "$LOG_FILE")"
+[ "$(printf '%s' "$req" | jq -r .path)" = "/api/v1/work/release" ] || fail "rework release path"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "rework" and .issue == 234 and .prNumber == 456 and .outcome == "done"' >/dev/null \
+  || fail "rework release done payload — issue is the worked issue, prNumber the PR (got: $req)"
+fleet_release_rework 234 abandoned || fail "fleet_release_rework abandoned must return 0"
+req="$(tail -1 "$LOG_FILE")"
+printf '%s' "$req" | jq -e '.body | fromjson | .kind == "rework" and .issue == 234 and .outcome == "abandoned"' >/dev/null \
+  || fail "rework release abandoned payload (got: $req)"
+( FLEET_SERVER="http://127.0.0.1:9" fleet_release_rework 234 done 456 ) || fail "rework release must swallow server failures"
+printf 'claim' > "$MODE_FILE"
+pass "fleet_release_rework sends kind:rework done/abandoned payloads and swallows failures"
 
 # --- fleet_pop_commands: drain-once + ownership guard --------------------------
 FLEET_CMDS_FILE="$TMP/cmds"

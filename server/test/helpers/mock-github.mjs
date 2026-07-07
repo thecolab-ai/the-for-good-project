@@ -88,6 +88,7 @@ export function makePull({
   createdAt = nowIso(),
   updatedAt = createdAt,
   reviews = [],
+  body = "",
 } = {}) {
   if (!Number.isInteger(number)) throw new Error("makePull: number is required");
   return {
@@ -98,6 +99,9 @@ export function makePull({
     labels: labels.map((l) => (typeof l === "string" ? { name: l } : l)),
     user: { login: user },
     html_url: `https://github.com/example/repo/pull/${number}`,
+    // GET /pulls/:n returns the body; rework dispatch (ADR-0020) reads it to
+    // resolve the worked issue from a `Closes`/`Part of #n` link.
+    body,
     head: { ref: headRef, sha: headSha, repo: { full_name: headRepoFullName } },
     base: { ref: baseRef },
     merged,

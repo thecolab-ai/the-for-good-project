@@ -47,6 +47,18 @@ export function reviewCooldownKey(pr: number): string {
   return `cooldown:review:${pr}`;
 }
 
+/** Redis key parking an issue out of rework dispatch after an ABANDONED
+ *  rework release (`SET EX reworkAbandonCooldownSeconds`, ADR-0020). A runner
+ *  that adopts a rework and then skips it locally (the author pushed a new
+ *  commit mid-window, a crash, a usage limit) releases `abandoned` and reverts
+ *  the label to `changes-requested` — which makes the PR adoptable again, so
+ *  without a cooldown the deterministic oldest-first queue re-serves it to
+ *  every runner on every pass. Keyed by the ISSUE number (the rework
+ *  assignment's number space), same as its lease. */
+export function reworkCooldownKey(issue: number): string {
+  return `cooldown:rework:${issue}`;
+}
+
 /** Redis key holding one handle's current command (JSON, or unset). */
 export function commandKey(handle: string): string {
   return `cmd:${handle}`;

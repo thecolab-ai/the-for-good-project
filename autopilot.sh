@@ -110,6 +110,13 @@ fleet_cleanup_run_dir() { [ -n "${FLEET_RUN_DIR:-}" ] && rm -rf "$FLEET_RUN_DIR"
 # what makes server-side pause/stop/abort commands reach this runner.
 FLEET_CLAIM="${FLEET_CLAIM-1}"
 export FLEET_CLAIM
+# Rework adoption (ADR-0020 / #656): let an idle worker take over a stale
+# changes-requested PR whose author went offline (idle >REWORK_ADOPT_HOURS,
+# adopter ≠ author ≠ last reviewer, arbitrated by the server's atomic lease).
+# Default ON under autopilot — it needs FLEET_CLAIM anyway, and the whole point
+# is to stop the queue freezing on absent authors. Opt out with REWORK_ADOPT=0.
+REWORK_ADOPT="${REWORK_ADOPT-1}"
+export REWORK_ADOPT
 if [ -n "$FLEET_SERVER" ] && [ "$FLEET_CLAIM" = "1" ]; then
   fleet_ensure_token || true
 fi

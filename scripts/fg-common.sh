@@ -271,6 +271,71 @@ fleet_release_review() {
   return 0
 }
 
+# ---- fleet server rework-ADOPTION helpers (ADR-0020, #656) -----------------
+# Same opt-in gate as the work/review claim helpers (fleet_claim_enabled). A
+# rework claim asks the server for the next STALE changes-requested PR a
+# DIFFERENT worker may adopt (idle > REWORK_ADOPT_HOURS, adopter ≠ author ≠
+# last reviewer, not synthesis/framing, not a fork, author not online). The
+# server takes the lease AND writes the issue labels (changes-requested →
+# claimed) + assignee ITSELF, so the caller must NOT run its own claim — it
+# just reworks the PR and, on push, flips the issue to in-review.
+
+# fleet_claim_rework — ask the server to adopt the next stale rework. On success
+# prints {pr, issue, author, headSha, headRef, title, leaseTtlSeconds, handle}
+# and returns 0; queue empty / non-200 / bad JSON / timeout → returns 1. The
+# same pre-ADR-0019 deploy-skew guard as fleet_claim_review: an old server
+# strips the unknown `kind` and runs a WORK claim, which we detect and release.
+fleet_claim_rework() {
+  fleet_claim_enabled || return 1
+  local agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg harness "${AGENT:-}" --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      {kind: "rework"}
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  if ! printf '%s' "$resp" | jq -e '.ok == true and .rework != null' >/dev/null 2>&1; then
+    # DEPLOY-SKEW GUARD (same as fleet_claim_review): a server predating
+    # kind:"rework" strips the field and runs a WORK claim, stranding a real
+    # issue "status: claimed". Detect and release it.
+    local oops
+    oops="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .issue.number // empty' 2>/dev/null || true)"
+    if [ -n "$oops" ]; then
+      warn "Fleet server predates kind:rework (deploy skew) — releasing the accidental work claim on #$oops."
+      fleet_release "$oops" abandoned
+    fi
+    return 1
+  fi
+  printf '%s' "$resp" | jq -c '{pr: .rework.pr, issue: .rework.issue, author: .rework.author, headSha: .rework.headSha, headRef: .rework.headRef, title: .rework.title, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
+}
+
+# fleet_release_rework <issue> <done|abandoned> [pr] — finish an adopted
+# rework. `issue` is the WORKED issue number (the rework assignment's number
+# space, and its lease key); `pr` the reworked PR. done = the rework was pushed
+# (the runner flips the issue to in-review itself); abandoned = it wasn't (the
+# author returned mid-window, a crash, a usage limit) → the server reverts the
+# issue to changes-requested. Best-effort; the lease TTL + sweeper backstop a
+# lost release.
+fleet_release_rework() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" --arg outcome "${2:-}" --arg pr "${3:-}" '
+      {kind: "rework", issue: ($issue | tonumber), outcome: $outcome}
+    + (if $pr != "" then {prNumber: ($pr | tonumber)} else {} end)' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
 # fleet_pop_commands — print (and consume) the control-command KINDS the
 # server piggybacked on telemetry responses (pause|resume|stop|abort), one
 # per line. fleet_send (autopilot.sh) stashes them into $FLEET_CMDS_FILE as

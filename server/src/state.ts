@@ -280,6 +280,20 @@ export class FleetStore extends EventEmitter {
       .sort((a, b) => a.connectedAt.localeCompare(b.connectedAt));
   }
 
+  /** Is any live agent connected under this GitHub handle? Rework dispatch
+   *  (ADR-0020) uses this to skip a PR whose AUTHOR is currently online — an
+   *  online author is presumed to be working (or about to work) their own
+   *  rework, so adoption targets the absent author the bottleneck is about.
+   *  "Live" = present in the agents map and not past its TTL (sweepAgents runs
+   *  on a timer, so check expiry here rather than trusting prompt reaping). */
+  isHandleOnline(handle: string): boolean {
+    const now = Date.now();
+    for (const rec of this.agents.values()) {
+      if (rec.handle === handle && rec.expiresAt >= now) return true;
+    }
+    return false;
+  }
+
   /** Coalesced: heartbeats arrive per tool call once the harness hooks are
    *  wired, so publishing the whole fleet per heartbeat would be an
    *  O(agents × watchers) storm. Mark dirty, flush at most once per window. */

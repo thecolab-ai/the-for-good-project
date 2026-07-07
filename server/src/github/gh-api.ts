@@ -46,6 +46,10 @@ export interface GhPull {
   labels: GhLabel[];
   user: GhUser | null;
   html_url: string;
+  /** PR description. Rework dispatch (ADR-0020) reads it to resolve the worked
+   *  issue from a `Closes` / `Part of #n` link. `GET /pulls/{n}` returns it;
+   *  the pulls LIST endpoint also carries it but the mirror doesn't store it. */
+  body?: string | null;
   head: { ref: string; sha: string; repo: { full_name: string } | null };
   base: { ref: string };
   merged?: boolean;

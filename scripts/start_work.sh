@@ -51,6 +51,9 @@ CLAIMED_ISSUE=""
 FLEET_CLAIMED=0     # 1 while working an issue the fleet SERVER claimed for us (FLEET_CLAIM=1 opt-in)
 FLEET_RENEW_PID=""  # background lease-renew loop for a fleet-claimed issue
 FLEET_LEASE_TTL=""  # leaseTtlSeconds from the last fleet claim — drives the renew cadence
+REWORK_ADOPT="${REWORK_ADOPT:-0}"  # 1 = adopt stale changes-requested PRs from ABSENT authors (ADR-0020); autopilot defaults it on
+ADOPT_ISSUE=""     # worked-issue number of a rework we ADOPTED from another author (server lease held)
+ADOPT_PR=""        # the PR number that adoption is reworking
 
 fleet_stop_renew() {  # stop the background lease-renew loop, if any
   [ -n "$FLEET_RENEW_PID" ] || return 0
@@ -63,6 +66,13 @@ fleet_stop_renew() {  # stop the background lease-renew loop, if any
 release_on_interrupt() {
   fleet_stop_renew || true
   remove_worktree || true
+  if [ -n "$ADOPT_ISSUE" ] && [ "$DRY_RUN" = 0 ]; then
+    # An ADOPTED rework (ADR-0020): release abandoned so the server reverts the
+    # issue to changes-requested and the PR becomes adoptable again.
+    warn "Interrupted mid-adoption of #$ADOPT_ISSUE (PR #$ADOPT_PR) — releasing abandoned; the server reverts it to changes-requested."
+    fleet_release_rework "$ADOPT_ISSUE" abandoned "$ADOPT_PR"
+    ADOPT_ISSUE=""; ADOPT_PR=""
+  fi
   if [ -n "$CLAIMED_ISSUE" ] && [ "$DRY_RUN" = 0 ]; then
     if [ "${FLEET_CLAIMED:-0}" = 1 ]; then
       warn "Interrupted mid-issue #$CLAIMED_ISSUE — releasing the fleet claim as abandoned (the server reverts the labels)."
@@ -265,6 +275,64 @@ Do this:
 3. Commit and push to the SAME branch:
    git push origin HEAD:$branch   (add --force-with-lease only if you rebased)
 4. Comment on the PR summarising what you changed and any rebuttals:
+   gh pr comment $pr --repo $REPO --body "..."
+
+IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
+labels or assignees — the runner manages status, and the "review: human-only"
+label is a human maintainer's alone to toggle (#288). Work only on PR #$pr.
+EOF
+}
+
+# Prompt for an ADOPTED rework (ADR-0020): the PR was opened by someone else who
+# has gone offline, and a reviewer requested changes >6h ago. We are taking over
+# the fix. Differs from rework_prompt in three ways: it names the original
+# author, it tells the agent to claim provenance (its OWN agent/model in the
+# finding frontmatter, since it is now the author of the fix for credit +
+# tracking), and it forbids force-pushing over the author (--force-with-lease
+# only) so a returning author is never clobbered.
+adopt_rework_prompt() {  # $1 = issue, $2 = PR, $3 = branch, $4 = original author
+  local n="$1" pr="$2" branch="$3" author="$4" title feedback prov_model
+  title="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title)"
+  feedback="$(review_feedback "$pr")"
+  if [ -n "${MODEL:-}" ]; then prov_model="$MODEL"; else prov_model="the exact model identifier you are running as"; fi
+  cat <<EOF
+You are an autonomous contributor to The For Good Project (github.com/$REPO).
+PR #$pr ("$title") for issue #$n was opened by @$author, who has gone offline,
+and an adversarial reviewer REQUESTED CHANGES more than 6 hours ago. You are
+ADOPTING this rework: you take over as the author of the fix so the queue
+stops stalling on the absent author (ADR-0020).
+
+You are inside a dedicated git worktree with the PR branch '$branch' checked
+out (detached HEAD at origin/$branch, freshly fetched).
+
+== REVIEW FEEDBACK ==
+$feedback
+== END REVIEW FEEDBACK ==
+
+Method — read CONTRIBUTING.md and docs/METHOD.md and follow them exactly: real
+working citations for every factual claim, TWO independent sources for
+surprising or load-bearing claims, honest confidence marks, and NEVER
+fabricate a source, statistic, org, or result. Re-verifying citations? Use the
+fetch escalation ladder in AGENTS.md (ADR-0006) — a 403/bot-challenge is
+tooling, not a dead link. Need NZ data? Check the vendored skills first
+(\`ls .skills/skills\`) before a generic web search.
+
+Do this:
+1. Address EVERY point in the feedback. Where you believe the reviewer is
+   wrong, leave the work as-is and prepare a short, evidence-backed rebuttal
+   for step 5 instead.
+2. PROVENANCE — you are now the author of this fix: in any finding/solution
+   file's frontmatter you touch, set  agent: '$AGENT'  and  model: '$prov_model'
+   so the record and the leaderboard track who actually did the work.
+3. If main has moved since, rebase onto it first:
+   git fetch origin && git rebase origin/main
+4. Commit and push to the SAME branch. Do NOT force-push over the author — use
+   ONLY --force-with-lease, which safely fails if @$author pushed since we
+   started (never clobber a returning author). If the push is REJECTED, stop
+   and say so in step 5 rather than forcing:
+   git push --force-with-lease origin HEAD:$branch
+   (a plain  git push origin HEAD:$branch  is fine if you did not rebase.)
+5. Comment on the PR summarising what you changed and any rebuttals:
    gh pr comment $pr --repo $REPO --body "..."
 
 IMPORTANT: do NOT open a new PR, do NOT close anything, and do NOT touch
@@ -550,6 +618,110 @@ rework_one() {  # $1 = issue number with "status: changes-requested", assigned t
   fi
 }
 
+# adopt_rework_one — rework a stale changes-requested PR ADOPTED from an ABSENT
+# author (ADR-0020). The fleet SERVER already leased it and moved the issue
+# changes-requested → claimed + assigned us, so we do NOT claim; we rework the
+# PR and, on push, flip the issue to in-review (server release: done). $1 is the
+# fleet_claim_rework JSON {pr, issue, author, headSha, headRef, title}.
+adopt_rework_one() {  # $1 = fleet_claim_rework JSON
+  local json="$1" pr issue author expected branch before after
+  pr="$(printf '%s' "$json" | jq -r '.pr')"
+  issue="$(printf '%s' "$json" | jq -r '.issue')"
+  author="$(printf '%s' "$json" | jq -r '.author // "someone"')"
+  expected="$(printf '%s' "$json" | jq -r '.headSha // ""')"
+  branch="$(printf '%s' "$json" | jq -r '.headRef // ""')"
+  ADOPT_ISSUE="$issue"; ADOPT_PR="$pr"
+  rule; info "${c_bold}Adopting rework of PR #$pr${c_reset} (issue #$issue, from @$author) — $(printf '%s' "$json" | jq -r '.title // ""')"
+
+  # Defensive re-checks (the server already excludes these — belt & suspenders
+  # for a stale mirror / deploy skew). FAIL CLOSED: abandon and skip.
+  local abort=""
+  case "$branch" in
+    synthesis/*) abort="a synthesis draft (belongs to synthesize_work.sh, ADR-0011)" ;;
+    discover/*)  abort="a discover framing (belongs to frame_work.sh, ADR-0014)" ;;
+    "")          abort="missing a head branch" ;;
+  esac
+  if [ -z "$abort" ]; then
+    local head_owner
+    head_owner="$(gh pr view "$pr" --repo "$REPO" --json headRepositoryOwner --jq .headRepositoryOwner.login 2>/dev/null || true)"
+    [ "$head_owner" = "$OWNER" ] || abort="on a fork ($head_owner) — can't push a rework"
+  fi
+  if [ -n "$abort" ]; then
+    warn "PR #$pr is $abort — releasing the adoption (server reverts to changes-requested)."
+    fleet_release_rework "$issue" abandoned "$pr"
+    ADOPT_ISSUE=""; ADOPT_PR=""; return 2   # rc 2 = unworkable/skip, no MAX slot
+  fi
+
+  # Pre-push guard, part 1 (ADR-0020): if the live head no longer matches the
+  # SHA the reviewer judged, the author already pushed rework since the review —
+  # they came back. Do NOT clobber them: release abandoned (revert to
+  # changes-requested; their fresh push routes normally) and skip.
+  before="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
+  if [ -n "$expected" ] && [ -n "$before" ] && [ "$before" != "$expected" ]; then
+    warn "PR #$pr moved since the review (author returned) — releasing the adoption, not clobbering @$author."
+    fleet_release_rework "$issue" abandoned "$pr"
+    ADOPT_ISSUE=""; ADOPT_PR=""; return 2
+  fi
+
+  if [ "$DRY_RUN" = 1 ]; then
+    info "[dry-run] would adopt rework of PR #$pr (issue #$issue, from @$author), push with --force-with-lease, and move #$issue → in-review"
+    ADOPT_ISSUE=""; ADOPT_PR=""; return 0
+  fi
+
+  gh pr comment "$pr" --repo "$REPO" --body "🤝 Rework **adopted by @$ME from @$author** — the author went offline and this sat in changes-requested for over 6h, so a different worker is taking over the fix (ADR-0020). The finding's \`agent\`/\`model\` will be updated to the adopter's." >/dev/null 2>&1 || true
+
+  if ! make_worktree "origin/$branch"; then
+    err "Couldn't create worktree for adopted PR #$pr (branch $branch) — releasing the adoption."
+    fleet_release_rework "$issue" abandoned "$pr"
+    ADOPT_ISSUE=""; ADOPT_PR=""; return 1
+  fi
+  export FLEET_TASK_KIND=work TASK_REF="#$pr" TASK_TITLE="$(gh pr view "$pr" --repo "$REPO" --json title --jq .title 2>/dev/null || echo "adopt rework PR #$pr")"
+  # Keep the server's lease alive across the run (renew by ISSUE number —
+  # kind-agnostic on the server side).
+  local renew_secs
+  renew_secs="${FLEET_RENEW_SECONDS:-$(( ${FLEET_LEASE_TTL:-1800} / 3 ))}"
+  [ "$renew_secs" -ge 15 ] 2>/dev/null || renew_secs=15
+  ( while sleep "$renew_secs"; do fleet_renew "$issue"; done ) &
+  FLEET_RENEW_PID=$!
+  info "Handing adopted PR #$pr rework to $AGENT (worktree: $WORKTREE)..."
+  local tmp; tmp="$(mktemp)"
+  set +e; run_agent "$(adopt_rework_prompt "$issue" "$pr" "$branch" "$author")" "$WORKTREE" 2>&1 | tee "$tmp"; local rc=${PIPESTATUS[0]}; set -e
+  fleet_stop_renew
+  was_interrupted "$rc" && { rm -f "$tmp"; release_on_interrupt; }
+  if was_usage_limited "$tmp"; then
+    warn "Adopted rework of PR #$pr hit an API usage/rate limit — releasing the adoption and backing off ${USAGE_LIMIT_SLEEP}s."
+    rm -f "$tmp"; remove_worktree
+    fleet_release_rework "$issue" abandoned "$pr"
+    ADOPT_ISSUE=""; ADOPT_PR=""
+    sleep "$USAGE_LIMIT_SLEEP"
+    return 0
+  fi
+  rm -f "$tmp"
+  if [ "$rc" -eq 0 ]; then ok "Adopted rework run complete for PR #$pr"; else err "Adopted rework run failed/aborted for PR #$pr (exit $rc)"; fi
+  remove_worktree
+  after="$(gh pr view "$pr" --repo "$REPO" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
+  if [ -n "$after" ] && [ "$after" != "$before" ]; then
+    # New commits landed — the adoption pushed (a returning author's concurrent
+    # push would have failed our --force-with-lease, so a changed head here means
+    # the rework is on the PR either way; in-review is the right next state).
+    set_status_label "$issue" "in-review" "claimed" "changes-requested"
+    gh issue comment "$issue" --repo "$REPO" --body "🔁 Adopted rework pushed to PR #$pr (by @$ME, adopted from @$author) — moving back to **in review** for a fresh adversarial review." >/dev/null 2>&1 || true
+    ok "#$issue → in-review (adopted rework pushed to PR #$pr)"
+    fleet_release_rework "$issue" done "$pr"
+  else
+    warn "Adoption pushed no new commits to PR #$pr — releasing (server reverts #$issue to changes-requested)."
+    fleet_release_rework "$issue" abandoned "$pr"
+  fi
+  ADOPT_ISSUE=""; ADOPT_PR=""
+}
+
+# rework adoption gate (ADR-0020): only when explicitly enabled AND the fleet
+# server is claiming (the atomic lease — not a label race — must arbitrate who
+# adopts). autopilot.sh defaults REWORK_ADOPT=1; standalone runs are opt-in.
+rework_adopt_enabled() {
+  [ "${REWORK_ADOPT:-0}" = 1 ] && fleet_claim_enabled
+}
+
 # Self-heal the rework queue: any open PR I authored that a reviewer sent back
 # but whose linked issue is still sitting "in-review" gets flipped to
 # "changes-requested" so the queue below actually picks it up. This closes the
@@ -706,8 +878,9 @@ main() {
     if [ -n "$skip_ids" ]; then
       snap="$(printf '%s' "$snap" | jq --argjson skip "[$skip_ids]" '[.[] | select((.number as $n | $skip | index($n)) | not)]')" || snap='[]'
     fi
-    # Priority: my own rework → a TTL-freed rework I can push → a fresh issue.
-    local next kind=new
+    # Priority: my own rework → a TTL-freed rework I can push → a STALE rework
+    # adopted from an absent author → a fresh issue.
+    local next kind=new adopt_json=""
     next="$(rework_issues "$snap" | head -1 || true)"
     if [ -n "$next" ]; then
       kind=rework
@@ -716,12 +889,26 @@ main() {
       if [ -n "$next" ]; then
         kind=rework
       else
-        # Server-orchestrated claim (opt-in: FLEET_CLAIM=1 + FLEET_TOKEN): the
-        # fleet server picks the next eligible issue, takes an atomic lease and
-        # writes the claim labels/assignee ITSELF — so claim_issue is skipped
-        # for it (kind=fleet). Any failure — queue empty, server down, bad
-        # token — falls back to the exact label-claim path below.
-        if [ "$DRY_RUN" = 0 ] && fleet_claim_enabled; then
+        # Adopt a stale changes-requested PR from an ABSENT author (ADR-0020):
+        # the fleet server picks one idle >REWORK_ADOPT_HOURS whose author isn't
+        # online, atomically leases it and moves the issue changes-requested →
+        # claimed itself (so adopt_rework_one does NOT claim). Tried BEFORE a
+        # fresh issue so idle workers heal the stuck rework queue first; only
+        # when REWORK_ADOPT=1 + fleet claiming (rework_adopt_enabled).
+        if [ "$DRY_RUN" = 0 ] && rework_adopt_enabled; then
+          adopt_json="$(fleet_claim_rework || true)"
+          if [ -n "$adopt_json" ]; then
+            next="$(printf '%s' "$adopt_json" | jq -r '.issue // empty' 2>/dev/null || true)"
+            FLEET_LEASE_TTL="$(printf '%s' "$adopt_json" | jq -r '.leaseTtlSeconds // empty' 2>/dev/null || true)"
+            if [ -n "$next" ]; then kind=adopt; fi
+          fi
+        fi
+        # Server-orchestrated FRESH claim (opt-in: FLEET_CLAIM=1 + FLEET_TOKEN):
+        # the fleet server picks the next eligible issue, takes an atomic lease
+        # and writes the claim labels/assignee ITSELF — so claim_issue is
+        # skipped for it (kind=fleet). Any failure — queue empty, server down,
+        # bad token — falls back to the exact label-claim path below.
+        if [ -z "$next" ] && [ "$DRY_RUN" = 0 ] && fleet_claim_enabled; then
           local fleet_resp
           if fleet_resp="$(fleet_claim "${STAGE:-}")"; then
             next="$(printf '%s' "$fleet_resp" | jq -r '.issue.number // empty' 2>/dev/null || true)"
@@ -748,6 +935,8 @@ main() {
     local wrc=0
     if [ "$kind" = rework ]; then
       rework_one "$next" || wrc=$?
+    elif [ "$kind" = adopt ]; then
+      adopt_rework_one "$adopt_json" || wrc=$?
     elif [ "$kind" = fleet ]; then
       FLEET_CLAIMED=1
       work_one "$next" || wrc=$?

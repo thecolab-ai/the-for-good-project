@@ -105,6 +105,20 @@ export const config = {
   // mirror deems eligible but every runner skips sits at the head of the
   // oldest-first queue and burns one claim per runner per pass, forever.
   reviewAbandonCooldownSeconds: num(process.env.REVIEW_ABANDON_COOLDOWN_SECONDS, 900),
+  // Rework-adoption leases (kind: "rework" dispatch — ADR-0020). A rework is
+  // one agent run like a work claim, not the hour a review takes, so it reuses
+  // the work-lease value by default.
+  reworkLeaseTtlSeconds: num(process.env.REWORK_LEASE_TTL_SECONDS, 1800),
+  // How long a `changes-requested` PR must sit idle (no push/review since the
+  // last change-request at its head) before a DIFFERENT worker may adopt its
+  // rework (#656). Configured in HOURS to match the issue/docs; stored in
+  // seconds. Default 6h.
+  reworkAdoptSeconds: num(process.env.REWORK_ADOPT_HOURS, 6) * 3600,
+  // A rework claim released `abandoned` (the runner skipped it locally — the
+  // author pushed a new commit mid-window, a crash, a usage limit) cools down
+  // before claimNextRework may re-serve it, exactly like the review cooldown:
+  // without it a PR every runner skips pins the head of the oldest-first queue.
+  reworkAbandonCooldownSeconds: num(process.env.REWORK_ABANDON_COOLDOWN_SECONDS, 900),
   // Review-round cap before a PR is a human maintainer's (#287). Same env var
   // the shell reads (review_work.sh MAX_REVIEW_ROUNDS) so an operator
   // override can't diverge the server's cap from the runners'.
