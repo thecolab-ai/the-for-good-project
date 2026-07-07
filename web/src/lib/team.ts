@@ -65,6 +65,13 @@ export const TEAM: TeamMember[] = [
     name: "Rachel McBride",
     photo: "team/rachelmcbride.jpg",
   },
+  {
+    id: "mwwhg",
+    role: "Mission & delivery",
+    focus: "Bridges the technical and the people, keeping the work pointed at the mission.",
+    name: "Matt Wood",
+    photo: "team/mwwhg.jpg",
+  },
 ];
 
 /** Whether a slot has a human-supplied, consented identity to show. */
