@@ -149,4 +149,4 @@ The two chains happened to coincide on price on two of the five dates shown, whi
 12. The Colab AI .skills. "grocer-nz API / asset notes." Accessed 2026-07-07. https://github.com/thecolab-ai/.skills/blob/main/skills/grocer-nz/references/api-notes.md
 13. The For Good Project. "Evidence-threshold method for supermarket reference-pricing" (issue #75). Accessed 2026-07-07. https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/other/supermarket-pricing-method.md
 14. The For Good Project. "Grocer NZ exposes useful public price data, but not a safe bulk republication licence" (issue #74). Accessed 2026-07-07. https://github.com/thecolab-ai/the-for-good-project/blob/main/research/findings/other/grocer-nz-data-audit.md
-15. Commerce Commission New Zealand. "Our role in dairy." Accessed 2026-07-13. https://www.comcom.govt.nz/regulated-industries/dairy/our-role-in-dairy/
+15. Commerce Commission New Zealand. "Our role in dairy." Accessed 2026-07-07. https://www.comcom.govt.nz/regulated-industries/dairy/our-role-in-dairy/
