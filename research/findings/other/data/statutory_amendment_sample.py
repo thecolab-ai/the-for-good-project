@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Reproduce the seeded pilot sample and classified provision breakdown for #676.
 
-The frame is the 62 Royal Assent results from:
+The frozen frame is the 62 Royal Assent results captured from:
 
     python3 .skills/skills/nz-parliament/scripts/cli.py bills \
         --keyword Amendment --all --limit 50 --page <1..10> --json
 
 filtered to status == "Royal Assent" and last_activity beginning "2025".
+The bills.parliament.nz API has since returned at least one same-date tie in
+a different order, so this embedded frame is the sampling artifact of record.
 """
 
 from __future__ import annotations

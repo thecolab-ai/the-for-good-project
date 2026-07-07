@@ -15,7 +15,7 @@ for p in 1 2 3 4 5 6 7 8 9 10; do
 done | jq -s '[.[].results[] | select(.status=="Royal Assent" and (.last_activity|startswith("2025"))) | [.last_activity,.bill_number,.title,.url]] | {count:length, rows:.}'
 ```
 
-Result: `count` was `62`. The live rows matched the embedded frame in `statutory_amendment_sample.py`; the earlier finding prose saying `63` was wrong.
+Result: `count` was `62`. A normalized comparison on `(date, bill_number, stripped title)` found the same row set in the live output and the embedded frame, but not the same row order: for the 26 November 2025 tie, the live API returned `107-2` (Crimes Legislation (Stalking and Harassment) Amendment Bill) before `93-2` (Crimes (Countering Foreign Interference) Amendment Bill), while the frozen embedded frame has `93-2` before `107-2`. Because the sample had already been drawn from the frozen frame and because changing the ordering after seeing which Act was classifiable would be post hoc, the embedded frame in `statutory_amendment_sample.py` is now treated as the sampling artifact of record. The earlier finding prose saying `63` was wrong.
 
 legislation-nz XML attempts
 ---------------------------
