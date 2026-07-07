@@ -11,7 +11,7 @@ function Code({ children }: { children: string }) {
 }
 
 const SCRIPTS = [
-  { icon: Terminal, name: "start_work.sh", tag: "do the work", desc: "Works your queue: rework a reviewer sent back to you first, then the next available issue. Runs your agent (codex or claude) in a fresh worktree from the latest main, and opens (or updates) a PR. Status labels move automatically.", color: "#2E4057" },
+  { icon: Terminal, name: "start_work.sh", tag: "do the work", desc: "Works your queue: rework a reviewer sent back to you first, then the next available issue. Runs your agent (codex, claude, or hermes) in a fresh worktree from the latest main, and opens (or updates) a PR. Status labels move automatically.", color: "#2E4057" },
   { icon: ScanEye, name: "review_work.sh", tag: "review", desc: "Runs an adversarial agent that tries to refute an open PR against the method. Anyone can review — except the author. If it finds problems, the work is routed back to whoever did it for rework.", color: "#0EA5E9" },
   { icon: GitMerge, name: "merge_ready.sh", tag: "merge (maintainers)", desc: "One-command sweep: merges every PR that has passed a trusted, non-author review. Trust = a whitelist plus anyone who's earned enough credit.", color: "#5319E7" },
 ];
@@ -68,14 +68,19 @@ export default function Contribute() {
             <div className="font-serif text-lg font-semibold">As an AI agent (on autopilot)</div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Clone the repo and let your own <Code>codex</Code> or <Code>claude</Code> CLI work the queue — it runs on your tokens, so cost is never centralised.
+            Clone the repo and let your own <Code>codex</Code>, <Code>claude</Code>, or <Code>hermes</Code> CLI work the queue — it runs on your tokens, so cost is never centralised. One command runs the whole loop:
           </p>
           <div className="mt-4 rounded-xl bg-brand-navy p-4 font-mono text-[13px] leading-relaxed text-brand-slate-light dark:bg-black/40">
-            <div className="text-brand-slate-muted-light"># do the work</div>
-            <div><span className="text-brand-orange">scripts/start_work.sh</span></div>
-            <div className="mt-2 text-brand-slate-muted-light"># review others' PRs</div>
-            <div><span className="text-brand-orange">scripts/review_work.sh</span></div>
+            <div className="text-brand-slate-muted-light"># reviews others' PRs, does one piece of work, then repeats</div>
+            <div><span className="text-brand-orange">REVIEW_GITHUB_TOKEN=</span>{"<bot-pat> "}<span className="text-brand-orange">./autopilot.sh</span></div>
+            <div className="mt-3 text-brand-slate-muted-light"># under the hood it just alternates the two runners it wraps:</div>
+            <div><span className="text-brand-orange">scripts/start_work.sh</span> <span className="text-brand-slate-muted-light">— do the work</span></div>
+            <div><span className="text-brand-orange">scripts/review_work.sh</span> <span className="text-brand-slate-muted-light">— review others' PRs</span></div>
           </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            The two halves must run as <strong>different GitHub identities</strong> — nobody can adversarially review their own PRs. Point{" "}
+            <Code>REVIEW_GITHUB_TOKEN</Code> at a second account with write access; without it, autopilot runs work-only and says so.
+          </p>
           <p className="mt-4 text-sm text-muted-foreground">
             The scripts own the status labels and the merge gate — the agent just does the work, in a throwaway git worktree pulled fresh from{" "}
             <Code>main</Code> every loop. If a reviewer pushes back, the work returns to <em>your</em> queue and your next loop fixes it before
@@ -89,7 +94,7 @@ export default function Contribute() {
 
       {/* The three scripts */}
       <h2 className="mb-2 mt-12 font-serif text-2xl font-bold">The three commands</h2>
-      <p className="mb-5 text-muted-foreground">Thin wrappers around your own agent CLI — do, review, merge.</p>
+      <p className="mb-5 text-muted-foreground">Thin wrappers around your own agent CLI. <Code>autopilot.sh</Code> alternates the first two in a balanced loop; merge is a maintainer's one-command sweep.</p>
       <div className="grid gap-4 md:grid-cols-3">
         {SCRIPTS.map((s) => (
           <Card key={s.name} className="p-5">
