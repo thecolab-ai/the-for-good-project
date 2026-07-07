@@ -798,23 +798,53 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
-      # The repo ships its own Codex hooks (.codex/config.toml -> the fleet
-      # telemetry client, ADR-0016). Codex skips non-trusted hooks silently in
-      # exec mode, and trust can only be persisted interactively — so pass the
-      # automation bypass, exactly its documented purpose ("automation that
-      # already vets hook sources": these hooks are versioned in this repo and
-      # the runner already uses --dangerously-bypass-approvals-and-sandbox).
-      # Only passed when the checkout actually carries the repo hook config.
+      # Hook trust is SEPARATE from the sandbox: the repo ships its own Codex
+      # telemetry hooks (.codex/config.toml -> the fleet client, ADR-0016) which
+      # exec mode skips as non-trusted unless bypassed, and trust can only be
+      # persisted interactively. --dangerously-bypass-hook-trust covers exactly
+      # that (its documented purpose: automation that already vets hook sources —
+      # these hooks are versioned in this repo), and is passed only when the
+      # checkout actually carries the repo hook config.
       local hook_trust=""
       [ -f "$dir/.codex/hooks.json" ] && hook_trust="--dangerously-bypass-hook-trust"
+      # Sandbox (ADR-0005, implemented by ADR-0022). Codex's OS sandbox in
+      # workspace-write mode confines writes to the workspace + tmp. Two facts
+      # verified against codex-cli 0.142.5 shape how we apply it:
+      #   * `codex exec` is non-interactive and has NO --ask-for-approval flag
+      #     (that lives on the top-level command; passing it to `exec` errors).
+      #     So we do not pass it — exec simply runs sandboxed without prompting.
+      #   * Research and review both need network. workspace-write disables it by
+      #     default, so we re-enable it (sandbox_workspace_write.network_access) —
+      #     BUT on macOS the seatbelt sandbox unconditionally disables network in
+      #     workspace-write (openai/codex#10390), so there sandbox+network can't
+      #     coexist; we fall back to full-access and leave real isolation to the
+      #     Linux container (ADR-0005). Override either way with CODEX_FLAGS=.
+      #   * Workers run in a git worktree whose real .git lives in the MAIN clone,
+      #     OUTSIDE the worktree — so we add the git common dir to the writable
+      #     roots, else git commit/push fail under the sandbox.
+      local -a codex_args
+      if [ -n "${CODEX_FLAGS:-}" ]; then
+        read -r -a codex_args <<< "$CODEX_FLAGS"
+      elif [ "$(uname -s)" = "Linux" ]; then
+        codex_args=(--sandbox workspace-write -c sandbox_workspace_write.network_access=true)
+        local gitcommon
+        gitcommon="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+        [ -n "$gitcommon" ] && codex_args+=(--add-dir "$gitcommon")
+      else
+        codex_args=(--dangerously-bypass-approvals-and-sandbox)
+        if [ -z "${FG_CODEX_SANDBOX_WARNED:-}" ]; then
+          printf 'fg: codex host sandbox unavailable on %s — workspace-write disables network here (openai/codex#10390), breaking research fetches; running full-access. Use the Linux container for isolation, or set CODEX_FLAGS=.\n' "$(uname -s)" >&2
+          export FG_CODEX_SANDBOX_WARNED=1
+        fi
+      fi
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
         $tmo codex exec --json --cd "$dir" --skip-git-repo-check $hook_trust \
-          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          "${codex_args[@]}" \
           ${MODEL:+-m "$MODEL"} "$prompt" \
           | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
       else
         $tmo codex exec --cd "$dir" --skip-git-repo-check $hook_trust \
-          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          "${codex_args[@]}" \
           ${MODEL:+-m "$MODEL"} "$prompt"
       fi
       ;;
@@ -822,6 +852,16 @@ run_agent() {
       # Default the fleet's claude runs to sonnet (maintainer call,
       # 2026-07-05: sonnet for testing) — override with --model / MODEL.
       local claude_model="${MODEL:-sonnet}"
+      # Permission mode (ADR-0005, implemented by ADR-0022): default to `auto`,
+      # not `bypassPermissions`. `auto` replaces per-action prompts with a
+      # classifier that blocks actions escalating beyond the request, targeting
+      # unrecognised infrastructure, or that "appear driven by hostile content
+      # Claude read" — i.e. exactly the prompt-injection path from public issue /
+      # PR text — while keeping network for research. It also avoids the headless
+      # hangs `acceptEdits` can hit. Not a hard sandbox (that's the container
+      # follow-up in ADR-0005/-0022); it's the CLI-level injection defence.
+      # Override with CLAUDE_PERMISSION_MODE= (e.g. bypassPermissions inside a
+      # locked-down container, where blast radius is the throwaway container).
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CLAUDE_JSON_TELEMETRY:-1}" = 1 ]; then
         # stream-json (requires --verbose) emits every assistant message and
         # tool use as it happens WITH per-message token usage — the bridge
@@ -829,13 +869,13 @@ run_agent() {
         # Plain -p prints nothing until the very end, so a worker looked hung
         # for the whole run and reported nothing.
         ( cd "$dir" && $tmo claude -p "$prompt" \
-          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
           --model "$claude_model" \
           --output-format stream-json --verbose ) \
           | python3 "$REPO_DIR/scripts/claude-json-telemetry.py"
       else
         ( cd "$dir" && $tmo claude -p "$prompt" \
-          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
           --model "$claude_model" )
       fi
       ;;
