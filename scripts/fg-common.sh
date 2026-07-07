@@ -798,23 +798,35 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
-      # The repo ships its own Codex hooks (.codex/config.toml -> the fleet
-      # telemetry client, ADR-0016). Codex skips non-trusted hooks silently in
-      # exec mode, and trust can only be persisted interactively — so pass the
-      # automation bypass, exactly its documented purpose ("automation that
-      # already vets hook sources": these hooks are versioned in this repo and
-      # the runner already uses --dangerously-bypass-approvals-and-sandbox).
-      # Only passed when the checkout actually carries the repo hook config.
+      # Sandbox (ADR-0005, implemented by ADR-0022): run under Codex's native OS
+      # sandbox (Apple Seatbelt on macOS, Landlock+seccomp on Linux) in
+      # workspace-write mode — writes confined to the worktree + tmp,
+      # non-interactive (--ask-for-approval never), with network LEFT ON because
+      # research and review both fetch NZ sources. workspace-write disables
+      # network by default, so we re-enable it explicitly. This replaces the old
+      # --dangerously-bypass-approvals-and-sandbox default: a prompt-injected
+      # worker can no longer write outside the worktree or run with the sandbox
+      # off. Override via CODEX_FLAGS= (e.g. a container runtime that can't
+      # provide Landlock — see ADR-0022 — or to tighten network back off).
+      #
+      # Hook trust is SEPARATE from the sandbox: the repo ships its own Codex
+      # telemetry hooks (.codex/config.toml -> the fleet client, ADR-0016) which
+      # exec mode skips as non-trusted unless bypassed, and trust can only be
+      # persisted interactively. --dangerously-bypass-hook-trust covers exactly
+      # that (its documented purpose: automation that already vets hook sources —
+      # these hooks are versioned in this repo), and is passed only when the
+      # checkout actually carries the repo hook config.
       local hook_trust=""
       [ -f "$dir/.codex/hooks.json" ] && hook_trust="--dangerously-bypass-hook-trust"
+      local codex_sandbox="${CODEX_FLAGS:---sandbox workspace-write --ask-for-approval never -c sandbox_workspace_write.network_access=true}"
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
         $tmo codex exec --json --cd "$dir" --skip-git-repo-check $hook_trust \
-          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          $codex_sandbox \
           ${MODEL:+-m "$MODEL"} "$prompt" \
           | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
       else
         $tmo codex exec --cd "$dir" --skip-git-repo-check $hook_trust \
-          ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
+          $codex_sandbox \
           ${MODEL:+-m "$MODEL"} "$prompt"
       fi
       ;;
@@ -822,6 +834,16 @@ run_agent() {
       # Default the fleet's claude runs to sonnet (maintainer call,
       # 2026-07-05: sonnet for testing) — override with --model / MODEL.
       local claude_model="${MODEL:-sonnet}"
+      # Permission mode (ADR-0005, implemented by ADR-0022): default to `auto`,
+      # not `bypassPermissions`. `auto` replaces per-action prompts with a
+      # classifier that blocks actions escalating beyond the request, targeting
+      # unrecognised infrastructure, or that "appear driven by hostile content
+      # Claude read" — i.e. exactly the prompt-injection path from public issue /
+      # PR text — while keeping network for research. It also avoids the headless
+      # hangs `acceptEdits` can hit. Not a hard sandbox (that's the container
+      # follow-up in ADR-0005/-0022); it's the CLI-level injection defence.
+      # Override with CLAUDE_PERMISSION_MODE= (e.g. bypassPermissions inside a
+      # locked-down container, where blast radius is the throwaway container).
       if [ -n "${FLEET_SERVER:-}" ] && [ "${CLAUDE_JSON_TELEMETRY:-1}" = 1 ]; then
         # stream-json (requires --verbose) emits every assistant message and
         # tool use as it happens WITH per-message token usage — the bridge
@@ -829,13 +851,13 @@ run_agent() {
         # Plain -p prints nothing until the very end, so a worker looked hung
         # for the whole run and reported nothing.
         ( cd "$dir" && $tmo claude -p "$prompt" \
-          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
           --model "$claude_model" \
           --output-format stream-json --verbose ) \
           | python3 "$REPO_DIR/scripts/claude-json-telemetry.py"
       else
         ( cd "$dir" && $tmo claude -p "$prompt" \
-          --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
           --model "$claude_model" )
       fi
       ;;
