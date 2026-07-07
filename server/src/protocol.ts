@@ -53,6 +53,12 @@ export const helloSchema = z.object({
   model: z.string().min(1).max(128),
   task: taskInfoSchema.optional(),
   version: z.string().max(64).optional(),
+  /** Stable client-side session id (e.g. the harness session_id). When present
+   *  the server derives a DETERMINISTIC agent id from (handle, session) instead
+   *  of minting a random one, so concurrent first-contact posts from one logical
+   *  session converge on a single record rather than each spawning a duplicate
+   *  (the session-start race that filled /live with repeat rows — #398). */
+  session: z.string().min(1).max(128).optional(),
   /** Optional fallback location (used only if IP geo fails). See schema note. */
   location: roughLocationSchema.optional(),
 });
@@ -122,6 +128,10 @@ export const telemetryPostSchema = z.object({
   harness: z.string().min(1).max(32),
   model: z.string().min(1).max(128),
   version: z.string().max(64).optional(),
+  /** Stable client session id — see helloSchema.session. Lets a one-shot hook
+   *  worker whose saved agentId hasn't landed yet (or raced with a sibling
+   *  hook) resolve to the same record instead of minting a duplicate. */
+  session: z.string().min(1).max(128).optional(),
   task: taskInfoSchema.optional(),
   heartbeat: heartbeatSchema.omit({ type: true }).optional(),
 });

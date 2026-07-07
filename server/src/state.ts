@@ -12,7 +12,7 @@
  * implementation behind the same interface; nothing else needs to change.
  */
 import { EventEmitter } from "node:events";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { config } from "./config.js";
 import type { HistoryStore } from "./history.js";
@@ -67,6 +67,21 @@ interface PersistedState {
   events: EventItem[];
   lastTps?: number;
   lastTpsAt?: string | null;
+}
+
+/** Deterministic v5-style UUID from a stable seed (handle + the client's own
+ *  session id). Concurrent first-contact posts from ONE logical session all
+ *  hash to the SAME id, so they upsert one record instead of each minting a
+ *  fresh random UUID — the session-start race that duplicated the same worker
+ *  on the same task all over /live (#398). Valid UUID shape, so it satisfies
+ *  the same schema as a minted id (logs/response echo). */
+export function sessionAgentId(handle: string, session: string): string {
+  const h = createHash("sha1").update(`fleet-agent\n${handle}\n${session}`).digest();
+  const b = h.subarray(0, 16);
+  b[6] = ((b[6] ?? 0) & 0x0f) | 0x50; // version 5
+  b[8] = ((b[8] ?? 0) & 0x3f) | 0x80; // RFC 4122 variant
+  const hex = b.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 function sampleTps(tokens: number, elapsedMs: number): number {

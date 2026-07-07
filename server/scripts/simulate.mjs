@@ -69,7 +69,7 @@ function startAgent(i) {
   let timer;
 
   ws.addEventListener("open", () => {
-    ws.send(JSON.stringify({ type: "hello", handle, harness, model, task: pick(TASKS), location, version: "sim-0.1" }));
+    ws.send(JSON.stringify({ type: "hello", handle, harness, model, task: pick(TASKS), location, version: "sim-0.1", session: `sim-${i}` }));
     console.log(`[sim] ${handle} online (${harness} · ${model})`);
     timer = setInterval(() => {
       // A plausible working rhythm: bursts of tokens, occasional milestones.

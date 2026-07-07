@@ -74,6 +74,8 @@ const hello = {
 async function send(heartbeat) {
   const resp = await post("/api/v1/telemetry", {
     ...(state.agentId ? { agentId: state.agentId } : {}),
+    // Stable per-session key so the server dedups first/raced posts (#398).
+    session: sessionKey,
     ...hello,
     ...(heartbeat ? { heartbeat } : {}),
   });
