@@ -178,7 +178,7 @@ default off.)
 Two bounds shape what gets picked up (#292 / #293, ADR-0013):
 
 - **Active-streams cap.** A `stage: discover` root is only claimed while
-  fewer than `MAX_ACTIVE_STREAMS` (default 5) streams are active (open child
+  fewer than `MAX_ACTIVE_STREAMS` (default 25) streams are active (open child
   work, or a root being worked). Roots beyond the cap stay
   `status: available` in the backlog and are picked up as streams drain —
   so ten approved streams *sequence* through the pipeline instead of all

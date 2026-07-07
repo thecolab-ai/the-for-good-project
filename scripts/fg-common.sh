@@ -11,7 +11,7 @@ PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes on
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
-MAX_ACTIVE_STREAMS="${MAX_ACTIVE_STREAMS:-5}"  # streams worked concurrently before new roots wait in the backlog (#292)
+MAX_ACTIVE_STREAMS="${MAX_ACTIVE_STREAMS:-25}"  # streams worked concurrently before new roots wait in the backlog (#292)
 HIGH_PRIORITY_CAP="${HIGH_PRIORITY_CAP:-5}"    # max STREAMS whose 'priority: high' items jump the queue (#293)
 CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it

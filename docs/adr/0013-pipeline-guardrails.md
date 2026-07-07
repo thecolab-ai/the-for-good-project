@@ -46,7 +46,7 @@ We will bound every agent loop and enforce every human lever:
 5. **Fan-out children link the stream root** (`Part of #<root>`), with
    `Split from #<issue>` carrying the spawn edge; depth (≤2) is computed
    along the spawn chain, and `stream-sync.yml` flags mislinked children.
-6. **At most `MAX_ACTIVE_STREAMS` (default 5) streams are worked
+6. **At most `MAX_ACTIVE_STREAMS` (default 25; originally 5) streams are worked
    concurrently**; further G0-approved roots queue in the backlog. Drained
    streams always reach G1 pre-drafted (`synthesize_work.sh`), and the
    synthesis queue depth is published in the site snapshot.
