@@ -47,9 +47,15 @@ command:
    fires on a real change — no exec loop), so autopilot-level improvements apply
    with no manual restart. `PULL=0` disables the per-cycle pull.
 5. **Preserve the integrity rule.** The review side runs under a **distinct
-   identity** via `REVIEW_GITHUB_TOKEN`; the work side runs as the operator's
-   normal `gh` identity. Without the token, autopilot runs **work-only and
-   warns** — it never reviews as the author, which the gate would reject anyway.
+   identity** via `REVIEW_GITHUB_TOKEN` (a second account / bot PAT) for **full
+   coverage** — that way even the operator's own work PRs get an independent
+   review. Without the token, autopilot **still reviews — as the operator's own
+   `gh` identity** — it just skips PRs that identity authored (`review_work.sh`
+   refuses to review its own author, which the merge gate would reject anyway),
+   so those still need a separate reviewer. Either way a loop helps drain the
+   review queue instead of idling; `REVIEW_PER_WORK=0` opts out of reviewing
+   entirely. *(Amended 2026-07-07: a token-less loop used to run work-only; it
+   now reviews as the local identity so bare work loops still pitch in.)*
 
 ## Consequences
 

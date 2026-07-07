@@ -16,16 +16,20 @@
 # those scripts, unchanged. See docs/adr/0015-autopilot-alternates-review-and-work.md.
 #
 # THE INTEGRITY RULE STILL HOLDS: an adversarial review may not be by the PR's
-# author. So run the REVIEW side under a DISTINCT identity via REVIEW_GITHUB_TOKEN
-# (a second account / bot PAT with write) — work runs as your normal gh identity,
-# review runs as the token's identity. Without REVIEW_GITHUB_TOKEN it runs
-# WORK-ONLY and warns (reviewing your own PRs is a no-op the gate rejects).
+# author. For FULL coverage run the REVIEW side under a DISTINCT identity via
+# REVIEW_GITHUB_TOKEN (a second account / bot PAT with write) — work runs as your
+# normal gh identity, review as the token's identity, so even your own work PRs
+# get reviewed. WITHOUT REVIEW_GITHUB_TOKEN it still reviews — as your local gh
+# identity — it just skips PRs you authored (which then need a separate
+# reviewer). Either way a loop helps drain the review queue; opt out with
+# REVIEW_PER_WORK=0.
 #
 # Usage:
-#   REVIEW_GITHUB_TOKEN=<bot-pat> ./autopilot.sh            # balanced (claude)
+#   REVIEW_GITHUB_TOKEN=<bot-pat> ./autopilot.sh            # full coverage (claude)
 #   REVIEW_GITHUB_TOKEN=<bot-pat> ./autopilot.sh codex      # use codex
 #   REVIEW_GITHUB_TOKEN=<bot-pat> REVIEW_PER_WORK=3 ./autopilot.sh
-#   ./autopilot.sh                                          # work-only (no token)
+#   ./autopilot.sh                                          # reviews as your gh user (skips your own PRs)
+#   REVIEW_PER_WORK=0 ./autopilot.sh                        # work-only, no reviewing
 #   MAX_CYCLES=5 ./autopilot.sh                             # stop after 5 cycles
 #   PULL=0 ./autopilot.sh                                   # don't auto-pull main
 #
@@ -62,8 +66,8 @@ SELF_HASH="$(self_hash)"
 trap 'rule; warn "autopilot stopping."; fleet_cleanup_run_dir; exit 130' INT TERM
 
 if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
-  warn "REVIEW_GITHUB_TOKEN is not set — running WORK-ONLY (no review passes)."
-  warn "To balance the queue, set REVIEW_GITHUB_TOKEN to a DISTINCT GitHub identity with write access."
+  warn "REVIEW_GITHUB_TOKEN is not set — reviewing as your LOCAL gh identity (PRs you authored are skipped)."
+  warn "For full coverage (incl. your own work PRs), set REVIEW_GITHUB_TOKEN to a DISTINCT GitHub identity with write access. Opt out of reviewing with REVIEW_PER_WORK=0."
 fi
 
 # Fleet telemetry (#398) — ON by default against the project's mission-control
@@ -282,7 +286,6 @@ run_pass() {  # $1 = task kind, rest = command to run
 }
 
 cycle=0
-review_disabled_reported=0
 while :; do
   cycle=$((cycle + 1))
   rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → frame×${FRAME_PER_WORK} → work×1)"
@@ -315,17 +318,17 @@ while :; do
 
   did_something=0
 
-  # Review side (distinct identity), review-first so we drain before adding.
-  if [ -n "${REVIEW_GITHUB_TOKEN:-}" ]; then
-    for _ in $(seq 1 "$REVIEW_PER_WORK"); do
-      fleet_handle_commands || break 2
-      info "review pass…"
-      run_pass review env MAX=1 POLL_SECONDS=0 ./scripts/review_work.sh "$@" && did_something=1
-    done
-  elif [ "$review_disabled_reported" = 0 ]; then
-    fleet_send "idle" "" "review disabled: REVIEW_GITHUB_TOKEN missing" 0 0 0 0 0 0 0
-    review_disabled_reported=1
-  fi
+  # Review side, review-first so we drain before adding. With REVIEW_GITHUB_TOKEN
+  # the review is posted by a DISTINCT identity (can review everyone, including
+  # your own work PRs). WITHOUT one, review_work.sh still reviews — as your local
+  # gh identity — it just skips PRs you authored (which then need a separate
+  # reviewer). Either way we run the review passes, so a work-only loop still
+  # helps drain the review queue instead of idling. Opt out with REVIEW_PER_WORK=0.
+  for _ in $(seq 1 "$REVIEW_PER_WORK"); do
+    fleet_handle_commands || break 2
+    info "review pass…"
+    run_pass review env MAX=1 POLL_SECONDS=0 ./scripts/review_work.sh "$@" && did_something=1
+  done
 
   # Framing side: discover roots and sent-back discover/framing PRs are not
   # claimable by start_work.sh (ADR-0014). Without this pass autopilot can look
