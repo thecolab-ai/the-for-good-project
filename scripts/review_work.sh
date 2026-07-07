@@ -36,14 +36,14 @@
 # (a bot / second GitHub account, or a GitHub App token, with write access).
 #
 # Usage:
-#   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh           # review all open PRs (claude)
-#   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh codex     # review with codex
-#   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh hermes    # review with hermes
-#   REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh --model <name>
-#   REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh
-#   PR=7 ./review_work.sh                                    # a single PR
-#   DRY_RUN=1 ./review_work.sh
-#   POLL_SECONDS=0 ./review_work.sh                          # exit instead of polling when empty
+#   REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh           # review all open PRs (claude)
+#   REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh codex     # review with codex
+#   REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh hermes    # review with hermes
+#   REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh --model <name>
+#   REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 scripts/review_work.sh
+#   PR=7 scripts/review_work.sh                                    # a single PR
+#   DRY_RUN=1 scripts/review_work.sh
+#   POLL_SECONDS=0 scripts/review_work.sh                          # exit instead of polling when empty
 #                                                             # (default: poll every 60s and never exit)
 #
 # REVIEW-ROUND CAP (#287 / ADR-0013): a PR gets at most MAX_REVIEW_ROUNDS
@@ -224,7 +224,7 @@ park_for_human() {  # $1 = pr number, $2 = head sha, $3 = url, $4 = rounds
     review_feedback "$pr" | head -c 3000
     echo '```'
     echo
-    echo "Maintainer options: decide the dispute and merge (\`merge_ready.sh\` / by hand), send it back with concrete asks, apply \`review: human-only\`, or force one more agent round with \`FORCE=1 PR=$pr ./review_work.sh\`."
+    echo "Maintainer options: decide the dispute and merge (\`merge_ready.sh\` / by hand), send it back with concrete asks, apply \`review: human-only\`, or force one more agent round with \`FORCE=1 PR=$pr scripts/review_work.sh\`."
   } >"$body"
   gh pr comment "$pr" --repo "$REPO" --body-file "$body" >/dev/null 2>&1 || true
   rm -f "$body"
@@ -582,7 +582,7 @@ review_one() {  # $1 = PR number
         tail -80 "$tmp"
         echo '```'
         echo
-        echo "The review loop will retry automatically. To force a retry now: \`FORCE=1 PR=$pr ./review_work.sh\`."
+        echo "The review loop will retry automatically. To force a retry now: \`FORCE=1 PR=$pr scripts/review_work.sh\`."
       } >"$diag"
       warn "No review file produced for PR #$pr; posting a diagnostic (check left unset so a later loop retries)."
       gh pr comment "$pr" --repo "$REPO" --body-file "$diag" >/dev/null || true

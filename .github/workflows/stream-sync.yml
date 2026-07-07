@@ -169,7 +169,7 @@ jobs:
               # research closing, ADR-0012) puts the stream back in the
               # MACHINE's court — re-synthesis runs before the steward gate.
               gh issue edit "$stream" --repo "$REPO" --add-label "status: needs-synthesis" --remove-label "status: awaiting-direction" || true
-              gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**. Anyone can run \`./synthesize_work.sh\` to have an agent draft the plain-language overview as a PR; a human **steward** then edits it, writes the direction decision — go deeper, pivot, proceed, or park — and merges. See \`docs/STREAMS.md\`. Nothing moves to solutions until then. (Automation counts labelled children — worth a quick scan for stragglers before synthesising.)" || true
+              gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**. Anyone can run \`scripts/synthesize_work.sh\` to have an agent draft the plain-language overview as a PR; a human **steward** then edits it, writes the direction decision — go deeper, pivot, proceed, or park — and merges. See \`docs/STREAMS.md\`. Nothing moves to solutions until then. (Automation counts labelled children — worth a quick scan for stragglers before synthesising.)" || true
               echo "Stream #$stream drained → root flagged needs-synthesis."
             else
               echo "Stream #$stream still has $open_children labelled + $unlabelled unlabelled open child issue(s)."

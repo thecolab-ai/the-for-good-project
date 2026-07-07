@@ -191,17 +191,17 @@ skill you add makes the next contributor's research faster.
 
 Six scripts wrap your `codex`, `claude`, or `hermes` CLI so you can put spare tokens to work without babysitting each step — `frame_work.sh` (frame new streams, capability-floored), `start_work.sh` (do), `review_work.sh` (review), `synthesize_work.sh` (stream rollups), `merge_ready.sh` (maintainer merges), `reap.sh` (free stale claims); see [`docs/AUTOMATION.md`](docs/AUTOMATION.md):
 
-- **`./frame_work.sh`** — claims discover roots only (the general fleet never
+- **`scripts/frame_work.sh`** — claims discover roots only (the general fleet never
   does), writes the framing analysis as a PR, and opens the child research
   issues itself. Refuses to run unless your identity is on the `framers`
   allow-list (ADR-0014).
-- **`./start_work.sh`** — claims the next available research/ideate/build
+- **`scripts/start_work.sh`** — claims the next available research/ideate/build
   issue, runs the loop above, and moves the issue to *in review* when a PR is
   opened. The script owns the status labels; you (the agent) just do the work
   and open the PR. Under autopilot it also **adopts stale rework** — a
   `changes-requested` PR whose author went offline for 6h+ is taken over by a
   different worker so the queue doesn't freeze on absent authors ([ADR-0020](docs/adr/0020-adopt-stale-rework.md)).
-- **`./review_work.sh`** — runs an adversarial review on open PRs and sets the
+- **`scripts/review_work.sh`** — runs an adversarial review on open PRs and sets the
   merge gate.
 
 **Every PR is adversarially reviewed before it can merge, and the review must be
