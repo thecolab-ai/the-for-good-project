@@ -45,14 +45,26 @@ brings the high-privilege worker up to at least the reviewer's bar and is free.
 **2. Implement ADR-0005's host sandbox defaults in `run_agent`**, both
 overridable via the existing env hooks:
 
-- **Codex** → `--sandbox workspace-write --ask-for-approval never -c
-  sandbox_workspace_write.network_access=true` (was
-  `--dangerously-bypass-approvals-and-sandbox`). This is exactly ADR-0005's
-  chosen flags, plus the `network_access=true` config the ADR omitted — without
-  it, `workspace-write` blocks the network and research/citation fetches break.
-  Writes are confined to the worktree + tmp; the sandbox is on. Override with
-  `CODEX_FLAGS=`. Hook trust (`--dangerously-bypass-hook-trust`, ADR-0016) is a
-  separate flag and is unchanged.
+- **Codex** → native OS sandbox in `workspace-write` mode (was
+  `--dangerously-bypass-approvals-and-sandbox`), verified against codex-cli
+  0.142.5. Three corrections to ADR-0005's sketch, each confirmed on the CLI:
+  - ADR-0005 wrote `--ask-for-approval never`, but **`codex exec` has no such
+    flag** (it lives on the top-level command; passing it to `exec` exits 2).
+    `exec` is already non-interactive, so we drop it.
+  - `workspace-write` disables network by default, so we re-enable it with
+    `-c sandbox_workspace_write.network_access=true` — the config key ADR-0005
+    omitted, without which every research/citation fetch fails.
+  - Workers run in a **git worktree** whose real `.git` is in the main clone,
+    *outside* the worktree; `workspace-write` confines writes to the worktree, so
+    `git commit`/`push` would fail. We add the git common dir
+    (`git rev-parse --path-format=absolute --git-common-dir`) via `--add-dir`.
+  - **Platform gate:** on **macOS**, the seatbelt sandbox unconditionally
+    disables network in `workspace-write` (openai/codex#10390), so sandbox and
+    network cannot coexist on a macOS host. Since research *and* review both need
+    network, macOS keeps the full-access default (behaviour unchanged) with a
+    one-line warning pointing to the Linux container; only **Linux** gets the
+    real sandbox by default. Override either with `CODEX_FLAGS=`. Hook trust
+    (`--dangerously-bypass-hook-trust`, ADR-0016) is separate and unchanged.
 - **Claude** → `--permission-mode auto` (was `bypassPermissions`). `auto` was
   the maintainer's originally stated intent in ADR-0005's discussion ("we should
   be running on auto mode"); it was unavailable/unreliable then, so 0005 landed
@@ -71,10 +83,11 @@ documented in-container override, where blast radius is the throwaway container.
 **Positive**
 - The worker and framing agents no longer take unfenced instructions from public
   text; all four privileged prompts now carry the same untrusted-data boundary.
-- No naked "dangerous" flag as the host default. An injected Codex worker can no
-  longer write outside the worktree or run unsandboxed; an injected Claude worker
+- On Linux, an injected Codex worker can no longer write outside the worktree
+  (+ its `.git`) or run unsandboxed; on every platform an injected Claude worker
   is checked by the `auto` classifier. Research network egress still works.
-- Implements a decision (ADR-0005) that had been accepted but not shipped.
+- Implements a decision (ADR-0005) that had been accepted but not shipped, and
+  corrects three flag/config errors in it that would have broken `codex exec`.
 
 **Negative / costs**
 - Prompt fencing is defence-in-depth, not a hard boundary — a sufficiently clever
@@ -83,11 +96,13 @@ documented in-container override, where blast radius is the throwaway container.
   that.
 - `auto` mode is fail-closed: it may occasionally block a legitimate action,
   reducing task completion. It's overridable per run.
-- The Codex flags follow OpenAI's documented sandbox interface but were not
-  runnable on the authoring machine (local Codex binary broken); they need a
-  smoke-test on a working-Codex host before the new default is trusted fleet-wide.
-  The `CODEX_FLAGS=` override is the fallback if a platform's container runtime
-  can't provide Landlock.
+- The Codex flag strings and config key are verified against codex-cli 0.142.5
+  (arg parsing, and the `workspace-write`/`network_access` docs), and Claude
+  `auto` is confirmed to run headless. What is **not** yet validated end-to-end:
+  a full Linux `codex exec` task completing under `workspace-write` with the
+  `.git` writable root (the authoring machine is macOS, which takes the
+  full-access path). Smoke-test one Linux worker before trusting the Linux
+  default fleet-wide; `CODEX_FLAGS=` is the fallback.
 
 **Tripwire** — revisit if `auto` mode blocks enough legitimate work that
 contributors routinely set `CLAUDE_PERMISSION_MODE=bypassPermissions` outside a
