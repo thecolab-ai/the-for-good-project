@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex"/>
+<title>Are most changes to NZ law really "repeals"? — a For Good report</title>
+<meta property="og:title" content="Are most changes to NZ law really 'repeals'? We counted."/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{cream:'#faf8f3',ink:'#1b1b22',navy:'#1e3a5f',muted:'#5b5b66',line:'#e4ded2',blue:'#2563eb',teal:'#0f766e',orange:'#c2410c',red:'#b91c1c'},fontFamily:{serif:['Georgia','Times New Roman','serif']}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+ body{background:#faf8f3}
+ .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+ .reveal.in{opacity:1;transform:none}
+ .conf{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:9999px}
+</style></head>
+<body class="text-ink font-sans antialiased">
+<div class="mx-auto max-w-4xl px-5 pb-24 pt-8">
+
+  <span class="inline-block rounded-full border border-line bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted">The For Good Project · civic transparency · stream #667</span>
+  <h1 class="mt-4 font-serif text-4xl font-bold leading-tight text-navy sm:text-5xl">Are most changes to NZ law really <span class="italic text-orange">"repeals"</span>?</h1>
+  <p class="mt-3 max-w-2xl text-lg text-muted">A viral article called New Zealand "the fastest repealer in the West." So the community stopped guessing and <strong>counted</strong>. Here's what the numbers actually say — and, just as importantly, how sure we can be.</p>
+
+  <!-- verdict -->
+  <div class="reveal mt-7 rounded-2xl border-l-4 border-teal bg-white p-5 shadow-sm sm:p-6">
+    <div class="text-[11px] font-bold uppercase tracking-wider text-teal">The short answer</div>
+    <p class="mt-1 font-serif text-2xl font-bold text-navy sm:text-3xl">No — repeals are a clear <span class="text-teal">minority</span> of law changes, under <em>every</em> way we counted.</p>
+    <p class="mt-2 text-muted">Not one definition we tested — from the strictest to the most generous — got anywhere near half. But there's an honest catch, and it's near the bottom.</p>
+  </div>
+
+  <!-- big numbers -->
+  <div id="bignums" class="reveal mt-6 grid grid-cols-3 gap-3"></div>
+
+  <!-- chart 1: definition sensitivity -->
+  <section class="reveal mt-10 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-serif text-xl font-bold text-navy">1 · It all hangs on how you define "repeal"</h2>
+      <span class="conf bg-amber-100 text-amber-700">Medium confidence</span>
+    </div>
+    <p class="mt-1 text-sm text-muted">In a fixed, reproducible sample of <strong>120 recent amendment records</strong>: counting only true repeals gives ~11%. Even counting <em>every</em> "replace" as a repeal only reaches ~23%. Widen the definition as far as it honestly goes and it still doesn't cross the line.</p>
+    <div class="relative mt-4" style="height:230px"><canvas id="c1"></canvas></div>
+  </section>
+
+  <!-- chart 2: per government -->
+  <section class="reveal mt-8 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-serif text-xl font-bold text-navy">2 · It's a minority no matter who's in power</h2>
+      <span class="conf bg-amber-100 text-amber-700">Medium confidence</span>
+    </div>
+    <p class="mt-1 text-sm text-muted">Repeal &amp; revocation events as a share of all Act-amendment activity, by government term since 2008. It drifts between roughly <strong>12% and 19%</strong> — never close to a majority, red or blue.</p>
+    <div class="relative mt-4" style="height:260px"><canvas id="c2"></canvas></div>
+    <p class="mt-2 text-[11px] text-muted">*Luxon I is a partial term. Source data is the Whiplash aggregate (see caveats).</p>
+  </section>
+
+  <!-- three numbers -->
+  <section class="reveal mt-8">
+    <h2 class="font-serif text-2xl font-bold text-navy">3 · The headline numbers count different things</h2>
+    <p class="mt-1 max-w-2xl text-muted">A lot of the confusion is that the big figures being quoted aren't measuring the same thing. They're reconcilable — but not interchangeable.</p>
+    <div id="layers" class="mt-5 grid gap-3 sm:grid-cols-3"></div>
+  </section>
+
+  <!-- chart 3: whole act repeals -->
+  <section class="reveal mt-10 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-serif text-xl font-bold text-navy">4 · When whole Acts <em>are</em> repealed, it's real policy — not tidying</h2>
+      <span class="conf bg-amber-100 text-amber-700">Medium confidence</span>
+    </div>
+    <p class="mt-1 text-sm text-muted">Of <strong>71 whole-Act repeals</strong> (Jan 2023 – Jun 2026): <strong>none</strong> came via a classic "spent-law" clean-up bill. 83% were part of live legislative packages — repeal-and-replace reforms, treaty settlements, institutional change.</p>
+    <div class="mt-4 grid items-center gap-4 sm:grid-cols-[220px_1fr]">
+      <div class="relative mx-auto" style="height:200px;width:200px"><canvas id="c3"></canvas></div>
+      <div class="text-sm text-muted">
+        <p class="mb-2 font-medium text-ink">Examples of the "83%":</p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="rounded bg-cream px-2 py-1 text-xs">Fair Pay Agreements Act Repeal 2023</span>
+          <span class="rounded bg-cream px-2 py-1 text-xs">Resource Management repeal 2023</span>
+          <span class="rounded bg-cream px-2 py-1 text-xs">Water Services Acts Repeal 2024</span>
+          <span class="rounded bg-cream px-2 py-1 text-xs">Therapeutic Products Act Repeal 2024</span>
+          <span class="rounded bg-cream px-2 py-1 text-xs">Incorporated Societies Act 2022</span>
+        </div>
+        <p class="mt-3">The other 17% were routine annual turnover (Appropriation &amp; Secondary Legislation Confirmation Acts).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- chart 4: judicature -->
+  <section class="reveal mt-8 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="font-serif text-xl font-bold text-navy">5 · Read one Act line-by-line — and "amendment" mostly means <em>adding</em></h2>
+      <span class="conf bg-orange/10 text-orange">Low confidence · n=1 Act</span>
+    </div>
+    <p class="mt-1 text-sm text-muted">The one Act from a seeded random sample that could be fully read from official text (Judicature (Timeliness) 2025). Of its <strong>23 amending provisions</strong>, 15 inserted brand-new law and just <strong>one</strong> was a repeal. It proves the method works — it's far too small to generalise from.</p>
+    <div class="relative mt-4" style="height:150px"><canvas id="c4"></canvas></div>
+  </section>
+
+  <!-- honesty -->
+  <section class="reveal mt-10 rounded-2xl bg-[#3a2410] p-6 text-[#ffe9d6] sm:p-8">
+    <div class="text-[11px] font-bold uppercase tracking-wider text-orange-300">How sure are we? (read this bit)</div>
+    <h2 class="mt-1 font-serif text-2xl font-bold text-white">The verdict is consistent — but it isn't yet independent.</h2>
+    <ul class="mt-4 space-y-3 text-[15px] leading-relaxed">
+      <li>⚠️ <strong class="text-white">One source, many angles.</strong> Almost every number here traces back to one volunteer-built mirror of the official data — the same community project behind the original article. The findings agree with each other, but that's not the same as independent confirmation. No count has yet been replicated straight from the government's own bulk data.</li>
+      <li>🚧 <strong class="text-white">The hand-check stalled.</strong> Four of five randomly chosen Acts couldn't be read because the official legislation website's bot-protection blocked our tools — a tooling problem, not missing data — leaving the line-by-line sample at a single Act.</li>
+      <li>🏷️ <strong class="text-white">A known weak spot.</strong> The mirror always counts a legacy "omit" instruction as a repeal, when some were probably minor deletions — which could inflate historical repeal counts.</li>
+    </ul>
+    <p class="mt-4 text-sm text-orange-200">So: "mostly repeals" doesn't survive the count — but before anyone publishes a single hard number, it needs replication from the official source. That honesty <em>is</em> the finding.</p>
+  </section>
+
+  <!-- where next -->
+  <section class="reveal mt-8 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+    <h2 class="font-serif text-xl font-bold text-navy">Where this is heading</h2>
+    <p class="mt-1 text-sm text-muted">The stream is now at a human decision point (gate G1). The options on the table:</p>
+    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+      <div class="rounded-lg bg-cream p-3 text-sm"><b>Get official access first</b> — an API key or unblocked mirror so future counts don't hit the bot-protection wall. <span class="text-muted">Small.</span></div>
+      <div class="rounded-lg bg-cream p-3 text-sm"><b>Finish the official-text sample</b> — classify the 4 blocked Acts and reconcile against the mirror. <span class="text-muted">Medium.</span></div>
+      <div class="rounded-lg bg-cream p-3 text-sm"><b>Full-corpus count with the author</b> — audit the labels, publish a defensible whole-statute-book figure. <span class="text-muted">Large.</span></div>
+      <div class="rounded-lg bg-cream p-3 text-sm"><b>Publish a plain-language explainer</b> — the taxonomy, the three counting layers, and how the headline shifts (but never flips). <span class="text-muted">Small.</span></div>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+      <a href="https://github.com/thecolab-ai/the-for-good-project/pull/745" class="rounded-lg bg-navy px-3 py-1.5 font-medium text-white hover:opacity-90">The synthesis (PR #745) →</a>
+      <a href="https://github.com/thecolab-ai/the-for-good-project/issues/667" class="rounded-lg bg-white px-3 py-1.5 font-medium text-navy ring-1 ring-line hover:bg-cream">Stream #667 →</a>
+      <a href="https://github.com/jonnonz1/nz-statute-book" class="rounded-lg bg-white px-3 py-1.5 font-medium text-navy ring-1 ring-line hover:bg-cream">The data mirror →</a>
+    </div>
+  </section>
+
+  <p class="mt-9 border-t border-line pt-5 text-xs leading-relaxed text-muted">Built from stream #667's five research findings (definition-sensitivity, counting-layers, whole-Act-repeal composition, taxonomy pilot, full-corpus feasibility). Primary sources: The Spinoff, "Are we really the fastest repealers in the West?" (7 Jul 2026); jonnonz1/nz-statute-book &amp; whiplash; legislation.govt.nz / PCO. Numbers rest on a community mirror pending official-source replication — treat as Medium confidence. A per-store snapshot… er, a per-record count is a claim, not proof; see the caveats above. · <a class="underline" href="https://github.com/thecolab-ai/the-for-good-project">thecolab-ai/the-for-good-project</a></p>
+</div>
+
+<script>
+const D={
+ "defSens":{"labels":["Strict — only records marked \"repealed\"","Broadest — every \"replace\" counted as a repeal too"],"values":[10.8,23.3],"n":120},
+ "perGov":{"labels":["Key I","Key II","Key III","Ardern I","Ardern II","Luxon I*"],"amend":[13426,15144,14584,17538,16818,12710],"repeal":[2391,3499,2844,2467,2648,2022]},
+ "wholeAct":{"labels":["Inside live policy packages","Routine annual lifecycle","Spent-law \"housekeeping\""],"counts":[59,12,0],"total":71},
+ "judicature":{"labels":["Insert new law","Replace text","Mixed insert + replace","Repeal / revoke"],"values":[15,5,2,1],"total":23},
+ "layers":[
+   {"n":"241,456","what":"individual recorded change events since 1872","src":"PCO XML, parsed by the Whiplash / Spinoff project"},
+   {"n":"15,282","what":"published consolidated versions of Acts","src":"the nz-statute-book mirror"},
+   {"n":"works + versions","what":"the government's own official tally","src":"PCO / NZ Legislation system"}
+ ]
+}
+;
+const $=(id)=>document.getElementById(id);
+Chart.defaults.font.family="Inter, system-ui, sans-serif";
+Chart.defaults.color="#5b5b66";
+
+// big numbers
+$('bignums').innerHTML=[
+  {v:'~11%',l:'repeals, strict count',c:'text-teal'},
+  {v:'~23%',l:'even at the broadest definition',c:'text-navy'},
+  {v:'0 / 50%',l:'definitions that reached a majority',c:'text-orange'}
+].map(x=>`<div class="rounded-xl border border-line bg-white p-4 text-center shadow-sm">
+  <div class="font-serif text-3xl font-bold ${x.c}">${x.v}</div>
+  <div class="mt-1 text-[11px] leading-tight text-muted">${x.l}</div></div>`).join('');
+
+// layers
+$('layers').innerHTML=D.layers.map(x=>`<div class="rounded-xl border border-line bg-white p-4 shadow-sm">
+  <div class="font-mono text-2xl font-bold text-navy">${x.n}</div>
+  <div class="mt-1 text-sm text-ink">${x.what}</div>
+  <div class="mt-1 text-[11px] text-muted">${x.src}</div></div>`).join('');
+
+const majLine={id:'maj',afterDatasetsDraw(ch){const a=ch.chartArea,y=ch.scales.y;if(!y)return;const py=y.getPixelForValue(50);if(py<a.top||py>a.bottom)return;const x=ch.ctx;x.save();x.strokeStyle='#c2410c';x.setLineDash([5,4]);x.lineWidth=1.5;x.beginPath();x.moveTo(a.left,py);x.lineTo(a.right,py);x.stroke();x.setLineDash([]);x.fillStyle='#c2410c';x.font='600 11px Inter';x.fillText('50% — a "majority" would sit up here',a.left+6,py-6);x.restore()}};
+const pct=(v)=>v.toFixed(0)+'%';
+
+// c1 definition sensitivity
+new Chart($('c1'),{type:'bar',data:{labels:D.defSens.labels,datasets:[{data:D.defSens.values,backgroundColor:['#0f766e','#c2410c'],borderRadius:6,maxBarThickness:70}]},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(i)=>' '+i.parsed.x.toFixed(1)+'% of 120 records'}}},
+  scales:{x:{min:0,max:100,ticks:{callback:pct},grid:{color:'#eee6da'}},y:{grid:{display:false},ticks:{font:{size:11}}}}},plugins:[{id:'m2',afterDatasetsDraw(ch){const a=ch.chartArea,x=ch.scales.x;const px=x.getPixelForValue(50);const c=ch.ctx;c.save();c.strokeStyle='#c2410c';c.setLineDash([5,4]);c.lineWidth=1.5;c.beginPath();c.moveTo(px,a.top);c.lineTo(px,a.bottom);c.stroke();c.setLineDash([]);c.fillStyle='#c2410c';c.font='600 11px Inter';c.fillText('50%',px+4,a.top+12);c.restore()}}]});
+
+// c2 per government share
+const shares=D.perGov.amend.map((am,i)=>+(100*D.perGov.repeal[i]/(am+D.perGov.repeal[i])).toFixed(1));
+new Chart($('c2'),{type:'bar',data:{labels:D.perGov.labels,datasets:[{data:shares,backgroundColor:'#1e3a5f',borderRadius:6,maxBarThickness:54}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(i)=>' repeals = '+i.parsed.y+'% of amendment activity'}}},
+  scales:{y:{min:0,max:100,ticks:{callback:pct},grid:{color:'#eee6da'}},x:{grid:{display:false}}}},plugins:[majLine]});
+
+// c3 whole-act doughnut
+new Chart($('c3'),{type:'doughnut',data:{labels:D.wholeAct.labels,datasets:[{data:D.wholeAct.counts,backgroundColor:['#1e3a5f','#0ea5e9','#e4ded2'],borderWidth:2,borderColor:'#fff'}]},
+ options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10.5},padding:8}},tooltip:{callbacks:{label:(i)=>' '+i.label+': '+i.parsed+' of 71'}}}}});
+
+// c4 judicature stacked horizontal
+new Chart($('c4'),{type:'bar',data:{labels:['Judicature (Timeliness) Act 2025 — 23 provisions'],
+  datasets:D.judicature.labels.map((l,i)=>({label:l,data:[D.judicature.values[i]],backgroundColor:['#0f766e','#0ea5e9','#f59e0b','#b91c1c'][i],borderRadius:3}))},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10.5},padding:8}},tooltip:{callbacks:{label:(i)=>' '+i.dataset.label+': '+i.parsed.x}}},
+  scales:{x:{stacked:true,max:23,grid:{color:'#eee6da'}},y:{stacked:true,grid:{display:false},ticks:{display:false}}}}});
+
+// reveal
+const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:0.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body></html>
