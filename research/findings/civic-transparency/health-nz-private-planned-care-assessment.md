@@ -1,0 +1,99 @@
+---
+title: "Health NZ has not yet published the planned-care outsourcing equity assessment the Auditor-General recommended"
+domain: "civic-transparency"
+issue: "#762"
+confidence: "Medium"
+author: "codex"
+agent: "codex"
+model: "gpt-5-codex"
+date: "2026-07-08"
+status: "draft"
+---
+
+# Health NZ has not yet published the planned-care outsourcing equity assessment the Auditor-General recommended
+
+## Executive answer
+
+- I found **no public Health NZ assessment, as of 8 July 2026, that directly answers the Auditor-General's June 2025 recommendation to assess the impact of outsourcing planned care to the private sector on equitable patient access**. Health NZ has instead published public-private collaboration machinery and Elective Boost volume planning that embeds outsourcing as a delivery model [Health NZ statement of expectations, 22 Sep 2025](https://www.healthnz.govt.nz/publications/statement-of-expectations-for-public-private-surgical-collaboration); [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf).
+- Health NZ's July 2025 Elective Boost advice says planned 2025/26 elective treatments totalled 215,544, including a 194,516 baseline and 21,028 boost, with 83% of planned treatments in-house and 17% by private providers; for the Boost specifically, it planned 22% in-house and 78% by private providers [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf).
+- The strongest public cost-effectiveness signal is still partial: the same aide-memoire says regions considered "greatest value" and "cost-effective mix", and says productivity gains/marginal use of existing assets are the lowest-cost opportunity while managing patient complexity can keep private provision cheaper than public provision; it does **not** publish procedure-level prices or a public outsourced-vs-in-house cost table [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf); [RNZ, 13 May 2025](https://www.rnz.co.nz/news/in-depth/560757/health-nz-aims-to-cut-surgery-waitlists-by-outsourcing-to-private-hospitals-extending-doctors-hours).
+- The OAG has not published a completed planned-care follow-up audit yet. It has, however, said it will likely follow up, and its 2024/25 annual report says it intends to follow up in the next 12-18 months from the 2025 report [OAG private healthcare providers response, 2025](https://oag.parliament.nz/2025/private-healthcare-providers); [OAG annual report 2024/25, Service 5](https://oag.parliament.nz/2025/annual-report/our-performance/our-services/service-5).
+- The EY FSA reporting review has moved from "referenced but not found" to **publicly acknowledged as released**: Health NZ now has an "Accuracy of FSA health target reporting" publication page saying it has released an independent EY report, and the OAG's January 2026 letter says EY provided further assurance while highlighting administrative challenges from district variation [Health NZ, Accuracy of FSA health target reporting](https://www.healthnz.govt.nz/publications/accuracy-of-fsa-health-target-reporting); [OAG FSA letter, 30 Jan 2026](https://oag.parliament.nz/2026/specialist-appointment).
+
+**Overall confidence:** Medium - high that the public record contains Health NZ's partnership/volume documents and no OAG follow-up report yet; medium on the negative finding because a non-public Health NZ assessment could exist and because Health NZ's EY page was fetchable only as page metadata in this environment, not as a downloadable report body.
+
+## Evidence
+
+### What the OAG recommended and why it matters
+
+The Auditor-General's planned-care report said outsourcing can reduce waiting times but creates an equity risk because private hospital access is uneven across the country and outsourced patients are generally non-complex, leaving complex patients on public lists [OAG planned-care Part 3, paras 3.42-3.51](https://oag.parliament.nz/2025/planned-care/part3.htm). The same section says Health NZ was not actively considering how outsourcing would account for those risks, and Recommendation 2 told Health NZ to ensure equity actions and ensure timeliness efforts do not increase inequities [OAG planned-care Part 3, paras 3.50-3.51 and Recommendation 2](https://oag.parliament.nz/2025/planned-care/part3.htm).
+
+The OAG media release made the missing outsourcing work explicit: Health NZ still needed to assess the impact of outsourcing planned care to the private sector on equitable patient access [OAG media release, 26 Jun 2025](https://oag.parliament.nz/media/2025/planned-care-treatment). OAG Part 4 separately recommended better public reporting on how long people can expect to wait, variations in access, who is affected by those variations, and how Health NZ actions will improve equity of access [OAG planned-care Part 4, Recommendation 4](https://oag.parliament.nz/2025/planned-care/part4.htm).
+
+### What Health NZ has published since June 2025
+
+Health NZ published a September 2025 Statement of Expectations for Public-Private Surgical Collaboration. It commits to long-term partnerships with private surgical providers, lists outsourced elective surgical services within scope, and says a Surgical Planned Care Programme Steering Group oversees five workstreams including Elective Boost Delivery, Private Surgical Hospital Agreements, Clinical Training in Private Settings, Conflicts of Interest, and Surgical Waitlist Management [Health NZ statement page](https://www.healthnz.govt.nz/publications/statement-of-expectations-for-public-private-surgical-collaboration); [Statement PDF](https://static.info.content.health.nz/docs/publications/Statement-of-Expectations-Expectations-for-Public-Private-Surgical-Collaboration.pdf).
+
+That statement is not the OAG-requested assessment. It sets principles, scope, governance, data sharing, and operating arrangements; it does not publish measured effects on Maori, Pacific peoples, disabled people, rural communities, deprived communities, complex patients, or patients needing translation/language support [Statement PDF](https://static.info.content.health.nz/docs/publications/Statement-of-Expectations-Expectations-for-Public-Private-Surgical-Collaboration.pdf); [OAG planned-care Part 3](https://oag.parliament.nz/2025/planned-care/part3.htm).
+
+The most relevant proactively released Health NZ briefing I found is the 2 July 2025 aide-memoire "Elective Boost - volumes for 2025/2026", listed on Health NZ's 2025 advice-to-Minister page [Health NZ briefings to Minister 2025](https://www.healthnz.govt.nz/publications/briefings-to-the-minister-of-health-2025). It says the 2025/26 elective health-target milestone increased to 70% by 30 June 2026, and Health NZ allocated 215,544 treatments to meet the interim and final milestones, made up of 194,516 baseline treatments and 21,028 Elective Boost treatments [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf).
+
+The same aide-memoire says Health NZ planned 83% of all elective treatments in-house and 17% by private providers, but planned the Elective Boost itself to be 22% in-house and 78% by private providers [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf). That is strong evidence that outsourcing remains central to the 2025/26 elective target, not merely an edge case.
+
+### Cost-per-procedure transparency remains incomplete
+
+The Elective Boost aide-memoire is the closest public cost-comparison document I found. It says regional planning considered the "greatest value" from elective investment and the "most cost-effective mix of service delivery models"; it also frames productivity gains and marginal use of existing Health NZ assets as the lowest-cost opportunity, Health NZ elective surgical centres as a cost-effective high-volume model, and private provision as cheaper than public provision when patient complexity is managed to hold the price point [Health NZ Elective Boost aide-memoire, 2 Jul 2025](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf).
+
+That is not enough to answer the public cost-effectiveness question ASMS and RNZ raised. RNZ's May 2025 reporting, based on Health NZ papers and sector comment, described Health NZ's plan to cut surgery waitlists by outsourcing to private hospitals and extending doctors' hours, and recorded ASMS concern about transparency and whether outsourcing was the best use of public money [RNZ, 13 May 2025](https://www.rnz.co.nz/news/in-depth/560757/health-nz-aims-to-cut-surgery-waitlists-by-outsourcing-to-private-hospitals-extending-doctors-hours). I found no public table giving, for example, cataract/hip/knee/hernia cost per completed procedure in private facilities versus Health NZ in-house or elective-surgical-centre delivery.
+
+### OAG follow-up status
+
+The OAG health index lists the January/February 2026 FSA waiting-list letter and the June 2025 planned-care audit, but I found no completed follow-up publication for the planned-care outsourcing/equity recommendations [OAG health index](https://oag.parliament.nz/reports/health). The OAG has signalled follow-up rather than completion: in a published 2025 declined-inquiry response about private healthcare providers, it said it often follows up performance audits and would likely do so for planned care [OAG private healthcare providers response, 2025](https://oag.parliament.nz/2025/private-healthcare-providers). Its 2024/25 annual report went further, saying Health NZ accepted the recommendations and OAG intended to follow up in the next 12-18 months [OAG annual report 2024/25, Service 5](https://oag.parliament.nz/2025/annual-report/our-performance/our-services/service-5).
+
+### EY FSA reporting review
+
+The EY review referenced in the OAG's January 2026 FSA letter is now publicly acknowledged on Health NZ's website. The Health NZ publication page "Accuracy of FSA health target reporting" says Health NZ has released an independent EY report on the accuracy of FSA reporting [Health NZ, Accuracy of FSA health target reporting](https://www.healthnz.govt.nz/publications/accuracy-of-fsa-health-target-reporting). This page was fetched via `node scripts/fetch.mjs` using plain HTTP; the HTML body available in this environment exposed the page metadata but not the download link or report text.
+
+The OAG letter remains the clearest source for the review's substance: it says Health NZ contracted EY to independently review FSA health-target reporting accuracy; OAG found no misrepresentation in the Nelson FSA issue; and OAG understood EY provided further assurance while also highlighting administrative challenges caused by variations across districts [OAG FSA letter, 30 Jan 2026](https://oag.parliament.nz/2026/specialist-appointment).
+
+## Surprising or load-bearing claims
+
+| Claim | Source 1 | Source 2 | Confidence |
+|---|---|---|---|
+| Health NZ has not publicly released a direct outsourcing-equity assessment answering the OAG's June 2025 recommendation. | OAG stated the recommendation and the needed assessment [OAG media release](https://oag.parliament.nz/media/2025/planned-care-treatment) | Searches of Health NZ publications/briefings/board-minutes pages found partnership and volume documents, not an equity-impact assessment [Health NZ statement](https://www.healthnz.govt.nz/publications/statement-of-expectations-for-public-private-surgical-collaboration), [Health NZ briefings 2025](https://www.healthnz.govt.nz/publications/briefings-to-the-minister-of-health-2025), [Health NZ board minutes page](https://www.healthnz.govt.nz/publications/board-meetings-minutes) | Medium |
+| Elective Boost 2025/26 was planned to rely mostly on private providers. | Health NZ's July 2025 aide-memoire says 78% of the Boost was planned for private-provider delivery [aide-memoire](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf) | Health NZ's Statement of Expectations identifies Elective Boost Delivery and Private Surgical Hospital Agreements as steering-group workstreams [Statement PDF](https://static.info.content.health.nz/docs/publications/Statement-of-Expectations-Expectations-for-Public-Private-Surgical-Collaboration.pdf) | High |
+| A public cost-per-procedure comparison has not been found, despite internal cost-effectiveness language. | Health NZ aide-memoire contains cost-effectiveness language but no procedure-level cost table [aide-memoire](https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf) | RNZ/ASMS public commentary called for transparency on whether outsourcing is cost-effective [RNZ, 13 May 2025](https://www.rnz.co.nz/news/in-depth/560757/health-nz-aims-to-cut-surgery-waitlists-by-outsourcing-to-private-hospitals-extending-doctors-hours) | Medium |
+| OAG follow-up is expected but not yet published. | OAG says it will likely follow up planned care [private providers response](https://oag.parliament.nz/2025/private-healthcare-providers) | OAG annual report says follow-up intended in 12-18 months [OAG annual report service 5](https://oag.parliament.nz/2025/annual-report/our-performance/our-services/service-5) | High |
+| The EY FSA reporting review is now public at least as a Health NZ publication page, but I could not verify the full report body in this environment. | Health NZ publication page metadata says it released an independent EY report [Health NZ EY/FSA page](https://www.healthnz.govt.nz/publications/accuracy-of-fsa-health-target-reporting) | OAG January 2026 letter says EY was contracted and provided further assurance/identified administrative challenges [OAG FSA letter](https://oag.parliament.nz/2026/specialist-appointment) | Medium |
+
+## What would change this conclusion
+
+- A Health NZ publication or OIA release that explicitly measures outsourced planned-care access by ethnicity, disability, rurality, deprivation, complexity/comorbidity, language/translation need, district, priority order, and wait time would change the main conclusion.
+- A published OAG planned-care follow-up report after June 2025 would supersede this finding's "follow-up expected, not completed" status.
+- A full downloadable EY report with methodology and findings would strengthen or weaken confidence in FSA reporting accuracy; I could verify the Health NZ page metadata and the OAG's description, but not the report PDF/body.
+- A public price or cost table comparing outsourced and in-house delivery by procedure, case complexity, region, and overhead treatment would change the cost-effectiveness conclusion.
+- A human clinical/operational review is still needed before using this finding for service design, because public documents do not reveal how case selection works in practice for complex patients, disabled patients, rural patients, or people needing language support.
+
+## Open follow-up questions
+
+- When OAG completes its planned-care follow-up, does it find that Health NZ has assessed outsourcing's equity impact and changed procurement/case-selection rules accordingly?
+- Can Health NZ publish a non-commercially-sensitive cost-per-procedure range for outsourced versus in-house delivery by procedure and complexity group?
+- Does the EY FSA report identify district reporting controls that also affect elective-treatment outsourcing decisions, not just FSA target reporting?
+
+## Sources
+
+1. Office of the Auditor-General, "Providing equitable access to planned care treatment - Part 3: Inequities and timeliness of treatment," 25 June 2025, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/2025/planned-care/part3.htm
+2. Office of the Auditor-General, "Part 4: Improving monitoring and reporting," 25 June 2025, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/2025/planned-care/part4.htm
+3. Office of the Auditor-General, "Auditor-General finds more work needed to support equitable access to planned care treatment," 26 June 2025, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/media/2025/planned-care-treatment
+4. Office of the Auditor-General, "Contracts with private healthcare providers," 2025, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/2025/private-healthcare-providers
+5. Office of the Auditor-General, "Health" report index, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/reports/health
+6. Office of the Auditor-General, "Service 5: Assess public sector performance and accountability," Annual report 2024/25, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/2025/annual-report/our-performance/our-services/service-5
+7. Office of the Auditor-General, "Concerns about first specialist appointment waiting lists," 30 January 2026, accessed 8 July 2026 via built-in web open. https://oag.parliament.nz/2026/specialist-appointment
+8. Health New Zealand, "Statement of expectations for public-private surgical collaboration," published 22 September 2025, last updated 30 March 2026, accessed 8 July 2026 via built-in web open. https://www.healthnz.govt.nz/publications/statement-of-expectations-for-public-private-surgical-collaboration
+9. Health New Zealand, "Statement of Expectations: Expectations for Public-Private Surgical Collaboration" PDF, accessed 8 July 2026 via static PDF and `pdftotext`. https://static.info.content.health.nz/docs/publications/Statement-of-Expectations-Expectations-for-Public-Private-Surgical-Collaboration.pdf
+10. Health New Zealand, "Briefings to the Minister of Health: 2025," published 19 December 2025, accessed 8 July 2026 via built-in web open. https://www.healthnz.govt.nz/publications/briefings-to-the-minister-of-health-2025
+11. Health New Zealand, "Elective Boost - volumes for 2025/2026," HNZ00092358, 2 July 2025, accessed 8 July 2026 via static PDF and `pdftotext`. https://static.info.content.health.nz/docs/publications/HNZ00092358-04-07-2025-Aide-Memoire-Elective-Boost-volumes-for-2025-2026.pdf
+12. Health New Zealand, "Board meeting minutes," accessed 8 July 2026 via built-in web search/open. https://www.healthnz.govt.nz/publications/board-meetings-minutes
+13. Health New Zealand, "Accuracy of FSA health target reporting," accessed 8 July 2026 via `node scripts/fetch.mjs`; page metadata fetched via plain HTTP, report body/download not visible in this environment. https://www.healthnz.govt.nz/publications/accuracy-of-fsa-health-target-reporting
+14. Health New Zealand, "Health targets," accessed 8 July 2026 via built-in web open. https://www.healthnz.govt.nz/about-us/what-we-do/planning-and-performance/health-targets
+15. RNZ, "Health NZ aims to cut surgery waitlists by outsourcing to private hospitals, extending doctors' hours," 13 May 2025, accessed 8 July 2026 via built-in web open. https://www.rnz.co.nz/news/in-depth/560757/health-nz-aims-to-cut-surgery-waitlists-by-outsourcing-to-private-hospitals-extending-doctors-hours
