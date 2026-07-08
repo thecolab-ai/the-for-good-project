@@ -77,7 +77,7 @@ export const TEAM: TeamMember[] = [
     role: "Product & facilitation",
     focus: "Provides product, strategy, and facilitation so the work stays useful, legible, and stewarded.",
     name: "Klaus Bravenboer",
-    photo: "team/product-strategy.jpg",
+    photo: "team/KlausBrave.jpg",
   },
 ];
 
