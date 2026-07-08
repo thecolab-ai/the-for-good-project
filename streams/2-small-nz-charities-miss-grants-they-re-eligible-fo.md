@@ -4,7 +4,7 @@ title: "Small charities miss grants they're eligible for"
 state: awaiting-direction
 steward: ""
 domain: grant-access
-updated: 2026-07-03
+updated: 2026-07-08
 image: /images/streams/stream-2-small-charities-grants.jpg
 ---
 
@@ -32,6 +32,13 @@ is credible but not yet proven.
   a government funding hub, 32 pokie-trust websites, 67 local councils, trust
   company portals, and paid databases — each with its own rules, dates, and
   forms (confidence: Medium) —
+  [grant source map](../research/findings/grant-access/nz-grant-source-map.md)
+- **One official, machine-readable dataset does exist for pokie money** — the
+  Department of Internal Affairs publishes a yearly spreadsheet of
+  gaming-machine grants approved *and declined*, broken down by district. It
+  records past decisions rather than what is currently on offer, but a
+  follow-up check in July 2026 confirmed the dataset is real and reachable
+  after earlier access problems (confidence: Medium) —
   [grant source map](../research/findings/grant-access/nz-grant-source-map.md)
 - **The only tools that pull it together are commercial, and free access
   depends on where you live.** The main database is free only through council
@@ -100,6 +107,9 @@ is credible but not yet proven.
   re-quoted by sector bodies rather than independently measured.
 - Some load-bearing numbers are dated: the 89% no-paid-staff figure is from
   2018, and the 9%/91% concentration figure uses 2020 data.
+- The official pokie-grants spreadsheet has been confirmed to exist, but
+  nobody has yet tallied its rows — so district-by-district counts of
+  approved and declined pokie grants remain unextracted.
 
 ## What we could do about it
 
@@ -129,7 +139,11 @@ is credible but not yet proven.
   (confidence: Medium),
   [no official register of grant funders](../research/findings/grant-access/nz-grant-funder-count-and-eligibility-data.md)
   (confidence: Medium). Would need: manual validation of a self-reported
-  register, and ongoing upkeep as the register changes.
+  register, and ongoing upkeep as the register changes. The newly confirmed
+  official spreadsheet of pokie grants (approved and declined, by district)
+  could help fill the pokie-money gap the register misses —
+  [grant source map](../research/findings/grant-access/nz-grant-source-map.md)
+  (confidence: Medium).
 - **Assemble an open dataset of current grant opportunities with eligibility
   rules** — extracted from funder websites into the schema the research
   drafted (funder, dates, region, eligibility, exclusions, application link).
