@@ -62,9 +62,9 @@ export default function FindingDetail() {
       <Separator className="my-6" />
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="min-w-0 md:col-span-2">
+          <Card className="overflow-hidden">
+            <CardContent className="min-w-0 pt-6">
               {finding.body ? <Markdown>{finding.body}</Markdown> : <p className="text-sm text-muted-foreground">No content in this finding.</p>}
             </CardContent>
           </Card>
