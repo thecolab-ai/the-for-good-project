@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="robots" content="index, follow"/>
 <title>Network Map — The For Good Project</title>
-<meta name="description" content="A live, interactive knowledge graph of The For Good Project: every research stream, every finding, and every citation, and how they all connect."/>
+<meta name="description" content="A live, interactive knowledge graph of The For Good Project: every research stream, finding and citation, plus a gap-analysis layer that spotlights research white-space."/>
 <meta property="og:title" content="The For Good Project — live knowledge graph"/>
-<meta property="og:description" content="Every stream, finding and citation in the open research commons, as one interactive network."/>
+<meta property="og:description" content="Every stream, finding and citation in the open research commons, as one interactive network — with a gaps/white-space mode."/>
 <meta property="og:type" content="website"/>
 <meta property="og:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png"/>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
 <script>
 tailwind.config={theme:{extend:{colors:{
   ink:'#e8ebf2',bg0:'#0a0e17',bg1:'#0e1524',panel:'#111a2e',line:'#1e2b45',
-  navy:'#1e3a5f',cyan:'#22d3ee',accent:'#38bdf8',muted:'#8fa2bf'
+  navy:'#1e3a5f',cyan:'#22d3ee',accent:'#38bdf8',amber:'#f59e0b',muted:'#8fa2bf'
 },fontFamily:{serif:['Georgia','Times New Roman','serif']}}}}
 </script>
 <style>
@@ -25,13 +25,17 @@ tailwind.config={theme:{extend:{colors:{
   .link{stroke-linecap:round;fill:none}
   .node-label{font-family:ui-sans-serif,system-ui,sans-serif;pointer-events:none;paint-order:stroke;
     stroke:#0a0e17;stroke-width:3px;stroke-linejoin:round}
-  .node circle{cursor:pointer}
+  .node circle,.node rect{cursor:pointer}
   .glass{background:rgba(14,21,36,.82);backdrop-filter:blur(10px);border:1px solid rgba(56,189,248,.18)}
   .chip{transition:all .15s}
   .chip.off{opacity:.32;filter:grayscale(.6)}
-  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;max-width:280px;z-index:50}
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;max-width:280px;z-index:60}
   .spin{width:34px;height:34px;border:3px solid #1e2b45;border-top-color:#38bdf8;border-radius:50%;animation:s 1s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .q-pulse{animation:pulse 1.8s ease-in-out infinite}
+  .bar{height:7px;border-radius:9999px;background:#1e2b45;overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:9999px}
   ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e2b45;border-radius:8px}
 </style>
 </head>
@@ -40,27 +44,39 @@ tailwind.config={theme:{extend:{colors:{
 <svg id="graph"></svg>
 
 <!-- Header -->
-<div class="glass pointer-events-auto fixed left-3 top-3 z-30 max-w-[min(92vw,420px)] rounded-2xl px-4 py-3 shadow-2xl">
+<div class="glass pointer-events-auto fixed left-3 top-3 z-30 max-w-[min(92vw,430px)] rounded-2xl px-4 py-3 shadow-2xl">
   <div class="flex items-center gap-2">
     <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan shadow-[0_0_10px_2px_rgba(34,211,238,.7)]"></span>
     <h1 class="font-serif text-lg font-bold leading-none text-white sm:text-xl">The For Good Project — live knowledge graph</h1>
   </div>
-  <p class="mt-1.5 text-[12px] leading-snug text-muted">Every <b class="text-ink">stream</b>, <b class="text-ink">finding</b> and <b class="text-ink">citation</b> in the open research commons — and how they all connect. Drag nodes, scroll to zoom, tap for detail.</p>
+  <p class="mt-1.5 text-[12px] leading-snug text-muted">Every <b class="text-ink">stream</b>, <b class="text-ink">finding</b> and <b class="text-ink">citation</b> — plus the <b class="text-amber">open questions</b> that mark the research frontier. Drag, scroll to zoom, tap for detail.</p>
   <div id="stats" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted"></div>
   <div class="mt-2 flex items-center gap-2">
-    <input id="search" placeholder="Search…" class="w-full rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[13px] text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"/>
+    <input id="search" placeholder="Search…" class="min-w-0 flex-1 rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[13px] text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"/>
+    <button id="gapBtn" title="Spot research gaps / white-space" class="shrink-0 rounded-lg border border-amber/50 bg-amber/10 px-2.5 py-1.5 text-[12px] font-semibold text-amber hover:bg-amber/20">⚡ Gaps</button>
     <button id="reset" title="Reset view" class="shrink-0 rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[12px] text-muted hover:text-ink">Reset</button>
   </div>
 </div>
 
+<!-- Gaps / white-space panel -->
+<div id="gapPanel" class="glass pointer-events-auto fixed right-3 top-3 z-40 hidden max-h-[calc(100vh-24px)] w-[min(93vw,352px)] overflow-y-auto rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="flex items-center justify-between">
+    <h2 class="font-serif text-base font-bold text-white">Research white-space</h2>
+    <button id="gapClose" class="rounded px-1.5 text-muted hover:text-ink">✕</button>
+  </div>
+  <p class="mt-1 text-[11px] leading-snug text-muted">Where the map is <b class="text-amber">thin</b>: open questions with no finding yet, nascent streams, and lightly-covered domains. Graph dims to spotlight these.</p>
+  <div id="gapBody" class="mt-3 space-y-4 text-[12px]"></div>
+</div>
+
 <!-- Legend + domain filters -->
-<div class="glass pointer-events-auto fixed bottom-3 left-3 z-30 max-w-[min(92vw,420px)] rounded-2xl px-4 py-3 shadow-2xl">
+<div class="glass pointer-events-auto fixed bottom-3 left-3 z-30 max-w-[min(92vw,430px)] rounded-2xl px-4 py-3 shadow-2xl">
   <div class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Node types</div>
   <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
     <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#f8fafc"></i>Project</span>
     <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#a78bfa"></i>Domain</span>
     <span class="flex items-center gap-1.5"><i class="inline-block h-3.5 w-3.5 rotate-45" style="background:#38bdf8"></i>Stream</span>
     <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#22d3ee"></i>Finding</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full border-2 border-amber" style="background:transparent"></i>Open question</span>
     <span class="flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-full" style="background:#5b6b8c"></i>Citation</span>
   </div>
   <div class="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Filter by domain</div>
@@ -87,10 +103,12 @@ const DOMAIN_META = {
 const domColor = d => (DOMAIN_META[d]?.color) || "#94a3b8";
 const domLabel = d => (DOMAIN_META[d]?.label) || (d||"other");
 const CONF = {High:"#34d399",Medium:"#fbbf24",Low:"#f87171",Unknown:"#8fa2bf"};
+const QC = "#f59e0b"; // question / frontier amber
 
 const svg = d3.select("#graph");
 const tip = d3.select("#tip");
 let sim, gLink, gNode, gLabel, allNodes=[], allLinks=[], activeDomains=new Set(), zoomB;
+let GAP=null, gapMode=false;
 
 function showTip(html, x, y){
   tip.html(html).style("opacity",1);
@@ -106,7 +124,6 @@ async function boot(){
     if(!res.ok) throw new Error(res.status);
     snap = await res.json();
   } catch(e){
-    // fallback to relative (works when served from same origin/path)
     try { snap = await (await fetch("../data/snapshot.json",{cache:"no-store"})).json(); }
     catch(_){ document.getElementById("loading").innerHTML =
       '<span class="text-sm text-red-300">Could not load project data. Try again shortly.</span>'; return; }
@@ -118,24 +135,20 @@ function build(snap){
   const findings = snap.findings||[];
   const streams  = snap.streamsSummary||[];
   const sources  = snap.sources||[];
+  const issues   = snap.issues||[];
 
   const nodes = new Map();
   const links = [];
   const add = (n)=>{ if(!nodes.has(n.id)) nodes.set(n.id,n); return nodes.get(n.id); };
 
-  // root
   add({id:"root", type:"root", label:"The For Good Project", r:22, domain:null});
 
-  // domains (from every source of truth)
   const domains = new Set();
   findings.forEach(f=>domains.add(f.domain||"other"));
   streams.forEach(s=>domains.add(s.domain||"other"));
-  domains.forEach(d=>{
-    add({id:"dom:"+d, type:"domain", label:domLabel(d), r:13, domain:d});
-    links.push({source:"root", target:"dom:"+d, kind:"root"});
-  });
+  const ensureDom = d=>{ if(!nodes.has("dom:"+d)){ add({id:"dom:"+d,type:"domain",label:domLabel(d),r:13,domain:d}); links.push({source:"root",target:"dom:"+d,kind:"root"}); } domains.add(d); };
+  domains.forEach(ensureDom);
 
-  // streams -> domain
   streams.forEach(s=>{
     const id="stream:"+s.stream;
     add({id, type:"stream", label:s.title||("Stream #"+s.stream), r:10, domain:s.domain||"other",
@@ -143,7 +156,6 @@ function build(snap){
     links.push({source:"dom:"+(s.domain||"other"), target:id, kind:"domain"});
   });
 
-  // findings -> domain, sized by citation count
   const byPath = new Map();
   findings.forEach(f=>{
     const id="find:"+f.slug;
@@ -154,12 +166,10 @@ function build(snap){
   });
 
   // citations: dedupe by host -> shared hosts weave findings together
-  const hostFindings = new Map(); // host -> Set(findingId)
-  const hostMeta = new Map();
+  const hostFindings = new Map(), hostMeta = new Map();
   sources.forEach(s=>{
     const host=s.host; if(!host) return;
-    const fn = byPath.get(s.findingPath);
-    if(!fn) return;
+    const fn = byPath.get(s.findingPath); if(!fn) return;
     if(!hostFindings.has(host)){ hostFindings.set(host,new Set()); hostMeta.set(host,{domain:s.domain,ex:s.label}); }
     hostFindings.get(host).add(fn.id);
   });
@@ -170,26 +180,52 @@ function build(snap){
     set.forEach(fid=>links.push({source:fid, target:id, kind:"cite"}));
   });
 
-  allNodes=[...nodes.values()]; allLinks=links;
-  DOMAIN_META && Object.keys(DOMAIN_META); activeDomains=new Set(domains);
+  // OPEN QUESTIONS = the research frontier (unanswered discover/research issues)
+  const questions = issues.filter(i=>!i.isPR && i.state==="open" && (i.stage==="discover"||i.stage==="research"));
+  questions.forEach(q=>{
+    const dom = q.domain||"other"; ensureDom(dom);
+    const id="q:"+q.number;
+    add({id, type:"question", label:q.title, r:5, domain:dom, url:q.url, stage:q.stage, meta:q});
+    links.push({source:"dom:"+dom, target:id, kind:"question"});
+  });
+
+  allNodes=[...nodes.values()]; allLinks=links; activeDomains=new Set(domains);
+
+  // ---- gap / white-space analysis ----
+  const perDom = {};
+  const D = d => (perDom[d] = perDom[d] || {domain:d,findings:0,questions:0,streams:0,hosts:new Set(),lowConf:0,thin:0});
+  findings.forEach(f=>{ const o=D(f.domain||"other"); o.findings++; if(["Low","Unknown"].includes(f.confidence))o.lowConf++; if((f.sources?.length||0)<=2)o.thin++; });
+  streams.forEach(s=>D(s.domain||"other").streams++);
+  questions.forEach(q=>D(q.domain||"other").questions++);
+  sources.forEach(s=>{ const f=byPath.get(s.findingPath); if(f) D(f.domain||"other").hosts.add(s.host); });
+  GAP = {
+    perDom: Object.values(perDom).map(o=>({...o,hosts:o.hosts.size,
+      coverage: o.findings/((o.findings+o.questions)||1)})).sort((a,b)=> (a.findings-b.findings) || (b.questions-a.questions)),
+    openQ: questions.length,
+    nascent: streams.filter(s=>(s.findings||0)<=1).sort((a,b)=>(a.findings||0)-(b.findings||0)),
+    thinFindings: findings.filter(f=>(f.sources?.length||0)<=2).length,
+    lowConf: findings.filter(f=>["Low","Unknown"].includes(f.confidence)).length,
+    questions,
+  };
 
   document.getElementById("loading").remove();
-  renderStats(findings.length, streams.length, hostFindings.size, sources.length);
+  renderStats(findings.length, streams.length, hostFindings.size, sources.length, questions.length);
   renderDomainChips([...domains]);
+  renderGaps();
   draw();
 }
 
-function renderStats(nf,ns,nh,nc){
+function renderStats(nf,ns,nh,nc,nq){
   document.getElementById("stats").innerHTML =
    `<span><b class="text-white">${ns}</b> streams</span>
     <span><b class="text-white">${nf}</b> findings</span>
+    <span><b class="text-amber">${nq}</b> open questions</span>
     <span><b class="text-white">${nc}</b> citations</span>
     <span><b class="text-white">${nh}</b> sources</span>`;
 }
 
 function renderDomainChips(doms){
-  const wrap=d3.select("#domains");
-  doms.sort();
+  const wrap=d3.select("#domains"); doms.sort();
   doms.forEach(d=>{
     wrap.append("button").attr("class","chip rounded-full border px-2.5 py-1 text-[11px] font-medium")
       .style("border-color",domColor(d)).style("color",domColor(d))
@@ -200,6 +236,48 @@ function renderDomainChips(doms){
         applyFilter();
       });
   });
+}
+
+function renderGaps(){
+  if(!GAP) return;
+  const maxF = Math.max(1, ...GAP.perDom.map(d=>d.findings+d.questions));
+  const domRows = GAP.perDom.map(d=>{
+    const fw=Math.round(d.findings/maxF*100), qw=Math.round(d.questions/maxF*100);
+    return `<div>
+      <div class="flex items-center justify-between"><span class="font-medium text-ink">${d.label}</span>
+        <span class="text-muted">${d.findings} finding${d.findings===1?'':'s'}${d.questions?` · <span class="text-amber">${d.questions} open</span>`:''}</span></div>
+      <div class="bar mt-1"><span style="width:${Math.max(fw,2)}%;background:${domColor(d.domain)}"></span></div>
+      ${d.questions?`<div class="bar mt-0.5"><span style="width:${Math.max(qw,2)}%;background:${QC}"></span></div>`:''}
+    </div>`;
+  }).join("");
+  const nascentRows = GAP.nascent.slice(0,10).map(s=>
+    `<button data-focus="stream:${s.stream}" class="jump block w-full rounded-lg border border-line bg-bg1/60 px-2 py-1.5 text-left hover:border-amber/50">
+       <span class="text-ink">#${s.stream} ${(s.title||'').slice(0,52)}</span>
+       <span class="ml-1 text-[10px] text-muted">${s.findings||0} findings · ${s.state||'—'}</span>
+     </button>`).join("") || `<div class="text-muted">None — every stream has real findings. 🎉</div>`;
+  const qRows = GAP.questions.slice(0,12).map(q=>
+    `<button data-focus="q:${q.number}" class="jump block w-full rounded-lg px-2 py-1 text-left hover:bg-amber/10">
+       <span class="text-amber">◇</span> <span class="text-ink">${(q.title||'').slice(0,58)}</span>
+       <span class="text-[10px] text-muted"> · ${domLabel(q.domain||'other')} · ${q.stage}</span>
+     </button>`).join("") || `<div class="text-muted">No open questions.</div>`;
+
+  document.getElementById("gapBody").innerHTML = `
+    <div class="grid grid-cols-3 gap-2 text-center">
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-amber">${GAP.openQ}</div><div class="text-[10px] text-muted">open questions</div></div>
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-ink">${GAP.thinFindings}</div><div class="text-[10px] text-muted">thin (&le;2 cites)</div></div>
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-ink">${GAP.lowConf}</div><div class="text-[10px] text-muted">low-confidence</div></div>
+    </div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Domain coverage — thinnest first</div>
+      <div class="space-y-2">${domRows}</div>
+      <div class="mt-1 text-[10px] text-muted">Bar = findings · <span class="text-amber">amber</span> = open questions. A short/absent bar with amber = white-space.</div></div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Nascent / empty streams</div>
+      <div class="space-y-1">${nascentRows}</div></div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Frontier — open questions</div>
+      <div class="space-y-0.5">${qRows}</div></div>`;
+
+  document.querySelectorAll("#gapBody .jump").forEach(b=>b.addEventListener("click",()=>{
+    const n=allNodes.find(x=>x.id===b.dataset.focus); if(n) flyTo(n);
+  }));
 }
 
 function draw(){
@@ -217,14 +295,16 @@ function draw(){
 
   gLink=root.append("g").attr("stroke-opacity",.5).selectAll("path").data(allLinks).join("path")
     .attr("class","link")
-    .attr("stroke",d=>{ const t=typeof d.target==="object"?d.target:null; return d.kind==="cite"?"#26364f":(t?domColor(t.domain):"#26364f"); })
-    .attr("stroke-width",d=>d.kind==="root"?1.6:d.kind==="domain"?1.2:0.7);
+    .attr("stroke",d=>{ const t=typeof d.target==="object"?d.target:null; return d.kind==="cite"?"#26364f":d.kind==="question"?QC:(t?domColor(t.domain):"#26364f"); })
+    .attr("stroke-width",d=>d.kind==="root"?1.6:d.kind==="domain"?1.2:d.kind==="question"?1:0.7)
+    .attr("stroke-dasharray",d=>d.kind==="question"?"4 3":null);
 
-  gNode=root.append("g").selectAll("g").data(allNodes).join("g").attr("class","node")
+  gNode=root.append("g").selectAll("g").data(allNodes).join("g")
+    .attr("class",d=>"node"+(d.type==="question"?" q-pulse":""))
     .call(d3.drag().on("start",dstart).on("drag",dgrag).on("end",dend))
     .on("mouseover",(e,d)=>hover(e,d,true)).on("mousemove",(e,d)=>hover(e,d,false))
-    .on("mouseout",()=>{ hideTip(); focus(null); })
-    .on("click",(e,d)=>{ if(d.url && (d.type==="finding"||d.type==="stream")) window.open(d.url,"_blank"); });
+    .on("mouseout",()=>{ hideTip(); if(!gapMode) focus(null); })
+    .on("click",(e,d)=>{ if(d.url && (d.type==="finding"||d.type==="stream"||d.type==="question")) window.open(d.url,"_blank"); });
 
   gNode.each(function(d){
     const g=d3.select(this);
@@ -233,11 +313,12 @@ function draw(){
        .attr("transform","rotate(45)").attr("rx",2)
        .attr("fill",domColor(d.domain)).attr("stroke","#0a0e17").attr("stroke-width",1.5).attr("filter","url(#glow)");
     } else {
-      const fill = d.type==="root" ? "#f8fafc" : d.type==="domain" ? "#a78bfa"
-                 : d.type==="finding" ? domColor(d.domain) : "#5b6b8c";
+      const fill = d.type==="root"?"#f8fafc":d.type==="domain"?"#a78bfa":d.type==="finding"?domColor(d.domain)
+                 : d.type==="question"?"transparent":"#5b6b8c";
       g.append("circle").attr("r",d.r).attr("fill",fill)
-       .attr("stroke", d.type==="finding" ? (CONF[d.conf]||"#0a0e17") : "#0a0e17")
-       .attr("stroke-width", d.type==="finding"?2:1.5)
+       .attr("stroke", d.type==="finding"?(CONF[d.conf]||"#0a0e17"):d.type==="question"?QC:"#0a0e17")
+       .attr("stroke-width", d.type==="finding"?2:d.type==="question"?2:1.5)
+       .attr("stroke-dasharray", d.type==="question"?"3 2":null)
        .attr("filter", d.type==="source" && !d.hub ? null : "url(#glow)")
        .attr("fill-opacity", d.type==="source"?0.9:1);
     }
@@ -245,21 +326,20 @@ function draw(){
 
   gLabel=root.append("g").selectAll("text").data(allNodes.filter(n=>n.type!=="source"||n.hub)).join("text")
     .attr("class","node-label")
-    .attr("font-size",d=>d.type==="root"?14:d.type==="domain"?12:d.type==="stream"?11:d.type==="finding"?9.5:8)
+    .attr("font-size",d=>d.type==="root"?14:d.type==="domain"?12:d.type==="stream"?11:d.type==="finding"?9.5:d.type==="question"?9:8)
     .attr("font-weight",d=>d.type==="root"||d.type==="domain"?700:500)
-    .attr("fill",d=>d.type==="root"?"#fff":d.type==="source"?"#8fa2bf":"#dbe4f3")
+    .attr("fill",d=>d.type==="root"?"#fff":d.type==="question"?QC:d.type==="source"?"#8fa2bf":"#dbe4f3")
     .attr("text-anchor","middle").attr("dy",d=>-(d.r+5))
-    .text(d=>{ const m=d.type==="finding"?46:d.type==="stream"?40:30; return d.label.length>m?d.label.slice(0,m-1)+"…":d.label; });
+    .text(d=>{ const m=d.type==="finding"?46:d.type==="stream"?40:d.type==="question"?42:30; return d.label.length>m?d.label.slice(0,m-1)+"…":d.label; });
 
   sim=d3.forceSimulation(allNodes)
-    .force("link",d3.forceLink(allLinks).id(n=>n.id).distance(l=>l.kind==="root"?90:l.kind==="domain"?70:l.kind==="cite"?45:60).strength(l=>l.kind==="cite"?0.28:0.7))
+    .force("link",d3.forceLink(allLinks).id(n=>n.id).distance(l=>l.kind==="root"?90:l.kind==="domain"?70:l.kind==="question"?55:l.kind==="cite"?45:60).strength(l=>l.kind==="cite"?0.28:l.kind==="question"?0.5:0.7))
     .force("charge",d3.forceManyBody().strength(d=>d.type==="source"?-40:d.type==="root"?-900:-260).distanceMax(520))
     .force("collide",d3.forceCollide().radius(d=>d.r+6).iterations(2))
     .force("center",d3.forceCenter(W/2,H/2))
     .force("x",d3.forceX(W/2).strength(0.03)).force("y",d3.forceY(H/2).strength(0.03))
     .on("tick",tick);
 
-  // gentle initial zoom-to-fit
   setTimeout(()=>fit(),700);
 }
 
@@ -280,8 +360,13 @@ function fit(){
   const tx=innerWidth/2-k*(minX+maxX)/2, ty=innerHeight/2-k*(minY+maxY)/2;
   svg.transition().duration(800).call(zoomB.transform,d3.zoomIdentity.translate(tx,ty).scale(k));
 }
+function flyTo(n){
+  const k=1.6, tx=innerWidth/2-k*n.x, ty=innerHeight/2-k*n.y;
+  svg.transition().duration(650).call(zoomB.transform,d3.zoomIdentity.translate(tx,ty).scale(k));
+  focus(n.id); setTimeout(()=>{ if(!gapMode) focus(null); },2600);
+}
 
-// neighbour focus on hover
+// neighbour focus
 const nbr=new Map();
 function buildNbr(){ if(nbr.size) return; allLinks.forEach(l=>{
   const s=l.source.id||l.source, t=l.target.id||l.target;
@@ -290,21 +375,22 @@ function buildNbr(){ if(nbr.size) return; allLinks.forEach(l=>{
 });}
 function focus(id){
   buildNbr();
-  if(!id){ gNode.style("opacity",1); gLink.style("opacity",1); gLabel.style("opacity",1); return; }
+  if(!id){ if(gapMode){ setGapMode(true); return; } gNode.style("opacity",1); gLink.style("opacity",1); gLabel.style("opacity",1); return; }
   const keep=nbr.get(id)||new Set(); keep.add(id);
   gNode.style("opacity",n=>keep.has(n.id)?1:0.12);
   gLabel.style("opacity",n=>keep.has(n.id)?1:0.08);
   gLink.style("opacity",l=>((l.source.id||l.source)===id||(l.target.id||l.target)===id)?0.9:0.05);
 }
 function hover(e,d,enter){
-  if(enter) focus(d.id);
-  const T={root:"Project",domain:"Domain",stream:"Research stream",finding:"Finding",source:"Citation source"}[d.type];
+  if(enter && !gapMode) focus(d.id);
+  const T={root:"Project",domain:"Domain",stream:"Research stream",finding:"Finding",question:"Open question (frontier)",source:"Citation source"}[d.type];
   let extra="";
   if(d.type==="finding") extra=`<div class="mt-1 text-muted">${domLabel(d.domain)} · <span style="color:${CONF[d.conf]||'#8fa2bf'}">${d.conf||'—'} confidence</span> · ${d.meta.sources?.length||0} citations</div><div class="mt-1 text-[11px] text-accent">click to open →</div>`;
   else if(d.type==="stream") extra=`<div class="mt-1 text-muted">${domLabel(d.domain)} · ${d.meta.findings||0} findings · ${d.meta.mergedPRs||0} merged PRs</div><div class="mt-1 text-[11px] text-accent">click to open →</div>`;
+  else if(d.type==="question") extra=`<div class="mt-1 text-muted">${domLabel(d.domain)} · ${d.stage} · unanswered</div><div class="mt-1 text-[11px] text-amber">a research gap · click to open →</div>`;
   else if(d.type==="source") extra=`<div class="mt-1 text-muted">cited by ${d.deg} finding${d.deg>1?'s':''}</div>`;
   else if(d.type==="domain") extra=`<div class="mt-1 text-muted">research domain</div>`;
-  showTip(`<div class="text-[10px] font-bold uppercase tracking-wider" style="color:${d.type==='finding'||d.type==='stream'?domColor(d.domain):'#8fa2bf'}">${T}</div><div class="font-semibold text-white leading-snug">${d.label}</div>${extra}`, e.clientX, e.clientY);
+  showTip(`<div class="text-[10px] font-bold uppercase tracking-wider" style="color:${d.type==='finding'||d.type==='stream'?domColor(d.domain):d.type==='question'?QC:'#8fa2bf'}">${T}</div><div class="font-semibold text-white leading-snug">${d.label}</div>${extra}`, e.clientX, e.clientY);
 }
 
 function applyFilter(){
@@ -324,12 +410,32 @@ function applyFilter(){
   });
 }
 
+// GAP MODE: spotlight the frontier + thin structure, fade the dense body
+function setGapMode(on){
+  gapMode=on;
+  document.getElementById("gapPanel").style.display=on?"block":"none";
+  const btn=document.getElementById("gapBtn");
+  btn.classList.toggle("bg-amber",on); btn.classList.toggle("text-bg0",on); btn.classList.toggle("text-amber",!on);
+  if(!gNode) return;
+  if(!on){ gNode.style("opacity",1); gLink.style("opacity",1); gLabel.style("opacity",1); return; }
+  const hot=new Set();
+  allNodes.forEach(n=>{
+    if(n.type==="question" || n.type==="domain" || n.type==="root") hot.add(n.id);
+    if(n.type==="stream" && (n.meta.findings||0)<=1) hot.add(n.id);
+  });
+  gNode.style("opacity",n=>hot.has(n.id)?1:0.13);
+  gLabel.style("opacity",n=>hot.has(n.id)?1:0.12);
+  gLink.style("opacity",l=>{ const s=l.source.id||l.source,t=l.target.id||l.target; return (hot.has(s)&&hot.has(t))?0.85:0.04; });
+}
+
 function dstart(e,d){ if(!e.active) sim.alphaTarget(.25).restart(); d.fx=d.x; d.fy=d.y; }
 function dgrag(e,d){ d.fx=e.x; d.fy=e.y; }
 function dend(e,d){ if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }
 
 document.getElementById("search").addEventListener("input",applyFilter);
-document.getElementById("reset").addEventListener("click",()=>{ document.getElementById("search").value=""; applyFilter(); fit(); });
+document.getElementById("reset").addEventListener("click",()=>{ document.getElementById("search").value=""; applyFilter(); if(gapMode)setGapMode(false); fit(); });
+document.getElementById("gapBtn").addEventListener("click",()=>setGapMode(!gapMode));
+document.getElementById("gapClose").addEventListener("click",()=>setGapMode(false));
 addEventListener("resize",()=>{ if(sim){ sim.force("center",d3.forceCenter(innerWidth/2,innerHeight/2)); sim.alpha(.3).restart(); }});
 boot();
 </script>
