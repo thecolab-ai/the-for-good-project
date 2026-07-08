@@ -1,7 +1,9 @@
-Fetch log for issue #676 rework
-================================
+Fetch log for issue #676 — re-research after the 8 July 2026 fetch-ladder upgrade
+=================================================================================
 
-Accessed 7 July 2026 from this PR worktree after adversarial review on PR #684.
+Accessed 8 July 2026. The four Acts that returned AWS WAF challenges on the
+7 July run (2025/52, 2025/25, 2025/72, 2025/58) are now fully retrievable, so all
+five selected clusters are classified from official legislation.govt.nz XML.
 
 Live Parliament frame
 ---------------------
@@ -15,56 +17,63 @@ for p in 1 2 3 4 5 6 7 8 9 10; do
 done | jq -s '[.[].results[] | select(.status=="Royal Assent" and (.last_activity|startswith("2025"))) | [.last_activity,.bill_number,.title,.url]] | {count:length, rows:.}'
 ```
 
-Result: `count` was `62`. A normalized comparison on `(date, bill_number, stripped title)` found the same row set in the live output and the embedded frame, but not the same row order: for the 26 November 2025 tie, the live API returned `107-2` (Crimes Legislation (Stalking and Harassment) Amendment Bill) before `93-2` (Crimes (Countering Foreign Interference) Amendment Bill), while the frozen embedded frame has `93-2` before `107-2`. Because the sample had already been drawn from the frozen frame and because changing the ordering after seeing which Act was classifiable would be post hoc, the embedded frame in `statutory_amendment_sample.py` is now treated as the sampling artifact of record. The earlier finding prose saying `63` was wrong.
+The frozen 62-row frame embedded in statutory_amendment_sample.py remains the
+sampling artifact of record (a same-date tie can reorder in the live API, and the
+sample was drawn from the frozen frame). The seeded draw selects the same five
+clusters every run.
 
-legislation-nz XML attempts
----------------------------
+legislation-nz XML — now succeeds
+---------------------------------
 
-Commands:
-
-```bash
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/52 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/25 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/72 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/58 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/85 --json
-```
-
-All five returned `status: error`, `error: upstream_unexpected_html`, with the message that upstream returned HTML instead of legislation XML and that this may be bot protection or a not-found page. The reported XML URLs were:
-
-- `https://www.legislation.govt.nz/act/public/2025/52/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/25/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/72/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/58/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/`
-
-Direct HTTP attempts
---------------------
-
-Commands:
+Command:
 
 ```bash
-curl -L -I https://www.legislation.govt.nz/act/public/2025/52/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/25/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/72/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/58/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/85/en/2025-12-19.pdf
+for id in 2025/52 2025/25 2025/72 2025/58 2025/85; do
+  python3 .skills/skills/legislation-nz/scripts/cli.py get-act "$id" --json
+done
 ```
 
-Each response was `HTTP/2 202` with `x-amzn-waf-action: challenge` and `x-cache: Error from cloudfront`.
+All five returned `status: ok`, `source: legislation.govt.nz XML format`, with the
+correct Act titles, assent dates, and administering agencies:
 
-Repository fetch helper
------------------------
+- 2025/52  Climate Change Response (Emissions Trading Scheme—Forestry Conversion) Amendment Act 2025  (assent 2025-09-23; Ministry for the Environment)
+- 2025/25  Social Security Amendment Act 2025  (assent 2025-05-21; Ministry of Social Development)
+- 2025/72  Crimes Legislation (Stalking and Harassment) Amendment Act 2025  (assent 2025-11-26; Ministry of Justice)
+- 2025/58  Marine and Coastal Area (Takutai Moana) (Customary Marine Title) Amendment Act 2025  (assent 2025-10-24; Office of Treaty Settlements and Takutai Moana—Te Tari Whakatau)
+- 2025/85  Judicature (Timeliness) Legislation Amendment Act 2025  (assent 2025-12-19; Ministry of Justice)
 
-Commands:
+Full-text XML pull for classification
+-------------------------------------
+
+Commands (the `latest.xml` endpoint; use curl directly to a file for the two
+larger Acts so the whole document is captured):
 
 ```bash
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/52/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/25/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/72/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/58/en/latest/"
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/72/en/latest.xml/"   # 32,658 bytes, complete
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/58/en/latest.xml/"   # 59,374 bytes, complete
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/"   # 46,611 bytes, complete
+curl -sL "https://www.legislation.govt.nz/act/public/2025/52/en/latest.xml/"                 # 97,909 bytes, complete
+curl -sL "https://www.legislation.govt.nz/act/public/2025/25/en/latest.xml/"                 # 293,252 bytes, complete
 ```
 
-The helper printed `# fetched via plain HTTP`, but the returned body was the AWS WAF JavaScript challenge page, including `window.gokuProps`, an AWS WAF `challenge.js` URL, and the `noscript` text: "In order to continue, we need to verify that you're not a robot."
+fetch.mjs reported `# fetched via plain HTTP` and returned real legislation XML
+(root `<act ...>`), not the AWS WAF challenge body seen on 7 July. No
+`x-amzn-waf-action: challenge` or `window.gokuProps` appeared in any response.
+`fetch.mjs` truncates its stdout at MAX_CHARS (default 20,000; raise via env), so
+for the two larger Acts the full document was captured with a direct `curl` to a
+file — a display cap, not an access block.
 
-This log supports only a tooling/access limitation in this worktree. It does not prove the official sources are dead, and it does not contradict the reviewer having successful access from a different environment.
+Classification method
+---------------------
+
+Each Act's XML was parsed with Python's xml.etree.ElementTree. Top-level amending
+provisions were taken as `<prov>` elements with no `<amend>` or `<schedule>`
+ancestor (this excludes the inserted/replaced content blocks, which live inside
+`<amend>`). Title, Commencement, and "Principal Act/regulations/rules" locator
+provisions were excluded. For each remaining provision the operative instruction
+text (all text not inside an `<amend>` block) was scanned for the operation verbs
+insert / replace / repeal / revoke / omit / delete; a provision spanning more than
+one family is `mixed`. Running this parser against Act 2025/85 reproduced the exact
+15 insert / 5 replace / 1 repeal-revoke / 2 mixed split recorded by the earlier
+browser-backed classification of that Act, which validates the method. Full
+per-provision results are embedded in statutory_amendment_sample.py.
