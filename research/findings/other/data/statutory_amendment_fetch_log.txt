@@ -29,6 +29,8 @@ Commands checked in this worktree:
 curl -sL "https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/"
 node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/"
 python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/85 --json
+curl -L --max-time 60 -o /tmp/act85.jina.txt \
+  https://r.jina.ai/https://www.legislation.govt.nz/act/public/2025/85/en/latest/
 ```
 
 Observed result:
@@ -39,6 +41,9 @@ Observed result:
 - `legislation-nz get-act` returned `status: error` with
   `upstream_unexpected_html`, identifying bot protection or a non-XML upstream
   response.
+- Jina reader over the public official HTML returned usable text and stable
+  section anchors for all five selected Act pages:
+  `2025/52`, `2025/25`, `2025/72`, `2025/58`, and `2025/85`.
 
 This is treated as a tooling/access limitation, not evidence that the official
 legislation.govt.nz URLs are dead.
@@ -47,12 +52,12 @@ Committed audit artifacts
 -------------------------
 
 - `statutory_amendment_sample.py` freezes the 62-row Parliament keyword frame,
-  reproduces the seeded five-Act draw, embeds the per-provision extraction table,
-  and computes the primary-class and operation-presence rollups reported in the
-  #676 finding.
+  reproduces the seeded five-Act draw, embeds the per-provision extraction table
+  with one official-page section anchor per row, and computes the primary-class
+  and operation-presence rollups reported in the #676 finding.
 - `statutory_amendment_five_cluster.py` is the later issue #746 reconciliation
-  artifact on main. It independently rolls up the same five-Act official-text
-  sample and gives the same primary and operation-presence totals now reported
-  in the #676 finding.
+  artifact on main. It rolls up the same five-Act table and gives the same
+  primary and operation-presence totals now reported in the #676 finding, but it
+  is a duplicate-table consistency check rather than independent corroboration.
 
 No live XML parser is claimed in the #676 finding after this rework.

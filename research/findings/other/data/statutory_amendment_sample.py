@@ -22,13 +22,15 @@ Two steps:
    legislative history, administrative notes, and nested text inserted or
    replaced by a provision are excluded.
 
-   This script deliberately does not claim to fetch or parse live XML. The
+   Each row also carries a stable official-page fragment URL for row-level
+   audit. This script deliberately does not claim to fetch or parse live XML. The
    legislation.govt.nz XML endpoint is intermittently blocked by AWS WAF in this
    environment, so the reproducible commitment here is the frozen sample frame,
    the per-provision classification table, and all rollups reported in the
    finding. The later issue #746 reconciliation script
-   (`statutory_amendment_five_cluster.py`) independently rolls up the same
-   five-Act official-text sample and is used as the cross-check artifact.
+   (`statutory_amendment_five_cluster.py`) rolls up the same five-Act table and
+   is used only as a duplicate-table cross-check, not as an independent source
+   for the classifications.
 """
 
 from __future__ import annotations
@@ -274,6 +276,161 @@ CLASSIFIED = {
     ],
 }
 
+SOURCE_ANCHORS = {
+    "2025/52": {
+        "4": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434654",
+        "5": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434655",
+        "6": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434744",
+        "7": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434745",
+        "8": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434746",
+        "9": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434747",
+        "10": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434748",
+        "11": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434751",
+        "12": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1459154",
+        "13": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434754",
+        "14": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434756",
+        "15": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434757",
+        "16": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434762",
+        "17": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434803",
+        "18": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1459155",
+        "19": "https://www.legislation.govt.nz/act/public/2025/52/en/latest/#LMS1434805",
+    },
+    "2025/25": {
+        "4": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014299",
+        "5": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014300",
+        "6": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014301",
+        "7": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014302",
+        "8": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014303",
+        "9": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1025330",
+        "10": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014304",
+        "11": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014310",
+        "12": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1436681",
+        "13": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014311",
+        "14": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014313",
+        "15": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014314",
+        "16": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014327",
+        "17": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014337",
+        "18": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1025583",
+        "19": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1025584",
+        "20": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014338",
+        "21": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014341",
+        "22": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014342",
+        "23": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014344",
+        "24": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1436707",
+        "25": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014349",
+        "26": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014353",
+        "27": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014354",
+        "28": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014355",
+        "29": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014356",
+        "30": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014361",
+        "31": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1025655",
+        "32": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014363",
+        "33": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014364",
+        "34": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014365",
+        "35": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014367",
+        "36": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1028111",
+        "37": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014368",
+        "38": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014369",
+        "39": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014371",
+        "40": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014372",
+        "41": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1028114",
+        "42": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014375",
+        "43": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014378",
+        "44": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014379",
+        "45": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014380",
+        "46": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014381",
+        "47": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014382",
+        "48": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014383",
+        "49": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014384",
+        "50": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014385",
+        "51": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014388",
+        "52": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014389",
+        "53": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014390",
+        "54": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014395",
+        "55": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1436708",
+        "56": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014396",
+        "57": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014397",
+        "58": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014398",
+        "59": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014399",
+        "60": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014400",
+        "61": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014401",
+        "62": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014402",
+        "63": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014414",
+        "65": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014417",
+        "66": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014420",
+        "67": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1025680",
+        "68": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014421",
+        "69": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014422",
+        "70": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014423",
+        "71": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014425",
+        "72": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014448",
+        "73": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014453",
+        "74": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014454",
+        "75": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014455",
+        "76": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014456",
+        "77": "https://www.legislation.govt.nz/act/public/2025/25/en/latest/#LMS1014457",
+    },
+    "2025/72": {
+        "4": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015361",
+        "6": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015364",
+        "7": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1428119",
+        "9": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015369",
+        "10": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015370",
+        "12": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015373",
+        "14": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015376",
+        "15": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015377",
+        "16": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015378",
+        "17": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015379",
+        "18": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015380",
+        "19": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015381",
+        "20": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015382",
+        "21": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015383",
+        "23": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015386",
+        "25": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015389",
+        "26": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1429067",
+        "27": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015394",
+        "29": "https://www.legislation.govt.nz/act/public/2025/72/en/latest/#LMS1015398",
+    },
+    "2025/58": {
+        "4": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993620",
+        "5": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993631",
+        "6": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993636",
+        "7": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS1469349",
+        "8": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993642",
+        "9": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993643",
+        "10": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993644",
+        "11": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993645",
+        "12": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993646",
+        "14": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS1461644",
+        "16": "https://www.legislation.govt.nz/act/public/2025/58/en/latest/#LMS993650",
+    },
+    "2025/85": {
+        "4": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441712",
+        "5": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441714",
+        "6": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441715",
+        "7": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441721",
+        "8": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441723",
+        "9": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441724",
+        "11": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441728",
+        "12": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441731",
+        "13": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441734",
+        "14": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441735",
+        "16": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441738",
+        "17": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441739",
+        "18": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441740",
+        "19": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441741",
+        "20": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441744",
+        "21": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441745",
+        "22": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441746",
+        "23": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441747",
+        "24": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441748",
+        "25": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441749",
+        "27": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441752",
+        "28": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441753",
+        "29": "https://www.legislation.govt.nz/act/public/2025/85/en/latest/#LMS1441754",
+    },
+}
+
 
 EXPECTED_PRIMARY = Counter({
     "insert": 76,
@@ -313,7 +470,8 @@ def main() -> None:
         print("\nPer-provision extraction table:")
         for act_id, rows in CLASSIFIED.items():
             for label, primary, tokens, heading in rows:
-                print(f"  {act_id} s {label}: {primary}; tokens={tokens}; {heading}")
+                url = SOURCE_ANCHORS[act_id][label]
+                print(f"  {act_id} s {label}: {primary}; tokens={tokens}; {heading}; source={url}")
 
     overall = Counter()
     presence = Counter()
@@ -337,6 +495,11 @@ def main() -> None:
         raise SystemExit(f"primary counts changed: expected {EXPECTED_PRIMARY}, got {overall}")
     if presence != EXPECTED_PRESENCE:
         raise SystemExit(f"presence counts changed: expected {EXPECTED_PRESENCE}, got {presence}")
+
+    for act_id, rows in CLASSIFIED.items():
+        missing = [label for label, *_ in rows if label not in SOURCE_ANCHORS.get(act_id, {})]
+        if missing:
+            raise SystemExit(f"missing source anchors for {act_id}: {missing}")
 
 
 if __name__ == "__main__":
