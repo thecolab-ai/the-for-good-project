@@ -1,0 +1,51 @@
+indicator,geography_type,geography_value,age_group,year_from,year_to,value_type,value,low,high,quality_flag
+k10high,All,All,15-24,2022/23,2024/25,Proportion,0.226,0.202,0.251,None
+k10high,DHB,Auckland,15-24,2022/23,2024/25,Proportion,0.259,0.176,0.356,None
+k10high,DHB,Bay of Plenty,15-24,2022/23,2024/25,Proportion,0.172,0.101,0.265,None
+k10high,DHB,Canterbury,15-24,2022/23,2024/25,Proportion,0.259,0.192,0.336,None
+k10high,DHB,Capital and Coast,15-24,2022/23,2024/25,Proportion,0.354,0.244,0.477,None
+k10high,DHB,Counties Manukau,15-24,2022/23,2024/25,Proportion,0.174,0.118,0.244,None
+k10high,DHB,Hawke's Bay,15-24,2022/23,2024/25,Proportion,0.2,0.106,0.327,None
+k10high,DHB,Hutt Valley,15-24,2022/23,2024/25,Proportion,0.243,0.14,0.373,None
+k10high,DHB,Lakes,15-24,2022/23,2024/25,Proportion,0.167,0.072,0.308,Low Quality Flag
+k10high,DHB,MidCentral,15-24,2022/23,2024/25,Proportion,0.325,0.236,0.425,None
+k10high,DHB,Nelson Marlborough,15-24,2022/23,2024/25,Proportion,0.169,0.08,0.296,Low Quality Flag
+k10high,DHB,Northland,15-24,2022/23,2024/25,Proportion,0.267,0.158,0.403,None
+k10high,DHB,South Canterbury,15-24,2022/23,2024/25,Proportion,0.145,0.042,0.328,Low Quality Flag
+k10high,DHB,Southern,15-24,2022/23,2024/25,Proportion,0.29,0.161,0.45,None
+k10high,DHB,Tairāwhiti,15-24,2022/23,2024/25,Proportion,0.077,0.025,0.174,Low Quality Flag
+k10high,DHB,Taranaki,15-24,2022/23,2024/25,Proportion,0.24,0.126,0.389,None
+k10high,DHB,Waikato,15-24,2022/23,2024/25,Proportion,0.131,0.088,0.184,None
+k10high,DHB,Wairarapa,15-24,2022/23,2024/25,Proportion,0.304,0.141,0.514,None
+k10high,DHB,Waitematā,15-24,2022/23,2024/25,Proportion,0.195,0.13,0.274,None
+k10high,DHB,West Coast,15-24,2022/23,2024/25,Proportion,NA,NA,NA,Suppress
+k10high,DHB,Whanganui,15-24,2022/23,2024/25,Proportion,0.252,0.105,0.457,Low Quality Flag
+k10high,Health region,Central | Te Ikaroa,15-24,2022/23,2024/25,Proportion,0.306,0.247,0.369,None
+k10high,Health region,Midland | Te Manawa Taki,15-24,2022/23,2024/25,Proportion,0.152,0.119,0.189,None
+k10high,Health region,Northern | Te Tai Tokerau,15-24,2022/23,2024/25,Proportion,0.212,0.179,0.248,None
+k10high,Health region,South Island | Te Waipounamu,15-24,2022/23,2024/25,Proportion,0.25,0.2,0.306,None
+adult_unmet_need_mh_care,All,All,15-24,2022/23,2024/25,Proportion,0.139,0.122,0.159,None
+adult_unmet_need_mh_care,DHB,Auckland,15-24,2022/23,2024/25,Proportion,0.134,0.074,0.216,None
+adult_unmet_need_mh_care,DHB,Bay of Plenty,15-24,2022/23,2024/25,Proportion,0.128,0.065,0.217,None
+adult_unmet_need_mh_care,DHB,Canterbury,15-24,2022/23,2024/25,Proportion,0.203,0.14,0.281,None
+adult_unmet_need_mh_care,DHB,Capital and Coast,15-24,2022/23,2024/25,Proportion,0.249,0.179,0.332,None
+adult_unmet_need_mh_care,DHB,Counties Manukau,15-24,2022/23,2024/25,Proportion,0.074,0.042,0.119,None
+adult_unmet_need_mh_care,DHB,Hawke's Bay,15-24,2022/23,2024/25,Proportion,0.149,0.067,0.273,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Hutt Valley,15-24,2022/23,2024/25,Proportion,0.172,0.075,0.316,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Lakes,15-24,2022/23,2024/25,Proportion,0.097,0.033,0.207,Low Quality Flag
+adult_unmet_need_mh_care,DHB,MidCentral,15-24,2022/23,2024/25,Proportion,0.154,0.094,0.232,None
+adult_unmet_need_mh_care,DHB,Nelson Marlborough,15-24,2022/23,2024/25,Proportion,0.115,0.051,0.214,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Northland,15-24,2022/23,2024/25,Proportion,0.197,0.108,0.316,None
+adult_unmet_need_mh_care,DHB,South Canterbury,15-24,2022/23,2024/25,Proportion,0.096,0.027,0.226,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Southern,15-24,2022/23,2024/25,Proportion,0.187,0.099,0.308,None
+adult_unmet_need_mh_care,DHB,Tairāwhiti,15-24,2022/23,2024/25,Proportion,0.077,0.025,0.171,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Taranaki,15-24,2022/23,2024/25,Proportion,0.169,0.062,0.34,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Waikato,15-24,2022/23,2024/25,Proportion,0.103,0.057,0.169,None
+adult_unmet_need_mh_care,DHB,Wairarapa,15-24,2022/23,2024/25,Proportion,0.169,0.052,0.365,Low Quality Flag
+adult_unmet_need_mh_care,DHB,Waitematā,15-24,2022/23,2024/25,Proportion,0.08,0.044,0.13,None
+adult_unmet_need_mh_care,DHB,West Coast,15-24,2022/23,2024/25,Proportion,NA,NA,NA,Suppress
+adult_unmet_need_mh_care,DHB,Whanganui,15-24,2022/23,2024/25,Proportion,0.083,0.025,0.195,Low Quality Flag
+adult_unmet_need_mh_care,Health region,Central | Te Ikaroa,15-24,2022/23,2024/25,Proportion,0.192,0.152,0.237,None
+adult_unmet_need_mh_care,Health region,Midland | Te Manawa Taki,15-24,2022/23,2024/25,Proportion,0.114,0.083,0.151,None
+adult_unmet_need_mh_care,Health region,Northern | Te Tai Tokerau,15-24,2022/23,2024/25,Proportion,0.102,0.076,0.133,None
+adult_unmet_need_mh_care,Health region,South Island | Te Waipounamu,15-24,2022/23,2024/25,Proportion,0.185,0.141,0.237,None
