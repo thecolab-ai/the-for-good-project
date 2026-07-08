@@ -32,11 +32,13 @@ well-sourced but not settled:
   bring in (confidence: Medium) —
   [road funding gap](../research/findings/other/land-transport-revenue-gap.md)
 - **Current electric-vehicle road charges are not the main revenue hole.**
-  Pure-electric vehicle kilometres were still small in the 2024 public data,
-  and an electric car paying today's light-vehicle road user charge is roughly
+  Official odometer readings — recovered in a re-run of one finding — show
+  pure-electric cars drove about 2% of light-vehicle kilometres in 2024, and
+  an electric car paying today's light-vehicle road user charge is roughly
   comparable with an average petrol car's petrol-tax contribution per
   kilometre (confidence: Medium) —
-  [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
+  [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md),
+  [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
   and [road funding gap](../research/findings/other/land-transport-revenue-gap.md)
 - **Efficient petrol cars and ordinary hybrids are the bigger proxy problem.**
   They can drive many kilometres while paying much less petrol tax per
@@ -44,10 +46,13 @@ well-sourced but not settled:
   current issue than pure-electric kilometres (confidence: Medium) —
   [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
   and [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
-- **Electric-vehicle uptake is uneven.** Registrations fell sharply in 2024
-  after the Clean Car Discount ended, then rebounded through 2025 and early
-  2026, but plug-in vehicles are still only about 3% of the light fleet while
-  ordinary hybrids dominate recent buying (confidence: Medium) —
+- **Electric-vehicle uptake dipped, rebounded, and is growing fast from a
+  small base.** Registrations fell sharply in 2024 after the Clean Car
+  Discount ended, then rebounded through 2025 and early 2026; plug-in vehicles
+  have only just passed about 3% of the light fleet and ordinary hybrids
+  dominate recent buying, but the pure-electric share of kilometres driven has
+  roughly doubled every two years since 2018 — small today, accelerating
+  (confidence: Medium) —
   [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
 - **A full light-vehicle road user charge is not yet proven ready.** The reform
   targets real problems, but non-payment, bad debt, provider fees, privacy,
@@ -73,10 +78,13 @@ well-sourced but not settled:
 - **The original "petrol-tax collapse" frame is weaker than the evidence.**
   The better-supported frame is a funding shortfall plus a fairness and
   implementation test for replacing petrol tax over time.
-- **Vehicle-kilometre data is still too coarse.** One finding found official
-  petrol, diesel, and pure-electric kilometres to 2024, but not a clean public
-  split for ordinary hybrids and plug-in hybrids after electric-vehicle road
-  charges began.
+- **Vehicle-kilometre data has improved but is still incomplete.** A re-run
+  of one finding recovered the official odometer-based kilometre series —
+  petrol, diesel, and pure-electric to 2024 — but ordinary hybrids and plug-in
+  hybrids are still folded into the petrol and diesel lines, so their
+  kilometres remain estimates. The whole kilometres picture also rests on one
+  official dataset, with no independent cross-check found by either finding
+  that uses it.
 - **The exact winners and losers depend on fuel use, kilometres, provider fees,
   and payment rules.** The revenue findings use transparent benchmarks, but a
   full household-level model joining income, rurality, disability, digital
@@ -117,9 +125,11 @@ discarded:
   (Medium), [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
   (Medium), [distributional impacts](../research/findings/other/universal-light-vehicle-ruc-distributional-impacts.md)
   (Medium), and [charging gaps](../research/findings/other/ev-charging-gaps.md)
-  (Medium). Would need: official release or request routes for vehicle
-  kilometres by powertrain, actual light electric-vehicle road-charge revenue,
-  provider fees, charging uptime, and site-level rollout plans.
+  (Medium). Would need: official release or request routes for the remaining
+  gaps — a hybrid and plug-in-hybrid kilometre split (petrol, diesel, and
+  pure-electric kilometres are now published), actual light electric-vehicle
+  road-charge revenue, provider fees, charging uptime, and site-level rollout
+  plans.
 - **Build a corridor-level charging reliability map from public charger data**
   — helps: rural drivers, tourism operators, councils, and emergency planners
   see which routes may still lack dependable fast charging. Effort: Medium.
@@ -133,7 +143,7 @@ discarded:
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
 Signal: the evidence contradicts the stream's "revenue collapse" framing — a pivot toward fairness/readiness of the RUC transition may fit the findings better than the original question.
-Signal: every finding landed at Medium confidence, with the same data gaps recurring across them: kilometres by powertrain, household-level impacts, provider costs, and charging reliability.
+Signal: every finding landed at Medium confidence; a re-run recovered the official kilometres-by-fuel data (narrowing one gap), but the hybrid/plug-in-hybrid split, household-level impacts, provider costs, and charging reliability gaps remain.
 Signal: the reform is mid-flight — final rules, provider offers, and real compliance data will affect when a scorecard-style option becomes measurable.
 
 ## Feedback log
