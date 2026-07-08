@@ -4,7 +4,7 @@ title: "Who pays for the roads as New Zealand's cars stop using petrol?"
 state: awaiting-direction
 steward: ""
 domain: other
-updated: 2026-07-07
+updated: 2026-07-08
 image: ""
 ---
 
@@ -13,131 +13,128 @@ image: ""
 ## The problem, in plain language
 
 New Zealand's roads are paid for mostly by petrol tax and road user charges —
-so as cars stop using petrol, the money that maintains roads has to come from
-somewhere else. The Government is planning to move every light vehicle onto
-distance-based road user charges (RUC), a change that will touch nearly every
-household that owns a car. Whether that switch is fair, workable, and ready is
-still an open question — and the answer matters most for people with the least
-room to absorb a badly designed charge.
+so as vehicles use less petrol, the country needs a fair way to keep paying for
+roads. The Government is preparing to move petrol cars into distance-based road
+user charges, which could affect almost every household that owns a vehicle.
+The evidence so far says this is less a sudden petrol-tax collapse than a
+readiness and fairness problem: who pays, how hard payment is, and who has the
+least room to absorb mistakes.
 
 ## What we've learned so far
 
-This round is waiting on a human steward's direction. All five findings landed
-at Medium confidence overall, so treat these as well-sourced but not settled:
+All seven findings landed at Medium confidence overall, so treat these as
+well-sourced but not settled:
 
-- **Petrol tax revenue has not collapsed — and it isn't expected to any time
-  soon.** Petrol tax income held steady at about $1.9 billion a year, road
-  user charges have already overtaken it as the biggest single revenue line,
-  and officials expect petrol tax to peak around 2035 before declining
-  gradually. The bigger, current problem is that the road-building programme
-  costs far more than user charges bring in — nearly 40% of the 2024–27 plan
-  is topped up by government grants and loans (confidence: Medium) —
-  [how the roads are funded](../research/findings/other/land-transport-revenue-gap.md)
-- **An electric car on today's RUC pays roughly what an average petrol car
-  pays per kilometre.** The clearer revenue leak is fuel-efficient petrol cars
-  and ordinary (non-plug-in) hybrids, which pay much less petrol tax per
-  kilometre and don't pay RUC at all (confidence: Medium) —
-  [how the roads are funded](../research/findings/other/land-transport-revenue-gap.md)
-- **EV uptake is a rebound story, not a straight line.** Electric-car
-  registrations fell by about two-thirds in 2024 after the Clean Car Discount
-  ended, then recovered through 2025–26 — but plug-in vehicles are still only
-  about 3% of the light fleet, and ordinary hybrids dominate what New
-  Zealanders are actually buying (confidence: Medium) —
-  [how fast EVs are really growing](../research/findings/other/ev-uptake-trajectory-ruc.md)
-- **The plan to move all 3.5 million light vehicles onto RUC targets the right
-  problems, but isn't yet proven to work.** Non-payment and bad debt are
-  already material at today's smaller scale (an estimated $105 million of
-  light-vehicle non-compliance), and the main risks are practical: whether
-  paying is easy, whether private payment providers show up, whether people
-  trust the privacy of electronic tracking, and whether the burden falls on
-  people with poor digital access. Officials' own analysis did not assess
-  fairness impacts (confidence: Medium) —
-  [is the new RUC system ready?](../research/findings/other/ruc-light-vehicle-transition-adequacy.md)
-- **No other country has a ready-made answer to copy.** Norway, the UK, the
-  Netherlands and California each solve pieces of it; the most transferable
-  lessons are to phase the change in stages, keep location-tracking out of the
-  design where possible, offer manual options, and treat administration cost
-  and rural fairness as make-or-break tests rather than afterthoughts
-  (confidence: Medium) —
-  [what other countries do](../research/findings/other/ev-road-funding-comparators.md)
-- **The measurable charging shortages are in and around cities, not the back
-  country.** Some fast-growing districts have hundreds of EVs per public
-  charge point. A government-backed rollout of 2,500+ new chargers is funded,
-  but there is no public site-level schedule or reliability data to show
-  whether rural highways will be adequately covered (confidence: Medium) —
-  [where the charging gaps are](../research/findings/other/ev-charging-gaps.md)
+- **Petrol tax has not collapsed.** Fuel excise was still about $1.9 billion
+  in 2024/25, road user charges have already become the larger revenue line,
+  and officials expect petrol-tax decline to be gradual rather than sudden; the
+  current gap is that the transport programme costs more than user charges
+  bring in (confidence: Medium) —
+  [road funding gap](../research/findings/other/land-transport-revenue-gap.md)
+- **Current electric-vehicle road charges are not the main revenue hole.**
+  Pure-electric vehicle kilometres were still small in the 2024 public data,
+  and an electric car paying today's light-vehicle road user charge is roughly
+  comparable with an average petrol car's petrol-tax contribution per
+  kilometre (confidence: Medium) —
+  [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
+  and [road funding gap](../research/findings/other/land-transport-revenue-gap.md)
+- **Efficient petrol cars and ordinary hybrids are the bigger proxy problem.**
+  They can drive many kilometres while paying much less petrol tax per
+  kilometre, and public data suggests ordinary-hybrid kilometres are a larger
+  current issue than pure-electric kilometres (confidence: Medium) —
+  [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
+  and [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
+- **Electric-vehicle uptake is uneven.** Registrations fell sharply in 2024
+  after the Clean Car Discount ended, then rebounded through 2025 and early
+  2026, but plug-in vehicles are still only about 3% of the light fleet while
+  ordinary hybrids dominate recent buying (confidence: Medium) —
+  [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
+- **A full light-vehicle road user charge is not yet proven ready.** The reform
+  targets real problems, but non-payment, bad debt, provider fees, privacy,
+  manual options, and digital access could decide whether the system feels
+  workable and legitimate (confidence: Medium) —
+  [road user charge readiness](../research/findings/other/ruc-light-vehicle-transition-adequacy.md)
+- **Fairness risk is specific, not generic.** The clearest cash losers are
+  likely to be high-kilometre drivers in efficient petrol or non-plug-in hybrid
+  vehicles, while hardship risk is sharpest for low-income, rural, disabled,
+  and digitally excluded people who have fewer alternatives or less room for
+  fees, penalties, and complex payment systems (confidence: Medium) —
+  [distributional impacts](../research/findings/other/universal-light-vehicle-ruc-distributional-impacts.md)
+- **No overseas model can simply be copied, and the charging picture is still
+  incomplete.** Comparator countries point toward staged, privacy-light
+  distance charging with manual options; New Zealand's measurable charging
+  pressure is urban and peri-urban, while rural-corridor reliability still
+  needs site-level testing (confidence: Medium) —
+  [international comparators](../research/findings/other/ev-road-funding-comparators.md)
+  and [charging gaps](../research/findings/other/ev-charging-gaps.md)
 
 ## What we're not sure about yet
 
-- **The stream's starting premise doesn't match the evidence.** This work
-  began with "what happens when petrol tax revenue collapses" — but the
-  accounts show no collapse, and officials project gradual decline from the
-  mid-2030s. The urgent questions turned out to be about the funding gap,
-  fairness, and readiness, not a revenue cliff.
-- **Nobody can currently show how many kilometres each type of vehicle
-  actually drives.** Both revenue findings lean on this, and no public data
-  splits kilometres travelled by petrol, hybrid, and electric vehicles since
-  EV road charges began. Until it exists, "EVs aren't the revenue hole" rests
-  on vehicle counts standing in for distance driven.
-- **The "EVs pay their fair share" comparison rests on one dated number.** It
-  uses a 2015 estimate of real-world petrol consumption (9.2 litres per
-  100km); the finding itself says a materially different figure would change
-  the conclusion. Single-sourced and load-bearing.
-- **Who gets hurt by the switch is unassessed.** The government's own analysis
-  did not examine impacts by income, rural location, disability, or digital
-  access, and the overseas evidence says rural fairness can't be assumed
-  either way without local modelling.
-- **Rural and highway charging adequacy is an open flag, not a finding.** Low
-  charger counts in rural districts often coincide with low EV counts; without
-  site-level rollout plans and charger reliability data, no one can say which
-  corridors are genuinely at risk.
+- **The original "petrol-tax collapse" frame is weaker than the evidence.**
+  The better-supported frame is a funding shortfall plus a fairness and
+  implementation test for replacing petrol tax over time.
+- **Vehicle-kilometre data is still too coarse.** One finding found official
+  petrol, diesel, and pure-electric kilometres to 2024, but not a clean public
+  split for ordinary hybrids and plug-in hybrids after electric-vehicle road
+  charges began.
+- **The exact winners and losers depend on fuel use, kilometres, provider fees,
+  and payment rules.** The revenue findings use transparent benchmarks, but a
+  full household-level model joining income, rurality, disability, digital
+  access, vehicle efficiency, and kilometres was not found.
+- **The road user charge reform is still partly unobservable.** Final provider
+  fees, manual options, privacy controls, debt practices, complaint data, and
+  post-rollout compliance rates are not yet public outcomes.
+- **Charging adequacy is unresolved at corridor level.** Public charger counts
+  and district ratios do not show uptime, queueing, failed sessions, site-level
+  rollout dates, or whether specific rural and inter-regional routes have
+  dependable fast-charger coverage.
 
 ## What we could do about it
 
 Options for the steward — drafted from the evidence, not ranked, and freely
 discarded:
 
-- **Publish a plain-language explainer on how New Zealand's roads are funded
-  and what the switch to RUC will mean for an ordinary household** — helps:
-  drivers, community organisations, and local media trying to follow a
-  confusing national change. Effort: Small. Supported by
-  [how the roads are funded](../research/findings/other/land-transport-revenue-gap.md)
-  (Medium) and [is the new RUC system ready?](../research/findings/other/ruc-light-vehicle-transition-adequacy.md)
-  (Medium). Would need: careful sourcing kept current as the reform passes
-  through Parliament.
-- **Build an open corridor test of rural charging coverage from the public
-  charger data** — helps: rural drivers, tourism operators, and councils who
-  currently have no way to see which highway stretches lack dependable fast
-  charging. Effort: Medium. Supported by
-  [where the charging gaps are](../research/findings/other/ev-charging-gaps.md)
-  (Medium), which lists exactly the inputs such a test needs. Would need: the
-  public charger-location data to be combinable with traffic and route data at
-  a quality a volunteer team can defend.
-- **Track the RUC reform against its own readiness conditions — a public
-  scorecard on cost to comply, provider competition, privacy safeguards, and
-  fairness** — helps: people with low digital access, rural households, and
-  anyone the official analysis skipped. Effort: Medium. Supported by
-  [is the new RUC system ready?](../research/findings/other/ruc-light-vehicle-transition-adequacy.md)
-  (Medium) and [what other countries do](../research/findings/other/ev-road-funding-comparators.md)
-  (Medium). Would need: the final regulations and provider market to become
-  observable so the scorecard measures reality, not proposals.
-- **Formally request the missing public datasets** — kilometres travelled by
-  vehicle type, charger reliability history, and the site-level charger
-  rollout schedule — helps: every future researcher, journalist, and council
-  officer working on this. Effort: Small. Supported by
-  [how fast EVs are really growing](../research/findings/other/ev-uptake-trajectory-ruc.md)
-  (Medium) and [where the charging gaps are](../research/findings/other/ev-charging-gaps.md)
-  (Medium), both of which name these as the datasets they could not obtain.
-  Would need: agencies willing to release the data, or an official information
-  request route.
+- **Publish a plain-language road-funding explainer with household examples**
+  — helps: drivers, community groups, councils, and local media trying to
+  understand the move from petrol tax to distance charging. Effort: Small.
+  Supported by [road funding gap](../research/findings/other/land-transport-revenue-gap.md)
+  (Medium), [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
+  (Medium), and [distributional impacts](../research/findings/other/universal-light-vehicle-ruc-distributional-impacts.md)
+  (Medium). Would need: examples clearly labelled as scenarios, not forecasts.
+- **Create a public readiness and fairness scorecard for the road user charge
+  transition** — helps: people with low digital access, rural households,
+  disabled people, consumer advocates, and decision-makers watching provider
+  fees and privacy safeguards. Effort: Medium. Supported by
+  [road user charge readiness](../research/findings/other/ruc-light-vehicle-transition-adequacy.md)
+  (Medium), [distributional impacts](../research/findings/other/universal-light-vehicle-ruc-distributional-impacts.md)
+  (Medium), and [international comparators](../research/findings/other/ev-road-funding-comparators.md)
+  (Medium). Would need: final rules, provider offers, and enough public data to
+  score real practice rather than promises.
+- **Request and organise the missing public datasets** — helps: future
+  researchers, journalists, councils, and advocates test the issue with less
+  guesswork. Effort: Small. Supported by
+  [electric-vehicle uptake](../research/findings/other/ev-uptake-trajectory-ruc.md)
+  (Medium), [vehicle kilometres and revenue](../research/findings/other/vkt-powertrain-road-revenue.md)
+  (Medium), [distributional impacts](../research/findings/other/universal-light-vehicle-ruc-distributional-impacts.md)
+  (Medium), and [charging gaps](../research/findings/other/ev-charging-gaps.md)
+  (Medium). Would need: official release or request routes for vehicle
+  kilometres by powertrain, actual light electric-vehicle road-charge revenue,
+  provider fees, charging uptime, and site-level rollout plans.
+- **Build a corridor-level charging reliability map from public charger data**
+  — helps: rural drivers, tourism operators, councils, and emergency planners
+  see which routes may still lack dependable fast charging. Effort: Medium.
+  Supported by [charging gaps](../research/findings/other/ev-charging-gaps.md)
+  (Medium). Would need: charger locations combined with routes, realistic
+  vehicle range, redundancy assumptions, and public or requested reliability
+  data.
 
 ## Where this is heading
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
 Signal: the evidence contradicts the stream's "revenue collapse" framing — a pivot toward fairness/readiness of the RUC transition may fit the findings better than the original question.
-Signal: every finding landed at Medium confidence, with the same two data gaps (kilometres by vehicle type; distributional impact) recurring across them.
-Signal: the reform is mid-flight — regulations and the provider market firm up over the coming year, which affects when a scorecard-style option becomes measurable.
+Signal: every finding landed at Medium confidence, with the same data gaps recurring across them: kilometres by powertrain, household-level impacts, provider costs, and charging reliability.
+Signal: the reform is mid-flight — final rules, provider offers, and real compliance data will affect when a scorecard-style option becomes measurable.
 
 ## Feedback log
 
