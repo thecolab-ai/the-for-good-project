@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Reproduce the seeded 2025 five-cluster sample and the provision-level
-operation-type classification for #676.
+"""Reproduce the seeded 2025 five-cluster sample and its provision-level
+operation-type rollups for #676.
 
 Two steps:
 
@@ -15,30 +15,27 @@ Two steps:
    a different order, so this embedded frame is the sampling artifact of record.
    With SEED it draws the same five clusters every run.
 
-2. Classification. Each of the five selected Acts was retrieved as official
-   legislation.govt.nz XML (via the vendored `legislation-nz` skill / the
-   `latest.xml` endpoint) and every top-level amending provision was classified
-   by its operative instruction text into one operation family
-   (insert / replace / repeal-revoke / delete) or `mixed` when the provision's
-   instructions span more than one family. Title, Commencement, and
-   "Principal Act/regulations/rules" locator provisions are excluded, as are the
-   inserted/replaced blocks themselves (the substituted content, not an
-   instruction). Two Social Security provisions (ss 61, 75) direct amendments
-   "as set out in Schedule 1/3"; the referenced schedules contain both insert
-   and replace/delete operations, so they are recorded as `mixed`
-   (schedule-directed).
+2. Classification. The rows below are the committed extraction artifact: every
+   top-level substantive amending provision in the five selected Acts, classified
+   from the official legislation.govt.nz text by operative instruction family.
+   Title, commencement, principal-Act/regulations/rules locator provisions,
+   legislative history, administrative notes, and nested text inserted or
+   replaced by a provision are excluded.
 
-   The classification here was produced by parsing the official XML
-   (parse tree: top-level <prov> with no <amend>/<schedule> ancestor; families
-   detected from operative verbs insert/replace/repeal/revoke/omit/delete) and
-   is embedded below as the artifact of record. Re-running the parser against a
-   fresh XML pull reproduces these rows.
+   This script deliberately does not claim to fetch or parse live XML. The
+   legislation.govt.nz XML endpoint is intermittently blocked by AWS WAF in this
+   environment, so the reproducible commitment here is the frozen sample frame,
+   the per-provision classification table, and all rollups reported in the
+   finding. The later issue #746 reconciliation script
+   (`statutory_amendment_five_cluster.py`) independently rolls up the same
+   five-Act official-text sample and is used as the cross-check artifact.
 """
 
 from __future__ import annotations
 
 from collections import Counter
 import random
+import sys
 
 SEED = "fg-676-2025-amendment-act-cluster-v1"
 
@@ -107,8 +104,8 @@ FRAME = [
     ("2025-02-24", "61-2", "Overseas Investment (Build-to-rent and Similar Rental Developments) Amendment Bill"),
 ]
 
-# Bill -> enacted public Act (year/number), confirmed by title match on the
-# official legislation.govt.nz XML metadata (get-act).
+# Bill -> enacted public Act (year/number), confirmed against the official
+# legislation.govt.nz Act pages and the later five-cluster reconciliation.
 SELECTED_ACTS = {
     "174-2": ("2025/52", "Climate Change Response (Emissions Trading Scheme—Forestry Conversion) Amendment Act 2025", "2025-09-23"),
     "103-3": ("2025/25", "Social Security Amendment Act 2025", "2025-05-21"),
@@ -118,7 +115,7 @@ SELECTED_ACTS = {
 }
 
 # Provision-level classification of every substantive amending provision in each
-# selected Act, parsed from official legislation.govt.nz XML. Fields:
+# selected Act, extracted from official legislation.govt.nz text. Fields:
 # (provision label, primary class, operation tokens present, heading).
 # Primary class: one family if the provision's instructions are single-family;
 # "mixed" if they span >1 family. Locator/title/commencement provisions excluded.
@@ -159,12 +156,12 @@ CLASSIFIED = {
         ("18", "replace", "replace", "Section 236 amended (Sanction for first failure)"),
         ("19", "insert", "insert", "New sections 236E to 236J inserted"),
         ("20", "replace", "replace", "Section 238 amended (Sanction for third failure)"),
-        ("21", "mixed", "insert/replace", "Section 239 replaced"),
+        ("21", "replace", "replace", "Section 239 replaced"),
         ("22", "replace", "replace", "Section 242 amended (Failures that cannot be counted)"),
         ("23", "insert", "insert", "New section 243AAA inserted"),
         ("24", "replace", "replace", "Sections 245 to 248 replaced and amended"),
         ("25", "mixed", "insert/replace", "Section 252 amended (MSD must give notice of sanction)"),
-        ("26", "mixed", "insert/replace", "New section 252A inserted"),
+        ("26", "insert", "insert", "New section 252A inserted"),
         ("27", "insert", "insert", "Section 254 amended"),
         ("28", "mixed", "insert/replace", "Section 256 amended"),
         ("29", "mixed", "insert/replace", "Section 261 amended"),
@@ -199,7 +196,7 @@ CLASSIFIED = {
         ("58", "insert", "insert", "Section 363A amended"),
         ("59", "insert", "insert", "Section 418 amended (Regulations: general)"),
         ("60", "mixed", "insert/replace", "Section 441 amended (Regulations: expiry and regrant)"),
-        ("61", "mixed", "schedule-directed", "Amendments to update references to money management (Schedule 1)"),
+        ("61", "mixed", "delete/insert/replace", "Amendments to update references to money management (Schedule 1)"),
         ("62", "insert", "insert", "Schedule 1 amended"),
         ("63", "mixed", "insert/repeal-revoke/replace", "Schedule 2 amended"),
         ("65", "insert", "insert", "Regulation 163 amended"),
@@ -212,9 +209,9 @@ CLASSIFIED = {
         ("72", "replace", "replace", "Regulation 190 replaced"),
         ("73", "insert", "insert", "New subpart 4A of Part 6 inserted"),
         ("74", "insert", "insert", "Regulation 206 amended (Debts due to the Crown)"),
-        ("75", "mixed", "schedule-directed", "Amendments to update references to money management (Schedule 3)"),
+        ("75", "mixed", "insert/replace", "Amendments to update references to money management (Schedule 3)"),
         ("76", "insert", "insert", "Schedule 1 amended"),
-        ("77", "delete", "delete", "Schedule 6 amended"),
+        ("77", "mixed", "delete/insert/replace", "Schedule 6 amended"),
     ],
     "2025/72": [
         ("4", "insert", "insert", "New sections 216O to 216S and cross-heading inserted"),
@@ -223,15 +220,15 @@ CLASSIFIED = {
         ("9", "insert", "insert", "Section 4 amended (Interpretation)"),
         ("10", "replace", "replace", "Section 95 amended (Restrictions on cross-examination)"),
         ("12", "mixed", "insert/replace", "Section 11 amended (Meaning of psychological abuse)"),
-        ("14", "delete", "delete", "Long Title amended"),
-        ("15", "mixed", "delete/repeal-revoke", "Section 6 amended (Object)"),
+        ("14", "replace", "replace", "Long Title amended"),
+        ("15", "mixed", "repeal-revoke/replace", "Section 6 amended (Object)"),
         ("16", "repeal/revoke", "repeal/revoke", "Part 2 repealed"),
         ("17", "repeal/revoke", "repeal/revoke", "Section 26 amended (Power to require person to supply name and address)"),
         ("18", "delete", "delete", "Section 29 amended (Standard of proof)"),
         ("19", "delete", "delete", "Section 30 amended (Admission of evidence)"),
         ("20", "repeal/revoke", "repeal/revoke", "Section 32 amended (Vexatious proceedings)"),
         ("21", "delete", "delete", "Section 42 amended (Rules of court)"),
-        ("23", "mixed", "delete/insert", "Section 62 amended (Grounds of disqualification)"),
+        ("23", "mixed", "insert/repeal-revoke", "Section 62 amended (Grounds of disqualification)"),
         ("25", "insert", "insert", "Section 9 amended (Aggravating and mitigating factors)"),
         ("26", "insert", "insert", "Section 106 amended (Discharge without conviction)"),
         ("27", "insert", "insert", "New sections 123I and 123J and cross-headings inserted"),
@@ -278,6 +275,32 @@ CLASSIFIED = {
 }
 
 
+EXPECTED_PRIMARY = Counter({
+    "insert": 76,
+    "replace": 33,
+    "mixed": 23,
+    "repeal/revoke": 6,
+    "delete": 4,
+})
+
+EXPECTED_PRESENCE = Counter({
+    "insert": 97,
+    "replace": 55,
+    "repeal/revoke": 11,
+    "delete": 6,
+})
+
+
+def operation_presence(rows: list[tuple[str, str, str, str]]) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for _label, _primary, tokens, _heading in rows:
+        normalized = tokens.replace("repeal/revoke", "repeal-revoke")
+        for token in normalized.split("/"):
+            token = "repeal/revoke" if token in {"repeal-revoke", "repeal", "revoke"} else token
+            counts[token] += 1
+    return counts
+
+
 def main() -> None:
     sample = random.Random(SEED).sample(FRAME, 5)
     print(f"Seed: {SEED}")
@@ -286,17 +309,34 @@ def main() -> None:
         act_id, act_title, assent = SELECTED_ACTS[bill_no]
         print(f"- {date} {bill_no} -> {act_id} ({assent}) {act_title}")
 
+    if "--rows" in sys.argv:
+        print("\nPer-provision extraction table:")
+        for act_id, rows in CLASSIFIED.items():
+            for label, primary, tokens, heading in rows:
+                print(f"  {act_id} s {label}: {primary}; tokens={tokens}; {heading}")
+
     overall = Counter()
+    presence = Counter()
     print("\nPer-cluster primary classification:")
     for act_id, rows in CLASSIFIED.items():
         c = Counter(primary for _, primary, _, _ in rows)
         overall.update(c)
+        presence.update(operation_presence(rows))
         print(f"  {act_id}: n={len(rows)} {dict(c)}")
 
     total = sum(overall.values())
     print(f"\nAggregate across all five clusters (n={total} substantive amending provisions):")
     for key in ["insert", "replace", "mixed", "repeal/revoke", "delete"]:
         print(f"  {key}: {overall[key]} ({100 * overall[key] / total:.1f}%)")
+
+    print("\nOperation-token presence across all five clusters (overlapping counts):")
+    for key in ["insert", "replace", "repeal/revoke", "delete"]:
+        print(f"  {key}: {presence[key]}")
+
+    if overall != EXPECTED_PRIMARY:
+        raise SystemExit(f"primary counts changed: expected {EXPECTED_PRIMARY}, got {overall}")
+    if presence != EXPECTED_PRESENCE:
+        raise SystemExit(f"presence counts changed: expected {EXPECTED_PRESENCE}, got {presence}")
 
 
 if __name__ == "__main__":

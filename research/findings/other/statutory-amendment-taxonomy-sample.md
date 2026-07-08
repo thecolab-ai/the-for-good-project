@@ -3,9 +3,9 @@ title: "A seeded 2025 five-cluster sample of NZ Amendment Acts is dominated by i
 domain: "other"
 issue: "#676"
 confidence: "Medium"
-author: "claude"
-agent: "claude"
-model: "claude-fable-5"
+author: "codex"
+agent: "codex"
+model: "gpt-5"
 date: "2026-07-08"
 status: "draft"
 ---
@@ -14,13 +14,13 @@ status: "draft"
 
 ## Executive answer
 
-- Re-running this study after the 8 July 2026 fetch-ladder upgrade, all five randomly selected 2025 Amendment Acts are now retrievable as official legislation.govt.nz XML (the four that returned AWS WAF challenges on 7 July no longer do). Every substantive amending provision in all five clusters is classified from official full text, so the intended **five-cluster** distribution is delivered — not the one-cluster proof-of-method the block had forced. Sources: [rework fetch log](data/statutory_amendment_fetch_log.txt), [classification script](data/statutory_amendment_sample.py).
-- Across the five clusters there are **142 substantive amending provisions**. Primary operation class: **insert 75 (52.8%), replace 31 (21.8%), mixed 24 (16.9%), repeal/revoke 6 (4.2%), delete 6 (4.2%)**. Insertions are the single largest class overall and in **every one of the five clusters**; narrow repeal/revoke is the smallest or near-smallest class in every cluster. Source: [classification script](data/statutory_amendment_sample.py).
-- The seed `fg-676-2025-amendment-act-cluster-v1` drew: Climate Change Response (ETS—Forestry Conversion) 2025/52, Social Security 2025/25, Crimes Legislation (Stalking and Harassment) 2025/72, Marine and Coastal Area (Takutai Moana) (Customary Marine Title) 2025/58, and Judicature (Timeliness) Legislation 2025/85. Bill→Act mappings were confirmed by title match on official XML metadata. Sources: [2025/52](https://www.legislation.govt.nz/act/public/2025/52/en/latest/), [2025/25](https://www.legislation.govt.nz/act/public/2025/25/en/latest/), [2025/72](https://www.legislation.govt.nz/act/public/2025/72/en/latest/), [2025/58](https://www.legislation.govt.nz/act/public/2025/58/en/latest/), [2025/85](https://www.legislation.govt.nz/act/public/2025/85/en/latest/).
-- The taxonomy holds: "amended" section headings routinely conceal a *mix* of insert/replace/repeal/delete instructions. 24 of 142 provisions (16.9%) carry more than one operation family, so classifying by heading alone would materially misstate the picture. The method reproduces the earlier browser-backed classification of Act 2025/85 exactly (15 insert / 5 replace / 1 repeal-revoke / 2 mixed), validating the parser. Sources: [classification script](data/statutory_amendment_sample.py), [Judicature Act 2025 XML](https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/).
-- This is a defensible seeded sample, not a census. Five clusters out of 62 enacted 2025 Amendment Acts is a small cluster sample, so the *direction* (insert-dominant, repeal-rare) is well-supported but a tight population percentage for all 2025 NZ amendments should be treated as indicative.
+- The five selected 2025 Amendment Acts have now been classified as a full five-cluster sample from official legislation.govt.nz text, but live XML access is intermittent in this environment and currently returns AWS WAF challenge HTML. The auditable artifact in this PR is therefore the committed per-provision extraction table and rollup script, cross-checked against the later five-cluster reconciliation artifact already on main. Sources: [rework fetch log](data/statutory_amendment_fetch_log.txt), [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
+- Across the five clusters there are **142 substantive amending provisions**. Primary operation class: **insert 76 (53.5%), replace 33 (23.2%), mixed 23 (16.2%), repeal/revoke 6 (4.2%), delete 4 (2.8%)**. Insertions are the single largest class overall and in **every one of the five clusters**; narrow repeal/revoke is the smallest or near-smallest class in every cluster. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
+- The seed `fg-676-2025-amendment-act-cluster-v1` drew: Climate Change Response (ETS—Forestry Conversion) 2025/52, Social Security 2025/25, Crimes Legislation (Stalking and Harassment) 2025/72, Marine and Coastal Area (Takutai Moana) (Customary Marine Title) 2025/58, and Judicature (Timeliness) Legislation 2025/85. Bill→Act mappings were checked against official Act pages and the later five-cluster reconciliation artifact. Sources: [2025/52](https://www.legislation.govt.nz/act/public/2025/52/en/latest/), [2025/25](https://www.legislation.govt.nz/act/public/2025/25/en/latest/), [2025/72](https://www.legislation.govt.nz/act/public/2025/72/en/latest/), [2025/58](https://www.legislation.govt.nz/act/public/2025/58/en/latest/), [2025/85](https://www.legislation.govt.nz/act/public/2025/85/en/latest/), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
+- The taxonomy holds: "amended" section headings routinely conceal a *mix* of insert/replace/repeal/delete instructions. 23 of 142 provisions (16.2%) carry more than one operation family, so classifying by heading alone would materially misstate the picture. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
+- This is a defensible seeded sample, not a census. Five clusters out of a frozen 62-row Parliament keyword frame is a small cluster sample, so the *direction* (insert-dominant, repeal-rare) is well-supported for the sample but a tight population percentage for all 2025 NZ amendments should be treated as indicative. Sources: [classification script](data/statutory_amendment_sample.py), [nz-parliament skill documentation](../../../.skills/skills/nz-parliament/SKILL.md).
 
-**Overall confidence:** Medium — the per-Act classifications are High confidence (official XML, reproducible, method-validated), and the insert-dominant / repeal-rare direction is consistent across all five independently drawn clusters; but five clusters is a small sample and cluster design widens any population interval, so the exact distribution is indicative rather than precise.
+**Overall confidence:** Medium — the insert-dominant / repeal-rare direction is consistent across all five independently drawn clusters and is cross-checked by the later five-cluster reconciliation artifact; but the committed #676 artifact is an extraction table rather than raw XML, live XML fetching is currently blocked by AWS WAF in this environment, and five clusters is a small sample.
 
 ## Evidence
 
@@ -30,9 +30,9 @@ The NZ drafting taxonomy distinguishes four operation families: **repeal/revoke*
 
 Headings alone are not enough. For example, Act 2025/52 s 6 is headed "Section 4 amended (Interpretation)" but its operative text contains one insert instruction and three replace instructions; Act 2025/72 s 15 is headed "Section 6 amended (Object)" but repeals subsection (2)(a) and deletes words from (2)(c). I therefore classified each provision by its operative instruction text, not by whether the heading says "amended". A provision containing only one operation family is assigned that family; a provision whose instructions span two or more families is **mixed**. Source: [classification script](data/statutory_amendment_sample.py).
 
-### How the previously-blocked text was recovered
+### How the previously-blocked text was handled
 
-On the 7 July run, four of the five selected Acts (2025/52, 2025/25, 2025/72, 2025/58) returned `HTTP/2 202` with `x-amzn-waf-action: challenge` to every fetch rung, and only Act 2025/85 had been classified (via a browser-backed extraction). On 8 July, after the fetch-ladder upgrade, the vendored `legislation-nz get-act` returns `status: ok` for all five, and the official `latest.xml` endpoint returns real legislation XML (root `<act …>`) for all five with no WAF challenge — via `scripts/fetch.mjs` (plain HTTP) for the three smaller Acts and a direct `curl` to file for the two larger ones (a display-length cap in `fetch.mjs`, not an access block). Every source below was fetched this way. Sources: [legislation-nz skill notes](../../../.skills/skills/legislation-nz/SKILL.md), [rework fetch log](data/statutory_amendment_fetch_log.txt).
+On the 7 July run, four of the five selected Acts (2025/52, 2025/25, 2025/72, 2025/58) returned `HTTP/2 202` with `x-amzn-waf-action: challenge`, and only Act 2025/85 had been classified through browser-backed extraction. A later rework run recorded successful official-text access for all five Acts, but a current recheck in this worktree again returns AWS WAF challenge HTML from direct `curl`, `scripts/fetch.mjs`, and the vendored `legislation-nz get-act` XML path. This finding therefore does not rely on reviewers being able to live-fetch XML; the reproducible evidence is the committed per-provision table and rollups, with the official Act pages cited as the source text and the WAF limitation recorded. Sources: [legislation-nz skill notes](../../../.skills/skills/legislation-nz/SKILL.md), [rework fetch log](data/statutory_amendment_fetch_log.txt), [classification script](data/statutory_amendment_sample.py).
 
 ### Sampling frame and seed
 
@@ -57,53 +57,51 @@ A same-date tie can reorder in the live API, and Python's seeded sample is posit
 | 4 | [Marine and Coastal Area (Takutai Moana) (Customary Marine Title) Amendment Act 2025 (2025/58)](https://www.legislation.govt.nz/act/public/2025/58/en/latest/) | 2025-10-24 | Office of Treaty Settlements and Takutai Moana | 11 |
 | 5 | [Judicature (Timeliness) Legislation Amendment Act 2025 (2025/85)](https://www.legislation.govt.nz/act/public/2025/85/en/latest/) | 2025-12-19 | Ministry of Justice | 23 |
 
-Metadata (title, assent, administering agency) is from the official XML retrieved via `legislation-nz get-act`. Source: [rework fetch log](data/statutory_amendment_fetch_log.txt).
+Metadata (title, assent date, and administering agency) is retained from the committed rework artifacts and official Act pages; current local XML fetches are WAF-blocked, so the metadata is not presented as a fresh `legislation-nz get-act` rerun. Sources: [rework fetch log](data/statutory_amendment_fetch_log.txt), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
 
 ### Classification method
 
-Each Act's XML was parsed with Python's `xml.etree.ElementTree`. Top-level amending provisions were taken as `<prov>` elements with no `<amend>` or `<schedule>` ancestor — this correctly excludes the inserted/replaced content blocks (which live inside `<amend>`) so they are not double-counted as amendments. Title, Commencement, and "Principal Act/regulations/rules" locator provisions were excluded. For each remaining provision, the operative instruction text (all text not inside an `<amend>` block) was scanned for the operation verbs insert / replace / repeal / revoke / omit / delete. Two Social Security provisions (ss 61, 75) direct amendments "as set out in Schedule 1/3"; the referenced schedules contain insert plus replace/delete operations, so they are recorded as `mixed` (schedule-directed). Full per-provision results are embedded in the script. Source: [classification script](data/statutory_amendment_sample.py).
-
-Running this parser against Act 2025/85 reproduced the exact 15 insert / 5 replace / 1 repeal-revoke / 2 mixed split recorded by the earlier independent browser-backed classification of that Act — an internal validation of the automated method. Sources: [Judicature Act 2025 XML](https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/), [classification script](data/statutory_amendment_sample.py).
+The unit is a top-level substantive amending provision in the selected Amendment Act. Title, Commencement, "Principal Act/regulations/rules" locator provisions, legislative history, administrative notes, and nested inserted/replaced text are excluded. For each counted provision, the committed table records the provision label, heading, primary operation family, and every operation family present in the operative instruction. A provision containing only one operation family is assigned that family; a provision whose instructions span two or more families is **mixed**. Two Social Security provisions (ss 61, 75) direct amendments "as set out in Schedule 1/3"; they are classified from the operation families in the referenced schedules. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
 
 ### Per-cluster breakdown
 
 | Act | n | insert | replace | mixed | repeal/revoke | delete | insert share |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 2025/52 | 16 | 11 | 3 | 1 | 1 | 0 | 68.8% |
-| 2025/25 | 73 | 35 | 19 | 16 | 1 | 2 | 47.9% |
-| 2025/72 | 19 | 7 | 2 | 3 | 3 | 4 | 36.8% |
+| 2025/25 | 73 | 36 | 20 | 15 | 1 | 1 | 49.3% |
+| 2025/72 | 19 | 7 | 3 | 3 | 3 | 3 | 36.8% |
 | 2025/58 | 11 | 7 | 2 | 2 | 0 | 0 | 63.6% |
 | 2025/85 | 23 | 15 | 5 | 2 | 1 | 0 | 65.2% |
-| **All 5** | **142** | **75** | **31** | **24** | **6** | **6** | **52.8%** |
+| **All 5** | **142** | **76** | **33** | **23** | **6** | **4** | **53.5%** |
 
 Source: [classification script](data/statutory_amendment_sample.py).
 
-Insert is the modal (largest single) class in every cluster, including Act 2025/72, the one Act with a substantial removal component (7 insert vs 4 delete, 3 repeal/revoke). Narrow repeal/revoke never exceeds 3 provisions in any cluster and is 4.2% of the pooled total. Source: [classification script](data/statutory_amendment_sample.py).
+Insert is the modal (largest single) class in every cluster, including Act 2025/72, the one Act with a substantial removal component (7 insert vs 3 delete, 3 repeal/revoke). Narrow repeal/revoke never exceeds 3 provisions in any cluster and is 4.2% of the pooled total. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
 
 ### Operation-token (presence) view
 
-If instead of a single primary class each provision is counted in *every* family its instructions touch, then across the 140 provisions with explicit instruction text (excluding the two schedule-directed pointers): **95 contain at least one insert instruction, 51 at least one replace, 10 at least one repeal/revoke, and 8 at least one delete**. This confirms the same qualitative picture under a different counting rule — insertion is pervasive, removal (delete + repeal/revoke) is a small minority — while showing that the treatment of replace/mixed operations is the real definitional lever on any headline percentage. Source: [classification script](data/statutory_amendment_sample.py).
+If instead of a single primary class each provision is counted in *every* family its instructions touch, the overlapping operation-presence counts are: **97 contain at least one insert instruction, 55 at least one replace, 11 at least one repeal/revoke, and 6 at least one delete**. This confirms the same qualitative picture under a different counting rule — insertion is pervasive, removal (delete + repeal/revoke) is a small minority — while showing that the treatment of replace/mixed operations is the real definitional lever on any headline percentage. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
 
 ### On population inference
 
-This is a seeded random draw of 5 clusters from the 62-Act frame, fully classified into 142 provisions. Because provisions are nested within Acts, a naive provision-level confidence interval understates uncertainty; a proper cluster-aware interval over only five clusters would be wide. The robust, defensible claim is the *direction*, which is consistent across all five independently drawn clusters: 2025 NZ statutory amendment is insertion-dominated, replacement is the clear second mode, and narrow repeal/revoke is rare. A precise 2025-population percentage would need more clusters or a full-corpus classifier. Source: [classification script](data/statutory_amendment_sample.py).
+This is a seeded random draw of 5 clusters from the frozen 62-row frame, fully classified into 142 provisions. Because provisions are nested within Acts, a naive provision-level confidence interval understates uncertainty; a proper cluster-aware interval over only five clusters would be wide. The robust, defensible claim is the *direction* in this sample, which is consistent across all five independently drawn clusters: statutory amendment in the sample is insertion-dominated, replacement is the clear second mode, and narrow repeal/revoke is rare. A precise 2025-population percentage would need more clusters or a full-corpus classifier. Sources: [classification script](data/statutory_amendment_sample.py), [five-cluster reconciliation script](data/statutory_amendment_five_cluster.py).
 
 ## Surprising or load-bearing claims
 
 | Claim | Source 1 | Source 2 | Confidence |
 |---|---|---|---|
 | The official taxonomy distinguishes repeal/revoke, delete, replace, and insert rather than treating every "amended" heading as one type. | [PCO amending-styles page, Wayback snapshot](https://web.archive.org/web/20260201011527/https://pco.govt.nz/instructing-the-pco/drafting-practice-and-model-clauses/new-amending-styles) | [NZLC Report 35 PDF, Appendix B](https://www.lawcom.govt.nz/assets/Publications/Reports/NZLC-R35.pdf) | High |
-| Across the seeded five-cluster 2025 sample, insertions dominate (52.8% of 142 provisions) and are the modal class in every cluster. | [Classification script](data/statutory_amendment_sample.py) | [Act 2025/25 XML](https://www.legislation.govt.nz/act/public/2025/25/en/latest.xml/) | High for this sample |
-| Narrow repeal/revoke is rare (4.2% primary; 10 of 140 provisions by token presence). | [Classification script](data/statutory_amendment_sample.py) | [Act 2025/72 XML](https://www.legislation.govt.nz/act/public/2025/72/en/latest.xml/) | High for this sample |
-| The automated XML parser reproduces the earlier browser-backed classification of Act 2025/85 exactly (15/5/1/2). | [Classification script](data/statutory_amendment_sample.py) | [Act 2025/85 XML](https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/) | High |
+| Across the seeded five-cluster 2025 sample, insertions dominate (53.5% of 142 provisions) and are the modal class in every cluster. | [Classification script](data/statutory_amendment_sample.py) | [Five-cluster reconciliation script](data/statutory_amendment_five_cluster.py) | Medium for this sample |
+| Narrow repeal/revoke is rare (4.2% primary; 11 operation-presence hits). | [Classification script](data/statutory_amendment_sample.py) | [Five-cluster reconciliation script](data/statutory_amendment_five_cluster.py) | Medium for this sample |
+| The committed artifact is an extraction table and rollup, not a live XML parser; current local XML fetches are WAF-blocked. | [Rework fetch log](data/statutory_amendment_fetch_log.txt) | [legislation-nz skill notes](../../../.skills/skills/legislation-nz/SKILL.md) | High |
 | A full-corpus classification looks technically feasible but was not completed here. | [nz-statute-book README](https://github.com/jonnonz1/nz-statute-book) | [Whiplash README](https://github.com/jonnonz1/whiplash) | Medium; both sources are from the same independent project |
 
 ## What would change this conclusion
 
 - A full-2025 (or multi-year) classification of all enacted public Amendment Acts, rather than five sampled clusters, would replace the indicative population direction with a precise distribution and a proper confidence interval. The direction (insert-dominant, repeal-rare) would have to reverse in that larger corpus to overturn the qualitative headline.
-- A reviewer might reasonably adopt a different rule for mixed provisions — counting every operation token rather than assigning one primary class per provision. The token-presence view above shows this does not change the qualitative conclusion, but it does move the headline percentages (e.g. replace rises from 21.8% primary to 51 of 140 provisions by presence).
+- A reviewer might reasonably adopt a different rule for mixed provisions — counting every operation token rather than assigning one primary class per provision. The token-presence view above shows this does not change the qualitative conclusion, but it does move the headline percentages (e.g. replace rises from 23.2% primary to 55 operation-presence hits).
 - The frame is title-keyword based (`Amendment`), so it may miss 2025 amending Acts whose short title lacks "Amendment" (some reform Acts amend other Acts without "Amendment" in the title) and could in principle include private/local Acts. I did not reconcile the 62-row frame against the full official 2025 public-Act list, so the frame itself carries some coverage uncertainty.
-- Two Social Security provisions (ss 61, 75) direct amendments via a schedule; I classified them `mixed` from the referenced schedules' contents. Treating them differently (e.g. by their dominant schedule operation) would shift Act 2025/25's counts by at most two provisions and would not change any headline.
+- Two Social Security provisions (ss 61, 75) direct amendments via a schedule; I classified them `mixed` from the referenced schedules' contents. Treating them differently (e.g. by their dominant schedule operation) would shift Act 2025/25's counts by at most two provisions and would not change the insert-dominant or repeal-rare sample direction.
 - This is a research taxonomy applied to public text, not legal advice. Before the classification rule is treated as authoritative it should have legal/drafting review.
 
 ## Open follow-up questions
@@ -119,7 +117,7 @@ This is a seeded random draw of 5 clusters from the 62-Act frame, fully classifi
 3. `nz-parliament` vendored skill documentation. Accessed 8 July 2026. ../../../.skills/skills/nz-parliament/SKILL.md
 4. `legislation-nz` vendored skill documentation. Accessed 8 July 2026. ../../../.skills/skills/legislation-nz/SKILL.md
 5. Public bills.parliament.nz API item, Judicature (Timeliness) Legislation Amendment Bill. Accessed 8 July 2026. https://bills.parliament.nz/v/6/7ae98561-af36-4dc6-fee0-08dd98c831fd
-6. Climate Change Response (Emissions Trading Scheme—Forestry Conversion) Amendment Act 2025 (2025/52), New Zealand Legislation (HTML and `latest.xml`). Accessed 8 July 2026. https://www.legislation.govt.nz/act/public/2025/52/en/latest/
+6. Climate Change Response (Emissions Trading Scheme—Forestry Conversion) Amendment Act 2025 (2025/52), New Zealand Legislation. Accessed 8 July 2026. https://www.legislation.govt.nz/act/public/2025/52/en/latest/
 7. Social Security Amendment Act 2025 (2025/25), New Zealand Legislation. Accessed 8 July 2026. https://www.legislation.govt.nz/act/public/2025/25/en/latest/
 8. Crimes Legislation (Stalking and Harassment) Amendment Act 2025 (2025/72), New Zealand Legislation. Accessed 8 July 2026. https://www.legislation.govt.nz/act/public/2025/72/en/latest/
 9. Marine and Coastal Area (Takutai Moana) (Customary Marine Title) Amendment Act 2025 (2025/58), New Zealand Legislation. Accessed 8 July 2026. https://www.legislation.govt.nz/act/public/2025/58/en/latest/
@@ -128,3 +126,4 @@ This is a seeded random draw of 5 clusters from the 62-Act frame, fully classifi
 12. jonnonz1/whiplash README. Accessed 8 July 2026. https://github.com/jonnonz1/whiplash
 13. Reproduction + classification script for this finding. [data/statutory_amendment_sample.py](data/statutory_amendment_sample.py)
 14. Rework fetch log for this finding. [data/statutory_amendment_fetch_log.txt](data/statutory_amendment_fetch_log.txt)
+15. Five-cluster reconciliation script used as an independent rollup cross-check. [data/statutory_amendment_five_cluster.py](data/statutory_amendment_five_cluster.py)
