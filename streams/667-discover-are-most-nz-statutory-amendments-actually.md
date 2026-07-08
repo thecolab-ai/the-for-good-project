@@ -35,17 +35,25 @@ steward's direction.
   [five-Act official-text finding](../research/findings/other/statutory-amendment-five-cluster-reconciliation.md),
   [definition-sensitivity finding](../research/findings/civic-transparency/repeal-replace-sensitivity.md)
 - **A heading that says "amended" can hide very different operations.** The
-  first one-Act pilot showed why researchers must read the operative text, not
-  just headings: the same Act contained inserts, replacements, and a revoke.
-  The completed five-Act follow-up confirmed the same classification method at
-  a larger, still limited scale (confidence: Low for the pilot, Medium for the
-  follow-up) — [taxonomy pilot sample](../research/findings/other/statutory-amendment-taxonomy-sample.md),
+  now-completed 142-provision extraction table found 23 provisions — about one
+  in six — that mixed more than one kind of change (insert, replace, repeal,
+  delete) under a single "amended" heading, so counting by headings alone
+  would misstate the numbers. That table is still a single manual
+  classification, not yet independently reproduced (confidence: Low for the
+  extraction table, Medium for the official-text reconciliation built on it) —
+  [extraction-table sample](../research/findings/other/statutory-amendment-taxonomy-sample.md),
   [five-Act official-text finding](../research/findings/other/statutory-amendment-five-cluster-reconciliation.md)
 - **The headline numbers people quote count different layers of change.** The
   article's 241,456 figure is an amendment-history event count; a related
   dataset's 15,282 figure is a count of public-Act consolidations; the official
   legislation system works in works, versions, and formats. These layers are
   related, but not interchangeable (confidence: Medium) — [counting-layers finding](../research/findings/civic-transparency/legislative-change-counts.md)
+- **Across governments since 2008, repeal-type events were a modest and fairly
+  steady minority in the available event data.** Repeals and revocations ranged
+  from roughly 12% to 19% of recorded Act-change events per government, while
+  overall change activity stayed broadly flat — though these figures come from
+  the same community data pipeline behind the article, not an independent
+  count (confidence: Medium) — [counting-layers finding](../research/findings/civic-transparency/legislative-change-counts.md)
 - **Recent whole-Act repeals are not mostly routine spent-law tidying.** In a
   2023 to mid-2026 public-Act mirror extraction, 71 whole-Act repeal rows were
   found: none came through a classic Statutes Repeal clean-up bill, 12 were
@@ -64,10 +72,18 @@ steward's direction.
   feasibility work still lean on the same Whiplash / nz-statute-book pipeline
   behind the public article. A direct full-corpus run from official XML or the
   PCO API has not been completed here.
-- **The five-Act sample is stronger than the first pilot, but still small.**
-  It covers 142 provisions from five 2025 Acts, with one Social Security Act
-  supplying just over half the provisions. It supports "not mostly narrow
-  repeals" in that sample, not a final all-time NZ estimate.
+- **The five-Act sample is complete, but still small and not independently
+  redone.** It covers 142 provisions from five 2025 Acts, with one Social
+  Security Act supplying just over half the provisions, and the five Acts were
+  drawn from a list keyed on the word "Amendment" in the title — so Acts that
+  change other laws without that word may be missed. It supports "not mostly
+  narrow repeals" in that sample, not a final all-time NZ estimate.
+- **The two five-Act documents rest on one shared classification table, and
+  they describe their cross-check differently.** The extraction-table finding
+  says the second document's rollup is only a duplicate-table consistency
+  check, not independent corroboration; the reconciliation finding presents
+  the mirror's labels as independently pointing the same way. A genuinely
+  independent re-classification of the same Acts has not been done.
 - **The definition still carries the conclusion.** Narrow repeal/revoke is
   small; repeal plus delete is also small; a broad "removal or replacement"
   view comes much closer to half in the five-Act sample. Future public use
@@ -102,7 +118,7 @@ steward's direction.
 - **Create a small reusable classification guide for future claims about
   repeals** — helps: charity staff, journalists, and civic researchers who
   need to check whether a law-change claim is counting repeal, delete, replace,
-  insert, or something else. Effort: Medium. Supported by the [taxonomy pilot
+  insert, or something else. Effort: Medium. Supported by the [extraction-table
   sample](../research/findings/other/statutory-amendment-taxonomy-sample.md)
   (confidence: Low), [five-Act official-text finding](../research/findings/other/statutory-amendment-five-cluster-reconciliation.md)
   (confidence: Medium), and [whole-Act repeal finding](../research/findings/civic-transparency/whole-act-repeal-housekeeping.md)
@@ -120,7 +136,7 @@ steward's direction.
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
 Signal: every tested definition of "repeal" left it short of a majority, but the larger-count evidence still needs direct official-source replication.
-Signal: the completed official-text sample now gives better support than the first one-Act pilot, but it is still not a whole-statute-book estimate.
+Signal: the completed 142-provision official-text sample is the stream's strongest evidence, but it is small, clustered, and still not a whole-statute-book estimate.
 Signal: the broadest tested "removal or replacement" definition gets close enough to half that any public output should show the definition choice plainly.
 
 ## Feedback log
