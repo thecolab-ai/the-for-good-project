@@ -577,10 +577,26 @@ synthesize_one() {  # $1 = stream root issue number
     info "Open draft PR #$update_pr (branch $branch) exists — updating it in place instead of opening a new one."
   fi
 
-  # Zero merged findings → a hollow overview helps nobody. Ask a human.
+  # Zero merged findings → a hollow overview helps nobody. Park it for a human
+  # decision and comment AT MOST ONCE. Previously this branch left the root
+  # flagged 'needs-synthesis' and re-commented every loop, so an empty stream
+  # (e.g. a framing run that opened no child research issues) spammed its thread
+  # indefinitely and burned a claim+worktree each cycle. Now: post the notice
+  # only if it isn't already there, and move the root out of the synthesis queue
+  # (needs-synthesis → awaiting-direction) so it stops being re-selected. The
+  # drain gate re-flags 'needs-synthesis' if real findings later land.
   if [ -z "$evidence" ]; then
-    warn "Stream #$n has no merged findings on disk — leaving 'needs-synthesis' and asking a human."
-    gh issue comment "$n" --repo "$REPO" --body "🧐 \`synthesize_work.sh\` found **no merged findings on disk** for stream #$n (children closed without finding files, or their frontmatter \`issue:\` doesn't point at this stream's issues). A human should check whether there's anything to synthesise — leaving **needs-synthesis** in place." >/dev/null || true
+    warn "Stream #$n has no merged findings on disk — parking at 'awaiting-direction' for a human."
+    local already
+    already="$(gh issue view "$n" --repo "$REPO" --json comments \
+      --jq '[.comments[].body | select(contains("no merged findings on disk"))] | length' 2>/dev/null || echo 0)"
+    if [ "${already:-0}" -eq 0 ]; then
+      gh issue comment "$n" --repo "$REPO" --body "🧐 \`synthesize_work.sh\` found **no merged findings on disk** for stream #$n (children closed without finding files, their frontmatter \`issue:\` doesn't point at this stream's issues, or the framing fan-out opened no child research issues). Parking at **awaiting-direction** for a human: re-run the framing fan-out to open the research questions, or park/close the stream. Relabel \`status: needs-synthesis\` once real findings exist." >/dev/null || true
+    else
+      info "Empty-stream notice already posted on #$n — not re-commenting."
+    fi
+    set_status_label "$n" "awaiting-direction" "needs-synthesis" 2>/dev/null \
+      || gh issue edit "$n" --repo "$REPO" --remove-label "status: needs-synthesis" >/dev/null 2>&1 || true
     remove_worktree; unclaim
     return 0
   fi
