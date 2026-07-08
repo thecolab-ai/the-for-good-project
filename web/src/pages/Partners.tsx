@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText, Server } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SystemDiagram } from "@/components/shared/SystemDiagram";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ const PROMISES = [
 
 export default function Partners() {
   const { data } = useSnapshot();
+  useSeo({ title: "For charities, councils & government", description: "Bring us a problem worth solving \u2014 rigorous, transparent, cited AI-assisted research for New Zealand\u2019s public-good organisations, for free.", path: "/partners" });
   const repo = data?.repo.url || "https://github.com/thecolab-ai/the-for-good-project";
 
   return (
