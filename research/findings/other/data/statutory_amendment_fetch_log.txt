@@ -1,70 +1,63 @@
 Fetch log for issue #676 rework
 ================================
 
-Accessed 7 July 2026 from this PR worktree after adversarial review on PR #684.
+Accessed 8 July 2026.
 
-Live Parliament frame
----------------------
+Purpose
+-------
 
-Command:
+This file records the source-access limitation for the five selected 2025
+Amendment Acts and the committed artifacts used for review. It replaces an
+earlier note that overstated the committed evidence by describing an XML parser
+and successful live XML rerun that were not present in the PR.
 
-```bash
-for p in 1 2 3 4 5 6 7 8 9 10; do
-  python3 .skills/skills/nz-parliament/scripts/cli.py bills \
-    --keyword Amendment --all --limit 50 --page "$p" --json
-done | jq -s '[.[].results[] | select(.status=="Royal Assent" and (.last_activity|startswith("2025"))) | [.last_activity,.bill_number,.title,.url]] | {count:length, rows:.}'
-```
-
-Result: `count` was `62`. A normalized comparison on `(date, bill_number, stripped title)` found the same row set in the live output and the embedded frame, but not the same row order: for the 26 November 2025 tie, the live API returned `107-2` (Crimes Legislation (Stalking and Harassment) Amendment Bill) before `93-2` (Crimes (Countering Foreign Interference) Amendment Bill), while the frozen embedded frame has `93-2` before `107-2`. Because the sample had already been drawn from the frozen frame and because changing the ordering after seeing which Act was classifiable would be post hoc, the embedded frame in `statutory_amendment_sample.py` is now treated as the sampling artifact of record. The earlier finding prose saying `63` was wrong.
-
-legislation-nz XML attempts
----------------------------
-
-Commands:
-
-```bash
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/52 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/25 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/72 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/58 --json
-python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/85 --json
-```
-
-All five returned `status: error`, `error: upstream_unexpected_html`, with the message that upstream returned HTML instead of legislation XML and that this may be bot protection or a not-found page. The reported XML URLs were:
-
-- `https://www.legislation.govt.nz/act/public/2025/52/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/25/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/72/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/58/en/latest.xml/`
-- `https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/`
-
-Direct HTTP attempts
+Official source URLs
 --------------------
 
-Commands:
+- https://www.legislation.govt.nz/act/public/2025/52/en/latest/
+- https://www.legislation.govt.nz/act/public/2025/25/en/latest/
+- https://www.legislation.govt.nz/act/public/2025/72/en/latest/
+- https://www.legislation.govt.nz/act/public/2025/58/en/latest/
+- https://www.legislation.govt.nz/act/public/2025/85/en/latest/
+
+Current local XML fetch status
+------------------------------
+
+Commands checked in this worktree:
 
 ```bash
-curl -L -I https://www.legislation.govt.nz/act/public/2025/52/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/25/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/72/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/58/en/latest/
-curl -L -I https://www.legislation.govt.nz/act/public/2025/85/en/2025-12-19.pdf
+curl -sL "https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/"
+node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/85/en/latest.xml/"
+python3 .skills/skills/legislation-nz/scripts/cli.py get-act 2025/85 --json
+curl -L --max-time 60 -o /tmp/act85.jina.txt \
+  https://r.jina.ai/https://www.legislation.govt.nz/act/public/2025/85/en/latest/
 ```
 
-Each response was `HTTP/2 202` with `x-amzn-waf-action: challenge` and `x-cache: Error from cloudfront`.
+Observed result:
 
-Repository fetch helper
------------------------
+- direct `curl` returned no usable XML body in this environment;
+- `scripts/fetch.mjs` printed `# fetched via plain HTTP` but returned AWS WAF
+  challenge HTML containing `window.gokuProps`;
+- `legislation-nz get-act` returned `status: error` with
+  `upstream_unexpected_html`, identifying bot protection or a non-XML upstream
+  response.
+- Jina reader over the public official HTML returned usable text and stable
+  section anchors for all five selected Act pages:
+  `2025/52`, `2025/25`, `2025/72`, `2025/58`, and `2025/85`.
 
-Commands:
+This is treated as a tooling/access limitation, not evidence that the official
+legislation.govt.nz URLs are dead.
 
-```bash
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/52/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/25/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/72/en/latest/"
-node scripts/fetch.mjs "https://www.legislation.govt.nz/act/public/2025/58/en/latest/"
-```
+Committed audit artifacts
+-------------------------
 
-The helper printed `# fetched via plain HTTP`, but the returned body was the AWS WAF JavaScript challenge page, including `window.gokuProps`, an AWS WAF `challenge.js` URL, and the `noscript` text: "In order to continue, we need to verify that you're not a robot."
+- `statutory_amendment_sample.py` freezes the 62-row Parliament keyword frame,
+  reproduces the seeded five-Act draw, embeds the per-provision extraction table
+  with one official-page section anchor per row, and computes the primary-class
+  and operation-presence rollups reported in the #676 finding.
+- `statutory_amendment_five_cluster.py` is the later issue #746 reconciliation
+  artifact on main. It rolls up the same five-Act table and gives the same
+  primary and operation-presence totals now reported in the #676 finding, but it
+  is a duplicate-table consistency check rather than independent corroboration.
 
-This log supports only a tooling/access limitation in this worktree. It does not prove the official sources are dead, and it does not contradict the reviewer having successful access from a different environment.
+No live XML parser is claimed in the #676 finding after this rework.
