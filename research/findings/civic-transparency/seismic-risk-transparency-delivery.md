@@ -69,6 +69,13 @@ Palmerston North is a useful high-risk comparator because it discloses the exist
 - I could not verify Christchurch's 2025 Civic Building Reports LGOIMA PDF directly because plain `curl` returned an 883-byte HTML shield page, Jina returned only metadata, and the official Newsline page did not include the exact %NBS values visible in search snippets; I therefore used the Newsline item for official status and did not treat the LGOIMA PDF as a verified citation.
 - This finding does not assess engineering adequacy. A structural engineer or council asset manager would be needed to judge whether a given remediation option is technically sufficient.
 
+### Source re-attempt note (2026-07-08, upgraded ADR-0006 ladder)
+
+On 2026-07-08 I re-ran both Christchurch citations through the upgraded fetch ladder (`node scripts/fetch.mjs "<url>"`), which now includes the r.jina.ai reader rung ([ADR-0006](../../../docs/adr/0006-fetch-proxy-browser-management.md)):
+
+- **Recovered:** The CCC Newsline item (Te Hononga civic-office review) now resolves via the Jina reader rung (exit 0, ~1.9 KB of clean article text). Its content confirms exactly what this finding relied on — north-side staff relocated during a seismic engineering review of the annex, the Council meeting cancelled because the Chamber was unusable, and a precautionary approach pending a detailed engineer's assessment. This citation is no longer blocked. https://www.newsline.ccc.govt.nz/news/story/review-of-christchurch-city-council-te-hononga-civic-offices-underway
+- **Still blocked:** The CCC Long-Term Plan 2024-34 Volume 1 PDF still cannot be extracted. `fetch.mjs` exits 0, but the only rung that returns anything is the Jina reader, which yields a cached-snapshot stub (~462 bytes, empty markdown body) rather than the document text — the same govt-bot-protection / cached-metadata wall recorded at first pass. A `FETCH_PROXY` rotating-proxy retry or a JS-rendering stealth-browser rung against this specific large PDF (or a manual authenticated download of the ~100-page LTP volume) would be needed to extract its body text; the general public-egress ladder does not clear it. This does **not** affect the finding's core conclusion: the CCC LTP PDF is cited only for "LTP existence and broad capital-programme context" (Source 8), and Christchurch's actual evidence — its asset-specific seismic disclosure being scattered rather than a Hutt-style portfolio register — rests on the now-recovered Newsline item, not on the LTP body. The Christchurch ranking ("behind on portfolio transparency") is unchanged.
+
 ## Open follow-up questions
 
 - Can a repeatable scraper convert Hutt's council-owned building register into a reusable schema for all 67 territorial authorities?
