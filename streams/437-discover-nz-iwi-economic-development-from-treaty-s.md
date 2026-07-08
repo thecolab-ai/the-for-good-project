@@ -4,7 +4,7 @@ title: "What iwi settlement capital has and has not shown so far"
 state: awaiting-direction
 steward: ""
 domain: other
-updated: 2026-07-06
+updated: 2026-07-08
 image: ""
 ---
 
@@ -20,13 +20,13 @@ Treaty settlements returned financial and commercial assets to iwi, and many iwi
 - **Starting conditions matter before investment skill is judged: early large settlements, relativity clauses, asset location, and capital access structurally widen outcomes.** (confidence: Medium) — [finding](../research/findings/other/iwi-settlement-structural-inequality.md)
 - **The public record supports venture case studies, not a clean success-rate figure; durable assets and strong partners look more resilient than concentrated exposure to shock-prone operating sectors.** (confidence: Medium) — [finding](../research/findings/other/iwi-venture-outcomes.md)
 - **The common governance pattern is a representative iwi authority setting mandate and distributions, with a separate commercial arm managing investments under explicit rules, but public evidence does not prove one best model.** (confidence: Medium) — [finding](../research/findings/other/iwi-commercial-governance-models.md)
-- **Iwi annual reports show real social spending and programme outputs, but reviewed public NZ evidence rarely proves that settlement capital caused measured social outcomes.** (confidence: Medium) — [finding](../research/findings/other/iwi-settlement-social-outcomes.md)
+- **Iwi annual reports show real social spending and programme outputs, but reviewed public NZ evidence rarely proves that settlement capital caused measured social outcomes.** The one candidate peer-reviewed study on procurement outcomes, previously unreadable behind a publisher block, has now been read in full via a public copy — it covers social procurement for Māori and Pasifika construction workers generally, not any iwi's own programmes, so the gap stands. (confidence: Medium) — [finding](../research/findings/other/iwi-settlement-social-outcomes.md)
 - **A responsible public comparison could cover stewardship metrics, risk, distributions and data limits, while leaving outcome data under iwi governance rather than forcing a universal return or wellbeing ranking.** (confidence: Medium) — [finding](../research/findings/other/iwi-reporting-standard.md)
 
 ## What we're not sure about yet
 
 - How many ventures really succeeded or failed is still unclear because comparable venture-level registers, lifetime returns, write-downs and exits are not public across iwi.
-- The strongest commercial evidence and the weakest social-impact evidence sit side by side: balance sheets, distributions and programme outputs are visible, but public sources rarely connect those to measured whānau wellbeing changes.
+- The strongest commercial evidence and the weakest social-impact evidence sit side by side: balance sheets, distributions and programme outputs are visible, but public sources rarely connect those to measured whānau wellbeing changes. This gap is now confirmed rather than provisional — the last unread academic lead on procurement outcomes has been checked and does not fill it.
 - Some comparisons are structurally loaded. Relativity payments, new redress, valuation methods, debt, asset location, member-count denominators and Crown delivery delays can make iwi look more or less successful than a simple investment-performance reading would suggest.
 - Smaller or later-settled iwi are harder to compare from public reports, so the evidence is strongest for the larger iwi and weaker for a full sector-wide picture.
 - The proposed reporting-standard work is only a desk-research proposal. It would need iwi governors, iwi data specialists, Māori commercial lawyers and members to test what is appropriate before anyone treats it as a standard.
