@@ -72,6 +72,13 @@ export const TEAM: TeamMember[] = [
     name: "Matt Wood",
     photo: "team/mwwhg.jpg",
   },
+  {
+    id: "product-strategy",
+    role: "Product & facilitation",
+    focus: "Provides product, strategy, and facilitation so the work stays useful, legible, and stewarded.",
+    name: "Klaus Bravenboer",
+    photo: "team/product-strategy.jpg",
+  },
 ];
 
 /** Whether a slot has a human-supplied, consented identity to show. */

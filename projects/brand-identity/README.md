@@ -155,11 +155,10 @@ What the agent did (allowed) vs. what a human must do (gated):
 
 Until a person consents, their slot in `team.ts` keeps `name: null` /
 `photo: null` and the page renders a dignified "added with consent" placeholder
-— so the site is always **honest about who has actually signed off**. Four
-people — the founder & steward, one contributor, the partnerships lead, and the
-engineering lead — have now been added with recorded consent (PRs #191, #369,
-and this PR); the remaining role slots stay gated until each person signs off. The process to add a real person
-is in
+— so the site is always **honest about who has actually signed off**. Consented
+people are listed in
+[`CONSENT.md`](CONSENT.md) and rendered from `TEAM`; any future role slots stay
+gated until each person signs off. The process to add a real person is in
 [`CONSENT.md`](CONSENT.md) and in the header comment of `team.ts`.
 
 ## How to run
@@ -175,15 +174,14 @@ npm run build   # type-check + production build (passes)
 
 ## Status
 
-**Prototype.** The brand kit and the page are built and building green. It now
-includes four real consented people (the founder & steward, a contributor, the
-partnerships lead, and the engineering lead). What's **deliberately still missing
-pending a human**:
+**Prototype.** The brand kit and the page are built and building green. The live
+roster is intentionally limited to consented people recorded in `CONSENT.md`.
+What's **deliberately still missing pending a human**:
 
-- Real names and photos for the rest of the team (human-gated — the whole point
-  of the consent rule). Until then those slots show placeholders.
+- Real names and photos for any future team roles (human-gated — the whole point
+  of the consent rule). Until then any placeholder slots show placeholders.
 - A human steward to confirm the positioning line / tagline choice and whether
-  the five role slots match the real team shape.
+  the role slots match the real team shape.
 - Optional: a favicon/OG image refresh if the steward wants beyond the current
   mark.
 
