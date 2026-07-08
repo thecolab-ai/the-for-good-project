@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link2, Search, ExternalLink, Database, Globe, Layers, FileText, LayoutGrid, Rows3, X } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,7 @@ function SourceLink({ s }: { s: SourceRef }) {
 
 export default function Sources() {
   const { data, error, loading } = useSnapshot();
+  useSeo({ title: "Data sources", description: "The evidence base \u2014 every source cited across the research, grouped by where it comes from.", path: "/sources" });
   const [q, setQ] = useState("");
   const [domain, setDomain] = useState("all");
   const [host, setHost] = useState("all");

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Link2, Search, Cpu, LayoutGrid, Rows3, Layers, ShieldCheck, ArrowUpDown, X } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -107,6 +108,7 @@ function ListRow({ f }: { f: Finding }) {
 
 export default function Findings() {
   const { data, error, loading } = useSnapshot();
+  useSeo({ title: "Research findings", description: "Cited answers to the questions the community is working on \u2014 every claim sourced, confidence marked honestly.", path: "/findings" });
   const [q, setQ] = useState("");
   const [domain, setDomain] = useState("all");
   const [conf, setConf] = useState("all");

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Check, Copy, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck, GitBranch, GitMerge } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card } from "@/components/ui/card";
@@ -93,6 +94,16 @@ export default function StreamDetail() {
   const { data, error, loading } = useSnapshot();
 
   const group = useMemo(() => (data ? buildStreamChains(data.issues).find((g) => g.stream === streamNum) : undefined), [data, streamNum]);
+
+  const seoDoc = data?.streamDocs?.find((d) => d.stream === streamNum);
+  const seoSummary = data?.streamsSummary?.find((s) => s.stream === streamNum);
+  const seoTitle = seoDoc?.title || seoSummary?.title;
+  useSeo({
+    title: seoTitle ? `${seoTitle} — stream #${streamNum}` : `Stream #${streamNum}`,
+    description: `Everything the community has researched on this problem — the original question, the cited evidence, and the synthesised answer. Stream #${streamNum} on The For Good Project.`,
+    path: `/streams/${streamNum}`,
+    type: "article",
+  });
 
   if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
   if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;

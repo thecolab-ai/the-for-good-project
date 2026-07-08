@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://thecolab-ai.github.io/the-for-good-project/sitemap.xml

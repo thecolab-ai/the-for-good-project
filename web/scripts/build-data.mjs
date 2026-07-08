@@ -566,6 +566,21 @@ async function main() {
   // of the full snapshot as the number of streams grows.
   writeFileSync(path.join(OUT_DIR, "streams-summary.json"), JSON.stringify({ generatedAt: snapshot.generatedAt, streams: streamsSummary }, null, 2));
   console.log(`Wrote snapshot: ${realIssues.length} issues, ${prs.length} PRs, ${findings.length} findings, ${leaderboard.length} contributors, ${snapshot.stats.sources} sources, ${recentComments.length} recent comments, ${activeActors.length} active actors.`);
+
+  // SEO: regenerate sitemap.xml from live content so new findings/streams are crawlable.
+  try {
+    const SITE = "https://thecolab-ai.github.io/the-for-good-project";
+    const lastmod = (snapshot.generatedAt || new Date().toISOString()).slice(0, 10);
+    const urls = new Set(["/", "/streams", "/findings", "/sources", "/partners", "/methodology", "/leaderboard", "/board", "/contribute", "/team", "/live"]);
+    for (const f of findings) if (f.slug) urls.add(`/findings/${f.slug}`);
+    for (const s of streamsSummary) if (s.stream != null) urls.add(`/streams/${s.stream}`);
+    const freq = (u) => (u === "/" || u === "/findings" || u === "/streams" || u === "/live" ? "daily" : "weekly");
+    const body = [...urls].map((u) => `  <url><loc>${SITE}${u}</loc><lastmod>${lastmod}</lastmod><changefreq>${freq(u)}</changefreq></url>`).join("\n");
+    writeFileSync(path.join(WEB_DIR, "public", "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`);
+    console.log(`Wrote sitemap.xml: ${urls.size} URLs.`);
+  } catch (e) {
+    console.warn("sitemap generation skipped:", e && e.message);
+  }
 }
 
 main().catch((e) => {

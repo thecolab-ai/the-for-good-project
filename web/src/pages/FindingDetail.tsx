@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Link2, Cpu } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,15 @@ const hostOf = (u: string) => {
 export default function FindingDetail() {
   const slug = useParams()["*"];
   const { data, error, loading } = useSnapshot();
+  const finding = data?.findings.find((f) => f.slug === slug);
+  useSeo(
+    finding
+      ? { title: finding.title, description: (finding.summary || "").slice(0, 200), path: `/findings/${finding.slug}`, type: "article" }
+      : { title: "Research findings", description: "Cited answers to the questions the community is working on. Every claim is sourced; confidence is marked honestly." },
+  );
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const finding = data.findings.find((f) => f.slug === slug);
   if (!finding) {
     return (
       <div className="mx-auto max-w-4xl">

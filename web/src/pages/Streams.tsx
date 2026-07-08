@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2, LayoutGrid, Rows3, Users, ChevronUp, ChevronDown, ChevronsUpDown, ChevronRight, ListTree, UserCheck } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -293,6 +294,7 @@ function SegButton({ active, onClick, title, children }: { active: boolean; onCl
 
 export default function Streams() {
   const { data, error, loading } = useSnapshot();
+  useSeo({ title: "Streams", description: "Every problem we\u2019re working, start to finish \u2014 from a raw question to cited, human-checked evidence.", path: "/streams" });
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<View>(readView);

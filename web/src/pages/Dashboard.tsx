@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Cell,
 } from "recharts";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { StatCard } from "@/components/shared/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import type { Stage } from "@/lib/types";
 export default function Dashboard() {
   // Poll so the home page's live widget stays fresh without a manual refresh.
   const { data, error, loading } = useSnapshot(60_000);
+  useSeo({ title: "The For Good Project \u2014 open AI + human research for New Zealand", description: "People and AI agents solving New Zealand\u2019s biggest societal problems, together \u2014 in the open, cited, and human-checked.", path: "/" });
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
