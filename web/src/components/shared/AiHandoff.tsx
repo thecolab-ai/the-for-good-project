@@ -10,19 +10,41 @@ type Kind = "stream" | "finding";
 // research in a plain ChatGPT/Claude chat and paste it back — no GitHub needed.
 function buildPrompt(kind: Kind, title: string, summary: string, url: string): string {
   const intro =
-    "You're helping with The For Good Project — an open, community-run research commons where people and AI agents tackle New Zealand's civic and social problems together. Every claim must be backed by a real, current source, and a human reviews everything before it counts.\n\n" +
-    "Please follow this method: cite every claim with a link; back any surprising claim with two independent sources; prefer official New Zealand sources (government, Stats NZ, councils, established NGOs, peer-reviewed work); mark your confidence as High, Medium or Low; never invent a source, statistic or organisation; and say plainly what you could not verify and what would change your mind.";
+    "You're helping with The For Good Project — an open, community-run research commons where people and AI agents tackle New Zealand's civic and social problems together. Every claim must be backed by a real, current source, and a human reviews everything before it counts.";
 
   const context = summary ? `\n\nContext: ${summary}` : "";
 
   const task =
     kind === "finding"
-      ? `I'm reviewing this published research finding: "${title}".${context}\n\nRead the full finding here: ${url}\n\n` +
-        "Please help me pressure-test and extend it: verify the key claims against current sources, flag anything that's missing, out of date or arguable, and surface follow-up questions worth researching. Then give me a short, plain-English, fully-sourced summary I can paste back into the project for a human to weigh in on."
-      : `I'm looking at this research stream — an open problem the community is working on: "${title}".${context}\n\nSee the stream here: ${url}\n\n` +
-        "Please help me move it forward: identify the most important unanswered questions, gather current, cited New Zealand evidence, and draft a short, plain-English, fully-sourced summary I can paste back into the stream for a human reviewer.";
+      ? `I'm reviewing this published research finding: "${title}".${context}\n\nRead the full finding here: ${url}\n\nHelp me pressure-test and extend it: verify the key claims against current sources, and flag anything missing, out of date, or arguable.`
+      : `I'm looking at an open research stream the community is working on: "${title}".${context}\n\nSee the stream here: ${url}\n\nHelp me move it forward: gather current, cited New Zealand evidence and lay out what's known, what's contested, and what's still unanswered.`;
 
-  return `${intro}\n\n${task}`;
+  const method =
+    "Method (please follow it): prefer official New Zealand sources (government, Stats NZ, councils, established NGOs, peer-reviewed work); back any surprising claim with two independent sources; never invent a source, statistic or organisation; mark confidence honestly; and say plainly what you could not verify.";
+
+  const format = [
+    "Give your answer in Markdown, using EXACTLY these sections and nothing before or after them:",
+    "",
+    "## Summary",
+    "2–3 plain-English sentences a busy person can grasp.",
+    "",
+    "## Key facts",
+    "A bulleted list. Every bullet MUST include at least one inline Markdown hyperlink to its source, written as [source name](https://full-url), AND end with a confidence tag in brackets — (High), (Medium) or (Low).",
+    "",
+    "## Contested or unverified",
+    "Anything you could not confirm, disagreements between sources, and claims that still need a second independent source.",
+    "",
+    "## Sources",
+    "A numbered reference list in APA style, each ending with a working URL. Example:",
+    "1. Radio New Zealand. (2026, March 11). *Article title* [News article]. RNZ. https://www.rnz.co.nz/…",
+    "",
+    "## Next steps for you",
+    `Finish with this block, written TO me (the contributor). Tell me to copy the whole brief above and share it back to The For Good Project so a human reviewer can weigh in — either by pasting it into the For Good WhatsApp group, or as a comment on this page: ${url} — and suggest 1–3 concrete next things worth researching.`,
+    "",
+    "Important: do NOT end with a follow-up question or an offer to keep chatting. End with the \"Next steps for you\" block so I know exactly what to do next.",
+  ].join("\n");
+
+  return `${intro}\n\n${task}\n\n${method}\n\n${format}`;
 }
 
 export function AiHandoff({ kind, title, summary = "", path }: { kind: Kind; title: string; summary?: string; path: string }) {
