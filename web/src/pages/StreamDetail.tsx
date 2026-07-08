@@ -241,7 +241,9 @@ export default function StreamDetail() {
                 <div className="space-y-3">
                   {findings.map((f) => (
                     <div key={f.path} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
-                      <a href={f.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</a>
+                      {f.slug
+                        ? <Link to={`/findings/${f.slug}`} className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</Link>
+                        : <a href={f.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</a>}
                       {f.summary ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{f.summary}</p> : null}
                       <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
                         <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">{harnessLabel(f.agent)}</span>
