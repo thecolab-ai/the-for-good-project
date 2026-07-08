@@ -1,5 +1,5 @@
 ---
-title: "NZ's freshwater consent-and-plan approach is less entitlement-based than Australia, slower-transitioning than California, and less nationally prescriptive than the Netherlands"
+title: "NZ's freshwater consent-and-plan approach is less entitlement-based than Australia, shorter-transitioning than California, and less nationally prescriptive than the Netherlands"
 domain: "other"
 issue: "#867"
 confidence: "Medium"
@@ -10,7 +10,7 @@ date: "2026-07-08"
 status: "draft"
 ---
 
-# NZ's freshwater consent-and-plan approach is less entitlement-based than Australia, slower-transitioning than California, and less nationally prescriptive than the Netherlands
+# NZ's freshwater consent-and-plan approach is less entitlement-based than Australia, shorter-transitioning than California, and less nationally prescriptive than the Netherlands
 
 ## Executive answer
 
