@@ -4,7 +4,7 @@ title: "Children at risk are still falling through the gaps in NZ's child-protec
 state: awaiting-direction
 steward: ""
 domain: child-welfare
-updated: 2026-07-04
+updated: 2026-07-08
 image: /images/streams/stream-259-child-protection-gaps.jpg
 ---
 
@@ -14,7 +14,7 @@ image: /images/streams/stream-259-child-protection-gaps.jpg
 
 Every so often New Zealand learns of children who were harmed while living "right under our noses" — known to schools, doctors, or police, yet helped by no one. Official reviews say this is not bad luck but a pattern: the agencies each hold a piece of the picture, nobody holds the whole child, and the reforms meant to fix it are moving slowly. This round of research maps how the system is supposed to work, what the official record says about where it fails, and what has already been recommended — using only public, aggregate sources, never any child's case.
 
-*This overview is a first synthesis. The research round is complete and the stream is now waiting on its human steward to set direction.*
+*The research round is complete and the stream is waiting on its human steward to set direction. This overview was refreshed on 8 July 2026 after the legal evidence behind one finding was re-verified against the law itself; no conclusion changed.*
 
 ## What we've learned so far
 
@@ -23,7 +23,7 @@ Every so often New Zealand learns of children who were harmed while living "righ
 - **The most urgent reports are increasingly answered late.** The target is to respond to critical and very-urgent reports on time at least 95% of the time; actual performance has slid from 89% to 80% over the past two years, and Oranga Tamariki marks itself "off-track". Responses to Māori children are less timely than for non-Māori in every region. (confidence: High) — [the numbers](../research/findings/child-welfare/roc-numbers-timeframe-outcomes.md), [what oversight bodies found](../research/findings/child-welfare/child-protection-oversight-gaps.md)
 - **Around 4 in 10 reports lead to no further action — and no one can yet say whether that's right.** The rate is highest for reports made by health professionals and NGOs. Officially, it is unresolved whether this reflects sound triage or missed risk. (confidence: High on the figures; the meaning is expressly unsettled) — [the numbers](../research/findings/child-welfare/roc-numbers-timeframe-outcomes.md)
 - **Every independent watchdog is critical, each from a different angle.** The Independent Children's Monitor says minimum care standards still aren't being met after five years of reporting; the Ombudsman could not assure that Oranga Tamariki consistently follows good administrative practice; the Auditor-General found its 2024/25 contracting of front-line services was mostly not open, transparent, or competitive. (confidence: High) — [what oversight bodies found](../research/findings/child-welfare/child-protection-oversight-gaps.md)
-- **The "nobody's job" gap is between agencies, and it isn't a legal problem.** The Privacy Commissioner confirms the law already allows agencies to share child-safety information proactively — but in practice they often don't, and they still mostly review failures in isolation from each other. A new inter-agency hub exists but covers only children whose sole parent is imprisoned, and local multi-agency forums don't exist in every community. (confidence: High that the gap persists; Medium on coverage; Low on whether the new fixes work) — [cross-agency handoffs](../research/findings/child-welfare/nz-child-protection-handoffs.md)
+- **The "nobody's job" gap is between agencies, and it isn't a legal problem.** The law itself — now checked directly against the Oranga Tamariki Act as well as the Privacy Commissioner's guidance — already allows agencies to share child-safety information proactively, even on their own initiative. In practice they often don't, and they still mostly review failures in isolation from each other. A new inter-agency hub exists but covers only children whose sole parent is imprisoned, and local multi-agency forums don't exist in every community. (confidence: High that the gap persists; Medium on coverage; Low on whether the new fixes work) — [cross-agency handoffs](../research/findings/child-welfare/nz-child-protection-handoffs.md)
 - **Everything above was already diagnosed and recommendations accepted — but little is complete.** The 2022 Poutasi review's 14 recommendations were all accepted by Cabinet in September 2025, yet by February 2026 the Monitor graded only two complete, the flagship mandatory-reporting reform still has no legislation date, and the Monitor concluded children are "still no more likely to be seen" — recording 24 children killed by a carer between December 2021 and June 2025. (confidence: High) — [recommendation implementation status](../research/findings/child-welfare/poutasi-recommendations-implementation-status.md), [stream framing](../research/findings/child-welfare/nz-child-protection-gaps-framing.md)
 
 ## What we're not sure about yet
