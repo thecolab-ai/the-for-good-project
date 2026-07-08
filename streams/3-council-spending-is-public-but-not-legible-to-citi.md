@@ -4,7 +4,7 @@ title: "Council spending is public but not legible to citizens"
 state: awaiting-direction
 steward: ""
 domain: civic-transparency
-updated: 2026-07-04
+updated: 2026-07-08
 image: /images/streams/stream-3-council-spending.jpg
 ---
 
@@ -54,16 +54,24 @@ secrecy, which is what makes this worth working on.
   (confidence: Medium) —
   [data census finding](../research/findings/civic-transparency/council-spending-data-census.md)
 - **All 78 council websites have now been checked with a repeatable,
-  auditable scan. Most councils (60 of 78) have finance, budget, procurement,
-  or grants pages discoverable from their front door — but not one scan
-  surfaced a structured, machine-readable spending file (a spreadsheet or data
-  feed) at any council's front door.** Seventeen sites blocked the scanner, so
-  they are unknowns rather than negatives, and the scan only checks each site's
-  front door — files hidden behind search boxes or document libraries would be
-  missed, so the "no structured data" part is explicitly Low confidence. The
-  strongest verified council-published datasets remain narrow: Christchurch's
-  openly licensed capital-works programme, and a stale 2018 Wellington grants
-  spreadsheet. (confidence: Medium for what was found; Low for what wasn't) —
+  auditable scan, and after a follow-up round fixed the scanning tools, none
+  remain unreachable: 77 of the 78 councils have a finance, budget,
+  procurement, rates, or grants page discoverable from their front door. But
+  not one scan surfaced a structured, machine-readable spending file (a
+  spreadsheet or data feed) at any council's front door.** The one site where
+  the scan matched nothing is, tellingly, Christchurch — the very council
+  whose capital-works dataset is the strongest verified example of structured
+  spending data — a reminder that the scan measures what a homepage makes
+  discoverable, not what a council actually publishes. Two honest caveats
+  travel with it: the 17 sites recovered in the follow-up were spot-checked
+  (one sample page each), so the "no structured data" result doesn't cover
+  them; and the scan only checks each site's front door — files hidden behind
+  search boxes or document libraries would be missed — so the "no structured
+  data" part is explicitly Low confidence, a lead to test rather than a
+  settled fact. The strongest verified council-published datasets remain
+  narrow: Christchurch's openly licensed capital-works programme, and a stale
+  2018 Wellington grants spreadsheet. (confidence: Medium for what was found;
+  Low for what wasn't) —
   [78-council census finding](../research/findings/civic-transparency/council-spending-census-78.md)
 - **The demand and supply pictures now connect, and the split is telling. The
   general questions — "where does my council's money go, by activity?", "is
@@ -115,10 +123,13 @@ secrecy, which is what makes this worth working on.
   answerability grades were made at national level. Individual councils may
   publish more — a contract register, a proactive disclosure log, project-level
   capital data, an online rates calculator — but those surfaces are flagged as
-  hypotheses to check, not confirmed to exist. The same blind spot covers the
-  17 council websites that blocked the census scanner and every council's
-  document library; the census itself says its "no structured spending data"
-  result is a lead to test, not a settled fact.
+  hypotheses to check, not confirmed to exist. The same blind spot covers
+  every council's document library; and although the 17 council websites that
+  initially blocked the census scanner have now all been re-checked and each
+  has a finance page discoverable, they were recovered only as spot checks
+  (one sample page each), so the census's "no structured spending data" result
+  doesn't cover them — the census itself calls that result a lead to test, not
+  a settled fact.
 - **Whether the "translation layer" is really necessary.** The claim that
   detailed cross-council comparison needs a mapping layer is a single finding's
   inference from official caveats — though the Taxpayers' Union's own
@@ -148,8 +159,9 @@ secrecy, which is what makes this worth working on.
   the front-door census with a per-council check — asking councils, or
   checking each site by hand — for structured spending data, a contract
   register, a proactive disclosure log, project-level capital data, usable
-  online meeting records, and an online rates calculator, starting with the 17
-  sites the scanner couldn't reach. Helps: everyone downstream — it turns two
+  online meeting records, and an online rates calculator, including a full
+  re-scan of the 17 sites that were only spot-checked after the scanning
+  tools were fixed. Helps: everyone downstream — it turns two
   Low-confidence negatives into trustworthy answers and shows where a pilot is
   actually feasible. Effort: Medium. Supported by the
   [78-council census finding](../research/findings/civic-transparency/council-spending-census-78.md)
@@ -218,7 +230,7 @@ secrecy, which is what makes this worth working on.
 
 > **TODO(steward): direction decision** — go deeper / pivot / proceed / park.
 
-Signal: the gap flagged last round — whether the recurring citizen questions are answerable from published data — is now filled: the general ones are, the specific ones generally are not, so the honest product shape is "answer the general, hand off the specific".
+Signal: the blocked-website gap flagged last round is now closed — all 17 council sites the scanner couldn't reach have been re-checked and every one has a finance page discoverable — so the remaining supply-side blind spot is document libraries and spot-checked sites, not unreachable websites; the "no structured spending data" negative still stands, but remains a Low-confidence lead.
 Signal: two unknowns still gate any build — whether councils publish usable decision records online, and which councils publish more than the national baseline — and two findings independently name a per-council audit as the next step.
 Signal: every finding that proposes building something still asks for human practitioner or user validation first, and the prior-art finding warns that sustained tools elsewhere were funded, not volunteer-run.
 
