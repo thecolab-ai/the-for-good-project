@@ -11,6 +11,7 @@ import { ChainTree } from "@/components/shared/ChainTree";
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
+import { AiHandoff } from "@/components/shared/AiHandoff";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
 import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection, stripEditorialDebris, buildStreamBrief } from "@/lib/streams";
 import { statusLabel } from "@/lib/meta";
@@ -172,6 +173,10 @@ export default function StreamDetail() {
       <Card className="mb-6 mt-5 overflow-x-auto p-5">
         <StreamProgress state={state} className="min-w-[560px]" />
       </Card>
+
+      <div className="mb-6">
+        <AiHandoff kind="stream" title={title} summary={rootExcerpt} path={`/streams/${streamNum}`} />
+      </div>
 
       {/* The human gate (G1, docs/STREAMS.md): the machines are done — a
           person now grades the evidence and sets the direction. */}
