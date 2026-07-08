@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="index, follow"/>
+<title>Network Map — The For Good Project</title>
+<meta name="description" content="A live, interactive knowledge graph of The For Good Project: every research stream, every finding, and every citation, and how they all connect."/>
+<meta property="og:title" content="The For Good Project — live knowledge graph"/>
+<meta property="og:description" content="Every stream, finding and citation in the open research commons, as one interactive network."/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{
+  ink:'#e8ebf2',bg0:'#0a0e17',bg1:'#0e1524',panel:'#111a2e',line:'#1e2b45',
+  navy:'#1e3a5f',cyan:'#22d3ee',accent:'#38bdf8',muted:'#8fa2bf'
+},fontFamily:{serif:['Georgia','Times New Roman','serif']}}}}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0a0e17;overflow:hidden;overscroll-behavior:none}
+  #graph{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;cursor:grab}
+  #graph:active{cursor:grabbing}
+  .link{stroke-linecap:round;fill:none}
+  .node-label{font-family:ui-sans-serif,system-ui,sans-serif;pointer-events:none;paint-order:stroke;
+    stroke:#0a0e17;stroke-width:3px;stroke-linejoin:round}
+  .node circle{cursor:pointer}
+  .glass{background:rgba(14,21,36,.82);backdrop-filter:blur(10px);border:1px solid rgba(56,189,248,.18)}
+  .chip{transition:all .15s}
+  .chip.off{opacity:.32;filter:grayscale(.6)}
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;max-width:280px;z-index:50}
+  .spin{width:34px;height:34px;border:3px solid #1e2b45;border-top-color:#38bdf8;border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e2b45;border-radius:8px}
+</style>
+</head>
+<body class="text-ink font-sans antialiased">
+
+<svg id="graph"></svg>
+
+<!-- Header -->
+<div class="glass pointer-events-auto fixed left-3 top-3 z-30 max-w-[min(92vw,420px)] rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="flex items-center gap-2">
+    <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan shadow-[0_0_10px_2px_rgba(34,211,238,.7)]"></span>
+    <h1 class="font-serif text-lg font-bold leading-none text-white sm:text-xl">The For Good Project — live knowledge graph</h1>
+  </div>
+  <p class="mt-1.5 text-[12px] leading-snug text-muted">Every <b class="text-ink">stream</b>, <b class="text-ink">finding</b> and <b class="text-ink">citation</b> in the open research commons — and how they all connect. Drag nodes, scroll to zoom, tap for detail.</p>
+  <div id="stats" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted"></div>
+  <div class="mt-2 flex items-center gap-2">
+    <input id="search" placeholder="Search…" class="w-full rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[13px] text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"/>
+    <button id="reset" title="Reset view" class="shrink-0 rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[12px] text-muted hover:text-ink">Reset</button>
+  </div>
+</div>
+
+<!-- Legend + domain filters -->
+<div class="glass pointer-events-auto fixed bottom-3 left-3 z-30 max-w-[min(92vw,420px)] rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Node types</div>
+  <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#f8fafc"></i>Project</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#a78bfa"></i>Domain</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3.5 w-3.5 rotate-45" style="background:#38bdf8"></i>Stream</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#22d3ee"></i>Finding</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-full" style="background:#5b6b8c"></i>Citation</span>
+  </div>
+  <div class="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Filter by domain</div>
+  <div id="domains" class="flex flex-wrap gap-1.5"></div>
+</div>
+
+<div id="loading" class="glass fixed left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl px-5 py-4">
+  <div class="spin"></div><span class="text-sm text-muted">Building the graph…</span>
+</div>
+
+<div id="tip" class="glass rounded-xl px-3 py-2 text-[12px] shadow-2xl"></div>
+
+<script>
+const SITE = "https://thecolab-ai.github.io/the-for-good-project";
+const DOMAIN_META = {
+  "ai-policy":         {label:"AI policy",          color:"#38bdf8"},
+  "child-welfare":     {label:"Child welfare",      color:"#f472b6"},
+  "civic-transparency":{label:"Civic transparency", color:"#22d3ee"},
+  "grant-access":      {label:"Grant access",       color:"#fbbf24"},
+  "biosecurity":       {label:"Biosecurity",        color:"#34d399"},
+  "social-services":   {label:"Social services",    color:"#c084fc"},
+  "other":             {label:"Other",              color:"#94a3b8"},
+};
+const domColor = d => (DOMAIN_META[d]?.color) || "#94a3b8";
+const domLabel = d => (DOMAIN_META[d]?.label) || (d||"other");
+const CONF = {High:"#34d399",Medium:"#fbbf24",Low:"#f87171",Unknown:"#8fa2bf"};
+
+const svg = d3.select("#graph");
+const tip = d3.select("#tip");
+let sim, gLink, gNode, gLabel, allNodes=[], allLinks=[], activeDomains=new Set(), zoomB;
+
+function showTip(html, x, y){
+  tip.html(html).style("opacity",1);
+  const w=280, ox = x+16+w > innerWidth ? x-16-w : x+16;
+  tip.style("left", Math.max(6,ox)+"px").style("top", Math.min(innerHeight-90, y+16)+"px");
+}
+function hideTip(){ tip.style("opacity",0); }
+
+async function boot(){
+  let snap;
+  try {
+    const res = await fetch(`${SITE}/data/snapshot.json`, {cache:"no-store"});
+    if(!res.ok) throw new Error(res.status);
+    snap = await res.json();
+  } catch(e){
+    // fallback to relative (works when served from same origin/path)
+    try { snap = await (await fetch("../data/snapshot.json",{cache:"no-store"})).json(); }
+    catch(_){ document.getElementById("loading").innerHTML =
+      '<span class="text-sm text-red-300">Could not load project data. Try again shortly.</span>'; return; }
+  }
+  build(snap);
+}
+
+function build(snap){
+  const findings = snap.findings||[];
+  const streams  = snap.streamsSummary||[];
+  const sources  = snap.sources||[];
+
+  const nodes = new Map();
+  const links = [];
+  const add = (n)=>{ if(!nodes.has(n.id)) nodes.set(n.id,n); return nodes.get(n.id); };
+
+  // root
+  add({id:"root", type:"root", label:"The For Good Project", r:22, domain:null});
+
+  // domains (from every source of truth)
+  const domains = new Set();
+  findings.forEach(f=>domains.add(f.domain||"other"));
+  streams.forEach(s=>domains.add(s.domain||"other"));
+  domains.forEach(d=>{
+    add({id:"dom:"+d, type:"domain", label:domLabel(d), r:13, domain:d});
+    links.push({source:"root", target:"dom:"+d, kind:"root"});
+  });
+
+  // streams -> domain
+  streams.forEach(s=>{
+    const id="stream:"+s.stream;
+    add({id, type:"stream", label:s.title||("Stream #"+s.stream), r:10, domain:s.domain||"other",
+         url:`${SITE}/streams/${s.stream}`, meta:s});
+    links.push({source:"dom:"+(s.domain||"other"), target:id, kind:"domain"});
+  });
+
+  // findings -> domain, sized by citation count
+  const byPath = new Map();
+  findings.forEach(f=>{
+    const id="find:"+f.slug;
+    const n = add({id, type:"finding", label:f.title, r:6+Math.min(9,(f.sources?.length||0)*0.7),
+      domain:f.domain||"other", url:`${SITE}/findings/${f.slug}`, conf:f.confidence, meta:f});
+    byPath.set(f.path, n);
+    links.push({source:"dom:"+(f.domain||"other"), target:id, kind:"domain"});
+  });
+
+  // citations: dedupe by host -> shared hosts weave findings together
+  const hostFindings = new Map(); // host -> Set(findingId)
+  const hostMeta = new Map();
+  sources.forEach(s=>{
+    const host=s.host; if(!host) return;
+    const fn = byPath.get(s.findingPath);
+    if(!fn) return;
+    if(!hostFindings.has(host)){ hostFindings.set(host,new Set()); hostMeta.set(host,{domain:s.domain,ex:s.label}); }
+    hostFindings.get(host).add(fn.id);
+  });
+  hostFindings.forEach((set,host)=>{
+    const id="src:"+host, deg=set.size;
+    add({id, type:"source", label:host, r:2.6+Math.min(6,deg*1.1), domain:hostMeta.get(host).domain||"other",
+      deg, url:"https://"+host, hub:deg>1});
+    set.forEach(fid=>links.push({source:fid, target:id, kind:"cite"}));
+  });
+
+  allNodes=[...nodes.values()]; allLinks=links;
+  DOMAIN_META && Object.keys(DOMAIN_META); activeDomains=new Set(domains);
+
+  document.getElementById("loading").remove();
+  renderStats(findings.length, streams.length, hostFindings.size, sources.length);
+  renderDomainChips([...domains]);
+  draw();
+}
+
+function renderStats(nf,ns,nh,nc){
+  document.getElementById("stats").innerHTML =
+   `<span><b class="text-white">${ns}</b> streams</span>
+    <span><b class="text-white">${nf}</b> findings</span>
+    <span><b class="text-white">${nc}</b> citations</span>
+    <span><b class="text-white">${nh}</b> sources</span>`;
+}
+
+function renderDomainChips(doms){
+  const wrap=d3.select("#domains");
+  doms.sort();
+  doms.forEach(d=>{
+    wrap.append("button").attr("class","chip rounded-full border px-2.5 py-1 text-[11px] font-medium")
+      .style("border-color",domColor(d)).style("color",domColor(d))
+      .html(`<span class="mr-1 inline-block h-2 w-2 rounded-full align-middle" style="background:${domColor(d)}"></span>${domLabel(d)}`)
+      .on("click",function(){
+        if(activeDomains.has(d)){ activeDomains.delete(d); this.classList.add("off"); }
+        else { activeDomains.add(d); this.classList.remove("off"); }
+        applyFilter();
+      });
+  });
+}
+
+function draw(){
+  const W=innerWidth,H=innerHeight;
+  svg.selectAll("*").remove();
+
+  const defs=svg.append("defs");
+  const glow=defs.append("filter").attr("id","glow").attr("x","-60%").attr("y","-60%").attr("width","220%").attr("height","220%");
+  glow.append("feGaussianBlur").attr("stdDeviation","2.4").attr("result","b");
+  const fm=glow.append("feMerge"); fm.append("feMergeNode").attr("in","b"); fm.append("feMergeNode").attr("in","SourceGraphic");
+
+  const root=svg.append("g");
+  zoomB=d3.zoom().scaleExtent([0.15,5]).on("zoom",e=>root.attr("transform",e.transform));
+  svg.call(zoomB).on("dblclick.zoom",null);
+
+  gLink=root.append("g").attr("stroke-opacity",.5).selectAll("path").data(allLinks).join("path")
+    .attr("class","link")
+    .attr("stroke",d=>{ const t=typeof d.target==="object"?d.target:null; return d.kind==="cite"?"#26364f":(t?domColor(t.domain):"#26364f"); })
+    .attr("stroke-width",d=>d.kind==="root"?1.6:d.kind==="domain"?1.2:0.7);
+
+  gNode=root.append("g").selectAll("g").data(allNodes).join("g").attr("class","node")
+    .call(d3.drag().on("start",dstart).on("drag",dgrag).on("end",dend))
+    .on("mouseover",(e,d)=>hover(e,d,true)).on("mousemove",(e,d)=>hover(e,d,false))
+    .on("mouseout",()=>{ hideTip(); focus(null); })
+    .on("click",(e,d)=>{ if(d.url && (d.type==="finding"||d.type==="stream")) window.open(d.url,"_blank"); });
+
+  gNode.each(function(d){
+    const g=d3.select(this);
+    if(d.type==="stream"){
+      g.append("rect").attr("width",d.r*1.7).attr("height",d.r*1.7).attr("x",-d.r*0.85).attr("y",-d.r*0.85)
+       .attr("transform","rotate(45)").attr("rx",2)
+       .attr("fill",domColor(d.domain)).attr("stroke","#0a0e17").attr("stroke-width",1.5).attr("filter","url(#glow)");
+    } else {
+      const fill = d.type==="root" ? "#f8fafc" : d.type==="domain" ? "#a78bfa"
+                 : d.type==="finding" ? domColor(d.domain) : "#5b6b8c";
+      g.append("circle").attr("r",d.r).attr("fill",fill)
+       .attr("stroke", d.type==="finding" ? (CONF[d.conf]||"#0a0e17") : "#0a0e17")
+       .attr("stroke-width", d.type==="finding"?2:1.5)
+       .attr("filter", d.type==="source" && !d.hub ? null : "url(#glow)")
+       .attr("fill-opacity", d.type==="source"?0.9:1);
+    }
+  });
+
+  gLabel=root.append("g").selectAll("text").data(allNodes.filter(n=>n.type!=="source"||n.hub)).join("text")
+    .attr("class","node-label")
+    .attr("font-size",d=>d.type==="root"?14:d.type==="domain"?12:d.type==="stream"?11:d.type==="finding"?9.5:8)
+    .attr("font-weight",d=>d.type==="root"||d.type==="domain"?700:500)
+    .attr("fill",d=>d.type==="root"?"#fff":d.type==="source"?"#8fa2bf":"#dbe4f3")
+    .attr("text-anchor","middle").attr("dy",d=>-(d.r+5))
+    .text(d=>{ const m=d.type==="finding"?46:d.type==="stream"?40:30; return d.label.length>m?d.label.slice(0,m-1)+"…":d.label; });
+
+  sim=d3.forceSimulation(allNodes)
+    .force("link",d3.forceLink(allLinks).id(n=>n.id).distance(l=>l.kind==="root"?90:l.kind==="domain"?70:l.kind==="cite"?45:60).strength(l=>l.kind==="cite"?0.28:0.7))
+    .force("charge",d3.forceManyBody().strength(d=>d.type==="source"?-40:d.type==="root"?-900:-260).distanceMax(520))
+    .force("collide",d3.forceCollide().radius(d=>d.r+6).iterations(2))
+    .force("center",d3.forceCenter(W/2,H/2))
+    .force("x",d3.forceX(W/2).strength(0.03)).force("y",d3.forceY(H/2).strength(0.03))
+    .on("tick",tick);
+
+  // gentle initial zoom-to-fit
+  setTimeout(()=>fit(),700);
+}
+
+function tick(){
+  gLink.attr("d",d=>{
+    const dx=d.target.x-d.source.x, dy=d.target.y-d.source.y, dr=Math.hypot(dx,dy)*2.2;
+    return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+  });
+  gNode.attr("transform",d=>`translate(${d.x},${d.y})`);
+  gLabel.attr("x",d=>d.x).attr("y",d=>d.y);
+}
+
+function fit(){
+  const xs=allNodes.map(n=>n.x),ys=allNodes.map(n=>n.y);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const w=maxX-minX||1,h=maxY-minY||1, pad=80;
+  const k=Math.min(2, 0.92/Math.max(w/(innerWidth-pad),h/(innerHeight-pad)));
+  const tx=innerWidth/2-k*(minX+maxX)/2, ty=innerHeight/2-k*(minY+maxY)/2;
+  svg.transition().duration(800).call(zoomB.transform,d3.zoomIdentity.translate(tx,ty).scale(k));
+}
+
+// neighbour focus on hover
+const nbr=new Map();
+function buildNbr(){ if(nbr.size) return; allLinks.forEach(l=>{
+  const s=l.source.id||l.source, t=l.target.id||l.target;
+  (nbr.get(s)||nbr.set(s,new Set()).get(s)).add(t);
+  (nbr.get(t)||nbr.set(t,new Set()).get(t)).add(s);
+});}
+function focus(id){
+  buildNbr();
+  if(!id){ gNode.style("opacity",1); gLink.style("opacity",1); gLabel.style("opacity",1); return; }
+  const keep=nbr.get(id)||new Set(); keep.add(id);
+  gNode.style("opacity",n=>keep.has(n.id)?1:0.12);
+  gLabel.style("opacity",n=>keep.has(n.id)?1:0.08);
+  gLink.style("opacity",l=>((l.source.id||l.source)===id||(l.target.id||l.target)===id)?0.9:0.05);
+}
+function hover(e,d,enter){
+  if(enter) focus(d.id);
+  const T={root:"Project",domain:"Domain",stream:"Research stream",finding:"Finding",source:"Citation source"}[d.type];
+  let extra="";
+  if(d.type==="finding") extra=`<div class="mt-1 text-muted">${domLabel(d.domain)} · <span style="color:${CONF[d.conf]||'#8fa2bf'}">${d.conf||'—'} confidence</span> · ${d.meta.sources?.length||0} citations</div><div class="mt-1 text-[11px] text-accent">click to open →</div>`;
+  else if(d.type==="stream") extra=`<div class="mt-1 text-muted">${domLabel(d.domain)} · ${d.meta.findings||0} findings · ${d.meta.mergedPRs||0} merged PRs</div><div class="mt-1 text-[11px] text-accent">click to open →</div>`;
+  else if(d.type==="source") extra=`<div class="mt-1 text-muted">cited by ${d.deg} finding${d.deg>1?'s':''}</div>`;
+  else if(d.type==="domain") extra=`<div class="mt-1 text-muted">research domain</div>`;
+  showTip(`<div class="text-[10px] font-bold uppercase tracking-wider" style="color:${d.type==='finding'||d.type==='stream'?domColor(d.domain):'#8fa2bf'}">${T}</div><div class="font-semibold text-white leading-snug">${d.label}</div>${extra}`, e.clientX, e.clientY);
+}
+
+function applyFilter(){
+  const q=(document.getElementById("search").value||"").toLowerCase().trim();
+  const vis=n=>{
+    if(n.type==="root") return true;
+    const dOk = n.domain==null || activeDomains.has(n.domain);
+    const qOk = !q || n.label.toLowerCase().includes(q);
+    return dOk && qOk;
+  };
+  gNode.style("display",n=>vis(n)?null:"none");
+  gLabel.style("display",n=>vis(n)?null:"none");
+  gLink.style("display",l=>{
+    const s=typeof l.source==="object"?l.source:allNodes.find(n=>n.id===l.source);
+    const t=typeof l.target==="object"?l.target:allNodes.find(n=>n.id===l.target);
+    return (s&&t&&vis(s)&&vis(t))?null:"none";
+  });
+}
+
+function dstart(e,d){ if(!e.active) sim.alphaTarget(.25).restart(); d.fx=d.x; d.fy=d.y; }
+function dgrag(e,d){ d.fx=e.x; d.fy=e.y; }
+function dend(e,d){ if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }
+
+document.getElementById("search").addEventListener("input",applyFilter);
+document.getElementById("reset").addEventListener("click",()=>{ document.getElementById("search").value=""; applyFilter(); fit(); });
+addEventListener("resize",()=>{ if(sim){ sim.force("center",d3.forceCenter(innerWidth/2,innerHeight/2)); sim.alpha(.3).restart(); }});
+boot();
+</script>
+</body>
+</html>
