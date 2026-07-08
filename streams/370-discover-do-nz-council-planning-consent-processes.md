@@ -4,7 +4,7 @@ title: "Flood-proofing your home rarely moves the official risk label — and no
 state: awaiting-direction
 steward: ""
 domain: other
-updated: 2026-07-04
+updated: 2026-07-08
 image: /images/streams/stream-370-flood-risk-labels.jpg
 ---
 
@@ -72,10 +72,16 @@ property look risky, and the "no reward" part largely holds.
   (confidence: Medium) —
   [finding](../research/findings/other/gabrielle-responsive-designation.md)
 - **Councils can and do correct flood maps and LIM notes — but the routes are
-  request-and-appeal, not automatic.** A homeowner who does protective works
+  request-and-appeal, not automatic, and even checking whether a label moved
+  costs the owner money and weeks.** A homeowner who does protective works
   has to push: ask the council, supply technical evidence, and escalate to the
-  Ombudsman or courts if refused. Nothing updates by itself, and there is no
-  public data on how often these requests succeed. (confidence: Medium) —
+  Ombudsman or courts if refused. Nothing updates by itself. The law behind
+  the buyer's property report treats it as a disclosure of the council's
+  existing records, not a site inspection — confirmed across six councils
+  including Wellington, where a fresh residential report costs $575.50 and is
+  currently averaging 18 working days despite a stated usual turnaround of up
+  to 10. There is still no public data on how often correction requests
+  succeed. (confidence: Medium) —
   [finding](../research/findings/other/designation-correction-pathways.md)
 - **NZ insurers increasingly price flood risk address-by-address, but none
   publishes a pathway that turns completed flood-proofing into a cheaper
@@ -161,8 +167,10 @@ claim that consent is often *refused* remains untested — see below.
 - **Write a plain-language homeowner guide to the correction routes that
   already exist** — how to seek removal of a title tag, correction of a LIM
   note or flood-map entry, and where to escalate (Ombudsman, determinations)
-  if refused. Helps: homeowners who have done protective works but don't know
-  the label can move. Effort: Small.
+  if refused; the evidence now includes real fees and current turnaround
+  times for at least one major council, so the guide can be honest about
+  cost and delay. Helps: homeowners who have done protective works but don't
+  know the label can move. Effort: Small.
   Supported by [the correction-pathways finding](../research/findings/other/designation-correction-pathways.md)
   (confidence: Medium) and
   [the title-tags finding](../research/findings/other/s73-s74-title-tags.md)
