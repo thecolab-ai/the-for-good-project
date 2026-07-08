@@ -124,6 +124,15 @@ Could not verify:
 - The `data-govt-nz` CLI search for hospital waiting and productivity data returned a non-JSON catalogue response in this environment, so it did not provide usable dataset evidence.
 - PubMed pages for several biomedical articles returned a reCAPTCHA page in the built-in web tool; where possible, I used publisher, ResearchGate, PMC or official report pages instead and treated the PubMed blockage as tooling, not a dead citation.
 
+### 2026-07-08 re-attempt of blocked sources (upgraded ADR-0006 fetch ladder)
+
+Two sources flagged as tooling-blocked in the original write-up were re-attempted on 2026-07-08 through the upgraded fetch ladder (`node scripts/fetch.mjs`, which now escalates plain HTTP → rotating proxy → r.jina.ai reader → stealth Chromium). Both remain blocked; neither is a dead citation, and the finding's core conclusions do not depend on either.
+
+- **ResearchGate publication 347569522** (Jones & van der Werf, ED crowding and mortality) — still **BLOCKED**. The ladder returned HTTP 403 on plain HTTP, on the Jina reader rung, and on stealth Chromium; the rotating-proxy rung was unavailable because `FETCH_PROXY` was not set in this environment. What would recover it: a rotating residential-IP proxy (`FETCH_PROXY`) to clear ResearchGate's IP-reputation wall, an authenticated ResearchGate session, or a manual browser download of the abstract/PDF. This does **not** change the core ED conclusion — the NZ ED access-block/mortality claim is independently supported by the HRC 2016 summary (source 4) and the mortality mechanism by the IFEM 2020 report (source 5), both of which fetch cleanly. The ResearchGate abstract only supplies the exact hazard ratios (1.10 and 1.07), already caveated as coming from a single source; those figures are unchanged.
+- **catalogue.data.govt.nz** — still **BLOCKED**. The catalogue returned an Imperva/Incapsula "Pardon Our Interruption" bot-challenge (an HTTP 200 challenge page, not real content) through the ladder. What would recover it: a rotating residential-IP proxy (`FETCH_PROXY`) or a normal interactive browser to pass the JS/cookie challenge. This does **not** affect any figure or conclusion — data.govt.nz was only queried as a null-result catalogue search (already recorded above as returning a non-JSON response and providing no usable dataset evidence). No figure or confidence rating rests on it.
+
+Neither re-attempt recovered new data, and no figure or confidence rating in this finding has been changed as a result.
+
 ## Open follow-up questions
 
 - What would an NZ linked-data design need to estimate productivity loss from Health NZ waitlists without exposing personal information?
