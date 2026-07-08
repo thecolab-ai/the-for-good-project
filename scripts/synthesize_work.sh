@@ -33,12 +33,59 @@
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  STREAM MAX POLL_SECONDS DRY_RUN AGENT MODEL AGENT_TIMEOUT
+#       FLEET_SERVER STREAM_LOGS HANDLE FLEET_HANDLE FLEET_MODEL
 #       FOLLOWUP_ROUNDS FOLLOWUP_PER_ROUND FOR_GOOD_REPO REPO_DIR
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source "scripts/fg-common.sh"
 RUNS_AGENT=1
 parse_agent_args "$@"
+export AGENT MODEL
+
+# Fleet telemetry (#398) — match autopilot's zero-setup presence default for
+# standalone synthesis runs, but keep it telemetry-only and best-effort. An
+# explicitly empty FLEET_SERVER opts out; server failures are swallowed by the
+# hook/bridge clients so GitHub remains the source of truth.
+init_synthesis_fleet() {
+  FLEET_SERVER="${FLEET_SERVER-https://forgood.thecolab.ai}"
+  export STREAM_LOGS="${STREAM_LOGS:-0}"
+  FLEET_HANDLE="${FLEET_HANDLE:-${HANDLE:-}}"
+  if [ -z "$FLEET_HANDLE" ]; then
+    FLEET_HANDLE="$(gh api user --jq .login 2>/dev/null || true)"
+  fi
+  if [ -z "$FLEET_HANDLE" ]; then
+    FLEET_HANDLE="$(git config user.name 2>/dev/null || true)"
+  fi
+  FLEET_HANDLE="${FLEET_HANDLE:-unknown}"
+  FLEET_MODEL="${FLEET_MODEL:-${MODEL:-$AGENT}}"
+  FLEET_AGENT_ID_FILE="${FLEET_AGENT_ID_FILE:-${TMPDIR:-/tmp}/fg-synthesis-agent-id-${FLEET_HANDLE}-${AGENT}}"
+  export FLEET_SERVER FLEET_HANDLE FLEET_MODEL FLEET_AGENT_ID_FILE
+}
+init_synthesis_fleet
+
+# run_agent with a current task bound for the fleet telemetry bridges/hooks.
+# Restore whatever the caller had set so this wrapper cannot leak task context
+# into a later idle/sleep phase or a different runner sourced in-process.
+run_synthesis_agent() {  # $1 = ref, $2 = title, $3 = prompt, $4 = worktree
+  local ref="$1" title="$2" prompt="$3" dir="$4" rc
+  local had_fleet_task_kind=0 had_task_kind=0 had_task_ref=0 had_task_title=0
+  local old_fleet_task_kind="" old_task_kind="" old_task_ref="" old_task_title=""
+  [ "${FLEET_TASK_KIND+x}" = x ] && { had_fleet_task_kind=1; old_fleet_task_kind="$FLEET_TASK_KIND"; }
+  [ "${TASK_KIND+x}" = x ] && { had_task_kind=1; old_task_kind="$TASK_KIND"; }
+  [ "${TASK_REF+x}" = x ] && { had_task_ref=1; old_task_ref="$TASK_REF"; }
+  [ "${TASK_TITLE+x}" = x ] && { had_task_title=1; old_task_title="$TASK_TITLE"; }
+
+  export FLEET_TASK_KIND=synth TASK_KIND=synth TASK_REF="$ref" TASK_TITLE="$title"
+  run_agent "$prompt" "$dir"
+  rc=$?
+
+  if [ "$had_fleet_task_kind" = 1 ]; then export FLEET_TASK_KIND="$old_fleet_task_kind"; else unset FLEET_TASK_KIND; fi
+  if [ "$had_task_kind" = 1 ]; then export TASK_KIND="$old_task_kind"; else unset TASK_KIND; fi
+  if [ "$had_task_ref" = 1 ]; then export TASK_REF="$old_task_ref"; else unset TASK_REF; fi
+  if [ "$had_task_title" = 1 ]; then export TASK_TITLE="$old_task_title"; else unset TASK_TITLE; fi
+  return "$rc"
+}
+
 # cleanup runs on ANY exit; INT/TERM must `exit` themselves or bash resumes the
 # loop after Ctrl-C instead of stopping. exit re-fires the EXIT trap.
 trap 'remove_worktree || true' EXIT
@@ -318,8 +365,9 @@ synthesis_rework_targets() {
 }
 
 resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
-  local n="$1" pr="$2" branch
-  rule; info "${c_bold}Stream #$n${c_reset} (synthesis rework, PR #$pr) — $(issue_field "$n" title)"
+  local n="$1" pr="$2" branch stream_title
+  stream_title="$(issue_field "$n" title)"
+  rule; info "${c_bold}Stream #$n${c_reset} (synthesis rework, PR #$pr) — $stream_title"
   branch="$(gh pr view "$pr" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null || true)"
   [ -z "$branch" ] && { warn "Couldn't read PR #$pr's head branch — leaving #$n for a future loop."; return 1; }
   # Currency check: commits newer than the latest change-request mean the
@@ -348,7 +396,7 @@ resynthesize_one() {  # $1 = stream root issue number, $2 = synthesis PR number
   make_worktree "origin/$branch" || { err "Couldn't create worktree for PR #$pr (branch $branch) — leaving #$n for a future loop."; return 1; }
   local path; path="$(overview_path "$n" "$WORKTREE" "$(issue_field "$n" title)")"
   info "Handing synthesis rework for stream #$n to $AGENT (worktree: $WORKTREE)..."
-  set +e; run_agent "$(synthesis_rework_prompt "$n" "$pr" "$path" "$branch")" "$WORKTREE"; local rc=$?; set -e
+  set +e; run_synthesis_agent "#$pr" "synthesis rework #$pr — stream #$n — $stream_title" "$(synthesis_rework_prompt "$n" "$pr" "$path" "$branch")" "$WORKTREE"; local rc=$?; set -e
   was_interrupted "$rc" && { remove_worktree; warn "Interrupted — stopping."; exit 130; }
   if [ "$rc" -eq 0 ]; then ok "Synthesis rework run complete for stream #$n"; else err "Synthesis rework run failed/aborted for stream #$n (exit $rc)"; fi
   remove_worktree
@@ -541,7 +589,7 @@ synthesize_one() {  # $1 = stream root issue number
   [ -n "$update_pr" ] && before="$(gh pr view "$update_pr" --repo "$REPO" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
   info "Evidence ($(printf '%s\n' "$evidence" | wc -l | tr -d ' ') file(s)):"; log "$evidence"
   info "Handing stream #$n to $AGENT (worktree: $WORKTREE)..."
-  set +e; run_agent "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth" "$update_pr")" "$WORKTREE"; local rc=$?; set -e
+  set +e; run_synthesis_agent "#$n" "synthesis #$n — $title" "$(synthesis_prompt "$n" "$path" "$evidence" "$branch" "$resynth" "$update_pr")" "$WORKTREE"; local rc=$?; set -e
   was_interrupted "$rc" && { remove_worktree; unclaim; warn "Interrupted — stopping."; exit 130; }
   if [ "$rc" -eq 0 ]; then
     ok "Synthesis agent run complete for stream #$n"
