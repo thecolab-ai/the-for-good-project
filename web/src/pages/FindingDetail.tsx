@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { DomainBadge } from "@/components/shared/Badges";
 import { Markdown } from "@/components/shared/Markdown";
+import { AiHandoff } from "@/components/shared/AiHandoff";
 import { CONFIDENCE_COLOR } from "@/lib/meta";
 
 const hostOf = (u: string) => {
@@ -92,6 +93,8 @@ export default function FindingDetail() {
               )) : <p className="text-sm text-muted-foreground">No sources listed.</p>}
             </CardContent>
           </Card>
+
+          <AiHandoff kind="finding" title={finding.title} summary={finding.summary} path={`/findings/${finding.slug}`} />
 
           <a href={finding.url} target="_blank" rel="noreferrer" className="block">
             <Button variant="brand" className="w-full">View source on GitHub <ExternalLink className="h-4 w-4" /></Button>
