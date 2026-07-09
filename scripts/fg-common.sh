@@ -763,6 +763,33 @@ clear_status_label() {  # $1 = issue
     | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
 }
 
+# ---- claim-fail backoff (#766) ----
+# An issue can be claimed, finish with NO PR (its sources unreachable from this
+# egress — a WAF / IP-reputation block, not a defect), get released to
+# `available`, and be re-claimed within seconds — spinning without progress
+# (#728 did this 11×, #521 5×). finish_issue (start_work.sh) counts prior empty
+# attempts from a hidden marker on the issue and, at EMPTY_ATTEMPT_CAP, parks it
+# `status: blocked` (runners skip that) instead of re-releasing. The marker and
+# these two PURE helpers live here so they're unit-tested without gh (see
+# scripts/test-fg-common-backoff.sh); the marker is derived from GitHub so the
+# count survives across separate runs and different runner identities.
+EMPTY_ATTEMPT_MARKER="<!-- fg-empty-attempt -->"
+
+# Count empty-attempt markers in a `gh issue view --json comments` payload.
+empty_attempt_count() {  # $1 = {comments:[{body}...]} JSON -> integer (0 on junk)
+  local out
+  out="$(printf '%s' "${1:-}" \
+    | jq --arg m "$EMPTY_ATTEMPT_MARKER" '[.comments[]? | select(.body|contains($m))] | length' 2>/dev/null)"
+  # Empty/malformed input can leave jq emitting nothing (exit 0) — coerce any
+  # non-integer, including "", to 0 so callers always get a number.
+  case "$out" in ''|*[!0-9]*) echo 0 ;; *) echo "$out" ;; esac
+}
+
+# Verdict for a claim that produced no PR: park the issue or re-release it.
+empty_attempt_verdict() {  # $1 = attempts so far (incl. this one), $2 = cap -> "block" | "release"
+  if [ "${1:-0}" -ge "${2:-3}" ]; then echo block; else echo release; fi
+}
+
 # True if an exit status means the agent was INTERRUPTED by the user (Ctrl-C) or
 # killed — the whole runner should stop, not move on to the next item. Note a
 # `timeout` (124) is deliberately NOT here: that fails one item but the loop

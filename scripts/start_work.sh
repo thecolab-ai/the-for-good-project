@@ -30,7 +30,7 @@
 #
 # Args: [claude|codex|hermes] [--model <name>]   (CLI wins over the AGENT/MODEL env vars)
 # Env:  AGENT MODEL MAX ISSUE STAGE POLL_SECONDS DRY_RUN AGENT_TIMEOUT
-#       PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
+#       EMPTY_ATTEMPT_CAP PROVIDER HERMES_PROFILE HERMES_FLAGS FOR_GOOD_REPO REPO_DIR
 #       FLEET_SERVER FLEET_TOKEN FLEET_CLAIM(=0) — set FLEET_CLAIM=1 to let the
 #       fleet server claim atomically for you; with no FLEET_TOKEN it
 #       AUTO-ENROLLS this gh identity on first contact (token stored in
@@ -47,6 +47,7 @@ ISSUE="${ISSUE:-}"                    # one-shot: work THIS issue first, then fa
 POLL_SECONDS="${POLL_SECONDS:-180}"   # keep polling when queue empty every 3 min (0 to exit instead)
 DRY_RUN="${DRY_RUN:-0}"
 RECONCILE_REWORK_SECONDS="${RECONCILE_REWORK_SECONDS:-900}"
+EMPTY_ATTEMPT_CAP="${EMPTY_ATTEMPT_CAP:-3}"  # consecutive claim→no-PR fails before an issue is parked status: blocked instead of re-released (#766)
 CLAIMED_ISSUE=""
 FLEET_CLAIMED=0     # 1 while working an issue the fleet SERVER claimed for us (FLEET_CLAIM=1 opt-in)
 FLEET_RENEW_PID=""  # background lease-renew loop for a fleet-claimed issue
@@ -416,11 +417,42 @@ finish_issue() {  # $1 = issue number
     # 'done' never touches labels (the PR/Actions pipeline owns them from here).
     if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" done "$pr"; fi
   else
-    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] no PR found for #$n — would release back to available"; CLAIMED_ISSUE=""; return 0; fi
-    set_status_label "$n" "available" "claimed"
+    # CLAIM-FAIL BACKOFF (#766): an issue that keeps being claimed and finished
+    # with NO PR — usually because its sources are unreachable from this egress
+    # (a WAF / IP-reputation block, not a defect in the issue) — must not spin:
+    # released straight to `available` it is re-grabbed within seconds and fails
+    # the same way (#728 did this 11×, #521 5×). We count prior empty attempts
+    # from a hidden marker on the issue itself (survives across runners/identities,
+    # no local state) and, at EMPTY_ATTEMPT_CAP, park it `status: blocked` — which
+    # the runners ignore (they only pick up `available`) — instead of re-releasing.
+    # A human clears it back to `available` once the fetch problem is resolved.
+    # Counting the marker is deliberately simple (all-time, not since-last-success):
+    # over-counting only parks a chronically-failing issue one attempt sooner, the
+    # safe direction, and a completed issue closes rather than re-entering here.
+    # The marker + count/verdict helpers are pure and live in fg-common.sh.
+    local prior; prior="$(empty_attempt_count "$(gh issue view "$n" --repo "$REPO" --json comments 2>/dev/null || echo '{"comments":[]}')")"
+    local attempts=$((prior + 1))
+    local verdict; verdict="$(empty_attempt_verdict "$attempts" "$EMPTY_ATTEMPT_CAP")"
+    if [ "$DRY_RUN" = 1 ]; then
+      if [ "$verdict" = block ]; then
+        info "[dry-run] no PR for #$n — empty attempt $attempts/$EMPTY_ATTEMPT_CAP — would park status: blocked"
+      else
+        info "[dry-run] no PR for #$n — empty attempt $attempts/$EMPTY_ATTEMPT_CAP — would release back to available"
+      fi
+      CLAIMED_ISSUE=""; return 0
+    fi
     gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null || true
-    gh issue comment "$n" --repo "$REPO" --body "⚠️ The agent finished without opening a PR — releasing this back to **available** for someone else to pick up." >/dev/null
-    warn "#$n released (no PR opened)"
+    if [ "$verdict" = block ]; then
+      set_status_label "$n" "blocked"
+      gh issue comment "$n" --repo "$REPO" --body "$EMPTY_ATTEMPT_MARKER
+⛔ **Claim-fail backoff (#766).** This issue has been claimed and finished **without a PR $attempts times** (cap \`EMPTY_ATTEMPT_CAP=$EMPTY_ATTEMPT_CAP\`). Rather than release it to \`available\` again — where a runner re-grabs it in seconds and fails the same way — it is parked **status: blocked** so the autonomous runners skip it. This usually means the sources can't be fetched from the current egress (WAF / IP-reputation block), not a defect in the issue. A maintainer can set it back to \`status: available\` once that's resolved (e.g. via the fetch proxy)." >/dev/null
+      warn "#$n parked status: blocked after $attempts empty attempts (#766 backoff)"
+    else
+      set_status_label "$n" "available"
+      gh issue comment "$n" --repo "$REPO" --body "$EMPTY_ATTEMPT_MARKER
+⚠️ The agent finished without opening a PR (empty attempt $attempts/$EMPTY_ATTEMPT_CAP) — releasing this back to **available** for someone else to pick up. After $EMPTY_ATTEMPT_CAP empty attempts it is parked \`status: blocked\` instead of re-released (#766)." >/dev/null
+      warn "#$n released (no PR opened, empty attempt $attempts/$EMPTY_ATTEMPT_CAP)"
+    fi
     # Fleet-claimed: also release the server's lease as abandoned (labels are
     # already reverted above; the server's own revert is an idempotent no-op).
     if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" abandoned; fi

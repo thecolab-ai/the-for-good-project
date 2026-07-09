@@ -61,5 +61,6 @@ routine fixes, copy changes, or web styling.
 | [0022](0022-worker-injection-hardening-and-sandbox-defaults.md) | Harden worker prompts against injection + implement ADR-0005's sandboxed run defaults (Codex workspace-write+network, Claude auto) | Proposed |
 | [0023](0023-self-report-is-a-claim.md) | A party's statement about itself is a claim, not confirmation (method check 3) | Proposed |
 | [0024](0024-stream-level-priority.md) | Priority is a stream-level decision inherited by children | Proposed |
+| [0025](0025-claim-fail-backoff.md) | An issue that keeps failing to produce a PR is parked status: blocked, not re-released forever | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
