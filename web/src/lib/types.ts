@@ -42,6 +42,7 @@ export interface IssueLite {
   state: "open" | "closed";
   isPR: boolean;
   merged?: boolean;
+  headRefName?: string;
   url: string;
   body: string;
   stage: Stage;
@@ -66,10 +67,13 @@ export interface Contributor {
   prsMerged: number;
   prsOpened: number;
   findingsAuthored: number;
+  synthesesAuthored: number;
   commits: number;
   reviewsGiven: number;
   researchScore: number;
+  synthesisScore: number;
   reviewScore: number;
+  trustCredit: number;
   score: number;
   lastActivity: string | null;
   domains: string[];

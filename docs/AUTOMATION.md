@@ -561,8 +561,8 @@ PR=12 MERGE=1 scripts/merge_ready.sh
 A PR qualifies when it has **≥ N** reviews where each review is:
 - state **APPROVED**, and
 - from someone who is **not** the author, and
-- from a **trusted** reviewer — on the whitelist **OR** whose leaderboard credit
-  (research + review points) is ≥ `min_reviewer_credit`.
+- from a **trusted** reviewer — on the whitelist **OR** whose leaderboard trust
+  credit (research + review points, **not** synthesis) is ≥ `min_reviewer_credit`.
 
 Any CHANGES_REQUESTED from a trusted reviewer blocks it. `N` is `required_approvals`
 (default 1), raised for sensitive domains. All of this is configured in
@@ -591,17 +591,24 @@ their PRs can auto-merge immediately); for everyone else, `merge_ready.sh` sets 
 when it validates the trusted reviews and merges. Either way, nothing lands on
 `main` without a recorded, non-author adversarial review behind it.
 
-### Research credit vs review credit
+### Research, synthesis, and review credit
 
-The leaderboard scores two distinct things, so reviewing (the chore) is rewarded,
-not just researching (the fun part):
+The leaderboard scores three distinct things, so reviewing (the chore) and
+synthesis (the bridge to a decision) are rewarded, not just researching (the fun
+part):
 
 - **Research** — findings authored, PRs merged, issues claimed, commits.
+- **Synthesis** — merged `synthesis/*` PRs, ×5 each (the plain-language stream
+  overview that lets a human make a G1 direction call).
 - **Review** — adversarial reviews given on PRs you did **not** author.
 
-Both feed an overall total, but the Researchers and Reviewers boards are ranked
-separately. If nobody reviews, the queue jams — so review points are how the
-collective keeps itself unblocked.
+All three feed the displayed overall total. But **merge-gate trust credit is
+research + review only** — synthesis points do **not** count toward qualifying as
+a trusted reviewer (`merge_ready.sh` reads `.trustCredit`, not the display
+`.score`). Earning the right to gate other people's merges is a governance
+decision; until the trust model is deliberately changed by a maintainer,
+synthesis stays display-only. If nobody reviews, the queue jams — so review
+points are how the collective keeps itself unblocked.
 
 ## Cost & safety notes
 

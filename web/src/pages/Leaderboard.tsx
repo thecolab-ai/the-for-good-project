@@ -1,4 +1,4 @@
-import { Trophy, BookOpen, GitPullRequest, CircleDot, GitCommit, Users, ScanEye, FlaskConical } from "lucide-react";
+import { Trophy, BookOpen, GitPullRequest, CircleDot, GitCommit, Users, ScanEye, FlaskConical, FileText } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -13,6 +13,7 @@ const MEDAL = ["#D4AF37", "#A8A29E", "#B45309"];
 function roles(c: Contributor): { label: string; color: string }[] {
   const out: { label: string; color: string }[] = [];
   if (c.researchScore > 0) out.push({ label: "Researcher", color: "#0EA5E9" });
+  if (c.synthesesAuthored > 0) out.push({ label: "Synthesist", color: "#14B8A6" });
   if (c.reviewsGiven > 0) out.push({ label: "Reviewer", color: "#1D76DB" });
   if (out.length === 0) out.push({ label: "Contributor", color: "#8B5CF6" });
   return out;
@@ -34,7 +35,7 @@ export default function Leaderboard() {
   return (
     <div>
       <PageHeader title="Contributors">
-        Everyone moving the queue forward, ranked by points. Two ways to climb: <strong>research</strong> the problems, or <strong>review</strong> others' work — reviewing is how the queue stays honest.
+        Everyone moving the queue forward, ranked by points. Three ways to climb: <strong>research</strong> the problems, <strong>synthesise</strong> streams into plain-language overviews, or <strong>review</strong> others' work — reviewing is how the queue stays honest.
       </PageHeader>
 
       {board.length === 0 ? (
@@ -84,6 +85,7 @@ export default function Leaderboard() {
                       {/* Stats — hidden on the smallest screens */}
                       <div className="hidden items-center gap-4 text-xs text-muted-foreground sm:flex">
                         {c.findingsAuthored > 0 ? <span className="inline-flex items-center gap-1" title="Findings authored"><BookOpen className="h-3.5 w-3.5" />{c.findingsAuthored}</span> : null}
+                        {c.synthesesAuthored > 0 ? <span className="inline-flex items-center gap-1" title="Stream syntheses authored"><FileText className="h-3.5 w-3.5" />{c.synthesesAuthored}</span> : null}
                         {c.reviewsGiven > 0 ? <span className="inline-flex items-center gap-1" title="Reviews given"><ScanEye className="h-3.5 w-3.5" />{c.reviewsGiven}</span> : null}
                         {c.prsMerged > 0 ? <span className="inline-flex items-center gap-1" title="PRs merged"><GitPullRequest className="h-3.5 w-3.5" />{c.prsMerged}</span> : null}
                         {c.issuesAssigned > 0 ? <span className="inline-flex items-center gap-1" title="Issues claimed"><CircleDot className="h-3.5 w-3.5" />{c.issuesAssigned}</span> : null}
@@ -104,8 +106,8 @@ export default function Leaderboard() {
       )}
 
       <p className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · PRs opened <GitPullRequest className="h-3.5 w-3.5" />×1 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />×1 (max 50)
-        <span className="inline-flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" /> research + review combined.</span>
+        <Trophy className="h-3.5 w-3.5" /> Points: findings <BookOpen className="h-3.5 w-3.5" />×5 · stream syntheses <FileText className="h-3.5 w-3.5" />×5 · PRs merged <GitPullRequest className="h-3.5 w-3.5" />×3 · issues claimed <CircleDot className="h-3.5 w-3.5" />×2 · PRs opened <GitPullRequest className="h-3.5 w-3.5" />×1 · reviews given <ScanEye className="h-3.5 w-3.5" />×4 · commits <GitCommit className="h-3.5 w-3.5" />×1 (max 50)
+        <span className="inline-flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" /> research + synthesis + review combined.</span>
       </p>
     </div>
   );

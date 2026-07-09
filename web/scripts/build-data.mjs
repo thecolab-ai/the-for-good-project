@@ -119,6 +119,9 @@ async function main() {
     console.warn("contributors unavailable:", e.message);
   }
 
+  const pullMetaByNumber = new Map(rawPulls.map((p) => [p.number, {
+    headRefName: p.head?.ref || "",
+  }]));
   const mergedByNumber = new Map(rawPulls.map((p) => [p.number, !!p.merged_at]));
 
   // PR reviews (who reviewed whose PR) — used for review credit. A review counts
@@ -220,6 +223,7 @@ async function main() {
       comments: it.comments,
       commentsList,
       reactions: it.reactions?.total_count || 0,
+      ...(isPR ? { headRefName: pullMetaByNumber.get(it.number)?.headRefName || "" } : {}),
     });
   }
 
@@ -386,7 +390,7 @@ async function main() {
 
   // --- leaderboard ---
   const people = new Map();
-  const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
+  const newPerson = (login, avatar, url) => ({ login, avatar, url, issuesAssigned: 0, prsMerged: 0, prsOpened: 0, findingsAuthored: 0, synthesesAuthored: 0, commits: 0, reviewsGiven: 0, score: 0, lastActivity: null, domains: new Set() });
   const bumpActivity = (r, iso) => {
     if (!r || !iso) return;
     const t = new Date(iso).getTime();
@@ -414,6 +418,16 @@ async function main() {
     if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     const r = people.get(login); r.findingsAuthored++; if (f.domain) r.domains.add(f.domain); bumpActivity(r, f.date);
   }
+  for (const p of prs) {
+    // Synthesis credit is keyed to the merged synthesis PR, not merely the
+    // latest edit to a stream overview file. That keeps typo/steward edits from
+    // taking credit for the synthesis while still counting re-synthesis PRs.
+    if (!p.merged || !String(p.headRefName || "").startsWith("synthesis/")) continue;
+    const r = ensure(p.author);
+    if (!r) continue;
+    r.synthesesAuthored++;
+    bumpActivity(r, p.updatedAt);
+  }
   for (const [login, prset] of reviewsGiven) {
     if (!people.has(login)) people.set(login, newPerson(login, `https://github.com/${login}.png`, `https://github.com/${login}`));
     people.get(login).reviewsGiven = prset.size;
@@ -424,8 +438,16 @@ async function main() {
     .filter((p) => !BOTS.has(p.login))
     .map((p) => {
       const researchScore = p.findingsAuthored * 5 + p.prsMerged * 3 + p.issuesAssigned * 2 + p.prsOpened + Math.min(p.commits, 50);
+      const synthesisScore = p.synthesesAuthored * 5;
       const reviewScore = p.reviewsGiven * 4;
-      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, reviewScore, score: researchScore + reviewScore };
+      // `score` is the display total (research + synthesis + review). `trustCredit`
+      // is what the merge gate consumes (scripts/merge_ready.sh) and is deliberately
+      // research + review only: earning merge-gate trust is a governance decision,
+      // so synthesis credit stays display-only until the trust model is changed by
+      // a maintainer. Keeping them separate lets the leaderboard reward synthesis
+      // without silently lowering the bar to gate other people's merges.
+      const trustCredit = researchScore + reviewScore;
+      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, synthesisScore, reviewScore, trustCredit, score: researchScore + synthesisScore + reviewScore };
     })
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);
