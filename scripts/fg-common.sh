@@ -11,6 +11,8 @@ PROVIDER="${PROVIDER:-}"                 # optional provider override (Hermes on
 HERMES_PROFILE="${HERMES_PROFILE:-}"     # optional Hermes profile override
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-2400}"   # seconds per agent run (0 = none)
 CLAIM_TTL="${CLAIM_TTL:-7200}"           # secs a claimed-but-undelivered issue is held before reap.sh frees it
+MAX_ACTIVE_STREAMS="${MAX_ACTIVE_STREAMS:-25}"  # streams worked concurrently before new roots wait in the backlog (#292)
+HIGH_PRIORITY_CAP="${HIGH_PRIORITY_CAP:-5}"    # max STREAMS whose 'priority: high' items jump the queue (#293)
 CLAIM_SETTLE="${CLAIM_SETTLE:-8}"        # base secs to let racing claimants' assignments settle before the tie-break
 REWORK_TTL="${REWORK_TTL:-7200}"         # secs a sent-back rework is held for its author before reap.sh frees it
 USAGE_LIMIT_SLEEP="${USAGE_LIMIT_SLEEP:-3600}"  # secs to back off when an agent hits an API usage/rate limit (60 min)
@@ -41,6 +43,318 @@ warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$*"; }
 err()  { printf '%s✗%s %s\n' "$c_red" "$c_reset" "$*" >&2; }
 rule() { printf '%s────────────────────────────────────────────────%s\n' "$c_dim" "$c_reset"; }
 
+# ---- fleet server work-claim helpers (server-orchestrated pull-claim) ----
+# Opt-in integration with the fleet server's work orchestrator. DEFAULT OFF:
+# every function below is a hard no-op unless ALL of FLEET_SERVER, FLEET_TOKEN
+# and FLEET_CLAIM=1 are set, so default runs keep the exact label-claim flow.
+# The telemetry side (fleet_send / fleet_logs) lives in autopilot.sh; these
+# live here so start_work.sh (which has no telemetry helpers) can claim,
+# renew and release too.
+# Where the auto-enrolled token lives (0600, owner-only). One file per
+# server host AND per identity: the server binds every token to one handle,
+# and two identities routinely share a box (autopilot's WORK login + the
+# distinct REVIEW_GITHUB_TOKEN reviewer). A host-only file made the reviewer
+# silently reuse the work identity's token, so the server's author != handle
+# review rule was enforced against the wrong account (ADR-0019).
+fleet_token_host() { printf '%s' "${FLEET_SERVER:-}" | sed 's|^[a-z]*://||; s|[/:].*$||'; }
+
+fleet_token_file() {
+  local host ident
+  host="$(fleet_token_host)"
+  ident="${ME:-${FLEET_HANDLE:-}}"
+  if [ -n "$ident" ]; then
+    printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}-${ident}}"
+  else
+    printf '%s' "${FLEET_TOKEN_FILE:-$HOME/.forgood/fleet-token-${host:-default}}"
+  fi
+}
+
+# The pre-identity-keyed path — read once as a migration fallback when this
+# identity's enrollment 409s (its token was minted before per-identity files).
+fleet_legacy_token_file() {
+  local host; host="$(fleet_token_host)"
+  printf '%s/.forgood/fleet-token-%s' "$HOME" "${host:-default}"
+}
+
+# fleet_ensure_token — resolve FLEET_TOKEN: env var > stored file > TOFU
+# auto-enroll against the server (ADR-0017: first contact mints the token,
+# so nobody hands tokens out). Returns 1 when no token can be resolved (the
+# caller falls back to the label-claim path). The stored file is trusted
+# only when it is a regular, non-symlink file we own — same paranoia as the
+# command stash: a foreign-writable path must never feed a bearer token.
+fleet_ensure_token() {
+  [ -n "${FLEET_TOKEN:-}" ] && return 0
+  [ -n "${FLEET_SERVER:-}" ] || return 1
+  local f; f="$(fleet_token_file)"
+  if [ -f "$f" ] && [ ! -L "$f" ] && [ -O "$f" ]; then
+    FLEET_TOKEN="$(head -c 256 "$f" 2>/dev/null | tr -d '[:space:]')"
+    [ -n "$FLEET_TOKEN" ] && { export FLEET_TOKEN; return 0; }
+  fi
+  # First contact: enroll this gh identity. 409 = the handle is already
+  # enrolled somewhere else (or was revoked) — that's an operator
+  # conversation, not something to retry every loop.
+  local resp token
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/agents/enroll" \
+    -H 'content-type: application/json' \
+    -d "$(jq -cn --arg h "${ME:-${FLEET_HANDLE:-}}" --arg a "${AGENT:-}" --arg m "${MODEL:-}" '
+        {handle: $h}
+      + (if $a != "" then {harness: $a[0:32]} else {} end)
+      + (if $m != "" then {model: $m[0:128]} else {} end)')" 2>/dev/null)" || return 1
+  token="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .token // empty' 2>/dev/null || true)"
+  if [ -z "$token" ]; then
+    # 409 "handle already enrolled" + a legacy host-only token file on disk:
+    # this identity enrolled before token files were keyed by handle — adopt
+    # its stored token once, migrating it to the per-identity path. Skipped
+    # when FLEET_TOKEN_FILE pins an explicit path (operator override), and
+    # harmless if the legacy file actually belongs to a DIFFERENT identity:
+    # the server still authenticates it as its bound handle, and the claim
+    # response's `handle` field exposes the mismatch to the runner.
+    if [ -z "${FLEET_TOKEN_FILE:-}" ] && printf '%s' "$resp" | grep -qi 'already enrolled'; then
+      local legacy; legacy="$(fleet_legacy_token_file)"
+      if [ "$legacy" != "$f" ] && [ -f "$legacy" ] && [ ! -L "$legacy" ] && [ -O "$legacy" ]; then
+        token="$(head -c 256 "$legacy" 2>/dev/null | tr -d '[:space:]')"
+        if [ -n "$token" ]; then
+          ( umask 077; mkdir -p "$(dirname "$f")" && printf '%s' "$token" > "$f" ) || true
+          FLEET_TOKEN="$token"; export FLEET_TOKEN
+          warn "Adopted the legacy host-keyed fleet token for @${ME:-${FLEET_HANDLE:-?}} (migrated to $f)."
+          return 0
+        fi
+      fi
+    fi
+    warn "fleet enrollment failed for @${ME:-${FLEET_HANDLE:-?}}: $(printf '%s' "$resp" | jq -r '.error // "server unreachable"' 2>/dev/null || echo 'server unreachable') — using the label-claim path."
+    return 1
+  fi
+  ( umask 077; mkdir -p "$(dirname "$f")" && printf '%s' "$token" > "$f" ) || true
+  FLEET_TOKEN="$token"; export FLEET_TOKEN
+  ok "Enrolled @${ME:-${FLEET_HANDLE:-?}} with the fleet server (token stored in $f)"
+  return 0
+}
+
+fleet_claim_enabled() {
+  [ -n "${FLEET_SERVER:-}" ] && [ "${FLEET_CLAIM:-0}" = "1" ] && fleet_ensure_token
+}
+
+# fleet_claim [stages-csv] — ask the server for the next eligible issue. On
+# success prints {issue: ClaimedIssue, leaseTtlSeconds} — the issue object is
+# {number,title,labels,body,htmlUrl,stage,stream}, and leaseTtlSeconds is the
+# server's ACTUAL lease TTL so the caller can derive its renew cadence from
+# it (a fixed client-side cadence silently expires every lease when the
+# server runs a shorter LEASE_TTL_SECONDS) — and returns 0. The server has
+# already taken the lease AND written the claim labels + assignee itself, so
+# the caller must NOT run its own label claim.
+# Queue empty, non-200, bad JSON or timeout → returns 1 (caller falls back to
+# the label-claim path).
+fleet_claim() {
+  fleet_claim_enabled || return 1
+  local stages="${1:-}" agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    # claimRequestSchema wants a UUID — never let a stale/garbled stash 400 the claim.
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg stages "$stages" --arg harness "${AGENT:-}" \
+                 --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      (if $stages  != "" then {stages: ($stages | split(","))} else {} end)
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  printf '%s' "$resp" | jq -e '.ok == true and .issue != null' >/dev/null 2>&1 || return 1
+  # handle = the registry identity the server claimed FOR (the token's bound
+  # handle). It can differ from the local `gh` login (bot-handle tokens), so
+  # race settlement must compare against it, not $ME.
+  printf '%s' "$resp" | jq -c '{issue: .issue, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
+}
+
+# fleet_renew <issue> — best-effort lease renewal; every failure swallowed.
+fleet_renew() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" '{issue: ($issue | tonumber)}' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/renew" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# fleet_release <issue> <done|abandoned> [pr] — tell the server we're finished
+# with a fleet-claimed issue. done = server frees the lease and does NOT touch
+# labels (the PR/Actions pipeline owns post-work transitions); abandoned = the
+# server reverts labels + assignee too. Best-effort: failures are swallowed —
+# the lease TTL and the server-side sweeper backstop a lost release.
+fleet_release() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" --arg outcome "${2:-}" --arg pr "${3:-}" '
+      {issue: ($issue | tonumber), outcome: $outcome}
+    + (if $pr != "" then {prNumber: ($pr | tonumber)} else {} end)' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# ---- fleet server review-claim helpers (orchestrated review dispatch) ----
+# Same opt-in gate as the work-claim helpers above (FLEET_SERVER + FLEET_TOKEN
+# + FLEET_CLAIM=1 — fleet_claim_enabled): reviews reuse the /work/claim and
+# /work/release endpoints with kind:"review", so review_work.sh can take ONE
+# server-arbitrated PR instead of walking the whole open-PR list. A review
+# claim holds NO labels and writes nothing to GitHub — the server-side lease
+# alone stops two enrolled reviewers colliding on one PR.
+
+# fleet_claim_review — ask the server for the next PR needing adversarial
+# review. On success prints {pr, headSha, author, title, leaseTtlSeconds,
+# handle} (jq-shaped from the claim response; `handle` is the registry
+# identity the claim was made FOR — the caller must check it against the
+# identity that will post the review) and returns 0. Queue empty, non-200,
+# bad JSON or timeout → returns 1 (the caller falls back to its own
+# client-side PR walk, unchanged). A pre-ADR-0019 server strips the unknown
+# `kind` field and executes a WORK claim — see the skew guard inside.
+fleet_claim_review() {
+  fleet_claim_enabled || return 1
+  local agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    # claimRequestSchema wants a UUID — never let a stale/garbled stash 400 the claim.
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg harness "${AGENT:-}" --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      {kind: "review"}
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  if ! printf '%s' "$resp" | jq -e '.ok == true and .review != null' >/dev/null 2>&1; then
+    # DEPLOY-SKEW GUARD: a pre-ADR-0019 server's claim schema silently strips
+    # the unknown `kind` field (non-strict zod object) and executes a WORK
+    # claim — labelling "status: claimed" + assigning the handle on a REAL
+    # issue — while answering {ok:true, issue:{...}}. Detect that shape and
+    # release the accidental claim, or the issue strands claimed-by-nobody
+    # until the server's lease TTL sweeps it, once per review pass.
+    local oops
+    oops="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .issue.number // empty' 2>/dev/null || true)"
+    if [ -n "$oops" ]; then
+      warn "Fleet server predates kind:review (deploy skew) — releasing the accidental work claim on #$oops."
+      fleet_release "$oops" abandoned
+    fi
+    return 1
+  fi
+  printf '%s' "$resp" | jq -c '{pr: .review.pr, headSha: .review.headSha, author: .review.author, title: .review.title, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
+}
+
+# fleet_release_review <pr> <done|abandoned> — finish a fleet-claimed review.
+# done = a verdict was actually posted (PASS and NEEDS_WORK both count — the
+# review HAPPENED); abandoned = it didn't (reviewer failure / usage limit /
+# interrupt / local skip), so the PR goes straight back into the review
+# queue. No label ops either way (review claims never held any). The
+# release request's `issue` field carries the PR number (the server's
+# release schema reuses it for kind:"review"). Best-effort: failures are
+# swallowed — the lease TTL and the server-side sweeper backstop a lost
+# release.
+fleet_release_review() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg pr "${1:-}" --arg outcome "${2:-}" \
+      '{kind: "review", issue: ($pr | tonumber), outcome: $outcome}' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# ---- fleet server rework-ADOPTION helpers (ADR-0020, #656) -----------------
+# Same opt-in gate as the work/review claim helpers (fleet_claim_enabled). A
+# rework claim asks the server for the next STALE changes-requested PR a
+# DIFFERENT worker may adopt (idle > REWORK_ADOPT_HOURS, adopter ≠ author ≠
+# last reviewer, not synthesis/framing, not a fork, author not online). The
+# server takes the lease AND writes the issue labels (changes-requested →
+# claimed) + assignee ITSELF, so the caller must NOT run its own claim — it
+# just reworks the PR and, on push, flips the issue to in-review.
+
+# fleet_claim_rework — ask the server to adopt the next stale rework. On success
+# prints {pr, issue, author, headSha, headRef, title, leaseTtlSeconds, handle}
+# and returns 0; queue empty / non-200 / bad JSON / timeout → returns 1. The
+# same pre-ADR-0019 deploy-skew guard as fleet_claim_review: an old server
+# strips the unknown `kind` and runs a WORK claim, which we detect and release.
+fleet_claim_rework() {
+  fleet_claim_enabled || return 1
+  local agent_id="" body resp
+  if [ -n "${FLEET_AGENT_ID_FILE:-}" ]; then
+    agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+    printf '%s' "$agent_id" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || agent_id=""
+  fi
+  body="$(jq -cn --arg harness "${AGENT:-}" --arg model "${MODEL:-}" --arg agentId "$agent_id" '
+      {kind: "rework"}
+    + (if $harness != "" then {harness: $harness[0:32]} else {} end)
+    + (if $model   != "" then {model: $model[0:128]} else {} end)
+    + (if $agentId != "" then {agentId: $agentId} else {} end)' 2>/dev/null)" || return 1
+  resp="$(curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/claim" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" 2>/dev/null)" || return 1
+  if ! printf '%s' "$resp" | jq -e '.ok == true and .rework != null' >/dev/null 2>&1; then
+    # DEPLOY-SKEW GUARD (same as fleet_claim_review): a server predating
+    # kind:"rework" strips the field and runs a WORK claim, stranding a real
+    # issue "status: claimed". Detect and release it.
+    local oops
+    oops="$(printf '%s' "$resp" | jq -r 'select(.ok == true) | .issue.number // empty' 2>/dev/null || true)"
+    if [ -n "$oops" ]; then
+      warn "Fleet server predates kind:rework (deploy skew) — releasing the accidental work claim on #$oops."
+      fleet_release "$oops" abandoned
+    fi
+    return 1
+  fi
+  printf '%s' "$resp" | jq -c '{pr: .rework.pr, issue: .rework.issue, author: .rework.author, headSha: .rework.headSha, headRef: .rework.headRef, title: .rework.title, leaseTtlSeconds: .leaseTtlSeconds, handle: .handle}'
+}
+
+# fleet_release_rework <issue> <done|abandoned> [pr] — finish an adopted
+# rework. `issue` is the WORKED issue number (the rework assignment's number
+# space, and its lease key); `pr` the reworked PR. done = the rework was pushed
+# (the runner flips the issue to in-review itself); abandoned = it wasn't (the
+# author returned mid-window, a crash, a usage limit) → the server reverts the
+# issue to changes-requested. Best-effort; the lease TTL + sweeper backstop a
+# lost release.
+fleet_release_rework() {
+  fleet_claim_enabled || return 0
+  local body
+  body="$(jq -cn --arg issue "${1:-}" --arg outcome "${2:-}" --arg pr "${3:-}" '
+      {kind: "rework", issue: ($issue | tonumber), outcome: $outcome}
+    + (if $pr != "" then {prNumber: ($pr | tonumber)} else {} end)' 2>/dev/null)" || return 0
+  curl -sS -m 5 -X POST "$FLEET_SERVER/api/v1/work/release" \
+    -H 'content-type: application/json' \
+    -H "authorization: Bearer $FLEET_TOKEN" \
+    -d "$body" >/dev/null 2>&1 || true
+  return 0
+}
+
+# fleet_pop_commands — print (and consume) the control-command KINDS the
+# server piggybacked on telemetry responses (pause|resume|stop|abort), one
+# per line. fleet_send (autopilot.sh) stashes them into $FLEET_CMDS_FILE as
+# it hears them; this drains the stash. No/empty stash → prints nothing,
+# always returns 0.
+fleet_pop_commands() {
+  local f="${FLEET_CMDS_FILE:-}"
+  [ -n "$f" ] || return 0
+  # Trust only a regular file WE own: this hop is unauthenticated (the token
+  # check happens server-side, on the write into the stash), so a foreign or
+  # pre-created file in a shared tmp dir must never drive control flow —
+  # a planted 'stop'/'pause' line would kill or wedge the autopilot.
+  [ -f "$f" ] && [ -O "$f" ] || return 0
+  [ -s "$f" ] || return 0
+  cat "$f" 2>/dev/null || true
+  : > "$f" 2>/dev/null || true
+  return 0
+}
+
 # ---- preflight ----
 preflight() {
   local missing=0
@@ -61,6 +375,18 @@ preflight() {
   if [ -z "$REPO_DIR" ] || ! git -C "$REPO_DIR" remote get-url origin 2>/dev/null | grep -q "$NAME"; then
     err "Run this from inside a clone of $REPO (or set REPO_DIR to one)."
     exit 1
+  fi
+
+  # Route every `gh` call — ours AND the agent's (run_agent inherits this PATH)
+  # — through the secret-scrubbing shim, so a token can never reach a public
+  # comment/PR body again (PR #585 leaked one and it had to be revoked). The
+  # shim only touches the body/title of pr|issue post commands; everything else
+  # passes straight through. Idempotent: never prepend twice.
+  if [ -x "$REPO_DIR/scripts/fg-secure/gh" ]; then
+    case ":$PATH:" in
+      *":$REPO_DIR/scripts/fg-secure:"*) ;;
+      *) export PATH="$REPO_DIR/scripts/fg-secure:$PATH" ;;
+    esac
   fi
   if ! ME="$(gh api user --jq .login 2>/dev/null)"; then
     if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
@@ -92,6 +418,13 @@ make_worktree() {  # $1 = ref to check out (e.g. origin/main, refs/fg/pr-12); se
     WORKTREE=""
     return 1
   fi
+  # `git worktree add` does NOT populate submodules in the new worktree (each
+  # worktree tracks its own submodule checkout state) — without this, every
+  # agent gets an empty .skills/ and silently loses the NZ data CLIs even when
+  # correctly instructed to use them. Best-effort: a missing/offline submodule
+  # remote shouldn't fail the whole run, just leave .skills empty as before.
+  git -C "$WORKTREE" submodule update --init --quiet 2>/dev/null \
+    || warn "couldn't init the .skills submodule in $WORKTREE (offline? leaving it empty)"
 }
 
 remove_worktree() {
@@ -106,38 +439,81 @@ remove_worktree() {
 issue_labels()  { gh issue view "$1" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")'; }
 issue_field()   { gh issue view "$1" --repo "$REPO" --json "$2" --jq ".$2"; }
 
-# ONE GraphQL query for the whole open-issue queue, normalised to the same
-# shape `gh issue list --json number,createdAt,labels,assignees` returns so the
-# jq filters below are unchanged. A single poll cycle can fetch this once and
-# feed EVERY queue check (available / my rework / unassigned rework) from it,
-# instead of firing a separate REST list call per status. Capped at 100 (the
-# GraphQL page max) to match the previous --limit 100 behaviour; ordered NEWEST
-# first so that if the repo ever exceeds 100 open issues the truncation drops
-# the oldest, not the freshly-created available/rework work we most want to see.
-# (The jq filters re-sort deterministically, so fetch order doesn't affect the
-# result while the queue is under 100 — it only decides which slice survives the
-# cap.) labels(first:50) is ample headroom over the ~5 labels an issue carries.
+# REST snapshot for the whole open issue queue, normalised to the same shape
+# `gh issue list --json number,createdAt,labels,assignees` returns. This used
+# to be a single GraphQL query per worker cycle; with multiple 30s autopilots it
+# silently burned the repository's GraphQL allowance. The REST Issues API costs
+# normal core quota, includes the fields we need, and returns PRs too, so filter
+# out `.pull_request` entries here.
 fetch_open_issues() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){issues(states:OPEN,first:100,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt labels(first:50){nodes{name}} assignees(first:10){nodes{login}}}}}}" \
-    --jq '[.data.repository.issues.nodes[] | {number, createdAt, labels: [.labels.nodes[] | {name}], assignees: [.assignees.nodes[] | {login}]}]'
+  # Mirror-first (ADR-0018): the fleet server serves this exact snapshot
+  # shape from its Mongo mirror — ONE unauthenticated HTTPS call, zero
+  # GitHub budget. With every runner loop on every machine drawing from the
+  # same per-identity GitHub pools, this read was the fleet's biggest
+  # rate-limit tax (and rate-limit stalls have taken the fleet down before —
+  # ADR-0016). Fall back to the direct GitHub read whenever the server is
+  # absent, stale (it answers 503 rather than serve a stale mirror), or
+  # returns anything malformed — a dead server can never stall the fleet.
+  # FLEET_SNAPSHOT=0 opts out (direct GitHub only).
+  if [ -n "${FLEET_SERVER:-}" ] && [ "${FLEET_SNAPSHOT:-1}" = "1" ]; then
+    local resp snap
+    if resp="$(curl -sS -m 5 "$FLEET_SERVER/api/v1/issues/open" 2>/dev/null)" \
+       && snap="$(printf '%s' "$resp" | jq -ce 'select(.ok == true) | .issues | select(type == "array")' 2>/dev/null)"; then
+      printf '%s' "$snap"
+      return 0
+    fi
+  fi
+  gh api --paginate "repos/$OWNER/$NAME/issues?state=open&per_page=100" \
+    --jq '[.[] | select(.pull_request|not) | {number, createdAt: .created_at, labels: [.labels[] | {name}], assignees: [.assignees[] | {login}]}]'
 }
 
 # Numbers of open issues with a given status label, optional STAGE filter.
 # Order: issues labelled "priority: high" first, then oldest-created first.
 # This is the whole priority system — label an issue "priority: high" to have
 # the workers pick it up before the rest of the queue.
+#
+# BOUNDED (#293 / ADR-0013): "high" only means something while it is scarce.
+# The jump-queue honours priority: high for at most HIGH_PRIORITY_CAP
+# STREAMS at a time (grouped by stream:<n> label — or the issue's own number
+# when it has none — oldest high item first, computed over the whole open
+# queue so every runner agrees). High items beyond the cap sort by age like
+# everything else. Counting STREAMS (not issues) is deliberate so that
+# stream-level priority propagation (#164) can mark a whole stream high
+# without eating the entire cap, while blanket-labelling ten streams high
+# still cannot make "high" mean "everything".
+#
 # $2 = optional queue snapshot (from fetch_open_issues). Pass one to check
 # several statuses from a SINGLE GraphQL query; omit it and one is fetched.
+# $3 = optional stage filter; when omitted the STAGE env var applies (the
+# historical behaviour), so callers with a fixed queue (frame_work.sh's
+# discover queue) can pin the stage regardless of the caller's environment.
 # "do-not-automate" is a human's parking brake: an issue carrying it is
 # invisible to EVERY automation queue below, whatever its status. Purely
 # restrictive — it can only shrink queues.
-issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON
-  local status="$1" snap="${2:-}"
+issues_with_status() {  # $1 = bare status (e.g. available); $2 = optional snapshot JSON; $3 = optional stage
+  local status="$1" snap="${2:-}" stage="${3-${STAGE:-}}"
   [ -n "$snap" ] || snap="$(fetch_open_issues)"
-  printf '%s' "$snap" | jq -r "[.[] | select(.labels|map(.name)|index(\"status: $status\")) | select(.labels|map(.name)|index(\"do-not-automate\")|not)$( [ -n "${STAGE:-}" ] && printf ' | select(.labels|map(.name)|index("stage: %s"))' "$STAGE" )] | sort_by((.labels|map(.name)|index(\"priority: high\")|not), .createdAt) | .[].number"
+  printf '%s' "$snap" | jq -r --arg status "status: $status" --arg stage "$stage" --argjson cap "$HIGH_PRIORITY_CAP" '
+    def names: [.labels[].name];
+    def is_high: names | index("priority: high");
+    def stream_key: (names | map(select(startswith("stream:")) | ltrimstr("stream:")) | first) // (.number|tostring);
+    ([ .[] | select(is_high) | select(names | index("do-not-automate") | not) ]
+     | group_by(stream_key) | sort_by(map(.createdAt) | min) | .[:$cap] | [ .[][].number ]) as $jump
+    | [ .[]
+        | select(names | index($status))
+        | select(names | index("do-not-automate") | not)
+        | select($stage == "" or (names | index("stage: " + $stage))) ]
+    | sort_by(((.number as $n | $jump | index($n)) | not), .createdAt)
+    | .[].number'
 }
 
 available_issues() { issues_with_status "available" "${1:-}"; }
+
+# Available DISCOVER roots — the framing queue (ADR-0014). Ordered like every
+# other queue (bounded priority jump, then age). Pins the stage explicitly, so
+# a caller's STAGE env can't widen it: this queue is discover by definition,
+# and it is frame_work.sh's alone — start_work.sh never claims discover roots.
+discover_roots() { issues_with_status "available" "${1:-}" "discover"; }
 
 # Issues a reviewer sent back that are assigned to *me* — my rework queue.
 # $1 = optional queue snapshot (from fetch_open_issues).
@@ -160,22 +536,52 @@ unassigned_reworks() {  # $1 = optional snapshot JSON
 # $1 = optional queue snapshot (from fetch_open_issues).
 synthesis_issues() { issues_with_status "needs-synthesis" "${1:-}"; }
 
+# ACTIVE streams (#292): the producer side scales with agents, the human
+# synthesis gate does not — so the number of streams being worked at once is
+# bounded by MAX_ACTIVE_STREAMS. A stream counts as active while it is
+# consuming producer capacity: it has OPEN CHILD issues, or its root is
+# actually being worked (claimed / in-review / changes-requested). A root
+# that is merely `status: available` is a G0-approved stream waiting for a
+# slot — start_work.sh holds it in the backlog until one frees up. Emits the
+# active stream root numbers, one per line, from a fetch_open_issues snapshot.
+active_streams() {  # $1 = queue snapshot JSON
+  printf '%s' "$1" | jq -r '
+    ( [ .[] as $i
+        | $i.labels[].name
+        | select(startswith("stream:"))
+        | ltrimstr("stream:")
+        | select(. != ($i.number|tostring)) ]        # open child work → its stream is active
+    + [ .[]
+        | select([.labels[].name] | index("stage: discover"))
+        | select([.labels[].name] | (index("status: claimed") or index("status: in-review") or index("status: changes-requested")))
+        | (.number|tostring) ] )                     # a root being worked → active even before children exist
+    | unique | .[]'
+}
+
 # First value of a "<prefix>..." entry in a comma-joined label list.
 label_field() {  # $1 = labels csv, $2 = prefix (e.g. "stage: ", "stream:")
   printf '%s' "$1" | tr ',' '\n' | sed -n "s/^$2//p" | head -1
 }
 
-# Depth of an issue in its stream: 0 for a root (no line-anchored "Part of #p"
-# in the body), else 1 + parent's depth, capped at 3 hops. Bounds agent
-# fan-out (docs/STREAMS.md). FAILS CLOSED: if gh errors mid-walk (rate limit,
-# network), reports the cap so fan-out is denied rather than unbounded.
+# Depth of an issue in its stream: 0 for a root, else 1 + parent's depth,
+# capped at 3 hops. Bounds agent fan-out (docs/STREAMS.md). The parent hop is
+# the line-anchored "Split from #m" if present, else "Part of #p" — under the
+# flattened linking convention (#291 / ADR-0013) every child's "Part of"
+# points at the STREAM ROOT (so roll-up is exact), while "Split from" records
+# which issue actually spawned it; depth must follow the SPAWN chain or a
+# grandchild that links the root would look depth-1 and fan out forever.
+# "Split from" may share the first line with "Part of #root." — the anchor
+# allows that one prefix so prose mentions still can't mis-parent an issue.
+# FAILS CLOSED: if gh errors mid-walk (rate limit, network), reports the cap
+# so fan-out is denied rather than unbounded.
 issue_depth() {  # $1 = issue number
   local n="$1" d=0 body parent
   while [ "$d" -lt 3 ]; do
     if ! body="$(gh issue view "$n" --repo "$REPO" --json body --jq .body 2>/dev/null)"; then
       echo 3; return
     fi
-    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+    parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*(part of[[:space:]]*#[0-9]+\.?[[:space:]]*)?split from[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)"
+    [ -z "$parent" ] && parent="$(printf '%s' "$body" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
     [ -z "$parent" ] && break
     d=$((d+1)); n="$parent"
   done
@@ -199,16 +605,17 @@ review_feedback() {  # $1 = pr number
 # Newest first — default order is oldest-first, which misses the just-opened
 # PR once >50 PRs are open.
 pr_for_issue() {
-  local pr
-  pr="$(gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequests(states:OPEN,first:50,orderBy:{field:CREATED_AT,direction:DESC}){nodes{number closingIssuesReferences(first:10){nodes{number}}}}}}" \
-    --jq ".data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.nodes|map(.number)|index($1)) | .number" | head -1)"
-  [ -n "$pr" ] && { echo "$pr"; return 0; }
-  local cands c
-  cands="$(gh pr list --repo "$REPO" --state open --search "\"Part of #$1\" in:body" \
-    --json number --jq '.[].number' 2>/dev/null || true)"
-  for c in $cands; do
-    if [ -z "$(issue_for_pr "$c")" ]; then echo "$c"; return 0; fi
-  done
+  local pr body closes_other
+  while IFS=$'\t' read -r pr body; do
+    [ -n "$pr" ] || continue
+    # If the PR body closes/fixes/resolves a DIFFERENT issue, it is a child PR
+    # that may mention "Part of #n" for its stream root; do not mistake it for
+    # the root's framing PR.
+    closes_other="$(printf '%s' "$body" | grep -oiE '(closes|fixes|resolves)[[:space:]]*#[0-9]+' | grep -oE '[0-9]+' | grep -vx "$1" | head -1 || true)"
+    [ -n "$closes_other" ] && continue
+    echo "$pr"; return 0
+  done < <(gh api --paginate "repos/$OWNER/$NAME/pulls?state=open&per_page=100" \
+    --jq ".[] | select((.body // \"\") | test(\"(?i)(closes|fixes|resolves|part of)\\\\s*#$1\\\\b\")) | [.number, (.body // \"\")] | @tsv" 2>/dev/null || true)
   return 0
 }
 
@@ -251,12 +658,33 @@ pr_is_synthesis() {  # $1 = pr number
   esac
 }
 
+# Is a PR a DISCOVER FRAMING? Framing branches are always discover/<slug>
+# (frame_work.sh mints them that way, and the old start_work.sh discover
+# prompt used "$stage/<slug>" — same shape), so the head branch is the
+# marker, exactly like pr_is_synthesis. Framing rework belongs to
+# frame_work.sh ONLY (ADR-0014): the capability floor on setting a stream's
+# direction applies to REWORK of the framing too, so the general
+# start_work.sh loop must hand these off, never feed them its generic
+# research rework prompt.
+# Returns 0 = framing, 1 = not framing, 2 = UNKNOWN (gh failed). Callers
+# guarding the generic path must fail CLOSED on 2: "don't touch it this
+# loop", never "not a framing" (same contract as pr_is_synthesis).
+pr_is_framing() {  # $1 = pr number
+  local head
+  head="$(gh pr view "$1" --repo "$REPO" --json headRefName --jq .headRefName 2>/dev/null)" || head=""
+  [ -z "$head" ] && return 2
+  case "$head" in
+    discover/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Issue closed by a PR (first closing ref). Use this ONLY when you specifically
 # mean "the issue merging this PR will CLOSE" (e.g. marking it done) — discover
 # PRs have no closing ref by design, so this is empty for them.
 issue_for_pr() {
-  gh api graphql -f query="{repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$1){closingIssuesReferences(first:5){nodes{number}}}}}" \
-    --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[0].number // empty'
+  gh api "repos/$OWNER/$NAME/pulls/$1" \
+    --jq '(.body // "") | capture("(?i)(?:closes|fixes|resolves)\\s*#(?<n>[0-9]+)").n // empty' 2>/dev/null || true
 }
 
 # The issue a PR is WORKING (for routing rework/status back to the author): a
@@ -286,33 +714,53 @@ claim_settle_secs() { echo $(( CLAIM_SETTLE + (RANDOM % 5) )); }
 # It's a pure function of the observed assignee set, so every racer computes the
 # SAME winner with no coordination. Returns 0 if THIS worker holds the claim;
 # otherwise un-assigns @me and returns 1 so the caller yields.
-resolve_claim_race() {  # $1 = issue number
-  local n="$1" assignees winner
+resolve_claim_race() {  # $1 = issue number, $2 = expected claim identity (default: $ME)
+  # $2 exists for the fleet path: a server claim is assigned to the handle
+  # bound to FLEET_TOKEN, which can differ from the local `gh` login (the
+  # docs mint bot-handle tokens). Comparing that claim to $ME would misread
+  # every valid fleet claim as a race loss (PR #592 review).
+  local n="$1" expected="${2:-$ME}" assignees winner
   sleep "$(claim_settle_secs)"
   assignees="$(gh issue view "$n" --repo "$REPO" --json assignees --jq '[.assignees[].login]|sort|join(" ")')"
   winner="${assignees%% *}"
-  if [ -n "$winner" ] && [ "$winner" != "$ME" ]; then
+  if [ -n "$winner" ] && [ "$winner" != "$expected" ]; then
     warn "#$n was claimed concurrently (assignees: $assignees) — @$winner wins, yielding."
-    gh issue edit "$n" --repo "$REPO" --remove-assignee "@me" >/dev/null 2>&1 || true
+    gh issue edit "$n" --repo "$REPO" --remove-assignee "$expected" >/dev/null 2>&1 || true
     return 1
   fi
   return 0
 }
 
-# The closed set of issue lifecycle statuses. set_status_label sweeps ALL of
-# them (minus the one being set) so an issue can never carry two status
-# labels at once — the "in-review + awaiting-direction" soup that confused
-# both reviewers and the website is impossible by construction. Callers may
-# still pass explicit old statuses; they're harmless no-ops now.
-ALL_STATUSES=(available claimed in-review changes-requested needs-synthesis awaiting-direction blocked done)
-
+# Set an issue's lifecycle status ATOMICALLY (#289 / ADR-0013): compute the
+# full label set — everything the issue carries except the "status: "
+# namespace, plus the ONE new status — and replace the labels in a single
+# PUT call. The previous add-label + N remove-label form (even in one gh
+# invocation) applied adds and removes as separate mutations, leaving a
+# window where an issue held two status labels at once; interleaved
+# concurrent transitions could leave that soup behind permanently.
+# A read-modify-write can still race a concurrent edit of OTHER labels
+# (rare, self-limiting); the issue-status.yml reconciler and reap.sh's
+# conflict sweep converge any residue back to exactly one status label.
+# The closed set of statuses lives in .github/labels.yml.
 set_status_label() {  # $1 issue, $2 new-status (bare, e.g. in-review), $3.. ignored (legacy)
   local n="$1" new="$2"; shift 2
-  local args=(--add-label "status: $new") old
-  for old in "${ALL_STATUSES[@]}"; do
-    [ "$old" = "$new" ] || args+=(--remove-label "status: $old")
-  done
-  gh issue edit "$n" --repo "$REPO" "${args[@]}" >/dev/null
+  local keep
+  keep="$(gh issue view "$n" --repo "$REPO" --json labels \
+          --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
+  printf '%s' "$keep" | jq --arg s "status: $new" '{labels: (. + [$s])}' \
+    | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
+}
+
+# Remove EVERY "status: " label, keeping the rest — the "researching" posture
+# a stream root holds between its framing fan-out and the drain flagging it
+# needs-synthesis (docs/STREAMS.md). Same atomic whole-set PUT as
+# set_status_label, so it can't leave a partial label soup behind.
+clear_status_label() {  # $1 = issue
+  local n="$1" keep
+  keep="$(gh issue view "$n" --repo "$REPO" --json labels \
+          --jq '[.labels[].name | select(startswith("status: ") | not)]')" || return 1
+  printf '%s' "$keep" | jq '{labels: .}' \
+    | gh api -X PUT "repos/$OWNER/$NAME/issues/$n/labels" --input - >/dev/null
 }
 
 # True if an exit status means the agent was INTERRUPTED by the user (Ctrl-C) or
@@ -350,14 +798,86 @@ run_agent() {
   fi
   case "$AGENT" in
     codex)
-      $tmo codex exec --cd "$dir" --skip-git-repo-check \
-        ${CODEX_FLAGS:---dangerously-bypass-approvals-and-sandbox} \
-        ${MODEL:+-m "$MODEL"} "$prompt"
+      # Hook trust is SEPARATE from the sandbox: the repo ships its own Codex
+      # telemetry hooks (.codex/config.toml -> the fleet client, ADR-0016) which
+      # exec mode skips as non-trusted unless bypassed, and trust can only be
+      # persisted interactively. --dangerously-bypass-hook-trust covers exactly
+      # that (its documented purpose: automation that already vets hook sources —
+      # these hooks are versioned in this repo), and is passed only when the
+      # checkout actually carries the repo hook config.
+      local hook_trust=""
+      [ -f "$dir/.codex/hooks.json" ] && hook_trust="--dangerously-bypass-hook-trust"
+      # Sandbox (ADR-0005 / ADR-0022). Codex's OS sandbox is OPT-IN, not the
+      # default — because it does not work in the environments the fleet actually
+      # runs in:
+      #   * The fleet server runs codex inside an UNPRIVILEGED container, where
+      #     workspace-write's sandbox helper can't create user namespaces —
+      #     "bwrap: setting up uid map: Permission denied" — so EVERY shell
+      #     command fails before it starts and the worker can't even make a branch
+      #     (this broke real work: #713).
+      #   * On macOS the seatbelt path disables network in workspace-write
+      #     (openai/codex#10390), breaking research fetches.
+      # The real isolation boundary is the container itself (ADR-0005), so nesting
+      # an OS sandbox inside it is both redundant and broken. We therefore default
+      # to full-access and expose the sandbox only to a bare-Linux host with a
+      # sandbox-capable kernel that sets FG_CODEX_SANDBOX=1. CODEX_FLAGS= still
+      # overrides everything. Verified against codex-cli 0.142.5: `codex exec` has
+      # no --ask-for-approval flag; workspace-write disables network unless
+      # network_access=true; and our worktree's real .git lives in the MAIN clone
+      # (outside the worktree), so it must be added to the writable roots or
+      # git commit/push fail.
+      local -a codex_args
+      if [ -n "${CODEX_FLAGS:-}" ]; then
+        read -r -a codex_args <<< "$CODEX_FLAGS"
+      elif [ "${FG_CODEX_SANDBOX:-0}" = 1 ] && [ "$(uname -s)" = "Linux" ]; then
+        codex_args=(--sandbox workspace-write -c sandbox_workspace_write.network_access=true)
+        local gitcommon
+        gitcommon="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+        [ -n "$gitcommon" ] && codex_args+=(--add-dir "$gitcommon")
+      else
+        codex_args=(--dangerously-bypass-approvals-and-sandbox)
+      fi
+      if [ -n "${FLEET_SERVER:-}" ] && [ "${CODEX_JSON_TELEMETRY:-1}" = 1 ]; then
+        $tmo codex exec --json --cd "$dir" --skip-git-repo-check $hook_trust \
+          "${codex_args[@]}" \
+          ${MODEL:+-m "$MODEL"} "$prompt" \
+          | python3 "$REPO_DIR/scripts/codex-json-telemetry.py"
+      else
+        $tmo codex exec --cd "$dir" --skip-git-repo-check $hook_trust \
+          "${codex_args[@]}" \
+          ${MODEL:+-m "$MODEL"} "$prompt"
+      fi
       ;;
     claude)
-      ( cd "$dir" && $tmo claude -p "$prompt" \
-        --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
-        ${MODEL:+--model "$MODEL"} )
+      # Default the fleet's claude runs to sonnet (maintainer call,
+      # 2026-07-05: sonnet for testing) — override with --model / MODEL.
+      local claude_model="${MODEL:-sonnet}"
+      # Permission mode (ADR-0005, implemented by ADR-0022): default to `auto`,
+      # not `bypassPermissions`. `auto` replaces per-action prompts with a
+      # classifier that blocks actions escalating beyond the request, targeting
+      # unrecognised infrastructure, or that "appear driven by hostile content
+      # Claude read" — i.e. exactly the prompt-injection path from public issue /
+      # PR text — while keeping network for research. It also avoids the headless
+      # hangs `acceptEdits` can hit. Not a hard sandbox (that's the container
+      # follow-up in ADR-0005/-0022); it's the CLI-level injection defence.
+      # Override with CLAUDE_PERMISSION_MODE= (e.g. bypassPermissions inside a
+      # locked-down container, where blast radius is the throwaway container).
+      if [ -n "${FLEET_SERVER:-}" ] && [ "${CLAUDE_JSON_TELEMETRY:-1}" = 1 ]; then
+        # stream-json (requires --verbose) emits every assistant message and
+        # tool use as it happens WITH per-message token usage — the bridge
+        # renders readable progress and posts live tool/token telemetry.
+        # Plain -p prints nothing until the very end, so a worker looked hung
+        # for the whole run and reported nothing.
+        ( cd "$dir" && $tmo claude -p "$prompt" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
+          --model "$claude_model" \
+          --output-format stream-json --verbose ) \
+          | python3 "$REPO_DIR/scripts/claude-json-telemetry.py"
+      else
+        ( cd "$dir" && $tmo claude -p "$prompt" \
+          --permission-mode "${CLAUDE_PERMISSION_MODE:-auto}" \
+          --model "$claude_model" )
+      fi
       ;;
     hermes)
       ( cd "$dir" && $tmo hermes ${HERMES_PROFILE:+--profile "$HERMES_PROFILE"} chat -Q \
@@ -368,4 +888,52 @@ run_agent() {
       ;;
     *) err "unknown AGENT '$AGENT'"; return 2 ;;
   esac
+}
+
+# Heal the known framing-PR merge conflict (the index cascade): every framing
+# PR appends a row to analysis/README.md's index table, so the moment one
+# merges, every other open framing PR goes DIRTY on that one file — reviews
+# PASS but the merge strands. If a same-repo PR's ONLY conflict with main is
+# analysis/README.md and its side of that file only ADDS full rows, re-resolve
+# deterministically (main's version + the branch's added rows), push, and
+# print the new head SHA. Anything else — fork head, other conflicted files,
+# row edits/removals — return 1 and leave it for a human.
+fg_heal_index_conflict() {  # $1 = pr number; prints the new head sha on success
+  local pr="$1" headrepo branch rows parent wt newsha
+  headrepo="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.repo.full_name' 2>/dev/null || true)"
+  [ "$headrepo" = "$REPO" ] || return 1
+  branch="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.ref' 2>/dev/null || true)"
+  [ -n "$branch" ] || return 1
+  git -C "$REPO_DIR" fetch origin --quiet || return 1
+  # The branch's README change must be pure row additions.
+  if git -C "$REPO_DIR" diff "origin/main...origin/$branch" -- analysis/README.md | grep -q '^-[^-]'; then
+    return 1
+  fi
+  rows="$(git -C "$REPO_DIR" diff "origin/main...origin/$branch" -- analysis/README.md | sed -n 's/^+\(|.*\)$/\1/p')"
+  [ -n "$rows" ] || return 1
+  parent="$(mktemp -d "${TMPDIR:-/tmp}/fg-heal.XXXXXX")"; wt="$parent/repo"
+  git -C "$REPO_DIR" worktree add --quiet --detach "$wt" "origin/$branch" 2>/dev/null \
+    || { rm -rf "$parent"; return 1; }
+  if ! (
+    cd "$wt" || exit 1
+    git merge --no-edit origin/main >/dev/null 2>&1 || true
+    conflicts="$(git diff --name-only --diff-filter=U)"
+    if [ -n "$conflicts" ] && [ "$conflicts" != "analysis/README.md" ]; then exit 1; fi
+    if [ -n "$conflicts" ]; then
+      git checkout origin/main -- analysis/README.md || exit 1
+      printf '%s\n' "$rows" >> analysis/README.md
+      git add analysis/README.md
+      git -c core.editor=true commit --no-edit >/dev/null 2>&1 || exit 1
+    fi
+    git push --quiet origin HEAD:"$branch" || exit 1
+  ); then
+    git -C "$REPO_DIR" worktree remove --force "$wt" 2>/dev/null || true
+    rm -rf "$parent" 2>/dev/null || true
+    return 1
+  fi
+  newsha="$(git -C "$wt" rev-parse HEAD 2>/dev/null || true)"
+  git -C "$REPO_DIR" worktree remove --force "$wt" 2>/dev/null || true
+  rm -rf "$parent" 2>/dev/null || true
+  [ -n "$newsha" ] || return 1
+  echo "$newsha"
 }

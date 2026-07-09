@@ -1,10 +1,10 @@
 ---
 stream: 110
 title: "Early-stage founders in New Zealand struggle to find and reach angel and seed investors"
-state: needs-synthesis
+state: awaiting-direction
 steward: ""
 domain: grant-access
-updated: 2026-07-03
+updated: 2026-07-08
 image: /images/streams/stream-110-founder-funding.jpg
 ---
 
@@ -21,7 +21,7 @@ New Zealanders starting a company often need a first small investment — somewh
 - **Women get a sliver of the money.** Women are about a quarter of New Zealand founders, but startups founded only by women received just 2.9% of venture capital dollars in 2024 (that exact figure comes from a single study; a separate study also found a large gap). (confidence: Medium) — [finding](../research/findings/grant-access/who-is-locked-out-nz-angel-seed.md)
 - **Māori and Pasifika founders are severely underrepresented, and the data barely exists.** They are about 27% of the population but only 4% of funded founding teams — and that number is one combined bucket from one source. Data on Māori and Pacific *businesses* is much better than data on their access to startup *capital*; whether new data should be collected, and by whom, is a question for Māori and Pacific data-governance authorities, not a technical exercise. (confidence: Medium) — [finding](../research/findings/grant-access/who-is-locked-out-nz-angel-seed.md), [finding](../research/findings/grant-access/kaupapa-maori-pasifika-investment.md)
 - **The small cheques exist but aren't matchable.** Formal angel groups wrote roughly $14m across 167 deals in 2025 (averaging about $83,000 — right in the range founders need), and there are public lists of networks and programmes. The gap isn't the absence of lists; it's that nothing lets a founder match by cheque size, stage, or region, and the many investors operating outside formal groups are essentially invisible by design. (confidence: Medium) — [finding](../research/findings/grant-access/nz-micro-cheque-funding-pathways.md)
-- **Overseas, open "list everyone" platforms don't work — vouched, curated introductions do.** The best academic evidence found that open matching platforms only produced results once trusted intermediaries curated deals. The best-evidenced model for a small country is Scotland/Ireland's: public money supporting a curated angel network plus co-investment. New Zealand already has the co-investment half (Aspire); what appears missing is a free public front door into the curated networks. (confidence: Medium) — [finding](../research/findings/grant-access/overseas-founder-investor-connection-models.md)
+- **Overseas, open "list everyone" platforms don't work — vouched, curated introductions do.** The best academic evidence found that open matching platforms only produced results once trusted intermediaries curated deals. The best-evidenced model for a small country is Scotland/Ireland/UK's: public money supporting a curated angel network plus co-investment. Newly recovered figures from the UK government's own funding bank (previously unreachable behind bot protection) reinforce this: its Angel CoFund attracted roughly £5 of private angel money for every £1 of public money across 82 businesses — and founders cannot approach it directly; the public money deliberately flows *through* the vetted angel groups. A second UK programme has committed £276m through regional angel partners. (These UK figures are reported by the programmes themselves, not independently audited.) New Zealand already has the co-investment half (Aspire); what appears missing is a free public front door into the curated networks. (confidence: Medium) — [finding](../research/findings/grant-access/overseas-founder-investor-connection-models.md)
 - **New Zealand investors would probably not join a fully open "everyone meets everyone" room.** Current practice runs on screening, due diligence and confidentiality, and financial-markets rules restrict how startup offers can be marketed to the public. A directory of funders is legally lower-risk than a pitch marketplace — but actual investor willingness hasn't been tested and needs interviews. (confidence: Medium) — [finding](../research/findings/grant-access/nz-investor-open-format-directory-participation.md)
 
 ## What we're not sure about yet
@@ -29,7 +29,7 @@ New Zealanders starting a company often need a first small investment — somewh
 - **How much of the problem is discovery at all.** No New Zealand data separates "couldn't find or reach investors" from "reached them and got a no" from "wasn't ready yet". This is the load-bearing gap for the whole stream — every option below rests partly on an unproven attribution.
 - **There is a tension between the original problem framing and the evidence.** The stream's founding idea leaned toward an open room or marketplace connecting all founders and all investors; two findings independently point the other way — toward curated, vouched connection, not open formats.
 - **Whether investors would actually participate** in any new directory or format is untested. Everything on the investor side is inferred from public behaviour, not asked directly.
-- **Several key numbers rest on a single source**: the 2.9% women's funding share (one study, methodology unpublished), the 13× warm-introduction figure (one UK study), and the 4% Māori/Pasifika share (one combined bucket from one agency's dashboard).
+- **Several key numbers rest on a single source**: the 2.9% women's funding share (one study, methodology unpublished), the 13× warm-introduction figure (one UK study), and the 4% Māori/Pasifika share (one combined bucket from one agency's dashboard). The UK co-investment results (the "£5 private per £1 public" figure) come from the programmes' own reporting, not an independent audit — only Scotland's scheme has an independent evaluation.
 - **Regional lock-out is plausible but unproven** — deals concentrate in Auckland, Wellington and Christchurch, but the data can't distinguish "fewer startups there" from "shut out there".
 - **First-time-founder status is measured nowhere**, despite being central to the problem statement.
 

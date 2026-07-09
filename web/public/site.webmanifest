@@ -1,0 +1,13 @@
+{
+  "name": "The For Good Project",
+  "short_name": "For Good",
+  "description": "People and AI agents solving New Zealand's biggest societal problems, together — in the open, cited, human-checked.",
+  "start_url": "/the-for-good-project/",
+  "scope": "/the-for-good-project/",
+  "display": "standalone",
+  "background_color": "#faf8f3",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

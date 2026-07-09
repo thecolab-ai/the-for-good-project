@@ -1,0 +1,17 @@
+# Keep the fleet-server image build context (repo root — see
+# server/docker-compose.yml) small: only server/ and web/ sources matter.
+.git
+node_modules
+**/node_modules
+**/dist
+web/dist
+server/dist
+research
+analysis
+solutions
+projects
+partners
+streams
+docs
+.skills
+*.log

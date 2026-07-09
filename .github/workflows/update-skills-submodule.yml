@@ -1,0 +1,75 @@
+# Keep the vendored `.skills` submodule (thecolab-ai/.skills) pointed at its
+# latest upstream commit. Runs hourly and can be kicked manually. Opens a PR
+# when the pointer moves instead of pushing straight to main — `main` requires
+# the `validate` and `for-good/adversarial-review` status checks, which a bare
+# push can never satisfy (confirmed: the direct-push version of this workflow
+# failed with GH006 on its first run). Going through a PR needs no branch-
+# protection bypass and keeps this workflow's commits under the same review
+# gate as everything else in the repo; the pointer-only diff gets the
+# lightweight "standard maintainer review" path (see review_work.sh
+# pr_review_kind), not the citation-gated research method.
+name: Update .skills submodule
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-skills-submodule
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Update .skills to latest upstream commit
+        run: git submodule update --remote --recursive .skills
+
+      - name: Open a PR if the pointer moved
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .skills; then
+            echo "No .skills update available — pointer unchanged."
+            exit 0
+          fi
+          new_sha="$(git -C .skills rev-parse --short HEAD)"
+          branch="chore/update-skills-submodule-${new_sha}"
+
+          # Idempotent: an earlier run for this exact pointer may already have
+          # an open PR awaiting review — don't spam a duplicate.
+          existing="$(gh pr list --state open --head "$branch" --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for $branch — nothing to do."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add .skills
+          git commit -m "chore: update .skills submodule to ${new_sha}"
+          # FORCE the push: the branch name is derived from the upstream sha, so
+          # a run for a pointer whose PR was CLOSED (not merged) leaves a stale
+          # same-named remote branch. A plain push is then non-fast-forward and
+          # rejected ("fetch first"), which wedged this workflow — every hourly
+          # run recreated the same branch and failed. Force is safe here: the
+          # branch namespace is automation-owned, and a still-OPEN PR already
+          # short-circuited above, so we never clobber a branch under review.
+          git push -u --force origin "$branch"
+          gh pr create --title "chore: update .skills submodule to ${new_sha}" \
+            --body "Automated bump of the vendored \`.skills\` submodule to its latest upstream commit (thecolab-ai/.skills@${new_sha}). Pointer-only change, no other content in this repo touched."
+          gh pr merge "$branch" --auto --squash --delete-branch \
+            || echo "Could not enable auto-merge (needs write/branch-protection settings) — a reviewer/maintainer can merge once it passes review."

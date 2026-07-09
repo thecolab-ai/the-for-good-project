@@ -49,5 +49,15 @@ routine fixes, copy changes, or web styling.
 | [0010](0010-partner-network.md) | Track the partner / SME / advisory network in the open, behind a consent gate | Accepted |
 | [0011](0011-synthesis-rework-routing.md) | Synthesis draft rework belongs to synthesize_work.sh; generic runners must not touch synthesis PRs | Accepted |
 | [0012](0012-synthesis-followup-research-loop.md) | Blocking unknowns loop back to research automatically — bounded — before the G1 human gate | Accepted |
+| [0013](0013-pipeline-guardrails.md) | Pipeline guardrails: bounded agent loops, one status at a time, human-held levers | Accepted |
+| [0014](0014-discover-framing-capability-floor.md) | Discover framing is reserved for a capability-floored runner (frame_work.sh) that also opens the fan-out | Proposed |
+| [0015](0015-autopilot-alternates-review-and-work.md) | autopilot.sh — one command alternates review and work, detects idle, and pulls latest main each cycle | Proposed |
+| [0016](0016-fleet-telemetry-defaults-and-merge-heal.md) | Fleet telemetry counters on by default (logs opt-in at every client) + deterministic index-cascade merge-healing in the runners | Proposed |
+| [0017](0017-server-orchestrated-pull-claim.md) | The fleet server arbitrates work claims for enrolled agents (pull-claim v1) | Proposed |
+| [0018](0018-mirror-backed-runner-reads.md) | Runner queue reads come from the fleet server's mirror, not GitHub | Proposed |
+| [0019](0019-orchestrated-review-dispatch.md) | The fleet server dispatches PR reviews to enrolled reviewers (kind: review) | Proposed |
+| [0020](0020-adopt-stale-rework.md) | A stale changes-requested PR is adopted by a different worker (kind: rework) | Proposed |
+| [0021](0021-author-agnostic-rework-reconcile.md) | reap routes ANY unaddressed change-request back to changes-requested, regardless of author | Proposed |
+| [0022](0022-worker-injection-hardening-and-sandbox-defaults.md) | Harden worker prompts against injection + implement ADR-0005's sandboxed run defaults (Codex workspace-write+network, Claude auto) | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

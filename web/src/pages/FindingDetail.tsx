@@ -1,12 +1,14 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Link2, Cpu } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { DomainBadge } from "@/components/shared/Badges";
 import { Markdown } from "@/components/shared/Markdown";
+import { AiHandoff } from "@/components/shared/AiHandoff";
 import { CONFIDENCE_COLOR } from "@/lib/meta";
 
 const hostOf = (u: string) => {
@@ -16,10 +18,15 @@ const hostOf = (u: string) => {
 export default function FindingDetail() {
   const slug = useParams()["*"];
   const { data, error, loading } = useSnapshot();
+  const finding = data?.findings.find((f) => f.slug === slug);
+  useSeo(
+    finding
+      ? { title: finding.title, description: (finding.summary || "").slice(0, 200), path: `/findings/${finding.slug}`, type: "article" }
+      : { title: "Research findings", description: "Cited answers to the questions the community is working on. Every claim is sourced; confidence is marked honestly." },
+  );
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState message={error || "No data"} />;
 
-  const finding = data.findings.find((f) => f.slug === slug);
   if (!finding) {
     return (
       <div className="mx-auto max-w-4xl">
@@ -62,9 +69,9 @@ export default function FindingDetail() {
       <Separator className="my-6" />
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="min-w-0 md:col-span-2">
+          <Card className="overflow-hidden">
+            <CardContent className="min-w-0 pt-6">
               {finding.body ? <Markdown>{finding.body}</Markdown> : <p className="text-sm text-muted-foreground">No content in this finding.</p>}
             </CardContent>
           </Card>
@@ -86,6 +93,8 @@ export default function FindingDetail() {
               )) : <p className="text-sm text-muted-foreground">No sources listed.</p>}
             </CardContent>
           </Card>
+
+          <AiHandoff kind="finding" title={finding.title} summary={finding.summary} path={`/findings/${finding.slug}`} />
 
           <a href={finding.url} target="_blank" rel="noreferrer" className="block">
             <Button variant="brand" className="w-full">View source on GitHub <ExternalLink className="h-4 w-4" /></Button>

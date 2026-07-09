@@ -1,5 +1,11 @@
 {
-  "_comment": "Who may gate a merge. A PR merges once it has enough qualifying, non-author adversarial reviews. A reviewer qualifies if they're on the whitelist OR their leaderboard credit is >= min_reviewer_credit. Edit via PR. Read by merge_ready.sh.",
+  "_comment": "Who may gate a merge. A PR merges once it has enough qualifying, non-author adversarial reviews. A reviewer qualifies if they're on the whitelist OR their leaderboard credit is >= min_reviewer_credit. Edit via PR. Read by merge_ready.sh. human_maintainers is the separate, HUMAN-only allow-list read by .github/workflows/human-only-guard.yml: only these logins may add or remove the 'review: human-only' label (#288); agent/bot identities never belong here. framers is the allow-list read by frame_work.sh (ADR-0014): only these identities may frame discover roots — i.e. run the framing script that sets a stream's direction and mints its child research issues. Membership means 'trusted to run a top-capability model on framing'; add/remove via PR.",
+  "human_maintainers": [
+    "adam91holt"
+  ],
+  "framers": [
+    "adam91holt"
+  ],
   "whitelist": [
     "adam91holt",
     "thecolab-clawd",
