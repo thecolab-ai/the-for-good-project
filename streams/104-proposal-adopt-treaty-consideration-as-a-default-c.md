@@ -5,6 +5,7 @@ state: needs-synthesis
 steward: ""
 domain: other
 updated: 2026-07-03
+image: /images/streams/stream-104-treaty-check.jpg
 ---
 
 # Should every project ask the Treaty question by default, not just the "Māori-looking" ones?

@@ -1,0 +1,64 @@
+# Run the fleet server:  docker compose up -d
+# State is in-memory by design (presence rebuilds from heartbeats); the volume
+# only preserves lifetime totals + the event feed across restarts.
+#
+# Orchestration (pull-claim v1): redis holds leases/command queues, mongo the
+# GitHub mirror + registry. Everything is additive and fail-open — export
+# FLEET_REDIS_URL= and FLEET_MONGO_URL= (empty) to deploy telemetry-only with
+# orchestration off; they default to the compose-internal stores. Dispatch
+# only activates when FLEET_GITHUB_TOKEN is DELIBERATELY provided — the
+# ambient GITHUB_TOKEN of the deploy shell (gh/CI tooling) is never adopted
+# as the fleet's claim-writing bot identity.
+services:
+  fleet-server:
+    build:
+      # Repo root: the image builds server/ AND web/ (dashboard served at /).
+      context: ..
+      dockerfile: server/Dockerfile
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      STATE_FILE: /data/fleet-state.json
+      TRUST_PROXY: "1"
+      WATCHER_GEO: "1"
+      # Log streaming stays default-OFF (issue #398): flip both deliberately,
+      # e.g. ALLOW_LOG_STREAM=1 BROADCAST_LOGS=1 docker compose up -d
+      ALLOW_LOG_STREAM: "${ALLOW_LOG_STREAM:-0}"
+      BROADCAST_LOGS: "${BROADCAST_LOGS:-0}"
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
+      # Orchestration stores (compose-internal hostnames, no host ports).
+      # The `-` (unset-only) default lets an operator export an EMPTY
+      # FLEET_REDIS_URL/FLEET_MONGO_URL to disable orchestration entirely.
+      REDIS_URL: "${FLEET_REDIS_URL-redis://redis:6379}"
+      MONGO_URL: "${FLEET_MONGO_URL-mongodb://mongo:27017}"
+      # Deliberately-named pass-through secrets — unset keeps the matching
+      # surface disabled (no claims / webhook 404 / admin 404 respectively).
+      # FLEET_GITHUB_TOKEN (NOT GITHUB_TOKEN) so a token exported for
+      # unrelated gh/CI tooling in the deploy shell can't silently become the
+      # fleet's bot identity on a routine `docker compose up`.
+      GITHUB_TOKEN: "${FLEET_GITHUB_TOKEN:-}"
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN:-}"
+    volumes:
+      - fleet-state:/data
+    depends_on:
+      - redis
+      - mongo
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  fleet-state:
+  redis-data:
+  mongo-data:

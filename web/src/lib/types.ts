@@ -59,6 +59,7 @@ export interface IssueLite {
 
 export interface Contributor {
   login: string;
+  name?: string | null;
   avatar: string;
   url: string;
   issuesAssigned: number;
@@ -103,6 +104,7 @@ export interface StreamSummary {
   state: string;
   steward: string;
   updated: string;
+  image: string;
   issues: number;
   openIssues: number;
   mergedPRs: number;
@@ -176,6 +178,7 @@ export interface StreamDoc {
   steward: string;
   domain: string;
   updated: string;
+  image: string;
   body: string;
   url: string;
 }

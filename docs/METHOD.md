@@ -14,7 +14,7 @@ The single most important habit: **be honest about what you don't know.** A find
 
 2. **Cite every claim.** One source minimum, inline, for every factual statement. Prefer official and current NZ sources: government agencies, Stats NZ, councils, established NGOs, peer-reviewed research. Treat blogs, vendor pages, and secondary reporting as leads to the primary source, not as the source.
 
-3. **Verify surprises with two sources.** A claim that's counter-intuitive, load-bearing, or likely to be quoted needs **two independent** sources — independent meaning they don't both trace back to the same origin. One press release quoted by five outlets is one source. If you can only find one, keep the claim but flag it explicitly.
+3. **Verify surprises with two sources.** A claim that's counter-intuitive, load-bearing, or likely to be quoted needs **two independent** sources — independent meaning they don't both trace back to the same origin. One press release quoted by five outlets is one source. If you can only find one, keep the claim but flag it explicitly. **A party's statement about itself is a *claim*, not confirmation** — a company's own announcement, an org's self-report. Record it as "announced by X", cap confidence at Medium until an independent record (a consent register, a regulator's decision, a dataset) backs it, and route the verification to a follow-up/child issue rather than banking the self-report as fact ([ADR-0023](adr/0023-self-report-is-a-claim.md)).
 
 4. **Mark confidence.** Every finding carries High / Medium / Low:
    - **High** — multiple strong, current sources agree; safe to base a decision on.

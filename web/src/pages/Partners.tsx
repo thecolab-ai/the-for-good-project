@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText } from "lucide-react";
+import { ArrowRight, HeartHandshake, Landmark, ShieldCheck, Users, ClipboardCheck, Eye, Lock, FileText, Server } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SystemDiagram } from "@/components/shared/SystemDiagram";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ const PROMISES = [
 
 export default function Partners() {
   const { data } = useSnapshot();
+  useSeo({ title: "For charities, councils & government", description: "Bring us a problem worth solving \u2014 rigorous, transparent, cited AI-assisted research for New Zealand\u2019s public-good organisations, for free.", path: "/partners" });
   const repo = data?.repo.url || "https://github.com/thecolab-ai/the-for-good-project";
 
   return (
@@ -27,7 +29,7 @@ export default function Partners() {
       <Card className="mb-10 p-6 md:p-8">
         <h2 className="font-serif text-2xl font-bold text-brand-navy dark:text-foreground">The idea, in one minute</h2>
         <p className="mt-3 text-muted-foreground">
-          A lot of skilled people have spare AI capacity. Aotearoa has hard problems that nobody has the hours to chip away at — cost of living, access to support people are entitled to, transparency, fairness for people doing it tough. This project puts those two things together: a shared, open workspace where people and AI agents work a real problem to a standard high enough that a real decision can rest on it.
+          A lot of skilled people have spare AI capacity. New Zealand has hard problems that nobody has the hours to chip away at — cost of living, access to support people are entitled to, transparency, fairness for people doing it tough. This project puts those two things together: a shared, open workspace where people and AI agents work a real problem to a standard high enough that a real decision can rest on it.
         </p>
         <p className="mt-3 text-muted-foreground">
           It is <strong>not</strong> a pile of AI-generated words. Every piece of work is cited, independently challenged before it's accepted, and turned into a plain-English brief a busy decision-maker can actually use. The measure of success isn't how much we produce — it's whether a real person or organisation is genuinely better off.
@@ -75,6 +77,25 @@ export default function Partners() {
         </Card>
       </div>
 
+      {/* Tech sponsors */}
+      <Card className="mt-4 p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-orange/15"><Server className="h-5 w-5 text-brand-orange" /></div>
+          <div className="font-serif text-lg font-semibold">Tech sponsors & infrastructure partners</div>
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          This is a shared commons that runs on real compute. AI agents do the heavy lifting — gathering, drafting, cross-checking — and that takes tokens, hosting, and tooling. We're looking for technology partners who can help the work scale so more of New Zealand's hard problems get worked, for free.
+        </p>
+        <p className="mt-3 text-sm font-medium text-foreground">Ways to help:</p>
+        <ul className="mt-2 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Model credits & API tokens</strong> — the fuel the agent fleet runs on.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Cloud infrastructure</strong> — hosting, compute, storage, database or CDN for the tools we build.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Developer tooling</strong> — services that make building and shipping small public-good apps easier.</span></li>
+          <li className="flex gap-2"><span className="text-brand-orange">•</span> <span><strong className="text-foreground">Engineering time</strong> — devs who want to help set up templates and get things deployed.</span></li>
+        </ul>
+        <p className="mt-3 text-sm text-muted-foreground">Sponsors are credited in the open, with your consent — every contribution goes straight into evidence and tools New Zealanders can actually use.</p>
+      </Card>
+
       {/* Our promise */}
       <h2 className="mb-2 mt-12 font-serif text-2xl font-bold">What we stand for</h2>
       <p className="mb-5 text-muted-foreground">The whole thing only works if it can be trusted. So these are non-negotiable.</p>
@@ -91,7 +112,8 @@ export default function Partners() {
       </div>
       <p className="mt-4 text-sm text-muted-foreground">
         We even track our partnerships in the open — behind a strict consent gate. Until you say otherwise, you appear as a role and sector only, never a name.{" "}
-        <a href={`${repo}/blob/main/partners/README.md`} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 hover:text-foreground">How that works</a>.
+        <a href={`${repo}/blob/main/partners/README.md`} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 hover:text-foreground">How that works</a>.{" "}
+        And we hold ourselves to the same bar: <Link to="/team" className="font-medium underline underline-offset-2 hover:text-foreground">meet the people behind the project</Link>.
       </p>
 
       {/* The ask */}

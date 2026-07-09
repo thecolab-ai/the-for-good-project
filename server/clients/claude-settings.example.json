@@ -1,0 +1,34 @@
+{
+  "$comment": "Fleet telemetry hooks for Claude Code — merge the `hooks` block into your ~/.claude/settings.json or the project's .claude/settings.local.json. They no-op instantly unless FLEET_SERVER is set in your environment; add STREAM_LOGS=1 (plus a server started with ALLOW_LOG_STREAM=1) to also stream redacted session excerpts.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/server/clients/claude-code-hook.mjs\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/server/clients/claude-code-hook.mjs\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/server/clients/claude-code-hook.mjs\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/server/clients/claude-code-hook.mjs\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

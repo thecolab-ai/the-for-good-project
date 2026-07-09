@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "node server/clients/codex-hook.mjs", "statusMessage": "fleet hello" } ] }
+    ],
+    "PostToolUse": [
+      { "hooks": [ { "type": "command", "command": "node server/clients/codex-hook.mjs", "statusMessage": "fleet heartbeat" } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "node server/clients/codex-hook.mjs", "statusMessage": "fleet tokens" } ] }
+    ]
+  }
+}

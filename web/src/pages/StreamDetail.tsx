@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Copy, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck } from "lucide-react";
+import { ArrowLeft, Check, Copy, FileText, Network, Users, Cpu, Wrench, ScrollText, ExternalLink, Lightbulb, ArrowRight, UserCheck, GitBranch, GitMerge } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card } from "@/components/ui/card";
@@ -10,10 +11,11 @@ import { ChainTree } from "@/components/shared/ChainTree";
 import { PersonAvatar } from "@/components/shared/PersonAvatar";
 import { DomainBadge } from "@/components/shared/Badges";
 import { StreamProgress } from "@/components/shared/StreamProgress";
+import { AiHandoff } from "@/components/shared/AiHandoff";
 import { buildStreamChains, type ChainNode } from "@/lib/lineage";
 import { findingsForStream, streamStateStyle, harnessLabel, isAwaitingDirection, stripEditorialDebris, buildStreamBrief } from "@/lib/streams";
 import { statusLabel } from "@/lib/meta";
-import { cleanTitle } from "@/lib/format";
+import { cleanTitle, publicAsset } from "@/lib/format";
 import type { StreamDoc } from "@/lib/types";
 
 const alwaysMatches = () => true;
@@ -52,6 +54,17 @@ function CopyBriefButton({ doc }: { doc: StreamDoc }) {
   );
 }
 
+// A dense KPI chip for the command bar — matches Findings/Sources/Streams.
+function Vital({ icon: Icon, value, label, accent = "#2E4057" }: { icon: typeof FileText; value: React.ReactNode; label: string; accent?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-card/60 px-2.5 py-1 backdrop-blur-sm">
+      <Icon className="h-3.5 w-3.5" style={{ color: accent }} />
+      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{value}</span>
+      <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">{label}</span>
+    </span>
+  );
+}
+
 function StepHeader({ n, icon: Icon, label }: { n: number; icon: typeof FileText; label: string }) {
   return (
     <div className="mb-3 flex items-center gap-2">
@@ -83,8 +96,18 @@ export default function StreamDetail() {
 
   const group = useMemo(() => (data ? buildStreamChains(data.issues).find((g) => g.stream === streamNum) : undefined), [data, streamNum]);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error || "No data"} />;
+  const seoDoc = data?.streamDocs?.find((d) => d.stream === streamNum);
+  const seoSummary = data?.streamsSummary?.find((s) => s.stream === streamNum);
+  const seoTitle = seoDoc?.title || seoSummary?.title;
+  useSeo({
+    title: seoTitle ? `${seoTitle} — stream #${streamNum}` : `Stream #${streamNum}`,
+    description: `Everything the community has researched on this problem — the original question, the cited evidence, and the synthesised answer. Stream #${streamNum} on The For Good Project.`,
+    path: `/streams/${streamNum}`,
+    type: "article",
+  });
+
+  if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
+  if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;
 
   const summary = data.streamsSummary?.find((s) => s.stream === streamNum);
   const doc = data.streamDocs?.find((d) => d.stream === streamNum);
@@ -92,7 +115,7 @@ export default function StreamDetail() {
 
   if (!summary && !group && !doc) {
     return (
-      <div>
+      <div className="px-4 py-8 md:px-6">
         <Link to="/streams" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> All streams</Link>
         <EmptyState icon={Network} title={`Stream #${streamNum} not found`}>It may not exist yet, or the data hasn't rebuilt. Head back to all streams.</EmptyState>
       </div>
@@ -115,22 +138,45 @@ export default function StreamDetail() {
   const people = summary?.people ?? [];
   const steward = doc?.steward?.replace(/^@/, "") || summary?.steward?.replace(/^@/, "") || "";
   const hasOverview = !!doc?.body?.trim();
+  const image = doc?.image || summary?.image || "";
 
   return (
-    <div>
-      <Link to="/streams" className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> All streams</Link>
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-xs text-muted-foreground">Stream #{streamNum}</span>
-        <h1 className="font-serif text-2xl font-bold text-brand-navy dark:text-foreground md:text-3xl">{title}</h1>
-        {state ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{statusLabel(state)}</span> : null}
-        <DomainBadge domain={domain} />
+    <div className="px-4 py-8 md:px-6">
+      {/* Sticky command bar — keeps title, status & key stats in view while scrolling */}
+      <div className="sticky top-16 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+        <Link to="/streams" className="mb-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> All streams</Link>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="font-mono text-xs text-muted-foreground">#{streamNum}</span>
+          <h1 className="min-w-0 flex-1 basis-full font-serif text-lg font-bold leading-tight text-brand-navy dark:text-foreground md:basis-auto md:text-xl">{title}</h1>
+          {state ? <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: streamStateStyle(state).bg, color: streamStateStyle(state).color }}>{statusLabel(state)}</span> : null}
+          <DomainBadge domain={domain} />
+          <div className="ml-auto flex items-center gap-1.5">
+            {hasOverview && doc ? <CopyBriefButton doc={doc} /> : null}
+          </div>
+        </div>
+        {/* Vitals strip */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <Vital icon={GitBranch} value={`${summary?.openIssues ?? 0}/${summary?.issues ?? 0}`} label="issues" accent="#2E4057" />
+          <Vital icon={GitMerge} value={summary?.mergedPRs ?? 0} label="accepted" accent="#C2410C" />
+          <Vital icon={FileText} value={summary?.findings ?? findings.length} label="findings" accent="#8B5CF6" />
+          <Vital icon={Users} value={people.length} label="people" accent="#1D76DB" />
+        </div>
       </div>
 
+      {image ? (
+        <figure className="mt-5 overflow-hidden rounded-lg border border-border bg-secondary">
+          <img src={publicAsset(image)} alt={`Overview illustration for ${title}`} className="aspect-[21/9] w-full object-cover" />
+        </figure>
+      ) : null}
+
       {/* Lifecycle stepper — where this stream is in its journey */}
-      <Card className="mb-6 overflow-x-auto p-5">
+      <Card className="mb-6 mt-5 overflow-x-auto p-5">
         <StreamProgress state={state} className="min-w-[560px]" />
       </Card>
+
+      <div className="mb-6">
+        <AiHandoff kind="stream" title={title} summary={rootExcerpt} path={`/streams/${streamNum}`} />
+      </div>
 
       {/* The human gate (G1, docs/STREAMS.md): the machines are done — a
           person now grades the evidence and sets the direction. */}
@@ -200,7 +246,9 @@ export default function StreamDetail() {
                 <div className="space-y-3">
                   {findings.map((f) => (
                     <div key={f.path} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
-                      <a href={f.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</a>
+                      {f.slug
+                        ? <Link to={`/findings/${f.slug}`} className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</Link>
+                        : <a href={f.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand-cyan-dark">{f.title}</a>}
                       {f.summary ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{f.summary}</p> : null}
                       <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
                         <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">{harnessLabel(f.agent)}</span>
@@ -242,18 +290,12 @@ export default function StreamDetail() {
         </div>
 
         {/* Sidebar: provenance (sticky) */}
-        <aside className="lg:sticky lg:top-20 lg:self-start">
+        <aside className="lg:sticky lg:top-[8rem] lg:self-start">
           <Card className="p-5">
             <div className="mb-3 font-serif text-base font-semibold">Provenance</div>
 
-            <div className="grid grid-cols-3 gap-2 border-b border-border pb-3 text-center">
-              <div><div className="text-lg font-bold tabular-nums">{summary?.issues ?? 0}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">issues</div></div>
-              <div><div className="text-lg font-bold tabular-nums">{summary?.mergedPRs ?? 0}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">accepted</div></div>
-              <div><div className="text-lg font-bold tabular-nums">{summary?.findings ?? findings.length}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">findings</div></div>
-            </div>
-
             {steward ? (
-              <div className="mt-3">
+              <div>
                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Steward</div>
                 <a href={`https://github.com/${steward}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm hover:text-brand-cyan-dark">
                   <PersonAvatar login={steward} avatar={`https://github.com/${steward}.png`} size={22} /> @{steward}

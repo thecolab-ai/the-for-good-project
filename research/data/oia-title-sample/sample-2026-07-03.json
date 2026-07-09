@@ -1,0 +1,3525 @@
+{
+  "meta": {
+    "generated": "2026-07-03",
+    "source": "fyi.org.nz public authority pages (counts + request titles only; no bodies)",
+    "bodies": [
+      "new_zealand_police",
+      "ministry_of_health",
+      "mbie",
+      "university_of_otago",
+      "acc",
+      "ministry_of_justice",
+      "auckland_transport",
+      "auckland_council",
+      "ministry_of_education",
+      "wellington_city_council"
+    ],
+    "pagesPerBody": 6,
+    "recentPages": 4,
+    "note": "FYI pages are mutable and default to most-recent order; dated, reproducible-as-of-access."
+  },
+  "totals": {
+    "bodiesFetched": 10,
+    "uniqueTitles": 795,
+    "themedTitles": 347,
+    "themedShare": 43.6,
+    "recurringGroups": 7,
+    "titlesInRecurringGroups": 17,
+    "recurrenceRate": 2.1,
+    "crossBodyGroups": 5
+  },
+  "clusterTally": [
+    {
+      "cluster": "roading/transport/speed",
+      "titles": 61,
+      "share": 7.7
+    },
+    {
+      "cluster": "spending/expenditure/budget",
+      "titles": 54,
+      "share": 6.8
+    },
+    {
+      "cluster": "education/school/student",
+      "titles": 54,
+      "share": 6.8
+    },
+    {
+      "cluster": "policy/guidelines/advice",
+      "titles": 53,
+      "share": 6.7
+    },
+    {
+      "cluster": "health/clinical/waitlist",
+      "titles": 45,
+      "share": 5.7
+    },
+    {
+      "cluster": "correspondence/meetings/minutes",
+      "titles": 37,
+      "share": 4.7
+    },
+    {
+      "cluster": "statistics/number-of/data",
+      "titles": 26,
+      "share": 3.3
+    },
+    {
+      "cluster": "immigration/visa",
+      "titles": 26,
+      "share": 3.3
+    },
+    {
+      "cluster": "complaints/investigations/misconduct",
+      "titles": 25,
+      "share": 3.1
+    },
+    {
+      "cluster": "contracts/procurement/consultants",
+      "titles": 23,
+      "share": 2.9
+    },
+    {
+      "cluster": "staffing/headcount/restructure",
+      "titles": 15,
+      "share": 1.9
+    },
+    {
+      "cluster": "ministerial/cabinet/briefing",
+      "titles": 11,
+      "share": 1.4
+    }
+  ],
+  "crossBody": [
+    {
+      "normalised": "cctv and anpr cameras",
+      "bodies": [
+        "auckland_transport",
+        "auckland_council",
+        "wellington_city_council"
+      ],
+      "ids": [
+        "33410",
+        "29149",
+        "29150"
+      ],
+      "example": "CCTV and ANPR Cameras"
+    },
+    {
+      "normalised": "payments to un",
+      "bodies": [
+        "mbie",
+        "ministry_of_justice"
+      ],
+      "ids": [
+        "31591",
+        "31590"
+      ],
+      "example": "Payments to UN"
+    },
+    {
+      "normalised": "fale andrew les stuff investigation reveals flawed cv",
+      "bodies": [
+        "acc",
+        "auckland_council"
+      ],
+      "ids": [
+        "31789",
+        "31792"
+      ],
+      "example": "Fale Andrew Lesā- Stuff investigation reveals flawed CV"
+    },
+    {
+      "normalised": "fale andrew lesa",
+      "bodies": [
+        "acc",
+        "ministry_of_justice"
+      ],
+      "ids": [
+        "23589",
+        "32324"
+      ],
+      "example": "Fale Andrew Lesa"
+    },
+    {
+      "normalised": "communications",
+      "bodies": [
+        "auckland_council",
+        "wellington_city_council"
+      ],
+      "ids": [
+        "34759",
+        "33879",
+        "32545",
+        "29204"
+      ],
+      "example": "Communications"
+    }
+  ],
+  "recurringExamples": [
+    {
+      "normalised": "communications",
+      "n": 4,
+      "examples": [
+        "Communications",
+        "Communications",
+        "Communications"
+      ]
+    },
+    {
+      "normalised": "cctv and anpr cameras",
+      "n": 3,
+      "examples": [
+        "CCTV and ANPR Cameras",
+        "CCTV and ANPR Cameras",
+        "CCTV and ANPR Cameras"
+      ]
+    },
+    {
+      "normalised": "rsu decision times for onshore refugee and protection claims",
+      "n": 2,
+      "examples": [
+        "RSU decision times for onshore refugee and protection claims",
+        "RSU decision times for onshore refugee and protection claims"
+      ]
+    },
+    {
+      "normalised": "payments to un",
+      "n": 2,
+      "examples": [
+        "Payments to UN",
+        "Payments to UN"
+      ]
+    },
+    {
+      "normalised": "fale andrew les stuff investigation reveals flawed cv",
+      "n": 2,
+      "examples": [
+        "Fale Andrew Lesā- Stuff investigation reveals flawed CV",
+        "Fale Andrew Lesā- Stuff investigation reveals flawed CV"
+      ]
+    },
+    {
+      "normalised": "fale andrew lesa",
+      "n": 2,
+      "examples": [
+        "Fale Andrew Lesa",
+        "Fale Andrew Lesa"
+      ]
+    },
+    {
+      "normalised": "official information act request design rationale for capability framework differences across phases in the nzc refresh",
+      "n": 2,
+      "examples": [
+        "Official Information Act Request – Design Rationale for Capability Framework Differences Across Phases in the NZC Refresh",
+        "Official Information Act Request – Design Rationale for Capability Framework Differences Across Phases in the NZC Refresh"
+      ]
+    }
+  ],
+  "bodies": [
+    {
+      "slug": "new_zealand_police",
+      "url": "https://fyi.org.nz/body/new_zealand_police",
+      "count": 2076,
+      "sampledTitles": [
+        {
+          "id": "34994",
+          "title": "Unlocked and unaccounted for: Guns and Tasers among tactical gear lost by police"
+        },
+        {
+          "id": "33422",
+          "title": "Request information on CCAP (Criminal Charging Advisory Panel)"
+        },
+        {
+          "id": "35001",
+          "title": "SSPOI and SearchX PIAs"
+        },
+        {
+          "id": "33966",
+          "title": "NZ Police handling of fraud reports involving cryptocurrency or Bitcoin, including statistics, investigation frameworks, triage processes, and international coordination."
+        },
+        {
+          "id": "33843",
+          "title": "OnDuty Bill of Rights & Human Rights Assessment"
+        },
+        {
+          "id": "34841",
+          "title": "Stalking and harassment legislation"
+        },
+        {
+          "id": "34961",
+          "title": "Grooming Gangs"
+        },
+        {
+          "id": "34601",
+          "title": "Police contacts with individuals over social media posts"
+        },
+        {
+          "id": "32692",
+          "title": "Police Instructions Policy and Section 30(1) of the Policing Act 2008"
+        },
+        {
+          "id": "34219",
+          "title": "Analytical Basis for Cannabis Social Harm Claims (Det. Supt. Williams, 24 March 2026)"
+        },
+        {
+          "id": "34771",
+          "title": "Official Information Act Request – Crash Classification Logic and Causation Determination"
+        },
+        {
+          "id": "34246",
+          "title": "Request for Information Relating to the Policing Amendment Bill (No. 268-1)"
+        },
+        {
+          "id": "34745",
+          "title": "Tasman Police Fleet"
+        },
+        {
+          "id": "34501",
+          "title": "High Angle Rescue Calls"
+        },
+        {
+          "id": "32703",
+          "title": "Timeline of events in relation to the charges against [name redacted]"
+        },
+        {
+          "id": "34578",
+          "title": "SDS for Oral‑Fluid Devices & DNA‑Use Clarification"
+        },
+        {
+          "id": "34696",
+          "title": "Crash classification, toxicology status, and coronial‑pending information"
+        },
+        {
+          "id": "34480",
+          "title": "contracts"
+        },
+        {
+          "id": "34423",
+          "title": "Total number of officers issued identification using a alias for covert &#x27;undercover\" purposesI"
+        },
+        {
+          "id": "34046",
+          "title": "WFH Survey Results"
+        },
+        {
+          "id": "34585",
+          "title": "Statutory Authority and Biometric Data Handling in Oral‑Fluid Roadside Drug Testing"
+        },
+        {
+          "id": "34482",
+          "title": "Firearms Authority communication identified as spam"
+        },
+        {
+          "id": "32186",
+          "title": "David Tamihere case/missing Swedes"
+        },
+        {
+          "id": "34489",
+          "title": "Copies of Police letters to NZLSOS 18 Jul and 10 Aug 2022"
+        },
+        {
+          "id": "34225",
+          "title": "Official Information Act Request – Islamophobia-Related Incidents and Police Response (Past 5 Years)"
+        },
+        {
+          "id": "34353",
+          "title": "Commercial Vehicle Safety Centres"
+        },
+        {
+          "id": "31899",
+          "title": "Org Chart"
+        },
+        {
+          "id": "29894",
+          "title": "Mangawhai Natural Disaster Response"
+        },
+        {
+          "id": "30029",
+          "title": "New Zealand Police Weapons Procedure"
+        },
+        {
+          "id": "33061",
+          "title": "15 - ADHD and Police Contact / Data Recognition"
+        },
+        {
+          "id": "33673",
+          "title": "Response Times and Training for Disability and Neurodiversity"
+        },
+        {
+          "id": "32673",
+          "title": "Documentation confirming &#x27;approved Tow operators&#x27; & &#x27;approved storage providers&#x27;  for the West Auckland service area, made to the Commissioner of Police"
+        },
+        {
+          "id": "30370",
+          "title": "Breakdown of SARs/PTRs for the past three years"
+        },
+        {
+          "id": "33687",
+          "title": "Impaired Driving National Rollout"
+        },
+        {
+          "id": "32552",
+          "title": "Role of the Firearms Registry in 3D-printed firearms seizure (West Auckland, October 2025)"
+        },
+        {
+          "id": "33228",
+          "title": "Lounge access"
+        },
+        {
+          "id": "30986",
+          "title": "Conflict of interest considerations in charges against [name redacted]"
+        },
+        {
+          "id": "33418",
+          "title": "Information concerning use of radar equipment"
+        },
+        {
+          "id": "33308",
+          "title": "Superintendent Steve Greally (Director of Road Policing) decisions"
+        },
+        {
+          "id": "33255",
+          "title": "Roadside Drug Testing Pad & Health/Safety Procedures"
+        },
+        {
+          "id": "32884",
+          "title": "Detection thresholds for the DrugWipe 3S which is being used for saliva drug testing"
+        },
+        {
+          "id": "29035",
+          "title": "Re: OIA 105927 please provide the URL for access to IRT (Information Request Tool)"
+        },
+        {
+          "id": "33450",
+          "title": "Declarable Organisations and Freemasonry"
+        },
+        {
+          "id": "32013",
+          "title": "Use of data brokers"
+        },
+        {
+          "id": "33344",
+          "title": "[name redacted]"
+        },
+        {
+          "id": "31574",
+          "title": "Family members and couples working together"
+        },
+        {
+          "id": "32882",
+          "title": "Warrant for interception and redirection of 36 emails intercepted and redirected by Andrew Coster of the New Zealand Police"
+        },
+        {
+          "id": "32143",
+          "title": "Total Number of Mental Heath Jobs"
+        },
+        {
+          "id": "31336",
+          "title": "Number of clandestine Methamphetamine laboratories found"
+        },
+        {
+          "id": "32660",
+          "title": "Release of Tom Phillips Camp Photos Query"
+        },
+        {
+          "id": "17098",
+          "title": "NZ Police organisation type"
+        },
+        {
+          "id": "32440",
+          "title": "Information regarding private helicopter use in Canterbury"
+        },
+        {
+          "id": "31925",
+          "title": "Response Data"
+        },
+        {
+          "id": "32706",
+          "title": "accuracy and Calibration certificate"
+        },
+        {
+          "id": "30274",
+          "title": "Police information on SOVCITS and SOVCIT activities"
+        }
+      ]
+    },
+    {
+      "slug": "ministry_of_health",
+      "url": "https://fyi.org.nz/body/ministry_of_health",
+      "count": 2064,
+      "sampledTitles": [
+        {
+          "id": "34919",
+          "title": "Official Information Act request — Medical Council appointments, non-reappointments and HPCA regulator-independence advice"
+        },
+        {
+          "id": "34882",
+          "title": "Dose Interval between primary course of COVID 19 vaccine"
+        },
+        {
+          "id": "34864",
+          "title": "Meaning and Governance Basis of the Name “Medsafe”"
+        },
+        {
+          "id": "34795",
+          "title": "Pandemic Vaccine Procurement, Medsafe Emergency Authorisation, and India FTA Pharmaceutical Provisions"
+        },
+        {
+          "id": "34839",
+          "title": "Mandated Covid-19 related vaccinations in New Zealand."
+        },
+        {
+          "id": "33529",
+          "title": "Copies of correspondence bteween MedSafe and Johnson & Johnson regarding Ortho EVRA"
+        },
+        {
+          "id": "34337",
+          "title": "Risk Assessments and PPE Standards for Pfizer Vaccine Handling in New Zealand"
+        },
+        {
+          "id": "34943",
+          "title": "OIA request - evidential source for two mechanistic statements at page 5 of \"Community Water Fluoridation: NZBORA Analysis\" (November 2024)"
+        },
+        {
+          "id": "34787",
+          "title": "Provision of memo reviewing evidence on coadministration of Covid vaccine with other vaccines"
+        },
+        {
+          "id": "34237",
+          "title": "Evidentiary Basis for the 2017 Fluoride UL Update"
+        },
+        {
+          "id": "34286",
+          "title": "Data models and methodology for the Nov and Dec 2024 public health publications"
+        },
+        {
+          "id": "34621",
+          "title": "Mandatory vaccinations announcement 11 Oct 2021"
+        },
+        {
+          "id": "34471",
+          "title": "Misuse of Drugs (Appointments of Members of Expert Advisory Committee on Drugs)"
+        },
+        {
+          "id": "34258",
+          "title": "Definitions of “Safe” and “Effective” in Public Health Communications"
+        },
+        {
+          "id": "34050",
+          "title": "Follow-up system-level oversight and governance of informed consent in healthcare"
+        },
+        {
+          "id": "33831",
+          "title": "Operational Guidance Concerning Patients Reporting EMF Sensitivity (Smart Meters)"
+        },
+        {
+          "id": "26209",
+          "title": "Comirnaty Obligatjon  #54 in the provisional approval notice"
+        },
+        {
+          "id": "33093",
+          "title": "13 - Māori, Pacific, and equity involvement in ADHD related clinical frameworks"
+        },
+        {
+          "id": "33059",
+          "title": "12 - ADHD Hui Actions, Data Survey Funding, and Coordination Progress"
+        },
+        {
+          "id": "34390",
+          "title": "Covid Inquiry Phase 2 documents"
+        },
+        {
+          "id": "30975",
+          "title": "October 2022 Review of Remaining COVID-19 Measures"
+        },
+        {
+          "id": "34304",
+          "title": "Please list all individuals, agencies, community groups and health organisations who were responsible for managing covid vaccine centres/clinics between 2020 and today&#x27;s date"
+        },
+        {
+          "id": "33553",
+          "title": "Hato Hone St John First response units, First response Groups and Prime"
+        },
+        {
+          "id": "34189",
+          "title": "Clarification on dental metrics used in the 2024 NZBORA decision"
+        },
+        {
+          "id": "33657",
+          "title": "Cosmic Hornby - Documentation and Sales Data"
+        },
+        {
+          "id": "33927",
+          "title": "Historical ESPI data export (2019-present)"
+        },
+        {
+          "id": "34190",
+          "title": "Methodology of demographic assessment in the November 2024 NZBORA analysis"
+        },
+        {
+          "id": "33754",
+          "title": "Te Tatau o te Whare Kahu | Midwifery Council- board"
+        },
+        {
+          "id": "24435",
+          "title": "Urgent Inquiry: Unravelling the Veil on Vaccine Exemptions Within the Ministry of Health"
+        },
+        {
+          "id": "29680",
+          "title": "Removal of EPOA"
+        },
+        {
+          "id": "33830",
+          "title": "Records Relied Upon Concerning Smart Meter RF Exposure"
+        },
+        {
+          "id": "17554",
+          "title": "CV TAG Advice on age group recommendations + AZ & Janssen recommendations"
+        },
+        {
+          "id": "32912",
+          "title": "New Zealand’s medical and nursing workforce (2018–2025)"
+        },
+        {
+          "id": "33686",
+          "title": "Accountability for informed consent assurance in medicines and vaccination programmes"
+        },
+        {
+          "id": "33926",
+          "title": "H2026077293 Evaluation Basis"
+        },
+        {
+          "id": "33874",
+          "title": "Occupational Therapy Board of New Zealand"
+        },
+        {
+          "id": "33280",
+          "title": "Vacancies on End of Life Choice Review Committee"
+        },
+        {
+          "id": "31313",
+          "title": "Conflicts of interest at NZ Immunisation Advisory Service"
+        },
+        {
+          "id": "16612",
+          "title": "Influenza"
+        },
+        {
+          "id": "11534",
+          "title": "Treatment injuries following full resection of embedded tumour on fourth ventricle"
+        },
+        {
+          "id": "33372",
+          "title": "Official Information Act Request: Annual volumes for Nuclear medicine Gastric Emptying Studies"
+        },
+        {
+          "id": "33546",
+          "title": "Nursing Council of New Zealand Board"
+        },
+        {
+          "id": "33490",
+          "title": "Official Information Act request – public funding supporting ethnicity-based GP fee reductions"
+        },
+        {
+          "id": "25093",
+          "title": "Official excess death rates for the last 5 years"
+        },
+        {
+          "id": "17707",
+          "title": "Guidelines/Procedures for the management of postoperative Urinary Retention (POUR)"
+        },
+        {
+          "id": "33349",
+          "title": "Medicines Act interpretation, ethics oversight, and consent frameworks"
+        },
+        {
+          "id": "32915",
+          "title": "Radiology, Pathology & Oncology Workforce Shortages (2018–2025)"
+        },
+        {
+          "id": "33235",
+          "title": "Fluoride Supply Chain – End-to-End Traceability, Contaminant Testing, and Regulatory Oversight"
+        },
+        {
+          "id": "32518",
+          "title": "The minutes of the BNT162b2 PREGNANCY AND LACTATION CUMULATIVE REVIEW"
+        },
+        {
+          "id": "25124",
+          "title": "Where are the satisfied conditions for the provisional approval of Comirnaty?"
+        },
+        {
+          "id": "32966",
+          "title": "Hospital Use of the Terms “Biologics/Biogenic Agents” and Consent Requirements for Vaccines and Injectable Products"
+        },
+        {
+          "id": "33121",
+          "title": "Impact of U.S. FDA Memo on COVID-19 Vaccine Safety Monitoring – Internal Risk Assessment or Policy Review (Nov–Dec 2025)"
+        },
+        {
+          "id": "32968",
+          "title": "Classification of Vaccines as Biological Medicines, Use of the Terms “Biologics/Biogenic Agents,” and Regulatory Implications for Consent"
+        },
+        {
+          "id": "32524",
+          "title": "Lab Testing Data and Investigations into Vape Nicotine Mislabelling (Ministry of Health + ESR)"
+        },
+        {
+          "id": "32533",
+          "title": "Data showing no increased risks in pregnant women for the covid vaccine"
+        },
+        {
+          "id": "33036",
+          "title": "Regulatory impact statement for new regulations regarding puberty blockers"
+        },
+        {
+          "id": "32904",
+          "title": "Funding for Cancer Research"
+        },
+        {
+          "id": "32989",
+          "title": "Follow up request"
+        },
+        {
+          "id": "33216",
+          "title": "H2024049482 Response letter- update request"
+        },
+        {
+          "id": "29160",
+          "title": "Abuse in State Care Apology (MoE)"
+        },
+        {
+          "id": "32589",
+          "title": "Reappointments / Appointments to the Osteopathic Council of New Zealand – Kaunihera Haumanu Tuahiwi o Aotearoa"
+        },
+        {
+          "id": "32659",
+          "title": "Results of T cells declining in the Pfizer non clinical report post vaccination"
+        },
+        {
+          "id": "18146",
+          "title": "Covid 19 Auckland University Commentators"
+        },
+        {
+          "id": "31797",
+          "title": "Average income senior and registered nurses"
+        },
+        {
+          "id": "32483",
+          "title": "Reports on Pfizer vaccine failure and efficacy (from the provisional approval notice)"
+        },
+        {
+          "id": "31171",
+          "title": "National Mass Fatality Framework"
+        },
+        {
+          "id": "32715",
+          "title": "Decision to allow prizegiving with a measle outbreak"
+        },
+        {
+          "id": "32197",
+          "title": "Industrial Hemp Regulation, Environmental Oversight, Interagency Coordination, and Related Funding (2020–2025)"
+        },
+        {
+          "id": "32519",
+          "title": "The results of the pfizer vaccine study on 12-15 year olds"
+        },
+        {
+          "id": "32433",
+          "title": "Cholesterol ingredient of Comirnaty and its half life"
+        },
+        {
+          "id": "32562",
+          "title": "Flu vaccination in the under 5s"
+        },
+        {
+          "id": "32405",
+          "title": "Disposable Vapes"
+        }
+      ]
+    },
+    {
+      "slug": "mbie",
+      "url": "https://fyi.org.nz/body/mbie",
+      "count": 1887,
+      "sampledTitles": [
+        {
+          "id": "34880",
+          "title": "Publication of OIA responses"
+        },
+        {
+          "id": "24081",
+          "title": "migrant exploitation and burden on NZ tax payers"
+        },
+        {
+          "id": "35014",
+          "title": "Migrant exploitation statistics"
+        },
+        {
+          "id": "34835",
+          "title": "Request for definition of independently verifiable evidence and Standard Operating Procedures for Work Visa processing and assessment"
+        },
+        {
+          "id": "34681",
+          "title": "Data request for Parent boost visa."
+        },
+        {
+          "id": "34979",
+          "title": "Employment Relations Authority Operating Costs, Caseload, Delay and Per-Case Data 2011/12–2025/26"
+        },
+        {
+          "id": "34973",
+          "title": "Employment Dispute Record Preservation, Disclosure and Search Controls"
+        },
+        {
+          "id": "34974",
+          "title": "Employment Relations Authority Evidence, Disclosure, Delay and Cost Issues"
+        },
+        {
+          "id": "34527",
+          "title": "INZ Work Visa (AEWV) Approval Stats - 1st March 2025 to 31st March 2026"
+        },
+        {
+          "id": "34726",
+          "title": "Policy directors"
+        },
+        {
+          "id": "34977",
+          "title": "Differential immigration settings applied to Indian citizens under the NZ-India FTA - operational changes, ministerial approval, and non-announcement"
+        },
+        {
+          "id": "34737",
+          "title": "Overstaying and student immigration details"
+        },
+        {
+          "id": "34628",
+          "title": "New Zealand asylum claims: resource pressures and low acceptance rates"
+        },
+        {
+          "id": "34675",
+          "title": "Nziat"
+        },
+        {
+          "id": "33932",
+          "title": "Working Holiday Visa (Philippines Scheme) – Residence Outcomes and Quota Administration"
+        },
+        {
+          "id": "33930",
+          "title": "Updated Information Regarding the Assessment of Student Visa Applications"
+        },
+        {
+          "id": "34620",
+          "title": "Total Visas issued to nationals from India for chefs"
+        },
+        {
+          "id": "34484",
+          "title": "Contract information"
+        },
+        {
+          "id": "34554",
+          "title": "MBIE Investigations on Mighty Rocket Properties"
+        },
+        {
+          "id": "34553",
+          "title": "Mighty Rocket Properties - Complaints & Enforcement"
+        },
+        {
+          "id": "34616",
+          "title": "Public Health and Forensic Science - directors"
+        },
+        {
+          "id": "34433",
+          "title": "Funding and procurement relating to geoengineering or atmospheric intervention research"
+        },
+        {
+          "id": "34567",
+          "title": "Detailed rental bond data April 2024"
+        },
+        {
+          "id": "34504",
+          "title": "Fuel stock reporting"
+        },
+        {
+          "id": "31302",
+          "title": "Parent Resident Visa EOI Ballot cost and drawn algorithm"
+        },
+        {
+          "id": "34257",
+          "title": "Does New Zealand monitor the safety of unsuccessful asylum claimants after their return to their countries of origin?"
+        },
+        {
+          "id": "34259",
+          "title": "Briefing to CEOs on oil supply"
+        },
+        {
+          "id": "34254",
+          "title": "All documents, reports, plans, letters, ministerial advice and responses relating to the research and development of a circular economy plan for NZ."
+        },
+        {
+          "id": "34326",
+          "title": "Official Information Act Request: Legal costs regarding PSA flexible working policy litigation"
+        },
+        {
+          "id": "34314",
+          "title": "Accounting of the fee for permanent residence visa application"
+        },
+        {
+          "id": "34214",
+          "title": "Record-high asylum backlog: staffing, policy basis, and whether the government reassessed its approach"
+        },
+        {
+          "id": "34140",
+          "title": "Request for Maps of Prospecting Areas"
+        },
+        {
+          "id": "34100",
+          "title": "Bullying and harassment, PIP"
+        },
+        {
+          "id": "34076",
+          "title": "Smart meter governance, standards, communications architecture, and inter-agency oversight"
+        },
+        {
+          "id": "34306",
+          "title": "Working Arrangements at Immigration New Zealand"
+        },
+        {
+          "id": "34092",
+          "title": "Money to Coalition for Epidemic Preparedness Innovations"
+        },
+        {
+          "id": "33918",
+          "title": "Operation Magazine - list of boaring houses"
+        },
+        {
+          "id": "33915",
+          "title": "Boarding house complaints & investigations"
+        },
+        {
+          "id": "33020",
+          "title": "OIA request for INZ documents and communications regarding Guosen QDII product"
+        },
+        {
+          "id": "13283",
+          "title": "SMC(NON-priority) applications allocation"
+        },
+        {
+          "id": "30283",
+          "title": "Conflict of Interest Declarations & Funding Decisions"
+        },
+        {
+          "id": "33691",
+          "title": "List of Entities with \"300\" Series Registration Numbers"
+        },
+        {
+          "id": "33312",
+          "title": "Official Information Act 1982 Request – Processing Times and Policy Settings for Parent/Grandparent Visitor Visas"
+        },
+        {
+          "id": "34213",
+          "title": "Inquiry regarding Skilled Work Experience for SMC – Median Wage Threshold Transition"
+        },
+        {
+          "id": "33655",
+          "title": "RSU decision times for onshore refugee and protection claims"
+        },
+        {
+          "id": "33106",
+          "title": "Admission of pending spree killers who committed war crimes against their own people to New Zealand"
+        },
+        {
+          "id": "33467",
+          "title": "Spectrum allocation policy for rural broadband and fixed wireless access"
+        },
+        {
+          "id": "20904",
+          "title": "Latest entire INZ organisational chart 10/2022"
+        },
+        {
+          "id": "33659",
+          "title": "RSU decision times for onshore refugee and protection claims"
+        },
+        {
+          "id": "25485",
+          "title": "Information regarding the conflict in Gaza"
+        },
+        {
+          "id": "24410",
+          "title": "Inquiry Regarding Assessment of Onshore and Offshore Student Visa Applications"
+        },
+        {
+          "id": "33132",
+          "title": "Immigration status of fraudulent licence holders"
+        },
+        {
+          "id": "33638",
+          "title": "Immigration compliance officer uniform and equipment"
+        },
+        {
+          "id": "33536",
+          "title": "Citizenship Endorsement and travel on foreign passport"
+        },
+        {
+          "id": "33481",
+          "title": "OIA Request - Net Energy Analysis for 81% Demand Increase Under Renewable Transition"
+        },
+        {
+          "id": "33585",
+          "title": "Anonymised Aggregate Information on Smart Meter Policy, Technology Oversight, and RF Compliance (2018–2025)"
+        },
+        {
+          "id": "31974",
+          "title": "MBIE Conflict of Interest documents - Mt Ruapehu."
+        },
+        {
+          "id": "33535",
+          "title": "Organisational Charts - Investigation Functions"
+        },
+        {
+          "id": "33444",
+          "title": "Economic and resilience implications of terrestrial rural infrastructure abandonment"
+        },
+        {
+          "id": "33581",
+          "title": "Mitigation of bias at the Employment Relations Authority"
+        },
+        {
+          "id": "33239",
+          "title": "Request for Information: Eligibility to Apply Offshore for a Post-study Work Visa and Impact of an Unsuccessful Refugee/Protection Claim"
+        },
+        {
+          "id": "33369",
+          "title": "Need NZ Accrideted Employers List"
+        },
+        {
+          "id": "33221",
+          "title": "New Zealand Growth Capital Partners"
+        },
+        {
+          "id": "33274",
+          "title": "Promulgation of Employment Court cases and Idea Services case at the ERA"
+        },
+        {
+          "id": "32762",
+          "title": "Removal of prohibition against switching protective earth neutral (PEN) conductors from Wiring Rules"
+        },
+        {
+          "id": "32760",
+          "title": "Modification of Electrical Standards via Regulation"
+        },
+        {
+          "id": "31591",
+          "title": "Payments to UN"
+        },
+        {
+          "id": "32738",
+          "title": "EWRB Competence Programme for Hazardous Area Endorsement Response"
+        },
+        {
+          "id": "31011",
+          "title": "Updated Data on 2025 Parent Resident Visas"
+        },
+        {
+          "id": "32867",
+          "title": "INZ Work Visa (AEWV) Approval Statistics - Jan 2024 to October 2025"
+        },
+        {
+          "id": "32605",
+          "title": "Defence Industry Plan - MBIE Inputs"
+        },
+        {
+          "id": "32264",
+          "title": "Covid 19 vaccine order documentation"
+        }
+      ]
+    },
+    {
+      "slug": "university_of_otago",
+      "url": "https://fyi.org.nz/body/university_of_otago",
+      "count": 1022,
+      "sampledTitles": [
+        {
+          "id": "34867",
+          "title": "Elective LAWS Papers Offered In 2017"
+        },
+        {
+          "id": "34964",
+          "title": "Bachelor of Radiation Therapy Admission Statistics, GPA and Selection Criteria (2021-2026)"
+        },
+        {
+          "id": "34432",
+          "title": "Health and conduct  declaration"
+        },
+        {
+          "id": "34359",
+          "title": "Average number of clinics in undergrad dentistry"
+        },
+        {
+          "id": "32625",
+          "title": "Halls of Residence Applications for the 2026 Year"
+        },
+        {
+          "id": "34505",
+          "title": "MBChB 2026 graduate admissions statistics"
+        },
+        {
+          "id": "30924",
+          "title": "MBCHB 2026 admissions"
+        },
+        {
+          "id": "34172",
+          "title": "Number of applicants: 2026 MBChB and BDS"
+        },
+        {
+          "id": "34490",
+          "title": "Rural Origin Eligibility Clarification"
+        },
+        {
+          "id": "33725",
+          "title": "Bpharm Two or More Years of Study wGPA"
+        },
+        {
+          "id": "29921",
+          "title": "Student Services Fee Expenditure"
+        },
+        {
+          "id": "34300",
+          "title": "The specific requirements to get into Dentistry through the graduate catergory"
+        },
+        {
+          "id": "34193",
+          "title": "Mbchb and Bds"
+        },
+        {
+          "id": "31400",
+          "title": "Minimum Grades for Entry to MBCHB and BDS Programmes 2025"
+        },
+        {
+          "id": "33944",
+          "title": "2023 Law and PPE GPA"
+        },
+        {
+          "id": "33861",
+          "title": "HSFY entry into BDS and MBChB for 2026"
+        },
+        {
+          "id": "33837",
+          "title": "Refugee equity MB CHB and BDS admission"
+        },
+        {
+          "id": "33241",
+          "title": "MBChb Graduate entry query"
+        },
+        {
+          "id": "33242",
+          "title": "Offer dates MBCHB"
+        },
+        {
+          "id": "33744",
+          "title": "Bds Interview 2025"
+        },
+        {
+          "id": "33244",
+          "title": "MBCHB & BDS Admission Statistics 2026"
+        },
+        {
+          "id": "33205",
+          "title": "Minimum grade/GPA cutoffs for 2026 MBChB and BDS first-round and waitlist offers"
+        },
+        {
+          "id": "33642",
+          "title": "HSFY declaration"
+        },
+        {
+          "id": "33594",
+          "title": "MBCHB UCAT Thresholds for 2027"
+        },
+        {
+          "id": "33600",
+          "title": "PSYC400 papers 2025"
+        },
+        {
+          "id": "33587",
+          "title": "Paper Results + Grade Distributions for past 3 years"
+        },
+        {
+          "id": "33578",
+          "title": "POPH192 Progress Test One (Essay) Grade Distribution"
+        },
+        {
+          "id": "33562",
+          "title": "Otago Scholarships and Prestige Scholarships"
+        },
+        {
+          "id": "29288",
+          "title": "Law Grades 2024"
+        },
+        {
+          "id": "29954",
+          "title": "Laws301 Research and Writing Assignments"
+        },
+        {
+          "id": "29956",
+          "title": "LAWS301 Exam Mark"
+        },
+        {
+          "id": "33033",
+          "title": "BDS Admission Requirements for 2026 (Graduate & HSFY Pathways)"
+        },
+        {
+          "id": "33032",
+          "title": "Inquiry Regarding Graduate Entry Eligibility, Honours Degree GPA Weighting, and Historical Selection Data (BDS & MBChB)"
+        },
+        {
+          "id": "32157",
+          "title": "Marine science postgraduate grades"
+        },
+        {
+          "id": "31882",
+          "title": "Quickstats Paper Results has no data for 2025"
+        },
+        {
+          "id": "31596",
+          "title": "MB ChB rural origins sub-category + accounting for years of school attendance"
+        },
+        {
+          "id": "32988",
+          "title": "Surveying grades 2018-2024"
+        },
+        {
+          "id": "32971",
+          "title": "LAWS101 cutoff, PPE distribution"
+        },
+        {
+          "id": "32940",
+          "title": "LAWS101 and BSNS Grade Distribution 2025"
+        },
+        {
+          "id": "32768",
+          "title": "Grade Comparison Reports"
+        },
+        {
+          "id": "32466",
+          "title": "Grades distribution for internal assignment for laws200 papers in 2025"
+        },
+        {
+          "id": "31071",
+          "title": "Admission to the Bachelor of Science (Honours) Programme"
+        },
+        {
+          "id": "29229",
+          "title": "LAWS Grade Distribution"
+        },
+        {
+          "id": "31423",
+          "title": "MBChB graduate entry 2025"
+        },
+        {
+          "id": "28450",
+          "title": "MbChB Applications under the Graduate General Category"
+        },
+        {
+          "id": "32480",
+          "title": "MBChB - Alternate and Graduate Entry Deferral"
+        },
+        {
+          "id": "32434",
+          "title": "Hall of Residence Applications for the 2025 Academic Year"
+        },
+        {
+          "id": "32413",
+          "title": "Why do rural pathway students not get MbChb tutorials?"
+        },
+        {
+          "id": "28207",
+          "title": "Medicine applicant 2025"
+        },
+        {
+          "id": "32432",
+          "title": "LAWS200 2024 Average Grade for LAWS200 Papers and Invitation to Honours."
+        },
+        {
+          "id": "32291",
+          "title": "Number of applicants for MbChb, MDS, and BPharm 2026."
+        },
+        {
+          "id": "32292",
+          "title": "Entrance scores"
+        },
+        {
+          "id": "21396",
+          "title": "BPharm International and domestic student enrolment"
+        },
+        {
+          "id": "21713",
+          "title": "International cut off for HSFY pathway into BDS and MBchB"
+        },
+        {
+          "id": "32322",
+          "title": "ZOOL314 Exam locations"
+        },
+        {
+          "id": "32356",
+          "title": "LAWS302 2025 Wai2700 Submission Grade Distribution"
+        },
+        {
+          "id": "32105",
+          "title": "Application Numbers MBChB"
+        },
+        {
+          "id": "32117",
+          "title": "Domestic HSFY Average for 2025 semester 1"
+        },
+        {
+          "id": "30307",
+          "title": "Minimum & Median GPA for offers into BDS and MBChB via Graduate Category 2025"
+        },
+        {
+          "id": "28950",
+          "title": "Exam Locations"
+        },
+        {
+          "id": "30846",
+          "title": "Retention of student work and grade appeal timeframes"
+        },
+        {
+          "id": "31415",
+          "title": "Applicants/admissions into the MBChB program 2025"
+        },
+        {
+          "id": "32188",
+          "title": "Grade distributions sem 1"
+        },
+        {
+          "id": "31125",
+          "title": "BDS and MBChB Entry grades information in 2021-2025"
+        },
+        {
+          "id": "32088",
+          "title": "Request for 2026 BDS HSFY cut-off, 2022–2024 alternative entry averages, and interview outcomes."
+        },
+        {
+          "id": "31212",
+          "title": "ECON Papers Offered 2026"
+        },
+        {
+          "id": "31916",
+          "title": "Entrance Scores to Health Professional Programmes 2025"
+        },
+        {
+          "id": "28366",
+          "title": "Paper changes concerning physiology, anatomy and neuroscience"
+        },
+        {
+          "id": "31679",
+          "title": "Minimum GPA for physiotherapy"
+        },
+        {
+          "id": "31901",
+          "title": "Med Entry Decile Data"
+        },
+        {
+          "id": "31597",
+          "title": "Graduate Category Admission into Physiotherapy 2025"
+        },
+        {
+          "id": "31344",
+          "title": "HSFY 8th Paper Grades 2024"
+        },
+        {
+          "id": "31523",
+          "title": "Acceptance data for entry into Medicine (MBChB) and Dentistry (BDS) via general category"
+        },
+        {
+          "id": "31547",
+          "title": "Average Academic Score Distribution of HSFY 2025 1st semester across 4 papers"
+        },
+        {
+          "id": "31535",
+          "title": "Lowest, median, and highest averages of the four semester one papers that were admitted into MB ChB after HSFY from the 2022 - 2024 cohorts"
+        },
+        {
+          "id": "31546",
+          "title": "Maximum 2024 HSFY Academic Score"
+        },
+        {
+          "id": "31519",
+          "title": "Law grade distributions S1 2025"
+        },
+        {
+          "id": "31420",
+          "title": "MB ChB and BDS Admission Information"
+        },
+        {
+          "id": "31494",
+          "title": "GPA required to get into Medicine via the Graduate Programme as a Rural Student"
+        },
+        {
+          "id": "31670",
+          "title": "Medicine requirements"
+        },
+        {
+          "id": "31416",
+          "title": "Oral Health Entry Data by Category 2024/2025"
+        },
+        {
+          "id": "30163",
+          "title": "MSc scholarship GPAs"
+        },
+        {
+          "id": "31255",
+          "title": "University of Otago Māori Masters Scholarship"
+        }
+      ]
+    },
+    {
+      "slug": "acc",
+      "url": "https://fyi.org.nz/body/acc",
+      "count": 963,
+      "sampledTitles": [
+        {
+          "id": "34982",
+          "title": "Recertification Programme Query"
+        },
+        {
+          "id": "31020",
+          "title": "Hip Resurfacing"
+        },
+        {
+          "id": "25182",
+          "title": "Number of Impairment Assessment Reports"
+        },
+        {
+          "id": "34975",
+          "title": "ACC Review System Evidence Disclosure, Bundle Completeness and Cost of Disputes"
+        },
+        {
+          "id": "32750",
+          "title": "Storage of Claimants Clinical Records"
+        },
+        {
+          "id": "27263",
+          "title": "Legal Services Representation"
+        },
+        {
+          "id": "27879",
+          "title": "Non-disclosure agreements"
+        },
+        {
+          "id": "34325",
+          "title": "Official Information Act Request – Mailhouse Procurement and Implementation (2025)"
+        },
+        {
+          "id": "34684",
+          "title": "Public confidence surveys and Public Trust surveys relative to the ACC for years 2015 to 2025 Respectively"
+        },
+        {
+          "id": "34142",
+          "title": "ACC information sharing with Veterans’ Affairs under AISA (2024)"
+        },
+        {
+          "id": "34144",
+          "title": "Cross-agency coordination between ACC and Veterans’ Affairs"
+        },
+        {
+          "id": "34280",
+          "title": "NAATI credential compliance and subcontracting practices in ACC interpreting and translation services"
+        },
+        {
+          "id": "34136",
+          "title": "POSSE Framework, Next-Generation Case Management, Administrative Decision-Making"
+        },
+        {
+          "id": "33715",
+          "title": "Request of stats on \"Interim Timeframe Decline Decision\""
+        },
+        {
+          "id": "33150",
+          "title": "Request for information regarding ACC’s annual performance outcomes, clinical quality assurance, turnaround-time standards, contractor oversight, and workforce adequacy"
+        },
+        {
+          "id": "33170",
+          "title": "Request for Information on External Legal Expenditure, Investigator Engagements & Assessor Governance Frameworks (2019–2025)"
+        },
+        {
+          "id": "33171",
+          "title": "Request for Information on Conflicts of Interest, Assessor Governance, and Panel-Selection Processes (2019–2025)"
+        },
+        {
+          "id": "33173",
+          "title": "Request for Information on Performance Targets, Operational Time Standards, Decline Rates & Staff Pressure Frameworks (2019–2025)"
+        },
+        {
+          "id": "33172",
+          "title": "Request for Information on Data Integrity Processes, File Accuracy, Evidence Handling & Decision-Making Quality Assurance (2019–2025)"
+        },
+        {
+          "id": "33169",
+          "title": "Request for Information on Provider Billing Irregularities, Audit Processes, and Fraud Controls (2019–2025)"
+        },
+        {
+          "id": "32534",
+          "title": "ACC external legal services – finance/ERP extracts, GL codes, and panel spend (2020/21–2024/25), with note to Claim #10038184163"
+        },
+        {
+          "id": "32869",
+          "title": "ACC external legal expenditure on claimant reviews & appeals"
+        },
+        {
+          "id": "33222",
+          "title": "ACC – clarification of ERP metadata and s18(e) refusals for dispute-resolution spend"
+        },
+        {
+          "id": "23363",
+          "title": "Information sharing agreement with External Clinical Advisors"
+        },
+        {
+          "id": "33710",
+          "title": "Claimant [name redacted] x [name redacted]"
+        },
+        {
+          "id": "32906",
+          "title": "treatment injury claims related to COVID-19 vaccinations"
+        },
+        {
+          "id": "32918",
+          "title": "Mitigating potential conflicts of interest for referrers."
+        },
+        {
+          "id": "31598",
+          "title": "Fiscal Performance"
+        },
+        {
+          "id": "31645",
+          "title": "Fiscal Performance (Resubmit)"
+        },
+        {
+          "id": "32814",
+          "title": "ACC for visitors to NZ"
+        },
+        {
+          "id": "32662",
+          "title": "Overseas Travel by DCE Service Delivery"
+        },
+        {
+          "id": "32671",
+          "title": "Expenditure by ACC contract and provider type"
+        },
+        {
+          "id": "32668",
+          "title": "Cessation of Your ACC Dashboard reports"
+        },
+        {
+          "id": "31103",
+          "title": "ACC’s handling of Permanent Injury Compensation (PIC), ACC18 medical certificates, and repetitive review processes"
+        },
+        {
+          "id": "30649",
+          "title": "Executives at ACC"
+        },
+        {
+          "id": "31080",
+          "title": "Executive Messaging Records"
+        },
+        {
+          "id": "31680",
+          "title": "Culture Reviewers"
+        },
+        {
+          "id": "32045",
+          "title": "Suicide rates of claimants"
+        },
+        {
+          "id": "31193",
+          "title": "Executive Non-Hotel Accommodation and Subsidies"
+        },
+        {
+          "id": "31789",
+          "title": "Fale Andrew Lesā- Stuff investigation reveals flawed CV"
+        },
+        {
+          "id": "31402",
+          "title": "OIA  sensitive claims for support of individuals who have experienced sexual assault"
+        },
+        {
+          "id": "31674",
+          "title": "Fale Andrew Lesā"
+        },
+        {
+          "id": "31874",
+          "title": "ACC court compliance"
+        },
+        {
+          "id": "31622",
+          "title": "Review Applications for Medicinal Cannabis (2024–2025)"
+        },
+        {
+          "id": "31216",
+          "title": "Request for Information on Workplace TBI and PCS Claims Related to Trips and Falls"
+        },
+        {
+          "id": "31476",
+          "title": "Reappointment to the Board of the Accident Compensation Corporation"
+        },
+        {
+          "id": "31530",
+          "title": "General overseas operations data Questions:"
+        },
+        {
+          "id": "31373",
+          "title": "Taxi Contract"
+        },
+        {
+          "id": "30429",
+          "title": "Waiheke island work function cost"
+        },
+        {
+          "id": "31465",
+          "title": "Travel Details"
+        },
+        {
+          "id": "23589",
+          "title": "Fale Andrew Lesa"
+        },
+        {
+          "id": "31526",
+          "title": "Independent allowance assessments"
+        },
+        {
+          "id": "31346",
+          "title": "St John PWC Report 2025"
+        },
+        {
+          "id": "11819",
+          "title": "Selection of Te Ahumairangi Investment Management"
+        },
+        {
+          "id": "27160",
+          "title": "Email Redirection - Te Ara Tika"
+        },
+        {
+          "id": "29208",
+          "title": "Procedure for submitting claim for tinnitus caused by exposure to loud noise"
+        },
+        {
+          "id": "30107",
+          "title": "Names of Peer Reviewers and Branch Medical Advisors"
+        },
+        {
+          "id": "29105",
+          "title": "Advertising information on X (formerly known as Twitter)"
+        },
+        {
+          "id": "23567",
+          "title": "Injuries Balance Bike"
+        },
+        {
+          "id": "30128",
+          "title": "Motorcycle Accidents and Funding of non-compliance Conduct"
+        },
+        {
+          "id": "29904",
+          "title": "Amount of Referrals and Payments made to a Vendor"
+        },
+        {
+          "id": "30413",
+          "title": "Samsung FRP Tool V2.7 Latest Version Download 2025"
+        },
+        {
+          "id": "26486",
+          "title": "ACC HR policies"
+        },
+        {
+          "id": "25544",
+          "title": "Radiologists employed by ACC"
+        },
+        {
+          "id": "20304",
+          "title": "Vaccine injury claims Pfizer BioNTech Comirnaty vaccine comparative with all other vaccine injury claims"
+        },
+        {
+          "id": "20613",
+          "title": "Performance of MoveMe Health service provider to ACC"
+        },
+        {
+          "id": "30129",
+          "title": "Legislation"
+        },
+        {
+          "id": "27051",
+          "title": "List of processes and procedures"
+        },
+        {
+          "id": "21977",
+          "title": "Do ACC keep a digital account log of their telecommunications"
+        },
+        {
+          "id": "28146",
+          "title": "Human rights commission involvement in a file remote claims handles"
+        },
+        {
+          "id": "29089",
+          "title": "GP/UC clinic ACC funding for accident related consults/treatments"
+        },
+        {
+          "id": "24184",
+          "title": "Policies & Docs related to Parts 4, 5, 7, 9 of the Act, and the Part 3-6 of the Code (Complaints)"
+        },
+        {
+          "id": "23436",
+          "title": "Zoom Meeting Guide & Mediation or Alternative Dispute Resolution"
+        },
+        {
+          "id": "24604",
+          "title": "• www.acc.co.nz/newsroom/stories/privacy-review/"
+        },
+        {
+          "id": "27255",
+          "title": "ACC Employee Conduct"
+        },
+        {
+          "id": "26293",
+          "title": "Inquiry about Contract Cancellation with General Psychologists"
+        },
+        {
+          "id": "16917",
+          "title": "OIA Request - Group email membership"
+        },
+        {
+          "id": "27210",
+          "title": "National Concussion Guidelines 2024 Winter Season Research Collation Resources"
+        },
+        {
+          "id": "27042",
+          "title": "Information regarding the CEO&#x27;s trip to Europe"
+        },
+        {
+          "id": "27096",
+          "title": "Risky claimants and claimant/client care indicators"
+        },
+        {
+          "id": "29145",
+          "title": "OCL"
+        }
+      ]
+    },
+    {
+      "slug": "ministry_of_justice",
+      "url": "https://fyi.org.nz/body/ministry_of_justice",
+      "count": 840,
+      "sampledTitles": [
+        {
+          "id": "35012",
+          "title": "Deputy Chair of the Social Security Appeal Authority"
+        },
+        {
+          "id": "34990",
+          "title": "NZ Lawyers & Conveyancers Disciplinary Tribunal and New Zealand Parole Board"
+        },
+        {
+          "id": "34965",
+          "title": "Daniel Becker - Crown Prosecutor"
+        },
+        {
+          "id": "34967",
+          "title": "PDS Policies"
+        },
+        {
+          "id": "34727",
+          "title": "Whether provisions concerning “acting otherwise than in good faith” in New Zealand immigration law were subject to human rights and discrimination review"
+        },
+        {
+          "id": "34942",
+          "title": "Public Defence Service"
+        },
+        {
+          "id": "34928",
+          "title": "Firearms Licensing Review Committee"
+        },
+        {
+          "id": "34686",
+          "title": "Coroner Reports"
+        },
+        {
+          "id": "32970",
+          "title": "COVID-19 Public Health Response Act 2020 infringement notices – total issued, collected, and outstanding as at November 2025 (post-repeal)"
+        },
+        {
+          "id": "34884",
+          "title": "Official Information Act request - cryptocurrency confiscation orders and proceeds"
+        },
+        {
+          "id": "34693",
+          "title": "OIA131751  updated request."
+        },
+        {
+          "id": "34679",
+          "title": "Official Information Act Request – Policies on Culturally & Religiously Appropriate Lawyer for Child Appointments and Role in Family Court"
+        },
+        {
+          "id": "33296",
+          "title": "Crime Rates, Economic Correlations, Corrections Costs, and Justice System Demand Analysis"
+        },
+        {
+          "id": "34291",
+          "title": "List of expiring appointments-2026- updated OIA reqeust"
+        },
+        {
+          "id": "34318",
+          "title": "Consultancy firm TBL re: OIA Reform"
+        },
+        {
+          "id": "34222",
+          "title": "Documents underpinning statements made by the Minister of Police regarding the roadside drug testing regime"
+        },
+        {
+          "id": "34365",
+          "title": "Ministry of Justice policy response to G (SC 130/2024) v R [2026] NZSC 19 — sentencing of aged-out youth offenders"
+        },
+        {
+          "id": "34261",
+          "title": "Official Information Act request – cannabis possession charge outcomes"
+        },
+        {
+          "id": "34265",
+          "title": "NAATI credential compliance and subcontracting practices in MOJ translation and interpreting services"
+        },
+        {
+          "id": "34191",
+          "title": "Request for reported IPV victims by gender"
+        },
+        {
+          "id": "34388",
+          "title": "Deputy Legal Complaints Review Officer"
+        },
+        {
+          "id": "34411",
+          "title": "Numbers and information of people jailed in NZ for threatening to. Kill in NZ"
+        },
+        {
+          "id": "34199",
+          "title": "Referee, Disputes Tribunal - Invercargill"
+        },
+        {
+          "id": "34270",
+          "title": "Operation Chartreuse prosecution results"
+        },
+        {
+          "id": "34074",
+          "title": "Recruitment processes, gatekeeping practices, applicant communication, advertising timeframes, and fixed‑term roles"
+        },
+        {
+          "id": "34373",
+          "title": "Recipients of Employment Court decision"
+        },
+        {
+          "id": "33501",
+          "title": "Referees, Disputes Tribunal - New Plymouth and Queenstown"
+        },
+        {
+          "id": "32321",
+          "title": "Information on persons convicted of aggravated robbery in relation to the murder of Palmerston North man Damon O’rourke."
+        },
+        {
+          "id": "33060",
+          "title": "14 - ADHD Policy, Data, and Fair Process in the Justice System"
+        },
+        {
+          "id": "33544",
+          "title": "new Ministerial Advisory Group-Prevention of Family and Sexual Violence"
+        },
+        {
+          "id": "17119",
+          "title": "Nuremburg Code"
+        },
+        {
+          "id": "33421",
+          "title": "Number of staff loss due to vaccine mandates at the ministry of Justice, take2"
+        },
+        {
+          "id": "32951",
+          "title": "There is a gap in the law which facilitates and condones  self represented lawyers  to commit crime in the civil jurisdiction"
+        },
+        {
+          "id": "33281",
+          "title": "Our ref: OIA 124577- updated"
+        },
+        {
+          "id": "33556",
+          "title": "Tenancy Tribunal Adjudicator"
+        },
+        {
+          "id": "33492",
+          "title": "Legal aid payments 2024-2025"
+        },
+        {
+          "id": "30158",
+          "title": "Protocols for the  involvement  of  Crown solicitors in private prosecutions"
+        },
+        {
+          "id": "33218",
+          "title": "JP status of 2025"
+        },
+        {
+          "id": "33085",
+          "title": "Our ref: OIA 125837- updated OIA"
+        },
+        {
+          "id": "32456",
+          "title": "Judicial JP Manual"
+        },
+        {
+          "id": "31725",
+          "title": "Writ of Habeas Corpus"
+        },
+        {
+          "id": "32459",
+          "title": "Judicial Conduct Commissioner"
+        },
+        {
+          "id": "32334",
+          "title": "Statistics on sex offender sentencing and reoffending"
+        },
+        {
+          "id": "32352",
+          "title": "NZ BORA Section 10: Right not to be subjected to medical or scientific experimentation"
+        },
+        {
+          "id": "32351",
+          "title": "Consistency with the New Zealand Bill of Rights Act 1990: Medicines Amendment Bill"
+        },
+        {
+          "id": "32350",
+          "title": "Consistency with the New Zealand Bill of Rights Act 1990: Covid-19 (Vaccinations) Legislation Bill"
+        },
+        {
+          "id": "32333",
+          "title": "Total amounts invoiced by Northland PDLA legal aid providers"
+        },
+        {
+          "id": "32324",
+          "title": "Fale Andrew Lesa"
+        },
+        {
+          "id": "31673",
+          "title": "Appointments of Fale Andrew Lesā"
+        },
+        {
+          "id": "31889",
+          "title": "Advice given"
+        },
+        {
+          "id": "32233",
+          "title": "Chief Justice&#x27;s 2024 Annual Report"
+        },
+        {
+          "id": "32271",
+          "title": "OIA 124845 Luke final response.pdf- update V2"
+        },
+        {
+          "id": "31971",
+          "title": "Communication Assistance annual report"
+        },
+        {
+          "id": "31919",
+          "title": "OIA 123823 - V2"
+        },
+        {
+          "id": "32010",
+          "title": "Gangs Act 2024 - NZBORA Official Advice"
+        },
+        {
+          "id": "24307",
+          "title": "Funding of policy staff to undertake tertiary study such as degrees, postgraduate and professional legal studies"
+        },
+        {
+          "id": "26427",
+          "title": "Youth Justice policy team"
+        },
+        {
+          "id": "31239",
+          "title": "Entry Exit Gates"
+        },
+        {
+          "id": "31632",
+          "title": "Court anouncements book"
+        },
+        {
+          "id": "31754",
+          "title": "2024 Stocktake of Gender and Ethnic Diversity on Public Sector Boards and Committees (2025)"
+        },
+        {
+          "id": "31660",
+          "title": "Community Magistrates - North Island"
+        },
+        {
+          "id": "31590",
+          "title": "Payments to UN"
+        },
+        {
+          "id": "31602",
+          "title": "Land Valuation Tribunal"
+        },
+        {
+          "id": "31289",
+          "title": "Minimum period of imprisonment"
+        },
+        {
+          "id": "31367",
+          "title": "Private Security Personnel Licensing Authority - Deputy Licensing Authority"
+        },
+        {
+          "id": "12747",
+          "title": "Employment equity for Maori women in public sector"
+        },
+        {
+          "id": "31204",
+          "title": "Section 49 Evidence Act enquiry"
+        },
+        {
+          "id": "29624",
+          "title": "Subject: Official Information Act Request - Ministry of Justice Policies and Procedures"
+        },
+        {
+          "id": "30794",
+          "title": "Rangatahi court data and information"
+        },
+        {
+          "id": "30625",
+          "title": "Tribunals OIA act"
+        },
+        {
+          "id": "30761",
+          "title": "Statutory vacancies V2- OIA Act"
+        },
+        {
+          "id": "30709",
+          "title": "Documents and correspondence from 2020–2025 regarding consent law reform and the Justice Select Committee’s recommendation to re-examine consent laws."
+        },
+        {
+          "id": "30842",
+          "title": "Official Information Act Request – Convictions of Immigrants and Charges Against Asylum Seekers for Sexual Offences (2010–Present)"
+        },
+        {
+          "id": "30715",
+          "title": "Community Magistrates  Ref: OIA 119569- updates"
+        },
+        {
+          "id": "30664",
+          "title": "New Zealand Teachers Disciplinary Tribunal"
+        },
+        {
+          "id": "30735",
+          "title": "Canterbury Earthquakes Insurance Tribunal Appointed"
+        },
+        {
+          "id": "30621",
+          "title": "Deputy Inspector-General of Defence"
+        },
+        {
+          "id": "28126",
+          "title": "Criminal Conviction Checks"
+        },
+        {
+          "id": "30546",
+          "title": "Length of time civil records are held"
+        }
+      ]
+    },
+    {
+      "slug": "auckland_transport",
+      "url": "https://fyi.org.nz/body/auckland_transport",
+      "count": 793,
+      "sampledTitles": [
+        {
+          "id": "34847",
+          "title": "Documents relating to cycle work as part of connected communities"
+        },
+        {
+          "id": "32946",
+          "title": "ANPR surveillance for parking offences"
+        },
+        {
+          "id": "34792",
+          "title": "Public consultation and information surrounding the asics waterfront half marathon 2026"
+        },
+        {
+          "id": "33410",
+          "title": "CCTV and ANPR Cameras"
+        },
+        {
+          "id": "33411",
+          "title": "Highway Cameras"
+        },
+        {
+          "id": "34051",
+          "title": "Train driver / train manager operational manuals"
+        },
+        {
+          "id": "33335",
+          "title": "Random Contactless Payments Deductions / Extremely Poor Handling from AT Hop Staff"
+        },
+        {
+          "id": "34294",
+          "title": "April 2026 Passenger Rail Network Shutdown Delay Discussions"
+        },
+        {
+          "id": "34309",
+          "title": "CCTV Cameras"
+        },
+        {
+          "id": "34395",
+          "title": "Public Transport Cost, Revenue, and Usage Data by Location"
+        },
+        {
+          "id": "33847",
+          "title": "The avenue/dairy flat highway traffic signals"
+        },
+        {
+          "id": "34098",
+          "title": "Coordinates of public transport fare zones in Auckland"
+        },
+        {
+          "id": "34081",
+          "title": "Query as to why an Arterial road has been chipsealed rather than asphalt"
+        },
+        {
+          "id": "32161",
+          "title": "Details of Any Plans to Update / Change Bus Stop Announcements Esmonde Road"
+        },
+        {
+          "id": "32309",
+          "title": "Traffic CCTV Footage along Ellerslie Panmure Highway (Harrison Rd to Wilkinson Road, toward Ellerslie Roundabout)"
+        },
+        {
+          "id": "32044",
+          "title": "Management of abandoned vehicle"
+        },
+        {
+          "id": "31930",
+          "title": "Total mobility drivers"
+        },
+        {
+          "id": "31558",
+          "title": "Newmarket Railway Station - Glazing"
+        },
+        {
+          "id": "31531",
+          "title": "PTOM Unit Patronage, Fare and Subsidy Information for Auckland"
+        },
+        {
+          "id": "31636",
+          "title": "Bus lane camera rule and historical data on fines issued and how to information."
+        },
+        {
+          "id": "31483",
+          "title": "CCTV Footage of accident on Panmure-Ellerslie Highway Roundabout onto State Highway 1, entering from on Great South Link, Penrose"
+        },
+        {
+          "id": "30876",
+          "title": "Project K Redesign Consultation & Strategic Alignment"
+        },
+        {
+          "id": "31152",
+          "title": "Data on Parking Infringement issued for parking on Off Roadway No Parking Zone"
+        },
+        {
+          "id": "31360",
+          "title": "CCTV Footage Request on the Corner of Mayoral Drive and Queen Street by Myers Park Underpass Entrance"
+        },
+        {
+          "id": "30850",
+          "title": "Request for Information, Weed Management on Roadways"
+        },
+        {
+          "id": "29653",
+          "title": "Further Information/Plan"
+        },
+        {
+          "id": "30488",
+          "title": "Hi can I please get a street footage for my claim, someone hit me an ran away"
+        },
+        {
+          "id": "30529",
+          "title": "Hobsonville Road Cycleway detailed design"
+        },
+        {
+          "id": "30510",
+          "title": "CCTV Footage Bus RT3012"
+        },
+        {
+          "id": "17737",
+          "title": "Rail Heritage"
+        },
+        {
+          "id": "28681",
+          "title": "Will the new card readers currently being installed be compatible with motu move?"
+        },
+        {
+          "id": "9199",
+          "title": "Tender Documents for Cycle-Way Hakanoa St to Warnock St Grey Lynn 2017"
+        },
+        {
+          "id": "30489",
+          "title": "Please help get the cctv footage if available, someone hit my car and run"
+        },
+        {
+          "id": "29987",
+          "title": "School buses with Rainbow flags"
+        },
+        {
+          "id": "24268",
+          "title": "Car was crashed into between 6pm and 9pm on Wednesday 27th September on St Johns Road, Meadowbank. Outside St Chad&#x27;s church."
+        },
+        {
+          "id": "26714",
+          "title": "A lady attacked me while on traffic light camera i want to make a complaint about her and i need fotage"
+        },
+        {
+          "id": "18294",
+          "title": "Camera footage"
+        },
+        {
+          "id": "30298",
+          "title": "Request for information on Mays Road and Grey Street, Onehunga – Intersection Safety Improvements"
+        },
+        {
+          "id": "9904",
+          "title": "Birkenhead transport 939 bus"
+        },
+        {
+          "id": "26464",
+          "title": "Procedures when notified of a death or serious injury on your network"
+        },
+        {
+          "id": "19046",
+          "title": "Police Mistakes green right signal at Domain St Parnell"
+        },
+        {
+          "id": "25652",
+          "title": "Failure to Notify Infringement"
+        },
+        {
+          "id": "29056",
+          "title": "AT Metro Fare Increases"
+        },
+        {
+          "id": "10969",
+          "title": "Business dealings with LEAPTHOUGHT NZ LIMITED and FULCRUMHQ LIMITED and  LEAPTHOUGHT HOLDINGS NZ LIMITED"
+        },
+        {
+          "id": "29649",
+          "title": "Loading zones in CBD for all vehicle"
+        },
+        {
+          "id": "30084",
+          "title": "Requesting Salary bands and Salary Ranges"
+        },
+        {
+          "id": "22669",
+          "title": "Day 1 costs for the City Rail Link"
+        },
+        {
+          "id": "24140",
+          "title": "Request for CCTV footage at Devenport ferry station"
+        },
+        {
+          "id": "29639",
+          "title": "Park over time limit / Park over vehicle entrance"
+        },
+        {
+          "id": "13417",
+          "title": "CCTV footage request - car accident in Harris Rd"
+        },
+        {
+          "id": "17141",
+          "title": "Salaries"
+        },
+        {
+          "id": "15467",
+          "title": "CCTV footage request, car accident, dominion and balmoral road 8:20pm-8:30pm 16/5/21"
+        },
+        {
+          "id": "13496",
+          "title": "Male assult male on Galway street Auckland cbd"
+        },
+        {
+          "id": "29512",
+          "title": "Opaheke Road"
+        },
+        {
+          "id": "19373",
+          "title": "CCTV Footage Archive Request"
+        },
+        {
+          "id": "8742",
+          "title": "Accident at the intersection"
+        },
+        {
+          "id": "29390",
+          "title": "Removal of bus stop indents"
+        },
+        {
+          "id": "29441",
+          "title": "Decision process to upgrade bus stop 1188"
+        },
+        {
+          "id": "20062",
+          "title": "Blockchain at AT"
+        },
+        {
+          "id": "28151",
+          "title": "Maintenance of cycleways"
+        },
+        {
+          "id": "28102",
+          "title": "MRCagney&#x27;s contracts, work, and specific email correspondence"
+        },
+        {
+          "id": "15912",
+          "title": "Cost of bus indent removal at The Avenue, Lynfield"
+        },
+        {
+          "id": "10226",
+          "title": "Right side on car accident"
+        },
+        {
+          "id": "17931",
+          "title": "Request CCTV footage of car crash"
+        },
+        {
+          "id": "29757",
+          "title": "Traffic volume along Vipond Road"
+        },
+        {
+          "id": "8421",
+          "title": "Footage for hit and run on Williamson Ave 1 August 2018"
+        },
+        {
+          "id": "14647",
+          "title": "Police need cctv footage for stolen cellphone and cards within 48 hours"
+        },
+        {
+          "id": "10633",
+          "title": "CCTV footage Great North Road"
+        },
+        {
+          "id": "27730",
+          "title": "997 Bus Route - Matakana to Omaha"
+        },
+        {
+          "id": "20546",
+          "title": "Camera Footage in Papatoetoe"
+        },
+        {
+          "id": "28844",
+          "title": "CCTV footage request - car accident in 22 Harris Rd"
+        },
+        {
+          "id": "28485",
+          "title": "Onewa road Cameras"
+        },
+        {
+          "id": "28539",
+          "title": "Dominion Rd bus patronage by stop"
+        },
+        {
+          "id": "21604",
+          "title": "ANPR Surveillance (3) - Public&#x27;s access to data within AT&#x27;s indefinite database of license plate locations"
+        },
+        {
+          "id": "28754",
+          "title": "Road camera footage in Papatoetoe request please"
+        },
+        {
+          "id": "27485",
+          "title": "ANPR Surveillance - Audits of Auckland Transport&#x27;s database + search warrant clarification"
+        },
+        {
+          "id": "27454",
+          "title": "Capabilities of AT to Identify Individuals from a License Plate Number"
+        },
+        {
+          "id": "28288",
+          "title": "Decision to not pedestrianise Mercury Lane"
+        },
+        {
+          "id": "28422",
+          "title": "Cost breakdown for Mount Albert Bridge"
+        },
+        {
+          "id": "4238",
+          "title": "CCTV footage of car crash"
+        },
+        {
+          "id": "26505",
+          "title": "Redoubt Road and Murphys Road, Manukau"
+        }
+      ]
+    },
+    {
+      "slug": "auckland_council",
+      "url": "https://fyi.org.nz/body/auckland_council",
+      "count": 754,
+      "sampledTitles": [
+        {
+          "id": "34778",
+          "title": "Developments within the Te Atatu \"restricted capacity\" water network"
+        },
+        {
+          "id": "34950",
+          "title": "Business Improvement District Audit Schedule"
+        },
+        {
+          "id": "34972",
+          "title": "LUC60319526, Lot610– Methodology for Impermeable Coverage Assessment"
+        },
+        {
+          "id": "34759",
+          "title": "Communications"
+        },
+        {
+          "id": "29087",
+          "title": "Auckland Council Owned Leisure Centres"
+        },
+        {
+          "id": "29154",
+          "title": "Glenfield Pool and Leisure Centre - Worksafe"
+        },
+        {
+          "id": "34848",
+          "title": "Rates by local board"
+        },
+        {
+          "id": "34890",
+          "title": "Emergency Preparedness, Building Compliance, Disability Inclusion & Accountability – Residential Buildings, Hotels & Residential Facilities"
+        },
+        {
+          "id": "34881",
+          "title": "Consent decisions and flood mitigation solutions at 22 Stanley Street, Parnell, Auckland 1010"
+        },
+        {
+          "id": "34434",
+          "title": "Monitoring results"
+        },
+        {
+          "id": "34843",
+          "title": "Grants allocation dates and amounts"
+        },
+        {
+          "id": "31066",
+          "title": "Chemical spillage 139 bethells road"
+        },
+        {
+          "id": "34607",
+          "title": "Dog management  auckland council animal shelters"
+        },
+        {
+          "id": "33905",
+          "title": "Can you tell me pay band of Ranui library manager in 2016"
+        },
+        {
+          "id": "31721",
+          "title": "Legal spending on Monte Cecilia Park dog access issue"
+        },
+        {
+          "id": "33983",
+          "title": "Reserve Contributions for Rodney"
+        },
+        {
+          "id": "33155",
+          "title": "Communications From Member George Wood Regarding Skateparks"
+        },
+        {
+          "id": "33560",
+          "title": "Marsden Point - Auckland&#x27;s waste"
+        },
+        {
+          "id": "33789",
+          "title": "Healthy Waters commitment to NWC Bid Kumeu Resilience Toolkit proposal"
+        },
+        {
+          "id": "30550",
+          "title": "Request for Investment Data on Playgrounds and Skate Facilities in Auckland"
+        },
+        {
+          "id": "33547",
+          "title": "Auckland Regional Transport Committee (ARTC)"
+        },
+        {
+          "id": "33773",
+          "title": "Ask Auckland ChatBot"
+        },
+        {
+          "id": "33825",
+          "title": "CBD walking"
+        },
+        {
+          "id": "31484",
+          "title": "Rodney Domestic Waste Collection Data"
+        },
+        {
+          "id": "33636",
+          "title": "Covid sick days for Council Workers 2020-2023"
+        },
+        {
+          "id": "31935",
+          "title": "requesting a dataset of residential properties considered abandoned or unoccupied in Auckland."
+        },
+        {
+          "id": "33277",
+          "title": "District Licensing Committees- V2"
+        },
+        {
+          "id": "32697",
+          "title": "Contracts with connexa"
+        },
+        {
+          "id": "33088",
+          "title": "District Licensing Committees- OIA"
+        },
+        {
+          "id": "32993",
+          "title": "Services that are conducted in Maori / Te Reo language"
+        },
+        {
+          "id": "33184",
+          "title": "Resource consent applications for the Pakūranga Precinct apartment development/associated developments on the Pakuranga mall site"
+        },
+        {
+          "id": "32358",
+          "title": "Skatepark Procurement"
+        },
+        {
+          "id": "32827",
+          "title": "Hakanoa Street Flooding Remediation Works"
+        },
+        {
+          "id": "33047",
+          "title": "CCTV footage request - Motor vehicle accident"
+        },
+        {
+          "id": "32236",
+          "title": "Discussions with Kaipara District Council and Mayor Craig Jepson on waste to energy incineration"
+        },
+        {
+          "id": "32649",
+          "title": "Organisational Structure of the UDA, Property and Economic functions"
+        },
+        {
+          "id": "32853",
+          "title": "property"
+        },
+        {
+          "id": "31830",
+          "title": "Meeting information"
+        },
+        {
+          "id": "32547",
+          "title": "Records of Noise Complaints made about 14 Manuka Rd, Titirangi"
+        },
+        {
+          "id": "29125",
+          "title": "Eden Park Travis Scott"
+        },
+        {
+          "id": "30711",
+          "title": "Mayor&#x27;s forgetfulness"
+        },
+        {
+          "id": "31247",
+          "title": "Meeting minutes"
+        },
+        {
+          "id": "30266",
+          "title": "Catering for Governing Body"
+        },
+        {
+          "id": "31918",
+          "title": "Fale Andrew Lesā- Stuff investigation reveals flawed CV- V2"
+        },
+        {
+          "id": "31816",
+          "title": "Information on fixed-site ocean temperature data (sampling < 3h) within Auckland region"
+        },
+        {
+          "id": "31256",
+          "title": "Up-to-date list of Spaces under the Bonus Floors Provision in the Auckland CBD"
+        },
+        {
+          "id": "31792",
+          "title": "Fale Andrew Lesā- Stuff investigation reveals flawed CV"
+        },
+        {
+          "id": "31504",
+          "title": "Dog Bylaw Compliance"
+        },
+        {
+          "id": "31870",
+          "title": "Attendance records of Governing Body 2022-2025"
+        },
+        {
+          "id": "31277",
+          "title": "Permitted activity drone footage./ information request"
+        },
+        {
+          "id": "31248",
+          "title": "Permitted activity application information"
+        },
+        {
+          "id": "31398",
+          "title": "Animal Management Organisational Chart"
+        },
+        {
+          "id": "17784",
+          "title": "Evidence, research, data or any material considered in arriving at Covid-19 vaccine mandate policy"
+        },
+        {
+          "id": "30993",
+          "title": "Communication Request"
+        },
+        {
+          "id": "23129",
+          "title": "food bins"
+        },
+        {
+          "id": "30477",
+          "title": "Auckland storm events 2023 - flood aerials"
+        },
+        {
+          "id": "25819",
+          "title": "True and correct reocrds kept"
+        },
+        {
+          "id": "30256",
+          "title": "Organisational Chart - Community Services Directorate 2025"
+        },
+        {
+          "id": "30102",
+          "title": "Security plan for Te Atatū Peninsula Library"
+        },
+        {
+          "id": "30898",
+          "title": "Rock sea wall at Hatfields Beach"
+        },
+        {
+          "id": "30206",
+          "title": "Auckland Council&#x27;s annual Budget for \"Pride\""
+        },
+        {
+          "id": "3917",
+          "title": "Auckland council community empowerment unit"
+        },
+        {
+          "id": "30810",
+          "title": "Local Board Pay"
+        },
+        {
+          "id": "30441",
+          "title": "The regional parks implementation plan capex programme for financial year 2024/2025"
+        },
+        {
+          "id": "30746",
+          "title": "FOSAL Assessments"
+        },
+        {
+          "id": "30960",
+          "title": "Rock sea wall at Hatfields Beach (ammended)"
+        },
+        {
+          "id": "30247",
+          "title": "Statistics of Complaints against elected members"
+        },
+        {
+          "id": "25699",
+          "title": "Removal Cost of Public Rubbish Bins"
+        },
+        {
+          "id": "25383",
+          "title": "Unformed Legal Roadways / Paper Roads"
+        },
+        {
+          "id": "29507",
+          "title": "Request for information related to Opaheke Road"
+        },
+        {
+          "id": "30090",
+          "title": "Auckland Council Code of Practice for Building Inspections"
+        },
+        {
+          "id": "7335",
+          "title": "Fireworks Information"
+        },
+        {
+          "id": "28751",
+          "title": "Cost of Fairy Falls upgrade"
+        },
+        {
+          "id": "23385",
+          "title": "Emails regarding Mayor"
+        },
+        {
+          "id": "5545",
+          "title": "Resorce consent for The Pacifica"
+        },
+        {
+          "id": "26125",
+          "title": "Resource consent for PwC Tower at 15 Customs Street West, Auckland CBD"
+        },
+        {
+          "id": "25694",
+          "title": "Eatsafe Inspection report for Songket Malaysian Cafe"
+        },
+        {
+          "id": "30087",
+          "title": "Auckland Council list of community occupancy leases"
+        },
+        {
+          "id": "19996",
+          "title": "Datasets held by Auckland Council"
+        },
+        {
+          "id": "29927",
+          "title": "Deed of gift documentation relating to Madills Farm, Kohimarama Park"
+        },
+        {
+          "id": "29149",
+          "title": "CCTV and ANPR Cameras"
+        },
+        {
+          "id": "10002",
+          "title": "Significant Fluoride test results"
+        }
+      ]
+    },
+    {
+      "slug": "ministry_of_education",
+      "url": "https://fyi.org.nz/body/ministry_of_education",
+      "count": 737,
+      "sampledTitles": [
+        {
+          "id": "34415",
+          "title": "Information on the consultation response process for the draft curriculum"
+        },
+        {
+          "id": "34630",
+          "title": "SMART tool data use"
+        },
+        {
+          "id": "35015",
+          "title": "Refined OIA request - Curriculum Capability Framework titles (GEMS-48574)"
+        },
+        {
+          "id": "34728",
+          "title": "Refine request of 4 May 2026 (GEMS-47959) under section 18B of the Act regarding payments to Learning First and other consultants on curriculum"
+        },
+        {
+          "id": "34892",
+          "title": "Official Information Act Request – Design Rationale for Capability Framework Differences Across Phases in the NZC Refresh"
+        },
+        {
+          "id": "34541",
+          "title": "Advice i10 Dec 2021 for tertiary to close without CVCs"
+        },
+        {
+          "id": "34991",
+          "title": "attendance service MOE"
+        },
+        {
+          "id": "34608",
+          "title": "Rowan Brickell and Conflicts of Interest"
+        },
+        {
+          "id": "35007",
+          "title": "Political Content in NZ Schools and PPTA Extremism Guidelines"
+        },
+        {
+          "id": "34971",
+          "title": "MoE Guidance on  Required Testing Order legislation?"
+        },
+        {
+          "id": "34981",
+          "title": "Curriculum Review Groups"
+        },
+        {
+          "id": "34980",
+          "title": "Foundational Learning Action Plan"
+        },
+        {
+          "id": "34689",
+          "title": "Westbridge Residential School proposed closure consultation"
+        },
+        {
+          "id": "34862",
+          "title": "OIA Request – Draft Curriculum Consultation Process – Follow-up to GEMS-47587"
+        },
+        {
+          "id": "33658",
+          "title": "MoE handling of Protected Disclosures"
+        },
+        {
+          "id": "34789",
+          "title": "Curriculum sequencing and implementation rationale"
+        },
+        {
+          "id": "34658",
+          "title": "SMART Assessment Trials"
+        },
+        {
+          "id": "34786",
+          "title": "Creation of four capabilities for NZ Curriculum"
+        },
+        {
+          "id": "34827",
+          "title": "Official Information Act Request – Design Rationale for Capability Framework Differences Across Phases in the NZC Refresh"
+        },
+        {
+          "id": "34572",
+          "title": "Procurement of [name redacted]"
+        },
+        {
+          "id": "33950",
+          "title": "Correspondence between Chris Duggan at HOuse of Science and the Minister of Education"
+        },
+        {
+          "id": "34240",
+          "title": "Use of Trespass Notices in Schools – Policy, Guidance, and Oversight"
+        },
+        {
+          "id": "34695",
+          "title": "March 2022 MoE bulletins"
+        },
+        {
+          "id": "34584",
+          "title": "Advice and Risk Assessment on Boards of Trustees’ Capability"
+        },
+        {
+          "id": "33951",
+          "title": "Correspondence related to the work on Phase 5 of the curriculum"
+        },
+        {
+          "id": "34565",
+          "title": "Number of OIA requests recieved"
+        },
+        {
+          "id": "34387",
+          "title": "Notice of Vacancy – Teaching Council of Aotearoa New Zealand"
+        },
+        {
+          "id": "33137",
+          "title": "The Practioners Limited, Derek Lyons and any Ministry and the Minister&#x27;s conflicts of interests"
+        },
+        {
+          "id": "33057",
+          "title": "8 - ADHD Policy, Learning Support, PLD, Data, and System Oversight"
+        },
+        {
+          "id": "33185",
+          "title": "Transparency in the procurement of SMART"
+        },
+        {
+          "id": "33856",
+          "title": "Funding Allocation and Equity Analysis"
+        },
+        {
+          "id": "34242",
+          "title": "NZSTA / NZSBA Board Governance Guidance – Use of Trespass Notices in Schools"
+        },
+        {
+          "id": "33582",
+          "title": "OIA Request: Cost of External Pedagogical Expertise & Ministerial Briefings on Curriculum Evidence"
+        },
+        {
+          "id": "34112",
+          "title": "School Lunch Timing"
+        },
+        {
+          "id": "34127",
+          "title": "Response to treasury concerns"
+        },
+        {
+          "id": "33630",
+          "title": "URGENT - Reports about Residential Specialist Schools"
+        },
+        {
+          "id": "33859",
+          "title": "Technical Advice – CRT Eligibility Threshold and Curriculum Refresh Workload Modelling"
+        },
+        {
+          "id": "34041",
+          "title": "Risks associated with the timeframe for rolling out the new curriculum and impacts on students"
+        },
+        {
+          "id": "33979",
+          "title": "New Zealand School Property Agency Board"
+        },
+        {
+          "id": "33466",
+          "title": "Rural student connectivity, digital equity, and educational service continuity"
+        },
+        {
+          "id": "32206",
+          "title": "Arts Curriculum Devleopment"
+        },
+        {
+          "id": "33374",
+          "title": "Covid sick days for education workers 2020-2023"
+        },
+        {
+          "id": "33855",
+          "title": "Curriculum Implementation Workload Modelling"
+        },
+        {
+          "id": "33609",
+          "title": "TEC Board closed 28 January 2026."
+        },
+        {
+          "id": "32962",
+          "title": "This is a request under the Official Information Act 1982."
+        },
+        {
+          "id": "21104",
+          "title": "Deaths an NZ education facilities."
+        },
+        {
+          "id": "26667",
+          "title": "History of NZ Scholarship Prime Minister award recipients"
+        },
+        {
+          "id": "12011",
+          "title": "NZBORA considerations Religious instruction in Education and Training Bill"
+        },
+        {
+          "id": "33357",
+          "title": "Sir Edmund Hillary Collegiate Combined School Board"
+        },
+        {
+          "id": "33566",
+          "title": "NZQA Board"
+        },
+        {
+          "id": "33341",
+          "title": "Cabinet Minute CAB-25-MIN-0031 and associated SWC papers"
+        },
+        {
+          "id": "26958",
+          "title": "High School for Northwest Auckland"
+        },
+        {
+          "id": "33024",
+          "title": "Communications from principals to the Minister expressing concerns about Te Tiriti"
+        },
+        {
+          "id": "33143",
+          "title": "Internal Records Relating to My Previous OIA"
+        },
+        {
+          "id": "33065",
+          "title": "Workforce Pre-restructure"
+        },
+        {
+          "id": "33164",
+          "title": "Total No. of education workers terminated due to mandates excluding teachers"
+        },
+        {
+          "id": "27256",
+          "title": "Request and Proposal for Enhancing Academic Integrity"
+        },
+        {
+          "id": "32601",
+          "title": "Cost Benefit - Smart"
+        },
+        {
+          "id": "32598",
+          "title": "SMART Tool"
+        },
+        {
+          "id": "32600",
+          "title": "Projected Cost - SMART"
+        },
+        {
+          "id": "32599",
+          "title": "Student Data"
+        },
+        {
+          "id": "32778",
+          "title": "Consultant and external contractor spending on draft curriculum"
+        },
+        {
+          "id": "32910",
+          "title": "Decision made on Arts curriculum to put Dance and Drama together 0-8"
+        },
+        {
+          "id": "29180",
+          "title": "Complaints Process Approachability (MoE)"
+        },
+        {
+          "id": "32595",
+          "title": "Official Information Act Request: Te Huruhi Primary School’s Te Reo Māori Curriculum, Including Spiritual Elements and Compliance with the Education and Training Act 2020"
+        },
+        {
+          "id": "32654",
+          "title": "Consultation with subject and curriculum experts"
+        },
+        {
+          "id": "32500",
+          "title": "Roles disestablished within the Ministry of Education"
+        },
+        {
+          "id": "32597",
+          "title": "Information on refusal"
+        },
+        {
+          "id": "32349",
+          "title": "Special Needs Unit at Naenae College"
+        },
+        {
+          "id": "32396",
+          "title": "Correspondence Regarding Naenae College Enrolment Scheme"
+        },
+        {
+          "id": "32573",
+          "title": "Composite School registration"
+        },
+        {
+          "id": "32786",
+          "title": "The Education Gazette from 11 November 2021"
+        },
+        {
+          "id": "32297",
+          "title": "Request for information on changes to food, nutrition, and home economics subjects in New Zealand secondary schools from 2028"
+        },
+        {
+          "id": "32183",
+          "title": "Contractors and fixed-term staff"
+        },
+        {
+          "id": "30745",
+          "title": "Curriculum contributing groups"
+        },
+        {
+          "id": "31279",
+          "title": "Curriculum contributing groups take 2"
+        },
+        {
+          "id": "32047",
+          "title": "Evidence that the ministry is effectively performing its core role."
+        },
+        {
+          "id": "31626",
+          "title": "MoE Insurance Claims for vax mandates"
+        }
+      ]
+    },
+    {
+      "slug": "wellington_city_council",
+      "url": "https://fyi.org.nz/body/wellington_city_council",
+      "count": 656,
+      "sampledTitles": [
+        {
+          "id": "34956",
+          "title": "Maintenance, repair and condition of physical cycleway barriers in Wellington"
+        },
+        {
+          "id": "35000",
+          "title": "Split of rateable values between categories of ratepayers"
+        },
+        {
+          "id": "34798",
+          "title": "Costs to fit out the new Council chamber"
+        },
+        {
+          "id": "34573",
+          "title": "Toi Pōneke Residencies / Living Wage (WCC)"
+        },
+        {
+          "id": "34640",
+          "title": "Rotunda Cheops Holdings Proposal & Contract"
+        },
+        {
+          "id": "34639",
+          "title": "Oriental Bay Rotunda development"
+        },
+        {
+          "id": "34599",
+          "title": "List of job titles over 200k$ p.a"
+        },
+        {
+          "id": "34368",
+          "title": "Excessive Use of Gallagher T20 Terminal"
+        },
+        {
+          "id": "34879",
+          "title": "Spending, governance and performance related to Te Matapihi ki te Ao Nui (Wellington’s central library)"
+        },
+        {
+          "id": "34468",
+          "title": "Transparency"
+        },
+        {
+          "id": "34661",
+          "title": "Staff conduct"
+        },
+        {
+          "id": "32218",
+          "title": "City to Sea Bridge - Artworks"
+        },
+        {
+          "id": "33112",
+          "title": "Deloitte report and contract management"
+        },
+        {
+          "id": "18976",
+          "title": "Correspondence regarding any noise complaints made in relation to Wellington International Airport Limited or their users"
+        },
+        {
+          "id": "34067",
+          "title": "Preliminary report into the Moa Point wastewater treatment plant"
+        },
+        {
+          "id": "33879",
+          "title": "Communications"
+        },
+        {
+          "id": "33654",
+          "title": "Engineering Reports on the Tarikaka Summit Lookout"
+        },
+        {
+          "id": "30640",
+          "title": "Expenditure and Documentation Related to Māori Deity-Based Shelving Trial at Te Awe Library"
+        },
+        {
+          "id": "34006",
+          "title": "Copy of resource consents for Hawkins Hill Rd buildings and structures"
+        },
+        {
+          "id": "33101",
+          "title": "Information on Commemorative Benches - Oriental Parade"
+        },
+        {
+          "id": "33430",
+          "title": "Contract(s) between Agite Consulting Ltd and Wellington City Council"
+        },
+        {
+          "id": "33010",
+          "title": "Ridgeline and Hilltops Overlay view points"
+        },
+        {
+          "id": "33634",
+          "title": "Cost of new speed sign on Rangatira Road Tawa"
+        },
+        {
+          "id": "33604",
+          "title": "Meeting minutes from Wellington Zoo Animal Welfare Committee meetings and Zoo and Aquarium Association Australasia accreditation report."
+        },
+        {
+          "id": "33639",
+          "title": "Communications and timing"
+        },
+        {
+          "id": "33586",
+          "title": "Yellow “HELP” station dara"
+        },
+        {
+          "id": "32656",
+          "title": "Miramar No Man Land Traffic Islands - Total Carparks Removed, Total Cost & Maintenance Costs"
+        },
+        {
+          "id": "31796",
+          "title": "Bus Lane infringments Cambridge Terrace as revenue trap"
+        },
+        {
+          "id": "32725",
+          "title": "Rates affordability heat map"
+        },
+        {
+          "id": "32752",
+          "title": "Tickets issued on Cambridge Terrace bus lane"
+        },
+        {
+          "id": "31486",
+          "title": "Wellington New Years Eve event"
+        },
+        {
+          "id": "32545",
+          "title": "Communications"
+        },
+        {
+          "id": "22780",
+          "title": "Incident report logs Waterfront"
+        },
+        {
+          "id": "31933",
+          "title": "Funding Payments & Grants"
+        },
+        {
+          "id": "32410",
+          "title": "Waterworks - Repairs and Maintenance"
+        },
+        {
+          "id": "32412",
+          "title": "WNHT: Accountability. Part II"
+        },
+        {
+          "id": "32064",
+          "title": "Cost of acquiring land"
+        },
+        {
+          "id": "32353",
+          "title": "Cost of destruction of bicycle tracks below Truby King park"
+        },
+        {
+          "id": "32068",
+          "title": "Value of land confiscated from use by Change 33 (Ridgelines and Hilltops Overlay)"
+        },
+        {
+          "id": "30562",
+          "title": "Staff Housing"
+        },
+        {
+          "id": "31300",
+          "title": "Shell Lane (The Terrace) cycle rack usage"
+        },
+        {
+          "id": "31934",
+          "title": "Requesting a dataset of residential properties considered abandoned or unoccupied in Wellington."
+        },
+        {
+          "id": "28957",
+          "title": "Waterfront Fencing"
+        },
+        {
+          "id": "31722",
+          "title": "RFP for Outdoor Digital Projectors"
+        },
+        {
+          "id": "31773",
+          "title": "Road Closure and Special Vehicle Lane Infringement Data"
+        },
+        {
+          "id": "31510",
+          "title": "Conflict of Interest statements for Clive Anstey"
+        },
+        {
+          "id": "31643",
+          "title": "WCC Officer Meetings with Hawkins Hill residents"
+        },
+        {
+          "id": "29150",
+          "title": "CCTV and ANPR Cameras"
+        },
+        {
+          "id": "31651",
+          "title": "Hawkins Hill Road - CSC - November 2018"
+        },
+        {
+          "id": "31551",
+          "title": "What involvement does Andy Foster still have with City Council?"
+        },
+        {
+          "id": "31938",
+          "title": "Organisational Alignment of Emergency Management"
+        },
+        {
+          "id": "31720",
+          "title": "Penguins in council plans"
+        },
+        {
+          "id": "27908",
+          "title": "WCC District Plan: Clarification as to Permitted Cultivation"
+        },
+        {
+          "id": "27907",
+          "title": "District Plan - Rural Zone Rules and Standards"
+        },
+        {
+          "id": "27976",
+          "title": "LGOIMA Record Search Capabilities"
+        },
+        {
+          "id": "27975",
+          "title": "WCC Planning - Error correction process"
+        },
+        {
+          "id": "27972",
+          "title": "WCC DIstrict Plan: Definition of Tree"
+        },
+        {
+          "id": "30937",
+          "title": "Hawtrey Terrace - Clifford Road Intersection"
+        },
+        {
+          "id": "30324",
+          "title": "Wellington Water Limited FY23/24/25"
+        },
+        {
+          "id": "27779",
+          "title": "Planning Department: Consideration of Neighbours on consent submittals"
+        },
+        {
+          "id": "28603",
+          "title": "Table of Right of Ways"
+        },
+        {
+          "id": "28604",
+          "title": "Non-Connecting Roads"
+        },
+        {
+          "id": "30865",
+          "title": "Policy on Enforcement Re Parking obstructing private driveways"
+        },
+        {
+          "id": "30832",
+          "title": "Singapore Airlines Subsidy"
+        },
+        {
+          "id": "30575",
+          "title": "Wellington Digital Twin"
+        },
+        {
+          "id": "21551",
+          "title": "Athfield Nikau Palms"
+        },
+        {
+          "id": "24221",
+          "title": "City Gallery hours change"
+        },
+        {
+          "id": "13211",
+          "title": "Keith Spry Pool Use of Cameras at pool"
+        },
+        {
+          "id": "28802",
+          "title": "Extract of Accounts Payable"
+        },
+        {
+          "id": "29204",
+          "title": "Communications"
+        },
+        {
+          "id": "30046",
+          "title": "Communications with Wellington Airport"
+        },
+        {
+          "id": "24197",
+          "title": "Councils Mismanaged Finances"
+        },
+        {
+          "id": "29663",
+          "title": "Urban on Manners alcohol licensing"
+        },
+        {
+          "id": "20906",
+          "title": "New Mayor - Advertisement"
+        },
+        {
+          "id": "19519",
+          "title": "Spa and swimming pool prices"
+        },
+        {
+          "id": "30124",
+          "title": "Latest seismic assessment report for 16 Glenmore Street"
+        },
+        {
+          "id": "30138",
+          "title": "Re: Homegrown festival (File Ref: IRC-7811)"
+        },
+        {
+          "id": "18803",
+          "title": "Ian Leary directive isnt being followed"
+        },
+        {
+          "id": "21683",
+          "title": "Copies of Bike Network Thorndon connections plans i.e. current versions of the detailed layout drawings"
+        }
+      ]
+    }
+  ],
+  "recent": [
+    {
+      "id": "34880",
+      "title": "Publication of OIA responses"
+    },
+    {
+      "id": "34401",
+      "title": "Overseas superannuation"
+    },
+    {
+      "id": "35016",
+      "title": "Grade Requirements for Acceptance into Bachelor of Veterinary Science"
+    },
+    {
+      "id": "34869",
+      "title": "OIA Request - Kāinga Ora Status Reports/ Weekly Reports"
+    },
+    {
+      "id": "34622",
+      "title": "Communications records April 2026"
+    },
+    {
+      "id": "34887",
+      "title": "Official Information Act 1982 Request - Gender-Inclusive Language Guidance and Application to Public-Facing Health Communications"
+    },
+    {
+      "id": "35013",
+      "title": "stocktake of gender and ethnic diversity on public sector boards and committees- OIA"
+    },
+    {
+      "id": "34868",
+      "title": "Key to Communities – Shelby New Zealand Promotion"
+    },
+    {
+      "id": "34894",
+      "title": "Unlit red arrow at traffic lights"
+    },
+    {
+      "id": "35004",
+      "title": "Law Results - S1 2026"
+    },
+    {
+      "id": "34919",
+      "title": "Official Information Act request — Medical Council appointments, non-reappointments and HPCA regulator-independence advice"
+    },
+    {
+      "id": "34344",
+      "title": "Lobbying Organizations"
+    },
+    {
+      "id": "35015",
+      "title": "Refined OIA request - Curriculum Capability Framework titles (GEMS-48574)"
+    },
+    {
+      "id": "35014",
+      "title": "Migrant exploitation statistics"
+    },
+    {
+      "id": "35012",
+      "title": "Deputy Chair of the Social Security Appeal Authority"
+    },
+    {
+      "id": "34671",
+      "title": "Legal bills at HEALTH NEW ZEALAND for 76 vaccine mandate cases to date"
+    },
+    {
+      "id": "34876",
+      "title": "Formal proceedings involving social media companies"
+    },
+    {
+      "id": "35010",
+      "title": "Tech vendors that contributed to PSC report"
+    },
+    {
+      "id": "34778",
+      "title": "Developments within the Te Atatu \"restricted capacity\" water network"
+    },
+    {
+      "id": "34541",
+      "title": "Advice i10 Dec 2021 for tertiary to close without CVCs"
+    },
+    {
+      "id": "33805",
+      "title": "Tania Kura"
+    },
+    {
+      "id": "34596",
+      "title": "Accommodation financial performance"
+    },
+    {
+      "id": "35008",
+      "title": "Details of LSM Appointment"
+    },
+    {
+      "id": "34550",
+      "title": "Official Information Act 1982 request — communications regarding social media amplification of India FTA messaging"
+    },
+    {
+      "id": "34627",
+      "title": "Residential Service Providers - Christchurch"
+    },
+    {
+      "id": "34886",
+      "title": "Official Information Act 1982 Request - Cervical Screening Rainbow Campaign Materials HE1191 and HE1192"
+    },
+    {
+      "id": "34851",
+      "title": "All information relating to previous request"
+    },
+    {
+      "id": "31696",
+      "title": "Is the DIA funding activities supporting the war goals of Hamas?"
+    },
+    {
+      "id": "34871",
+      "title": "Local Advisory Committee – West Coast and Tairāwhiti"
+    },
+    {
+      "id": "34853",
+      "title": "Hauora a Toi Mental Health and Addiction service policy set"
+    },
+    {
+      "id": "34858",
+      "title": "Conservation Amendment Bill"
+    },
+    {
+      "id": "34692",
+      "title": "Appointment to the Board of the Tertiary Education Commission"
+    },
+    {
+      "id": "34608",
+      "title": "Rowan Brickell and Conflicts of Interest"
+    },
+    {
+      "id": "34867",
+      "title": "Elective LAWS Papers Offered In 2017"
+    },
+    {
+      "id": "34673",
+      "title": "Te Ara Mangawhero Trail"
+    },
+    {
+      "id": "35006",
+      "title": "Ministry for the Environment&#x27;s Reporting on temperature increases"
+    },
+    {
+      "id": "33986",
+      "title": "Actuarial Modelling of Veteran Entitlement Liabilities"
+    },
+    {
+      "id": "34524",
+      "title": "Information Request – Pōneke Promise (Courtenay Place Initiative)"
+    },
+    {
+      "id": "34956",
+      "title": "Maintenance, repair and condition of physical cycleway barriers in Wellington"
+    },
+    {
+      "id": "34728",
+      "title": "Refine request of 4 May 2026 (GEMS-47959) under section 18B of the Act regarding payments to Learning First and other consultants on curriculum"
+    },
+    {
+      "id": "34694",
+      "title": "Harm from 1080 poison"
+    },
+    {
+      "id": "34839",
+      "title": "Mandated Covid-19 related vaccinations in New Zealand."
+    },
+    {
+      "id": "35000",
+      "title": "Split of rateable values between categories of ratepayers"
+    },
+    {
+      "id": "34820",
+      "title": "Appointment to the Building Practitioners Board"
+    },
+    {
+      "id": "28619",
+      "title": "ED Heart or Chest Pain - By Age and COVID Dose - expand HNZ00061156"
+    },
+    {
+      "id": "34969",
+      "title": "CIO hiring mates - illegal employment practices"
+    }
+  ]
+}

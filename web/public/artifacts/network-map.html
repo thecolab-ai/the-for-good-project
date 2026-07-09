@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="index, follow"/>
+<title>Network Map — The For Good Project</title>
+<meta name="description" content="A live, interactive knowledge graph of The For Good Project — explore streams, findings and citations by expanding nodes, Neo4j-style, and spot research white-space."/>
+<meta property="og:title" content="The For Good Project — live knowledge graph"/>
+<meta property="og:description" content="Explore every stream, finding and citation by expanding nodes — plus a gaps/white-space mode."/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{
+  ink:'#e8ebf2',bg0:'#0a0e17',bg1:'#0e1524',panel:'#111a2e',line:'#1e2b45',
+  navy:'#1e3a5f',cyan:'#22d3ee',accent:'#38bdf8',amber:'#f59e0b',muted:'#8fa2bf'
+},fontFamily:{serif:['Georgia','Times New Roman','serif']}}}}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0a0e17;overflow:hidden;overscroll-behavior:none}
+  #graph{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;cursor:grab}
+  #graph:active{cursor:grabbing}
+  .link{stroke-linecap:round;fill:none}
+  .node-label{font-family:ui-sans-serif,system-ui,sans-serif;pointer-events:none;paint-order:stroke;
+    stroke:#0a0e17;stroke-width:3px;stroke-linejoin:round}
+  .badge-bg{fill:#0a0e17;stroke-width:1.5}
+  .badge-tx{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;pointer-events:none;text-anchor:middle}
+  .hit{fill:transparent;cursor:pointer}
+  .glass{background:rgba(14,21,36,.82);backdrop-filter:blur(10px);border:1px solid rgba(56,189,248,.18)}
+  .chip{transition:all .15s}.chip.off{opacity:.32;filter:grayscale(.6)}
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;max-width:280px;z-index:60}
+  .spin{width:34px;height:34px;border:3px solid #1e2b45;border-top-color:#38bdf8;border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .q-pulse{animation:pulse 1.8s ease-in-out infinite}
+  .bar{height:7px;border-radius:9999px;background:#1e2b45;overflow:hidden}.bar>span{display:block;height:100%;border-radius:9999px}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e2b45;border-radius:8px}
+</style>
+</head>
+<body class="text-ink font-sans antialiased">
+
+<svg id="graph"></svg>
+
+<!-- Header -->
+<div class="glass pointer-events-auto fixed left-3 top-3 z-30 max-w-[min(92vw,440px)] rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="flex items-center gap-2">
+    <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan shadow-[0_0_10px_2px_rgba(34,211,238,.7)]"></span>
+    <h1 class="font-serif text-lg font-bold leading-none text-white sm:text-xl">The For Good Project — knowledge graph</h1>
+  </div>
+  <p class="mt-1.5 text-[12px] leading-snug text-muted"><b class="text-ink">Click a domain</b> to reveal its research, <b class="text-ink">click a finding</b> for its citations. A number on a node = hidden children. Drag, scroll to zoom.</p>
+  <div id="stats" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted"></div>
+  <div class="mt-2 flex items-center gap-2">
+    <input id="search" placeholder="Search findings, streams…" class="min-w-0 flex-1 rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[13px] text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none"/>
+    <button id="gapBtn" title="Spot research gaps / white-space" class="shrink-0 rounded-lg border border-amber/50 bg-amber/10 px-2.5 py-1.5 text-[12px] font-semibold text-amber hover:bg-amber/20">⚡ Gaps</button>
+    <button id="reset" title="Collapse all & reset view" class="shrink-0 rounded-lg border border-line bg-bg1 px-2.5 py-1.5 text-[12px] text-muted hover:text-ink">Reset</button>
+  </div>
+</div>
+
+<!-- Gaps / white-space panel -->
+<div id="gapPanel" class="glass pointer-events-auto fixed right-3 top-3 z-40 hidden max-h-[calc(100vh-24px)] w-[min(93vw,352px)] overflow-y-auto rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="flex items-center justify-between">
+    <h2 class="font-serif text-base font-bold text-white">Research white-space</h2>
+    <button id="gapClose" class="rounded px-1.5 text-muted hover:text-ink">✕</button>
+  </div>
+  <p class="mt-1 text-[11px] leading-snug text-muted">Where the map is <b class="text-amber">thin</b>: open questions with no finding yet, nascent streams, lightly-covered domains. Open questions are revealed on the graph.</p>
+  <div id="gapBody" class="mt-3 space-y-4 text-[12px]"></div>
+</div>
+
+<!-- Legend + domain filters -->
+<div class="glass pointer-events-auto fixed bottom-3 left-3 z-30 max-w-[min(92vw,440px)] rounded-2xl px-4 py-3 shadow-2xl">
+  <div class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Node types</div>
+  <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#a78bfa"></i>Domain</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3.5 w-3.5 rotate-45" style="background:#38bdf8"></i>Stream</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full" style="background:#22d3ee"></i>Finding</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-full border-2 border-amber" style="background:transparent"></i>Open question</span>
+    <span class="flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-full" style="background:#5b6b8c"></i>Citation</span>
+  </div>
+  <div class="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Filter by domain</div>
+  <div id="domains" class="flex flex-wrap gap-1.5"></div>
+</div>
+
+<div id="loading" class="glass fixed left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl px-5 py-4">
+  <div class="spin"></div><span class="text-sm text-muted">Building the graph…</span>
+</div>
+
+<div id="tip" class="glass rounded-xl px-3 py-2 text-[12px] shadow-2xl"></div>
+
+<script>
+const SITE = "https://thecolab-ai.github.io/the-for-good-project";
+const DOMAIN_META = {
+  "ai-policy":{label:"AI policy",color:"#38bdf8"},"child-welfare":{label:"Child welfare",color:"#f472b6"},
+  "civic-transparency":{label:"Civic transparency",color:"#22d3ee"},"grant-access":{label:"Grant access",color:"#fbbf24"},
+  "biosecurity":{label:"Biosecurity",color:"#34d399"},"social-services":{label:"Social services",color:"#c084fc"},
+  "other":{label:"Other",color:"#94a3b8"},
+};
+const domColor = d => (DOMAIN_META[d]?.color)||"#94a3b8";
+const domLabel = d => (DOMAIN_META[d]?.label)||(d||"other");
+const CONF = {High:"#34d399",Medium:"#fbbf24",Low:"#f87171",Unknown:"#8fa2bf"};
+const QC = "#f59e0b";
+const CAP_FIND = 30, CAP_SRC = 12;   // keep expansions readable
+
+const svg = d3.select("#graph"), tip = d3.select("#tip");
+let W=innerWidth, H=innerHeight;
+let masterNodes=[], nodeById=new Map(), childrenOf=new Map(), parentsOf=new Map();
+let masterLinks=[], linksByPair=[];
+let visibleIds=new Set(), activeDomains=new Set();
+let sim, zoomB, root, gLink, gNode, GAP=null, gapMode=false;
+
+const kids = id => childrenOf.get(id)||[];
+const rents = id => parentsOf.get(id)||[];
+function cappedKids(n){
+  const all=kids(n.id);
+  if(n.type==="domain"){ const f=all.filter(c=>nodeById.get(c).type!=="question"), q=all.filter(c=>nodeById.get(c).type==="question");
+    return f.slice(0,CAP_FIND).concat(q); }
+  if(n.type==="finding") return all.slice(0,CAP_SRC);
+  return all;
+}
+const hasKids = n => (n.type==="domain"||n.type==="finding") && kids(n.id).length>0;
+
+function showTip(html,x,y){ tip.html(html).style("opacity",1);
+  const w=280, ox=x+16+w>innerWidth?x-16-w:x+16;
+  tip.style("left",Math.max(6,ox)+"px").style("top",Math.min(innerHeight-90,y+16)+"px"); }
+const hideTip=()=>tip.style("opacity",0);
+
+async function boot(){
+  let snap;
+  try{ const r=await fetch(`${SITE}/data/snapshot.json`,{cache:"no-store"}); if(!r.ok)throw 0; snap=await r.json(); }
+  catch(e){ try{ snap=await(await fetch("../data/snapshot.json",{cache:"no-store"})).json(); }
+    catch(_){ document.getElementById("loading").innerHTML='<span class="text-sm text-red-300">Could not load project data.</span>'; return; } }
+  buildMaster(snap); init();
+}
+
+function buildMaster(snap){
+  const findings=snap.findings||[], streams=snap.streamsSummary||[], sources=snap.sources||[], issues=snap.issues||[];
+  const N=new Map(), L=[];
+  const add=n=>{ if(!N.has(n.id)) N.set(n.id,n); return N.get(n.id); };
+  const link=(s,t,kind)=>L.push({source:s,target:t,kind});
+
+  add({id:"root",type:"root",label:"The For Good Project",r:20,domain:null});
+  const domains=new Set();
+  const ensureDom=d=>{ if(!N.has("dom:"+d)){ add({id:"dom:"+d,type:"domain",label:domLabel(d),r:13,domain:d}); link("root","dom:"+d,"root"); } domains.add(d); };
+  findings.forEach(f=>ensureDom(f.domain||"other")); streams.forEach(s=>ensureDom(s.domain||"other"));
+
+  streams.forEach(s=>{ const id="stream:"+s.stream;
+    add({id,type:"stream",label:s.title||("Stream #"+s.stream),r:10,domain:s.domain||"other",url:`${SITE}/streams/${s.stream}`,meta:s});
+    link("dom:"+(s.domain||"other"),id,"stream"); });
+
+  const byPath=new Map();
+  findings.forEach(f=>{ const id="find:"+f.slug;
+    const n=add({id,type:"finding",label:f.title,r:6+Math.min(9,(f.sources?.length||0)*0.7),domain:f.domain||"other",url:`${SITE}/findings/${f.slug}`,conf:f.confidence,meta:f});
+    byPath.set(f.path,n); link("dom:"+(f.domain||"other"),id,"finding"); });
+
+  const hostF=new Map(),hostM=new Map();
+  sources.forEach(s=>{ if(!s.host)return; const fn=byPath.get(s.findingPath); if(!fn)return;
+    if(!hostF.has(s.host)){hostF.set(s.host,new Set());hostM.set(s.host,s.domain);} hostF.get(s.host).add(fn.id); });
+  hostF.forEach((set,host)=>{ const id="src:"+host,deg=set.size;
+    add({id,type:"source",label:host,r:2.8+Math.min(6,deg*1.1),domain:hostM.get(host)||"other",deg,url:"https://"+host,hub:deg>1});
+    set.forEach(fid=>link(fid,id,"cite")); });
+
+  const questions=issues.filter(i=>!i.isPR&&i.state==="open"&&(i.stage==="discover"||i.stage==="research"));
+  questions.forEach(q=>{ const dom=q.domain||"other"; ensureDom(dom); const id="q:"+q.number;
+    add({id,type:"question",label:q.title,r:5,domain:dom,url:q.url,stage:q.stage,meta:q}); link("dom:"+dom,id,"question"); });
+
+  masterNodes=[...N.values()]; masterLinks=L; nodeById=N;
+  L.forEach(l=>{ (childrenOf.get(l.source)||childrenOf.set(l.source,[]).get(l.source)).push(l.target);
+                 (parentsOf.get(l.target)||parentsOf.set(l.target,[]).get(l.target)).push(l.source); });
+
+  // ---- gap analysis (full data) ----
+  const per={}; const D=d=>(per[d]=per[d]||{domain:d,findings:0,questions:0,streams:0,hosts:new Set(),lowConf:0,thin:0});
+  findings.forEach(f=>{const o=D(f.domain||"other");o.findings++;if(["Low","Unknown"].includes(f.confidence))o.lowConf++;if((f.sources?.length||0)<=2)o.thin++;});
+  streams.forEach(s=>D(s.domain||"other").streams++); questions.forEach(q=>D(q.domain||"other").questions++);
+  sources.forEach(s=>{const f=byPath.get(s.findingPath);if(f)D(f.domain||"other").hosts.add(s.host);});
+  GAP={ perDom:Object.values(per).map(o=>({...o,hosts:o.hosts.size,coverage:o.findings/((o.findings+o.questions)||1)})).sort((a,b)=>(a.findings-b.findings)||(b.questions-a.questions)),
+    openQ:questions.length, nascent:streams.filter(s=>(s.findings||0)<=1).sort((a,b)=>(a.findings||0)-(b.findings||0)),
+    thinFindings:findings.filter(f=>(f.sources?.length||0)<=2).length, lowConf:findings.filter(f=>["Low","Unknown"].includes(f.confidence)).length, questions };
+
+  activeDomains=new Set(domains);
+  // seed: root + domains + streams
+  visibleIds=new Set(["root"]);
+  masterNodes.forEach(n=>{ if(n.type==="domain"||n.type==="stream") visibleIds.add(n.id); });
+
+  document.getElementById("loading").remove();
+  renderStats(findings.length,streams.length,hostF.size,sources.length,questions.length);
+  renderChips([...domains]); renderGaps();
+}
+
+function renderStats(nf,ns,nh,nc,nq){ document.getElementById("stats").innerHTML=
+  `<span><b class="text-white">${ns}</b> streams</span><span><b class="text-white">${nf}</b> findings</span>
+   <span><b class="text-amber">${nq}</b> open questions</span><span><b class="text-white">${nc}</b> citations</span>`; }
+
+function renderChips(doms){ const wrap=d3.select("#domains"); doms.sort();
+  doms.forEach(d=>wrap.append("button").attr("class","chip rounded-full border px-2.5 py-1 text-[11px] font-medium")
+    .style("border-color",domColor(d)).style("color",domColor(d))
+    .html(`<span class="mr-1 inline-block h-2 w-2 rounded-full align-middle" style="background:${domColor(d)}"></span>${domLabel(d)}`)
+    .on("click",function(){ if(activeDomains.has(d)){activeDomains.delete(d);this.classList.add("off");
+        [...visibleIds].forEach(id=>{const n=nodeById.get(id);if(n.domain===d&&n.type!=="root"){visibleIds.delete(id);n.expanded=false;}});}
+      else{activeDomains.add(d);this.classList.remove("off"); masterNodes.forEach(n=>{if(n.domain===d&&(n.type==="domain"||n.type==="stream"))visibleIds.add(n.id);});}
+      restart(); })); }
+
+// ---------- graph engine ----------
+function init(){
+  const defs=svg.append("defs");
+  const glow=defs.append("filter").attr("id","glow").attr("x","-60%").attr("y","-60%").attr("width","220%").attr("height","220%");
+  glow.append("feGaussianBlur").attr("stdDeviation","2.4").attr("result","b");
+  const fm=glow.append("feMerge"); fm.append("feMergeNode").attr("in","b"); fm.append("feMergeNode").attr("in","SourceGraphic");
+
+  root=svg.append("g");
+  zoomB=d3.zoom().scaleExtent([0.15,5]).on("zoom",e=>root.attr("transform",e.transform));
+  svg.call(zoomB).on("dblclick.zoom",null);
+  gLink=root.append("g").attr("stroke-opacity",.5);
+  gNode=root.append("g");
+
+  sim=d3.forceSimulation()
+    .force("link",d3.forceLink().id(n=>n.id).distance(l=>l.kind==="root"?90:l.kind==="stream"?60:l.kind==="finding"?58:l.kind==="question"?52:l.kind==="cite"?42:60).strength(l=>l.kind==="cite"?0.3:l.kind==="question"?0.5:0.65))
+    .force("charge",d3.forceManyBody().strength(d=>d.type==="source"?-60:d.type==="root"?-700:-240).distanceMax(480))
+    .force("collide",d3.forceCollide().radius(d=>d.r+7).iterations(2))
+    .force("center",d3.forceCenter(W/2,H/2))
+    .force("x",d3.forceX(W/2).strength(0.04)).force("y",d3.forceY(H/2).strength(0.04))
+    .on("tick",tick);
+
+  restart(); setTimeout(fit,750);
+}
+
+function computeVisible(){
+  const nodes=masterNodes.filter(n=>visibleIds.has(n.id));
+  const links=masterLinks.filter(l=>visibleIds.has(l.source)&&visibleIds.has(l.target)).map(l=>({source:l.source,target:l.target,kind:l.kind}));
+  return {nodes,links};
+}
+
+function restart(){
+  const {nodes,links}=computeVisible();
+  nodes.forEach(n=>{ if(!Number.isFinite(n.x)||!Number.isFinite(n.y)){ n.x=W/2+(Math.random()-.5)*60; n.y=H/2+(Math.random()-.5)*60; n.vx=n.vy=0; } });
+
+  gLink.selectAll("path").data(links,l=>(l.source.id||l.source)+"|"+(l.target.id||l.target))
+    .join(en=>en.append("path").attr("class","link").attr("stroke-opacity",0)
+        .attr("stroke",d=>d.kind==="cite"?"#26364f":d.kind==="question"?QC:domColor(nodeById.get(typeof d.target==="object"?d.target.id:d.target).domain))
+        .attr("stroke-width",d=>d.kind==="root"?1.6:d.kind==="stream"||d.kind==="finding"?1.2:d.kind==="question"?1:0.7)
+        .attr("stroke-dasharray",d=>d.kind==="question"?"4 3":null),
+      up=>up, ex=>ex.remove())
+    .transition().duration(300).attr("stroke-opacity",.5);
+
+  const nsel=gNode.selectAll("g.node").data(nodes,d=>d.id).join(
+    en=>{ const g=en.append("g").attr("class",d=>"node"+(d.type==="question"?" q-pulse":""))
+        .call(d3.drag().on("start",dstart).on("drag",dgrag).on("end",dend))
+        .on("click",onClick).on("dblclick",(e,d)=>{ if(d.url&&d.type!=="root")window.open(d.url,"_blank"); })
+        .on("mouseover",(e,d)=>hover(e,d,true)).on("mousemove",(e,d)=>hover(e,d,false)).on("mouseout",()=>{hideTip();if(!gapMode)focus(null);});
+      g.each(function(d){ const s=d3.select(this);
+        s.append("circle").attr("class","hit").attr("r",Math.max(d.r+8,18));
+        if(d.type==="stream"){ s.append("rect").attr("class","glyph").attr("width",d.r*1.7).attr("height",d.r*1.7).attr("x",-d.r*.85).attr("y",-d.r*.85).attr("transform","rotate(45)").attr("rx",2)
+            .attr("fill",domColor(d.domain)).attr("stroke","#0a0e17").attr("stroke-width",1.5).attr("filter","url(#glow)"); }
+        else { const fill=d.type==="root"?"#f8fafc":d.type==="domain"?"#a78bfa":d.type==="finding"?domColor(d.domain):d.type==="question"?"transparent":"#5b6b8c";
+          s.append("circle").attr("class","glyph").attr("r",d.r).attr("fill",fill)
+            .attr("stroke",d.type==="finding"?(CONF[d.conf]||"#0a0e17"):d.type==="question"?QC:"#0a0e17")
+            .attr("stroke-width",d.type==="finding"||d.type==="question"?2:1.5)
+            .attr("stroke-dasharray",d.type==="question"?"3 2":null)
+            .attr("filter",d.type==="source"&&!d.hub?null:"url(#glow)").attr("fill-opacity",d.type==="source"?.9:1); }
+        if(d.type!=="source"){ s.append("text").attr("class","node-label")
+            .attr("font-size",d.type==="root"?14:d.type==="domain"?12:d.type==="stream"?11:d.type==="finding"?9.5:9)
+            .attr("font-weight",d.type==="root"||d.type==="domain"?700:500)
+            .attr("fill",d.type==="root"?"#fff":d.type==="question"?QC:"#dbe4f3")
+            .attr("text-anchor","middle").attr("dy",-(d.r+6))
+            .text(()=>{ const m=d.type==="finding"?46:d.type==="stream"?38:40; return d.label.length>m?d.label.slice(0,m-1)+"…":d.label; }); }
+        // badge (hidden-children count)
+        const bg=s.append("g").attr("class","badge").attr("transform",`translate(${d.r+2},${-d.r-2})`);
+        bg.append("circle").attr("class","badge-bg").attr("r",7.5).attr("stroke",d.type==="domain"?"#a78bfa":domColor(d.domain));
+        bg.append("text").attr("class","badge-tx").attr("dy",3).attr("font-size",9).attr("fill","#e8ebf2");
+      }); return g; },
+    up=>up, ex=>ex.transition().duration(180).style("opacity",0).remove());
+
+  // update badges each restart
+  gNode.selectAll("g.node").each(function(d){
+    const show=hasKids(d)&&!d.expanded, cnt=kids(d.id).length;
+    d3.select(this).select(".badge").style("display",show?null:"none").select(".badge-tx").text(cnt>99?"99+":cnt);
+  });
+
+  sim.nodes(nodes); sim.force("link").links(links); sim.alpha(.6).restart();
+}
+
+function onClick(e,d){ e.stopPropagation();
+  if(!hasKids(d)){ if(d.url&&(d.type==="stream"||d.type==="question"))window.open(d.url,"_blank"); return; }
+  d.expanded ? collapse(d) : expand(d);
+  if(gapMode){ gapMode=false; document.getElementById("gapPanel").style.display="none"; toggleGapBtn(false); }
+  restart();
+}
+function expand(n){ n.expanded=true; const px=n.x||W/2, py=n.y||H/2;
+  cappedKids(n).forEach(cid=>{ const c=nodeById.get(cid);
+    if(!Number.isFinite(c.x)){ c.x=px+(Math.random()-.5)*30; c.y=py+(Math.random()-.5)*30; c.vx=c.vy=0; }
+    visibleIds.add(cid); }); }
+function hasLiveParent(id){ return rents(id).some(p=>nodeById.get(p).expanded&&visibleIds.has(p)); }
+function collapse(n){ n.expanded=false; const q=[...kids(n.id)];
+  while(q.length){ const cid=q.shift(), c=nodeById.get(cid);
+    if(!visibleIds.has(cid))continue; if(hasLiveParent(cid))continue;
+    if(c.type==="stream"||c.type==="domain")continue; // keep structural nodes
+    c.expanded=false; visibleIds.delete(cid); q.push(...kids(cid)); } }
+
+function tick(){
+  gLink.selectAll("path").attr("d",d=>{ const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,dr=Math.hypot(dx,dy)*2.2;
+    return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`; });
+  gNode.selectAll("g.node").attr("transform",d=>`translate(${d.x||0},${d.y||0})`);
+}
+function fit(){ const ns=masterNodes.filter(n=>visibleIds.has(n.id)&&Number.isFinite(n.x)); if(!ns.length)return;
+  const xs=ns.map(n=>n.x),ys=ns.map(n=>n.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const w=maxX-minX||1,h=maxY-minY||1,pad=90,k=Math.min(2,.92/Math.max(w/(innerWidth-pad),h/(innerHeight-pad)));
+  svg.transition().duration(700).call(zoomB.transform,d3.zoomIdentity.translate(innerWidth/2-k*(minX+maxX)/2,innerHeight/2-k*(minY+maxY)/2).scale(k)); }
+function flyTo(n){ if(!Number.isFinite(n.x))return; const k=1.5;
+  svg.transition().duration(600).call(zoomB.transform,d3.zoomIdentity.translate(innerWidth/2-k*n.x,innerHeight/2-k*n.y).scale(k));
+  focus(n.id); setTimeout(()=>{if(!gapMode)focus(null);},2600); }
+
+const nbr=new Map(), nbrBuilt={v:false};
+function buildNbr(){ nbr.clear(); computeVisible().links.forEach(l=>{ const s=l.source.id||l.source,t=l.target.id||l.target;
+  (nbr.get(s)||nbr.set(s,new Set()).get(s)).add(t); (nbr.get(t)||nbr.set(t,new Set()).get(t)).add(s); }); }
+function focus(id){ buildNbr();
+  const N=gNode.selectAll("g.node"), Lk=gLink.selectAll("path");
+  if(!id){ if(gapMode)return applyGapSpotlight(); N.style("opacity",1); Lk.style("opacity",1); return; }
+  const keep=nbr.get(id)||new Set(); keep.add(id);
+  N.style("opacity",n=>keep.has(n.id)?1:.12); Lk.style("opacity",l=>((l.source.id||l.source)===id||(l.target.id||l.target)===id)?.9:.05); }
+
+function hover(e,d,enter){ if(enter&&!gapMode)focus(d.id);
+  const T={root:"Project",domain:"Domain",stream:"Research stream",finding:"Finding",question:"Open question (frontier)",source:"Citation source"}[d.type];
+  let ex="";
+  if(d.type==="domain") ex=`<div class="mt-1 text-muted">${kids(d.id).filter(c=>nodeById.get(c).type!=="question").length} findings · ${kids(d.id).filter(c=>nodeById.get(c).type==="question").length} open questions</div><div class="mt-1 text-[11px] text-accent">${d.expanded?"click to collapse":"click to expand"}</div>`;
+  else if(d.type==="finding") ex=`<div class="mt-1 text-muted">${domLabel(d.domain)} · <span style="color:${CONF[d.conf]||'#8fa2bf'}">${d.conf||'—'}</span> · ${d.meta.sources?.length||0} citations</div><div class="mt-1 text-[11px] text-accent">${d.expanded?"click to collapse":"click for citations"} · dbl-click to open</div>`;
+  else if(d.type==="stream") ex=`<div class="mt-1 text-muted">${domLabel(d.domain)} · ${d.meta.findings||0} findings · ${d.meta.mergedPRs||0} merged PRs</div><div class="mt-1 text-[11px] text-accent">click to open →</div>`;
+  else if(d.type==="question") ex=`<div class="mt-1 text-muted">${domLabel(d.domain)} · ${d.stage} · unanswered</div><div class="mt-1 text-[11px] text-amber">a research gap · click to open →</div>`;
+  else if(d.type==="source") ex=`<div class="mt-1 text-muted">cited by ${d.deg} finding${d.deg>1?'s':''}</div>`;
+  showTip(`<div class="text-[10px] font-bold uppercase tracking-wider" style="color:${d.type==='finding'||d.type==='stream'?domColor(d.domain):d.type==='question'?QC:'#8fa2bf'}">${T}</div><div class="font-semibold text-white leading-snug">${d.label}</div>${ex}`,e.clientX,e.clientY); }
+
+// ---------- gaps ----------
+function renderGaps(){ if(!GAP)return;
+  const maxF=Math.max(1,...GAP.perDom.map(d=>d.findings+d.questions));
+  const domRows=GAP.perDom.map(d=>{ const fw=Math.round(d.findings/maxF*100),qw=Math.round(d.questions/maxF*100);
+    return `<div><div class="flex items-center justify-between"><span class="font-medium text-ink">${d.label}</span>
+      <span class="text-muted">${d.findings} finding${d.findings===1?'':'s'}${d.questions?` · <span class="text-amber">${d.questions} open</span>`:''}</span></div>
+      <div class="bar mt-1"><span style="width:${Math.max(fw,2)}%;background:${domColor(d.domain)}"></span></div>
+      ${d.questions?`<div class="bar mt-0.5"><span style="width:${Math.max(qw,2)}%;background:${QC}"></span></div>`:''}</div>`; }).join("");
+  const nasc=GAP.nascent.slice(0,10).map(s=>`<button data-focus="stream:${s.stream}" class="jump block w-full rounded-lg border border-line bg-bg1/60 px-2 py-1.5 text-left hover:border-amber/50"><span class="text-ink">#${s.stream} ${(s.title||'').slice(0,52)}</span><span class="ml-1 text-[10px] text-muted">${s.findings||0} findings · ${s.state||'—'}</span></button>`).join("")||`<div class="text-muted">None. 🎉</div>`;
+  const qs=GAP.questions.slice(0,14).map(q=>`<button data-focus="q:${q.number}" class="jump block w-full rounded-lg px-2 py-1 text-left hover:bg-amber/10"><span class="text-amber">◇</span> <span class="text-ink">${(q.title||'').slice(0,58)}</span><span class="text-[10px] text-muted"> · ${domLabel(q.domain||'other')}</span></button>`).join("")||`<div class="text-muted">No open questions.</div>`;
+  document.getElementById("gapBody").innerHTML=`
+    <div class="grid grid-cols-3 gap-2 text-center">
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-amber">${GAP.openQ}</div><div class="text-[10px] text-muted">open questions</div></div>
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-ink">${GAP.thinFindings}</div><div class="text-[10px] text-muted">thin (&le;2 cites)</div></div>
+      <div class="rounded-lg bg-bg1/70 p-2"><div class="text-lg font-bold text-ink">${GAP.lowConf}</div><div class="text-[10px] text-muted">low-confidence</div></div></div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Domain coverage — thinnest first</div><div class="space-y-2">${domRows}</div>
+      <div class="mt-1 text-[10px] text-muted">Bar = findings · <span class="text-amber">amber</span> = open questions.</div></div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Nascent / empty streams</div><div class="space-y-1">${nasc}</div></div>
+    <div><div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Frontier — open questions</div><div class="space-y-0.5">${qs}</div></div>`;
+  document.querySelectorAll("#gapBody .jump").forEach(b=>b.addEventListener("click",()=>{ const id=b.dataset.focus, n=nodeById.get(id);
+    if(!n)return; if(!visibleIds.has(id)){ const p=rents(id)[0]; if(p){nodeById.get(p).expanded=true; visibleIds.add(p); expand(nodeById.get(p)); restart(); } }
+    setTimeout(()=>flyTo(n),120); })); }
+
+function toggleGapBtn(on){ const b=document.getElementById("gapBtn"); b.classList.toggle("bg-amber",on); b.classList.toggle("text-bg0",on); }
+function applyGapSpotlight(){ const hot=new Set();
+  masterNodes.forEach(n=>{ if(!visibleIds.has(n.id))return;
+    if(n.type==="question"||n.type==="domain"||n.type==="root")hot.add(n.id);
+    if(n.type==="stream"&&(n.meta.findings||0)<=1)hot.add(n.id); });
+  gNode.selectAll("g.node").style("opacity",n=>hot.has(n.id)?1:.13);
+  gLink.selectAll("path").style("opacity",l=>{const s=l.source.id||l.source,t=l.target.id||l.target;return(hot.has(s)&&hot.has(t))?.85:.04;}); }
+function setGapMode(on){ gapMode=on; document.getElementById("gapPanel").style.display=on?"block":"none"; toggleGapBtn(on);
+  if(on){ masterNodes.forEach(n=>{ if(n.type==="question"){ const p=rents(n.id)[0]; if(p){nodeById.get(p).expanded=true; if(!Number.isFinite(n.x)){const pn=nodeById.get(p);n.x=(pn.x||W/2)+(Math.random()-.5)*30;n.y=(pn.y||H/2)+(Math.random()-.5)*30;} visibleIds.add(n.id);} } });
+    restart(); setTimeout(applyGapSpotlight,60); }
+  else { gNode.selectAll("g.node").style("opacity",1); gLink.selectAll("path").style("opacity",1); } }
+
+// search: reveal matching findings/streams/questions
+let searchT;
+function doSearch(){ const q=(document.getElementById("search").value||"").toLowerCase().trim();
+  if(!q){ focus(null); return; }
+  const hits=masterNodes.filter(n=>["finding","stream","question"].includes(n.type)&&n.label.toLowerCase().includes(q)).slice(0,40);
+  hits.forEach(n=>{ const p=rents(n.id)[0]; if(p){nodeById.get(p).expanded=true; visibleIds.add(p); expand(nodeById.get(p)); } visibleIds.add(n.id); });
+  restart();
+  const hitIds=new Set(hits.map(n=>n.id));
+  setTimeout(()=>{ gNode.selectAll("g.node").style("opacity",n=>hitIds.has(n.id)?1:.15);
+    gLink.selectAll("path").style("opacity",.06); },120);
+}
+
+function dstart(e,d){ if(!e.active) sim.alphaTarget(.25).restart(); d.fx=d.x; d.fy=d.y; }
+function dgrag(e,d){ d.fx=e.x; d.fy=e.y; }
+function dend(e,d){ if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }
+
+document.getElementById("search").addEventListener("input",()=>{ clearTimeout(searchT); searchT=setTimeout(doSearch,260); });
+document.getElementById("gapBtn").addEventListener("click",()=>setGapMode(!gapMode));
+document.getElementById("gapClose").addEventListener("click",()=>setGapMode(false));
+document.getElementById("reset").addEventListener("click",()=>{ document.getElementById("search").value="";
+  if(gapMode)setGapMode(false);
+  masterNodes.forEach(n=>{ n.expanded=false; });
+  visibleIds=new Set(["root"]); masterNodes.forEach(n=>{ if((n.type==="domain"||n.type==="stream")&&activeDomains.has(n.domain))visibleIds.add(n.id); });
+  restart(); setTimeout(fit,400); });
+addEventListener("resize",()=>{ W=innerWidth;H=innerHeight; if(sim){sim.force("center",d3.forceCenter(W/2,H/2)); sim.alpha(.3).restart();} });
+boot();
+</script>
+</body>
+</html>

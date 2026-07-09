@@ -67,4 +67,50 @@
   .glass {
     @apply bg-card/70 backdrop-blur-md border border-border/60;
   }
+
+  /* ── Mission control (/live) ──────────────────────────────────────────
+     A full-screen ops console. The canvas gets a faint engineering grid and
+     a top-edge aurora; panels are HUD-style tiles that scroll internally so
+     the page itself never scrolls. Theme-aware, tuned to shine in dark. */
+  .hud-canvas {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, hsl(var(--ring) / 0.10), transparent 60%),
+      linear-gradient(to right, hsl(var(--foreground) / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
+    background-size: 100% 100%, 44px 44px, 44px 44px;
+  }
+  .hud-panel {
+    @apply relative rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm;
+    box-shadow: inset 0 1px 0 0 hsl(var(--foreground) / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.15);
+  }
+  .hud-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+  .hud-glow {
+    text-shadow: 0 0 24px hsl(var(--ring) / 0.45);
+  }
+
+  /* Slim, unobtrusive scrollbars inside console panels. */
+  .console-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--foreground) / 0.18) transparent;
+  }
+  .console-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+  .console-scroll::-webkit-scrollbar-track { background: transparent; }
+  .console-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--foreground) / 0.16);
+    border-radius: 9999px;
+  }
+  .console-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--foreground) / 0.28);
+  }
+}
+
+@layer utilities {
+  @keyframes hud-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+  .animate-hud-sweep { animation: hud-sweep 2.4s ease-in-out infinite; }
 }

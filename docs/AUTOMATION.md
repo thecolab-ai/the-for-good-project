@@ -1,11 +1,11 @@
 # Working the project with agents
 
-Five scripts keep the work queue moving — one to *do* the work, one to
-*review* it, one to *release stale claims*, one to *draft a stream's synthesis*
-for human sign-off, and one for maintainers to *merge* what's passed. The
-worker scripts are thin, deterministic wrappers around your own `codex`,
-`claude`, or `hermes` CLI; `reap.sh` is deterministic GitHub bookkeeping with
-no model calls. **The scripts own every status change and the merge gate; the
+Six scripts keep the work queue moving — one to *frame new streams*, one to
+*do* the work, one to *review* it, one to *release stale claims*, one to
+*draft a stream's synthesis* for human sign-off, and one for maintainers to
+*merge* what's passed. The worker scripts are thin, deterministic wrappers
+around your own `codex`, `claude`, or `hermes` CLI; `reap.sh` is
+deterministic GitHub bookkeeping with no model calls. **The scripts own every status change and the merge gate; the
 agent only does the actual work.** That's deliberate — it's why tracking stays
 correct no matter which agent runs or how it behaves.
 
@@ -27,10 +27,13 @@ the `issue-status.yml` action sweep all others whenever they set one.
 ```
 
 **Stream roots** (Discover issues) never close via a PR and follow the gate
-cycle instead:
+cycle instead. Discover roots are claimed **only by `frame_work.sh`**
+(ADR-0014) — never by `start_work.sh` — and the framing run itself opens the
+child research issues and moves the root to the researching posture (no
+status), with no manual fan-out or label-clearing step:
 
 ```
-(no status) ──G0: maintainer──▶ available → claimed → in-review ──framing PR merges──▶ (no status: researching)
+(no status) ──G0: maintainer──▶ available → claimed ──framing PR opens + children opened──▶ (no status: researching)
                                                                                              │
                              children all close (the stream "drains")                       ▼
         ┌──────────────────────────────────────────────────────────────────── needs-synthesis
@@ -60,15 +63,19 @@ The full vocabulary, in one table:
 | `review: claimed` | PRs | `review_work.sh` | A reviewer is holding this PR (double-review lock) |
 | `review: human-only` | PRs | maintainers | Pipeline/governance change — humans review and merge, agents skip |
 | `do-not-automate` | issues | humans only | Parking brake: excluded from every automation queue |
-| `priority: high` | issues | humans | Jumps every queue |
+| `priority: high` | issues | humans | Steward-curated **shortlist**, not a default — honoured for at most `HIGH_PRIORITY_CAP` streams at a time (#293, below) |
 | `stage: *` / `domain: *` / `stream:<n>` | issues/PRs | template / `stream-sync.yml` | What kind of work, which problem area, which stream |
 
 `start_work.sh` moves `available → claimed → in-review` (and
-`changes-requested → in-review` after rework). `review_work.sh` records reviews
-and flips `in-review → changes-requested` on a NEEDS_WORK verdict — **except
-for synthesis draft PRs (branch `synthesis/*`), whose rework routes to
-`synthesize_work.sh` (ADR-0011)**. `merge_ready.sh` (maintainer) merges what
-qualifies → `done`. No agent is trusted to set these itself.
+`changes-requested → in-review` after rework) for research/ideate/build
+work. `frame_work.sh` does the same for discover roots, ending at *no
+status* (researching) once the fan-out is open (ADR-0014). `review_work.sh`
+records reviews and flips `in-review → changes-requested` on a NEEDS_WORK
+verdict — **except for synthesis draft PRs (branch `synthesis/*`), whose
+rework routes to `synthesize_work.sh` (ADR-0011), and discover framing PRs
+(branch `discover/*`), whose rework routes to `frame_work.sh` (ADR-0014)**.
+`merge_ready.sh` (maintainer) merges what qualifies → `done`. No agent is
+trusted to set these itself.
 
 ### Worktrees & fresh main
 
@@ -78,23 +85,80 @@ work, from the PR head for rework/review). Your clone is never checked out,
 reset, or dirtied, and every loop starts from up-to-date `main` by
 construction. Worktrees are removed when the task finishes.
 
+## `frame_work.sh` — frame new streams (discover only, capability-floored)
+
+The **first pickup of a stream root** — turning a raw problem into a framed
+set of testable questions and minting the child research issues — is the
+highest-leverage step in the pipeline, and its quality tracks model
+strength. So discover roots are **not** in the general fleet's queue at all:
+they are claimed only by this runner, which is expected to drive a powerful
+model under a **trusted identity** — the `framers` allow-list in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json). The
+script refuses to run for any other identity (fail closed; `DRY_RUN=1` is
+allowed through with a warning so anyone can inspect it). This is the
+authoring-side twin of the reviewer capability floor (#368): the two moments
+where model strength matters most — framing a stream and gating a merge —
+both get a floor (ADR-0014).
+
+```bash
+scripts/frame_work.sh                          # frame available discover roots (default agent: claude)
+scripts/frame_work.sh claude --model <name>    # pin the framing model explicitly
+MAX=1 scripts/frame_work.sh                    # one root, then stop
+DRY_RUN=1 scripts/frame_work.sh                # show what it would do, change nothing
+FANOUT_MAX=6 scripts/frame_work.sh             # cap on child issues opened per framing (default 6)
+```
+
+One framing run:
+
+- claims one `stage: discover` + `status: available` root — honouring the
+  **active-streams cap** (#292), which lives here now: a new root is only
+  claimed while fewer than `MAX_ACTIVE_STREAMS` streams are active;
+- runs the agent in a fresh `origin/main` worktree: test the root's stated
+  hypotheses against evidence, write the framing analysis to
+  `analysis/<slug>-framing.md` (validated by `npm run validate`), and open
+  it as a PR on branch `discover/<slug>` with `Part of #<root>` (a stream
+  root never closes via a PR);
+- the agent also proposes **3–6 chunky child research questions** in an
+  uncommitted JSON side-file, and **the script — never the agent — opens
+  them** as `stage: research` / `status: available` / `stream:<n>` issues
+  (capped at `FANOUT_MAX`, deduped by title against the stream) — so the
+  stream never stalls at the fan-out gap the way #370 did;
+- transitions the root out of the queue: **no status label** (the
+  researching posture) once children exist — no manual fan-out, and no
+  manual "clear `in-review` after the framing PR merges" step. If the
+  fan-out couldn't be opened, the root parks at `in-review` with a comment
+  telling a human exactly what's missing.
+
+**Sent-back framing PRs are reworked here, not by `start_work.sh`** — the
+capability floor applies to rework of a framing too, mirroring the ADR-0011
+synthesis routing: `start_work.sh` unassigns itself from any
+`changes-requested` issue whose PR head is `discover/*`, and this runner's
+own reconcile/rework loop picks it up.
+
+**Provenance is auditable per stream**: the framing doc's frontmatter
+records `agent:` + the exact `model:` (enforced by the validator), and the
+root's hand-off comment and every spawned child issue name the framing
+runner, agent, and model.
+
 ## `start_work.sh` — do the work
 
 Works your queue in priority order: **first any of your own PRs a reviewer sent
 back** (`status: changes-requested`, assigned to you), then the next available
 issue. Runs your agent on it following the project method, and moves it to
-**in review** once the agent opens (or updates) a PR.
+**in review** once the agent opens (or updates) a PR. **Discover roots are
+never picked up here** — framing is `frame_work.sh`'s alone (ADR-0014;
+`STAGE=discover` refuses to run).
 
 ```bash
-./start_work.sh                 # work the queue until it's empty (default agent: claude)
-./start_work.sh codex           # use `codex exec` instead
-./start_work.sh hermes          # use `hermes chat` instead
-./start_work.sh --model <name>  # override the agent model
-./start_work.sh codex --model gpt-5.5
-HERMES_PROFILE=reviewer ./start_work.sh hermes
-STAGE=research ./start_work.sh  # only pick up research-stage issues
-MAX=1 ./start_work.sh           # one issue, then stop
-DRY_RUN=1 ./start_work.sh       # show what it would do, change nothing
+scripts/start_work.sh                 # work the queue until it's empty (default agent: claude)
+scripts/start_work.sh codex           # use `codex exec` instead
+scripts/start_work.sh hermes          # use `hermes chat` instead
+scripts/start_work.sh --model <name>  # override the agent model
+scripts/start_work.sh codex --model gpt-5.5
+HERMES_PROFILE=reviewer scripts/start_work.sh hermes
+STAGE=research scripts/start_work.sh  # only pick up research-stage issues
+MAX=1 scripts/start_work.sh           # one issue, then stop
+DRY_RUN=1 scripts/start_work.sh       # show what it would do, change nothing
 ```
 
 The agent can be given as a positional word (`claude`, `codex`, or `hermes`)
@@ -106,7 +170,31 @@ For a **new issue** it claims (assigns you + `status: claimed`), creates a fresh
 worktree from `origin/main`, hands the issue to the agent with the method baked
 into the prompt, then finds the PR the agent opened (via GitHub's closing-issue
 link) and flips the issue to `status: in-review`. If the agent opened no PR,
-the issue is released back to `available`.
+the issue is released back to `available`. (Enrolled agents can claim
+atomically through the fleet server instead of the label race — see
+[Server-orchestrated claiming (opt-in)](#server-orchestrated-claiming-opt-in);
+default off.)
+
+Two bounds shape what gets picked up (#292 / #293, ADR-0013):
+
+- **Active-streams cap.** A `stage: discover` root is only claimed while
+  fewer than `MAX_ACTIVE_STREAMS` (default 25) streams are active (open child
+  work, or a root being worked). Roots beyond the cap stay
+  `status: available` in the backlog and are picked up as streams drain —
+  so ten approved streams *sequence* through the pipeline instead of all
+  converging on the human synthesis gate at once (see
+  [STREAMS.md](STREAMS.md)). Since discover roots moved to `frame_work.sh`
+  (ADR-0014), that script enforces this cap — it is the only claimer of new
+  roots.
+- **Priority discipline.** `priority: high` is a steward-curated shortlist,
+  not a default. The queue honours it for at most `HIGH_PRIORITY_CAP`
+  (default 5) **streams** at a time — oldest high streams first, computed
+  identically by every runner; high items beyond the cap sort by age like
+  everything else. Counting streams (not issues) means stream-level
+  propagation (#164) can mark a whole stream's children high without eating
+  the cap, while labelling everything high still can't make "high" mean
+  "everything". Humans: keep the shortlist small — if more than ~5 streams
+  are high, downgrade some rather than relying on the cap.
 
 For **rework** it checks out the PR branch in a fresh worktree, feeds the agent
 the reviewer's feedback (review bodies + inline comments), and — once the agent
@@ -115,7 +203,10 @@ a reviewer picks it up again. If the agent pushed nothing, the issue stays
 `changes-requested` and is retried next loop. **Synthesis draft PRs (branch
 `synthesis/*`) are never reworked here** — they belong to
 `synthesize_work.sh`, which keeps the synthesis rules in its prompt
-(ADR-0011); this loop unassigns itself and leaves them.
+(ADR-0011); this loop unassigns itself and leaves them. **Discover framing
+PRs (branch `discover/*`) are never reworked here either** — they belong to
+`frame_work.sh` and its capability floor (ADR-0014), with the same
+unassign-and-leave hand-off.
 
 Each loop also **reconciles the rework queue** first (ADR-0008): any open PR
 you authored whose *current* latest review is a change-request (no commits
@@ -123,6 +214,25 @@ pushed after it) but whose worked issue still sits `in-review` gets flipped to
 `changes-requested` — so reviews posted outside `review_work.sh` (a human,
 another bot) or a hand-off lost to a reviewer crash still route back to you.
 A freshly reworked PR awaiting re-review is left alone.
+
+**Adopting a stale rework (ADR-0020 / #656).** Rework used to advance only when
+the PR's *own author* re-ran — so a `changes-requested` PR whose author went
+offline could freeze for days while idle workers had nothing to do. After its
+own rework queue and any TTL-freed unassigned reworks, an enrolled worker can
+now **adopt** a stale changes-requested PR from an *absent* author: the fleet
+server hands out (under an atomic lease) the oldest PR that has sat in
+changes-requested for more than `REWORK_ADOPT_HOURS` (default 6h) since its
+last review, whose author is **not currently online**, and where the adopter is
+**neither the author nor the last reviewer** (so the eventual re-review still
+lands on a third identity). Synthesis (`synthesis/*`) and framing (`discover/*`)
+PRs are never adopted this way, and fork PRs aren't either (see the fork note
+under `reap.sh`). Before pushing, the adopter re-checks that no new author
+commit landed since the review — a returning author is never clobbered
+(`--force-with-lease` backstops a concurrent push). It is gated by
+`REWORK_ADOPT` **and** server claiming (`FLEET_CLAIM`), so the atomic lease —
+not a label race — arbitrates who adopts; `autopilot.sh` defaults it on,
+standalone `start_work.sh` is opt-in. Full contract:
+[server dispatch — kind `rework`](#server-orchestrated-claiming-opt-in).
 
 ## `reap.sh` — release stale claims and rework
 
@@ -139,16 +249,138 @@ Two TTLs are enforced:
   `synthesize_work.sh`, for a synthesis draft (ADR-0011) — can pick up the
   rework.
 
+It also **reconciles unrouted change-requests** (ADR-0021): any open PR whose
+*current* review is `CHANGES_REQUESTED` (no commit after it) whose worked
+research/ideate/build issue is still `status: in-review`/`claimed` gets that
+issue flipped to `status: changes-requested`. `start_work.sh`'s reconcile
+(ADR-0008) only handles the *running identity's own* PRs, so an **absent
+author's** reviewed work never reached `changes-requested` and ADR-0020
+adoption couldn't see it — this author-agnostic sweep is what lets that work
+re-enter the queue. It flips status only (keeps the assignee; the `REWORK_TTL`
+unassign and adoption handle absence), is currency- and canonical-PR-guarded,
+skips `synthesis/*`/`discover/*` and human-only/do-not-automate, and runs
+**before** the fork sweep so a flipped fork issue is closed in the same pass.
+Opt out with `RECONCILE_UNROUTED=0`.
+
+And it **closes fork-origin stale reworks** (ADR-0020 §5): a
+`changes-requested` PR whose branch lives on a **fork** can't be adopted (only
+its author can push it), and the project isn't taking outside fork branches
+into the automated pipeline for now — so the PR is closed with an explanatory
+comment and its issue released to `status: available` for a fresh same-repo
+attempt (the recorded review stays on the closed PR as reference). A
+`review: human-only` fork PR is left for the human maintainer. Opt out with
+`CLOSE_FORK_REWORKS=0`.
+
 Run it manually when you want an immediate sweep:
 
 ```bash
-./reap.sh              # release stale items
-DRY_RUN=1 ./reap.sh    # report what would be released
+scripts/reap.sh              # release stale items
+DRY_RUN=1 scripts/reap.sh    # report what would be released
 ```
 
 The workflow can also be started manually from GitHub's Actions tab, including
 in dry-run mode. It uses only the repository `GITHUB_TOKEN`; no model API keys
 or agent credentials are involved.
+
+## Server-orchestrated claiming (opt-in)
+
+The label claim above is a **read-then-write race**: `next_available()` reads
+the queue, then the label write claims — nothing atomic between them, so two
+runners polling at once can pick the same issue. **Enrolled** agents can
+instead claim through the fleet server, which takes an atomic Redis lease and
+writes the *same* `status: claimed` label + assignee itself
+([ADR-0017](adr/0017-server-orchestrated-pull-claim.md); server setup and the
+full API live in [`server/README.md`](../server/README.md)).
+
+**Default ON in `autopilot.sh` — with nothing to hand out.** Just run it:
+
+```bash
+./autopilot.sh codex   # first contact AUTO-ENROLLS your gh identity: the server
+                       # mints your token into ~/.forgood/ (0600) — no maintainer step
+```
+
+`FLEET_CLAIM=0` opts out (label path only). A pre-minted `FLEET_TOKEN=fgt_...`
+overrides auto-enrollment (that's how elevated-tier identities run). Standalone
+`start_work.sh` keeps server claiming opt-in (`FLEET_CLAIM=1`). If enrollment
+is refused (handle already enrolled elsewhere, or revoked) the runner warns
+once and uses the label path — recovery is an operator re-mint, never
+self-service (a revocation must stick). One handle can hold at most
+`MAX_ACTIVE_CLAIMS` (default 3) live server claims at a time.
+
+What changes when it's on:
+
+- **Claiming** — `start_work.sh` asks `POST /api/v1/work/claim` instead of
+  running `next_available` + `claim_issue`. The server picks by the *same
+  ordering* (priority-high with the `HIGH_PRIORITY_CAP` stream bound, then
+  oldest first), leases it, and writes the labels — so the claim is atomic
+  among enrolled agents, and GitHub still shows exactly the state every other
+  doc describes. Discover roots are **never** dispatched (ADR-0014 —
+  `frame_work.sh` keeps its own path). Before starting work the runner still
+  applies the two label-path safety checks: the duplicate-PR guard (an
+  already-PR'd issue is released `done` and healed to in-review, never worked
+  twice — the #305/#307 protection) and the deterministic co-assignee
+  tie-break against label-path racers (`resolve_claim_race`). The lease-renew
+  loop derives its cadence from the `leaseTtlSeconds` the claim returns
+  (TTL/3, floor 15s; `FLEET_RENEW_SECONDS` overrides).
+- **Fallback is automatic and total** — queue empty, timeout, non-200, server
+  down: the runner falls back to today's label path, byte-for-byte. The
+  server can never make the fleet *stop*; only GitHub can.
+- **Releasing** — on the success path the runner reports `done` (labels are
+  left to the normal PR/Actions transitions); on failure/interrupt it reports
+  `abandoned` and the server reverts the labels to `status: available`.
+- **Leases replace `reap.sh` for enrolled agents** — the claim's lease
+  (default 30 min) auto-renews on telemetry heartbeats; if the agent dies,
+  the server's sweeper reverts the labels within about a minute of expiry
+  instead of waiting for `reap.sh`'s cron. `reap.sh` still covers everyone on
+  the label path.
+- **Fleet commands** — `autopilot.sh` checks each loop for maintainer
+  commands delivered on heartbeat responses: `pause` (idle-poll until
+  `resume`), `stop` (finish the current task, then exit), `abort` (abandon
+  current work — released `abandoned` — and exit). Command semantics and the
+  admin API are in [`server/README.md`](../server/README.md).
+- **Reviews too ([ADR-0019](adr/0019-orchestrated-review-dispatch.md))** —
+  an enrolled `review_work.sh` asks the same endpoint with `kind: "review"`
+  instead of walking the open-PR list. The server picks the oldest open PR
+  that needs a review by that identity — not draft, not
+  `review: human-only`/`do-not-automate`, not authored by the reviewer, not
+  already reviewed at its current head SHA (a commented-only review doesn't
+  count), under the review-round cap, and verified still open against live
+  GitHub — and takes a review lease (default 1 hour). **No labels are
+  involved**: the lease alone stops two enrolled reviewers doubling up, so
+  there is nothing to revert if the reviewer dies — the lease lapses and the
+  PR is claimable again. The runner reviews exactly that PR through its
+  normal per-PR flow (method-vs-standard kind, round cap, merge check — all
+  unchanged) and releases `done` on any posted verdict (PASS *or* NEEDS_WORK
+  — the review happened) or `abandoned` on failure/interrupt or a local
+  skip; an abandoned PR cools down (default 15 min) before re-dispatch, so a
+  skip can never loop. Each identity enrolls its **own** fleet token (the
+  stored token file is keyed by host + handle), so the reviewer running
+  under `REVIEW_GITHUB_TOKEN` never reuses the work identity's token and
+  author ≠ reviewer is enforced against the account that actually posts the
+  review. Empty queue or server trouble → the pass falls through to today's
+  PR-list walk unchanged.
+- **Rework adoption too ([ADR-0020](adr/0020-adopt-stale-rework.md))** — an
+  enrolled `start_work.sh` with `REWORK_ADOPT=1` asks the same endpoint with
+  `kind: "rework"`. The server picks the oldest open `changes-requested` PR
+  that a *different* worker may adopt: idle more than `REWORK_ADOPT_HOURS`
+  (default 6h) since its last review-at-head, author **not currently online**,
+  adopter **neither the author nor the last reviewer**, not draft, not
+  `synthesis/*`/`discover/*`, not a fork, not `review: human-only`/
+  `do-not-automate`. Unlike a review, a rework **writes labels**: the server
+  leases the worked issue and moves it `changes-requested → claimed` +
+  assigns the adopter (the atomic `status: changes-requested` removal is the
+  test-and-set), then hands back the PR + issue. The runner reworks the PR
+  through its adopter flow (provenance comment; the finding's `agent`/`model`
+  become the adopter's; `--force-with-lease` so a returning author is never
+  clobbered) and releases `done` on push — the issue flips to `in-review` —
+  or `abandoned` if it pushed nothing / the author returned mid-window, which
+  reverts the issue to `changes-requested` and cools it down (default 15 min).
+  Empty queue or server trouble → the loop simply skips adoption, unchanged.
+
+GitHub remains the durable source of truth throughout: the server arbitrates
+*who claims*, but every durable fact lands on GitHub as the same labels and
+assignees — humans and non-enrolled agents keep working exactly as before,
+in the same queue.
 
 ## `review_work.sh` — review before merge
 
@@ -171,13 +403,24 @@ tooling failure, not a PR verdict: the merge check is left unset (merge is
 still blocked — the check never went green) so a later loop simply retries,
 and at most one diagnostic comment is posted per head SHA (ADR-0008).
 
+**Review rounds are capped (#287 / ADR-0013).** A PR gets at most
+`MAX_REVIEW_ROUNDS` (default 10) change-requesting review rounds. Instead of
+an (N+1)th agent re-review, the loop **parks the PR for a human**: the
+merge check is set to `pending` ("Awaiting human maintainer"), a one-time
+summary of the unresolved points is posted, and later loops skip the PR —
+including across new pushes — until a maintainer decides (merge it, send it
+back with concrete asks, apply `review: human-only`, or force one more agent
+round with `FORCE=1 PR=<n>`). Prior review rounds and author replies are
+already injected into every reviewer prompt as untrusted context, so a fresh
+reviewer must bring *new* evidence rather than re-litigate resolved points.
+
 ```bash
-REVIEW_GITHUB_TOKEN=<bot-pat> ./review_work.sh              # review all open PRs
-REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=hermes ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> HERMES_PROFILE=reviewer AGENT=hermes ./review_work.sh
-REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 ./review_work.sh # merge on PASS
-PR=7 ./review_work.sh                                       # one PR
+REVIEW_GITHUB_TOKEN=<bot-pat> scripts/review_work.sh              # review all open PRs
+REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=claude scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> AGENT=hermes scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> HERMES_PROFILE=reviewer AGENT=hermes scripts/review_work.sh
+REVIEW_GITHUB_TOKEN=<bot-pat> AUTO_MERGE=1 scripts/review_work.sh # merge on PASS
+PR=7 scripts/review_work.sh                                       # one PR
 ```
 
 ### `review: human-only` — keep a PR out of the agent loop
@@ -190,6 +433,16 @@ review scripts themselves, merge rules, ADR statuses). Label them
 it and merges it themselves — as admin, or by setting the
 `for-good/adversarial-review` check by hand. The label must be applied
 **deliberately by a maintainer, never by a work agent**.
+
+That rule is **enforced, not just convention** (#288 / ADR-0013):
+[`human-only-guard.yml`](../.github/workflows/human-only-guard.yml) reverts
+any add/removal of `review: human-only` performed by a login that isn't on
+the `human_maintainers` allow-list in
+[`.github/trusted-reviewers.json`](../.github/trusted-reviewers.json), and
+records the attempt on the thread. Runner prompts additionally forbid agents
+from ever touching the label. An agent that believes a PR needs the label
+says so in a comment and leaves the labelling to a maintainer (ADR-0009) —
+or, in the review loop, parks the PR via the pending merge check (#287).
 
 ### The different-identity rule (important)
 
@@ -222,11 +475,11 @@ the plain-language overview in `streams/` — **as a PR for a human steward to
 edit, decide direction on, and merge.**
 
 ```bash
-./synthesize_work.sh                  # draft every flagged stream (default agent: claude)
-./synthesize_work.sh codex            # use `codex exec` instead
-STREAM=4 ./synthesize_work.sh         # target one stream root
-MAX=1 ./synthesize_work.sh            # one stream, then stop
-DRY_RUN=1 ./synthesize_work.sh        # print target + evidence + prompt, change nothing
+scripts/synthesize_work.sh                  # draft every flagged stream (default agent: claude)
+scripts/synthesize_work.sh codex            # use `codex exec` instead
+STREAM=4 scripts/synthesize_work.sh         # target one stream root
+MAX=1 scripts/synthesize_work.sh            # one stream, then stop
+DRY_RUN=1 scripts/synthesize_work.sh        # print target + evidence + prompt, change nothing
 ```
 
 The judgement stays human, structurally:
@@ -300,9 +553,9 @@ The flow:
 ### `merge_ready.sh` — the merge gate
 
 ```bash
-./merge_ready.sh            # dry run: report every PR's status, merge nothing
-MERGE=1 ./merge_ready.sh    # merge the ones that qualify
-PR=12 MERGE=1 ./merge_ready.sh
+scripts/merge_ready.sh            # dry run: report every PR's status, merge nothing
+MERGE=1 scripts/merge_ready.sh    # merge the ones that qualify
+PR=12 MERGE=1 scripts/merge_ready.sh
 ```
 
 A PR qualifies when it has **≥ N** reviews where each review is:
@@ -352,13 +605,27 @@ collective keeps itself unblocked.
 
 ## Cost & safety notes
 
-- The agent runs with your local CLI auth (your subscription/tokens). `codex`
-  runs with `--dangerously-bypass-approvals-and-sandbox`, `claude` with
-  `--permission-mode bypassPermissions`, and `hermes` with `--yolo --source tool`
-  by default so it can use git/gh unattended — run these on a repo clone you
-  trust, not arbitrary input. Use `HERMES_PROFILE` to run a named Hermes profile,
-  override additional Hermes options with `HERMES_FLAGS`, and use `MODEL` /
-  `PROVIDER` to select a model or provider where supported.
+- The agent runs with your local CLI auth (your subscription/tokens). Default
+  sandbox/permission modes (ADR-0005, implemented by ADR-0022), all overridable:
+  - `codex` — `--dangerously-bypass-approvals-and-sandbox` (unchanged default).
+    Codex's native OS sandbox is **opt-in** via `FG_CODEX_SANDBOX=1` on a
+    bare-Linux host with a sandbox-capable kernel — it is *not* on by default
+    because it can't create user namespaces inside the unprivileged fleet
+    container (`bwrap: setting up uid map`, #713) and disables network on macOS
+    ([openai/codex#10390](https://github.com/openai/codex/issues/10390)). The
+    isolation boundary is the container itself (ADR-0005), not a nested OS
+    sandbox. Override with `CODEX_FLAGS`.
+  - `claude` — `--permission-mode auto` (an injection-aware classifier that
+    blocks actions driven by hostile content, keeps network, and doesn't hang
+    headless). Override with `CLAUDE_PERMISSION_MODE`; use `bypassPermissions`
+    inside a locked-down container.
+  - `hermes` — `--yolo --source tool`. Override with `HERMES_FLAGS`; use
+    `HERMES_PROFILE` for a named profile.
+
+  These reduce but do not eliminate blast radius — still run on a repo clone you
+  trust, not arbitrary input; the container + credential scoping (issue #686) is
+  the real boundary. Use `MODEL` / `PROVIDER` to select a model or provider
+  where supported.
 - The reviewer fails **closed**: a review whose verdict isn't a clear
   `VERDICT: PASS` sets the check to failure. (A reviewer *crash* that produces
   no review at all leaves the check unset so a later loop retries — merge is

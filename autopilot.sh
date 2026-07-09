@@ -1,0 +1,377 @@
+#!/usr/bin/env bash
+#
+# autopilot.sh — ONE command that keeps both sides of the queue moving.
+#
+# Run only produce (start_work.sh) and you flood the review queue; run only
+# review (review_work.sh) and nothing new gets made. autopilot alternates —
+# it REVIEWS other people's PRs, then does ONE piece of work, then repeats —
+# so research and review stay balanced instead of one starving the other.
+# It's what you tell everyone to run: one script, both jobs.
+#
+# It is NOT a merge of the two runners: it's a thin conductor that calls the
+# existing, tested start_work.sh / review_work.sh with MAX=1 POLL_SECONDS=0 (do
+# one item, exit instead of polling) and owns only the alternation, the ratio,
+# the idle back-off, and pulling latest main each cycle. All the real behaviour
+# — claiming, status labels, worktrees, the PR, the merge gate — still lives in
+# those scripts, unchanged. See docs/adr/0015-autopilot-alternates-review-and-work.md.
+#
+# THE INTEGRITY RULE STILL HOLDS: an adversarial review may not be by the PR's
+# author. For FULL coverage run the REVIEW side under a DISTINCT identity via
+# REVIEW_GITHUB_TOKEN (a second account / bot PAT with write) — work runs as your
+# normal gh identity, review as the token's identity, so even your own work PRs
+# get reviewed. WITHOUT REVIEW_GITHUB_TOKEN it still reviews — as your local gh
+# identity — it just skips PRs you authored (which then need a separate
+# reviewer). Either way a loop helps drain the review queue; opt out with
+# REVIEW_PER_WORK=0.
+#
+# Usage:
+#   REVIEW_GITHUB_TOKEN=<bot-pat> ./autopilot.sh            # full coverage (claude)
+#   REVIEW_GITHUB_TOKEN=<bot-pat> ./autopilot.sh codex      # use codex
+#   REVIEW_GITHUB_TOKEN=<bot-pat> REVIEW_PER_WORK=3 ./autopilot.sh
+#   ./autopilot.sh                                          # reviews as your gh user (skips your own PRs)
+#   REVIEW_PER_WORK=0 ./autopilot.sh                        # work-only, no reviewing
+#   MAX_CYCLES=5 ./autopilot.sh                             # stop after 5 cycles
+#   PULL=0 ./autopilot.sh                                   # don't auto-pull main
+#
+# Args: [claude|codex|hermes] [--model <name>]   (forwarded to both runners)
+# Env:  REVIEW_GITHUB_TOKEN  REVIEW_PER_WORK(=2)  POLL_SECONDS(=120)
+#       MAX_CYCLES(=0)  PULL(=1)  MAIN_BRANCH(=main)  + everything the runners read
+#       FLEET_SERVER(=https://forgood.thecolab.ai; ""=off)  STREAM_LOGS(=0, opt-in)
+#       FLEET_CLAIM(=1: server-orchestrated claiming, AUTO-ENROLLS this gh
+#       identity on first contact and stores the token in ~/.forgood/ — no
+#       hand-outs; every failure falls back to the label-claim path; 0=off)
+#       FLEET_TOKEN (optional pre-minted agent token — overrides auto-enroll;
+#       authed heartbeats carry pause/resume/stop/abort commands either way)
+set -euo pipefail
+cd "$(dirname "$0")"
+source "scripts/fg-common.sh"
+parse_agent_args "$@"
+export AGENT MODEL
+
+# Rotating fetch proxy (ADR-0006). If ~/.forgood/proxy.env exists it exports
+# FETCH_PROXY (a rotating-IP proxy URL — a SECRET, git-ignored, never committed),
+# which scripts/fetch.mjs + cloak-fetch.mjs use as a retry-rotation rung to clear
+# IP-reputation bot walls (Incapsula/Cloudflare) the local egress can't. Sourcing
+# it here makes it available to every worker/skill subprocess. PROXY_ALL=1 ALSO
+# routes ALL curl + python-urllib traffic through it (every skill "for free") —
+# OFF by default because a rotating proxy is metered; the fetch ladder uses it
+# selectively as a fallback, which is cheaper and usually enough.
+[ -f "$HOME/.forgood/proxy.env" ] && . "$HOME/.forgood/proxy.env" 2>/dev/null || true
+[ -n "${FETCH_PROXY:-}" ] && export FETCH_PROXY
+if [ -n "${FETCH_PROXY:-}" ] && [ "${PROXY_ALL:-0}" = "1" ]; then
+  export HTTPS_PROXY="$FETCH_PROXY" HTTP_PROXY="$FETCH_PROXY" ALL_PROXY="$FETCH_PROXY"
+  export https_proxy="$FETCH_PROXY" http_proxy="$FETCH_PROXY" all_proxy="$FETCH_PROXY"
+  warn "PROXY_ALL=1 — routing ALL curl + urllib traffic through the rotating proxy (it's metered)."
+elif [ -n "${FETCH_PROXY:-}" ]; then
+  log "Rotating fetch proxy available (FETCH_PROXY) — used selectively by the fetch ladder. PROXY_ALL=1 to route everything."
+fi
+
+REVIEW_PER_WORK="${REVIEW_PER_WORK:-2}"   # review passes per work pass — bias to review; it's the bottleneck
+FRAME_PER_WORK="${FRAME_PER_WORK:-1}"       # framing/discover rework passes per cycle; frame_work owns discover roots
+FRAMING="${FRAMING:-false}"                  # OFF by default — set FRAMING=true to enable discover-root framing at all
+export FRAMING
+POLL_SECONDS="${POLL_SECONDS:-120}"       # idle wait between cycles when the whole queue is empty
+MAX_CYCLES="${MAX_CYCLES:-0}"             # 0 = run forever
+PULL="${PULL:-1}"                         # git-pull latest main each cycle (0 to disable)
+MAIN_BRANCH="${MAIN_BRANCH:-main}"
+
+# Fingerprint this script so we can hot-reload it if a pull changes autopilot.sh
+# itself (see the exec below). $PWD is the script dir — we cd'd here above.
+SELF="$PWD/$(basename "$0")"
+self_hash() { sha1sum "$SELF" 2>/dev/null | cut -d' ' -f1 || true; }
+SELF_HASH="$(self_hash)"
+
+trap 'rule; warn "autopilot stopping."; fleet_cleanup_run_dir; exit 130' INT TERM
+
+if [ -z "${REVIEW_GITHUB_TOKEN:-}" ]; then
+  warn "REVIEW_GITHUB_TOKEN is not set — reviewing as your LOCAL gh identity (PRs you authored are skipped)."
+  warn "For full coverage (incl. your own work PRs), set REVIEW_GITHUB_TOKEN to a DISTINCT GitHub identity with write access. Opt out of reviewing with REVIEW_PER_WORK=0."
+fi
+
+# Fleet telemetry (#398) — ON by default against the project's mission-control
+# server, so `./autopilot.sh codex` reports presence/heartbeats with zero setup.
+# It stays deliberately best-effort: GitHub is the source of truth and workers
+# keep running exactly as before if the server is down (3s timeouts, all
+# failures swallowed). Opt out with FLEET_SERVER="" (explicitly empty), or
+# point elsewhere with FLEET_SERVER=<url>. Log streaming stays OPT-IN
+# (STREAM_LOGS=1; redacted at both ends) — telemetry counters always flow,
+# session log lines only when you ask.
+FLEET_SERVER="${FLEET_SERVER-https://forgood.thecolab.ai}"
+export STREAM_LOGS="${STREAM_LOGS:-0}"
+FLEET_HANDLE="${FLEET_HANDLE:-${HANDLE:-$(gh api user --jq .login 2>/dev/null || git config user.name 2>/dev/null || echo unknown)}}"
+FLEET_MODEL="${FLEET_MODEL:-${MODEL:-$AGENT}}"
+FLEET_AGENT_ID_FILE="${FLEET_AGENT_ID_FILE:-${TMPDIR:-/tmp}/fg-autopilot-agent-id-${FLEET_HANDLE}-${AGENT}}"
+# Control-plane stash: fleet_send drops any commands the server piggybacks on a
+# telemetry response in here (one kind per line); fleet_pop_commands (in
+# fg-common.sh) drains it. Only ever written when FLEET_TOKEN is set.
+# Unlike the telemetry-only agent-id file, this file's CONTENTS drive control
+# flow (a 'stop' line exits the loop), so it lives in a PRIVATE per-run
+# directory (mktemp -d = 0700) — never at a predictable world-writable /tmp
+# path another local user could pre-create or inject commands into.
+# fleet_pop_commands additionally refuses any stash we don't own.
+FLEET_RUN_DIR=""
+if [ -z "${FLEET_CMDS_FILE:-}" ]; then
+  FLEET_RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/fg-autopilot.XXXXXX" 2>/dev/null || true)"
+  [ -n "$FLEET_RUN_DIR" ] && FLEET_CMDS_FILE="$FLEET_RUN_DIR/cmds"
+fi
+FLEET_CMDS_FILE="${FLEET_CMDS_FILE:-}"
+export FLEET_SERVER FLEET_HANDLE FLEET_MODEL FLEET_AGENT_ID_FILE FLEET_CMDS_FILE
+# Never act on commands stashed by a previous run (0600 via umask).
+if [ -n "$FLEET_CMDS_FILE" ]; then
+  ( umask 077; : > "$FLEET_CMDS_FILE" ) 2>/dev/null || true
+fi
+fleet_cleanup_run_dir() { [ -n "${FLEET_RUN_DIR:-}" ] && rm -rf "$FLEET_RUN_DIR" 2>/dev/null || true; }
+
+# Server-orchestrated claiming (ADR-0017) — ON by default: the runner asks
+# the fleet server for its next issue (atomic Redis lease, no label race)
+# and AUTO-ENROLLS on first contact — the server mints this identity's token
+# straight into ~/.forgood/, so nobody hands tokens out. EVERY failure
+# (server down, enrollment refused, queue empty) falls back to the exact
+# label-claim path, so this is safe to default on. Opt out with
+# FLEET_CLAIM=0. The enrolled token also authenticates heartbeats, which is
+# what makes server-side pause/stop/abort commands reach this runner.
+FLEET_CLAIM="${FLEET_CLAIM-1}"
+export FLEET_CLAIM
+# Rework adoption (ADR-0020 / #656): let an idle worker take over a stale
+# changes-requested PR whose author went offline (idle >REWORK_ADOPT_HOURS,
+# adopter ≠ author ≠ last reviewer, arbitrated by the server's atomic lease).
+# Default ON under autopilot — it needs FLEET_CLAIM anyway, and the whole point
+# is to stop the queue freezing on absent authors. Opt out with REWORK_ADOPT=0.
+REWORK_ADOPT="${REWORK_ADOPT-1}"
+export REWORK_ADOPT
+if [ -n "$FLEET_SERVER" ] && [ "$FLEET_CLAIM" = "1" ]; then
+  fleet_ensure_token || true
+fi
+
+fleet_enabled() { [ -n "$FLEET_SERVER" ]; }
+
+fleet_json() {  # kind ref title tokens_in tokens_out tool_calls tasks_completed prs_opened reviews_completed errors
+  python3 - "$@" <<'PY'
+import json, os, sys
+kind, ref, title, ti, to, tools, tasks, prs, reviews, errors = sys.argv[1:]
+agent_id = ''
+try:
+    with open(os.environ['FLEET_AGENT_ID_FILE']) as f:
+        agent_id = f.read().strip()
+except Exception:
+    pass
+body = {
+    'handle': os.environ.get('FLEET_HANDLE', 'unknown'),
+    'harness': os.environ.get('AGENT', 'unknown'),
+    'model': os.environ.get('FLEET_MODEL') or os.environ.get('MODEL') or os.environ.get('AGENT', 'unknown'),
+    'version': 'autopilot.sh',
+    'task': {'kind': kind or 'idle'},
+    'heartbeat': {
+        'toolCalls': int(tools or 0),
+        'tasksCompleted': int(tasks or 0),
+        'prsOpened': int(prs or 0),
+        'reviewsCompleted': int(reviews or 0),
+        'errors': int(errors or 0),
+    }
+}
+if agent_id:
+    body['agentId'] = agent_id
+if ref:
+    body['task']['ref'] = ref[:32]
+if title:
+    body['task']['title'] = title[:300]
+if int(ti or 0):
+    body['heartbeat']['tokensIn'] = int(ti)
+if int(to or 0):
+    body['heartbeat']['tokensOut'] = int(to)
+print(json.dumps(body, separators=(',', ':')))
+PY
+}
+
+fleet_send() {  # kind ref title token_in token_out tool_calls tasks prs reviews errors
+  fleet_enabled || return 0
+  local resp id
+  # An enrolled agent (FLEET_TOKEN set) authenticates its heartbeats so the
+  # server can auto-renew its lease and piggyback control commands on the
+  # response. Without a token the request is exactly what it always was.
+  # (Two explicit invocations, not a conditional array: empty-array expansion
+  # trips `set -u` on macOS's bash 3.2.)
+  if [ -n "${FLEET_TOKEN:-}" ]; then
+    resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -H "authorization: Bearer $FLEET_TOKEN" -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  else
+    resp="$(curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/telemetry" -H 'content-type: application/json' -d "$(fleet_json "$@")" 2>/dev/null || true)"
+  fi
+  id="$(printf '%s' "$resp" | sed -n 's/.*"agentId":"\([^"]*\)".*/\1/p')"
+  if [ -n "$id" ]; then printf '%s' "$id" > "$FLEET_AGENT_ID_FILE"; fi
+  # Stash any piggybacked control commands for fleet_pop_commands (one kind/line).
+  if [ -n "${FLEET_TOKEN:-}" ] && [ -n "${FLEET_CMDS_FILE:-}" ] && [ -n "$resp" ]; then
+    printf '%s' "$resp" | jq -r '.commands[]?.kind // empty' 2>/dev/null >> "$FLEET_CMDS_FILE" || true
+  fi
+  return 0
+}
+
+fleet_logs() {  # file
+  fleet_enabled || return 0
+  [ "${STREAM_LOGS:-0}" = 1 ] || return 0
+  [ -s "$1" ] || return 0
+  local agent_id payload
+  agent_id="$(cat "$FLEET_AGENT_ID_FILE" 2>/dev/null || true)"
+  [ -n "$agent_id" ] || return 0
+  payload="$(python3 - "$agent_id" "$1" <<'PY'
+import json, re, sys
+agent_id, path = sys.argv[1:]
+patterns = [
+    re.compile(r'(?i)(token|secret|password|api[_-]?key|authorization)(\s*[:=]\s*)\S+'),
+    re.compile(r'gh[pousr]_[A-Za-z0-9_]{20,}'),
+    re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
+    re.compile(r'https?://[^\s/:]+:[^\s@]+@'),
+]
+with open(path, errors='replace') as f:
+    raw = f.read().splitlines()[-40:]
+lines=[]
+for line in raw:
+    # strip ANSI, cap line size; server redacts again.
+    line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+    for p in patterns:
+        line = p.sub(lambda m: (m.group(1)+m.group(2)+'[REDACTED]') if len(m.groups()) >= 2 else '[REDACTED]', line)
+    if line.strip():
+        lines.append(line[:2000])
+print(json.dumps({'agentId': agent_id, 'lines': lines[-40:]}, separators=(',', ':')))
+PY
+)"
+  curl -sS -m 3 -X POST "$FLEET_SERVER/api/v1/logs" -H 'content-type: application/json' -d "$payload" >/dev/null 2>&1 || true
+}
+
+# Act on control-plane commands the server piggybacked on our heartbeats
+# (pull-claim orchestration): stop/abort → return 1 so the caller breaks the
+# main loop; pause → hold HERE, sending an idle heartbeat every 30s (each
+# response can carry the resume), until resume — or stop/abort — arrives.
+# No FLEET_TOKEN / no pending commands → instant no-op returning 0, so the
+# default flow is untouched.
+fleet_handle_commands() {
+  local cmd paused=0
+  while :; do
+    while IFS= read -r cmd; do
+      case "$cmd" in
+        stop|abort)
+          warn "fleet command '$cmd' received — stopping autopilot."
+          fleet_send "idle" "" "stopped by fleet command ($cmd)" 0 0 0 0 0 0 0
+          return 1 ;;
+        pause)
+          if [ "$paused" = 0 ]; then
+            info "fleet command 'pause' received — pausing (idle heartbeat every ${FLEET_PAUSE_POLL:-30}s until resume)…"
+          fi
+          paused=1 ;;
+        resume)
+          if [ "$paused" = 1 ]; then info "fleet command 'resume' received — resuming."; fi
+          paused=0 ;;
+      esac
+    done < <(fleet_pop_commands)
+    if [ "$paused" = 0 ]; then return 0; fi
+    fleet_send "idle" "" "paused by fleet command" 0 0 0 0 0 0 0
+    sleep "${FLEET_PAUSE_POLL:-30}"
+  done
+}
+
+# Run ONE runner pass and report whether it actually DID something. The runners
+# exit 0 whether they processed an item OR found an empty queue, so we can't use
+# the exit code alone — instead detect the empty-queue sentinel line each runner
+# prints (review_work.sh: "No open PRs needing review."; start_work.sh: "Queue
+# empty — no rework…"). Returns 0 = did work, 1 = idle (or errored).
+run_pass() {  # $1 = task kind, rest = command to run
+  local kind="$1" out rc title did=0 errs=0 reviews=0 tasks=0; shift
+  title="autopilot ${kind} pass"
+  fleet_send "$kind" "" "$title" 0 0 1 0 0 0 0
+  out="$(mktemp)"
+  set +e; "$@" 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}; set -e
+  fleet_logs "$out"
+  if was_usage_limited "$out" || grep -qE "API rate limit|rate limit already exceeded|usage limit" "$out"; then
+    fleet_send "$kind" "" "${kind} pass hit API/rate limit" 0 0 0 0 0 0 1
+    rm -f "$out"; return 1
+  fi
+  if grep -qE "No open PRs needing review\.|Queue empty|nothing available" "$out"; then
+    fleet_send "idle" "" "${kind} queue empty" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
+  if [ "$kind" = review ] && grep -qE "already (passed adversarial review|reviewed at this revision)|waiting on the author's rework|parked for a human maintainer" "$out"; then
+    fleet_send "idle" "" "review skipped: already reviewed" 0 0 0 0 0 0 0
+    rm -f "$out"; return 1
+  fi
+  if [ "$rc" -eq 0 ]; then did=1; else errs=1; fi
+  case "$kind" in
+    review) reviews="$did" ;;
+    work) tasks="$did"; grep -qE 'https://github.com/.*/pull/[0-9]+|Work submitted in #[0-9]+' "$out" && prs=1 || prs=0 ;;
+    *) tasks="$did" ;;
+  esac
+  fleet_send "$kind" "" "${kind} pass complete" 0 0 1 "$tasks" "${prs:-0}" "$reviews" "$errs"
+  rm -f "$out"
+  [ "$rc" -eq 0 ]
+}
+
+cycle=0
+while :; do
+  cycle=$((cycle + 1))
+  rule; info "${c_bold}autopilot cycle $cycle${c_reset}  (review×${REVIEW_PER_WORK} → frame×${FRAME_PER_WORK} → work×1)"
+
+  # Fleet control plane: honour pause/stop/abort at the top of every cycle
+  # (and again between passes below). No-op without FLEET_TOKEN.
+  fleet_handle_commands || break
+
+  # Pull latest main each cycle so operators automatically pick up script and
+  # pipeline improvements without a manual git pull. git swaps files by atomic
+  # rename, so the RUNNING autopilot keeps executing its current (open) inode —
+  # no mid-run corruption — while the runner subprocesses launched below read the
+  # freshly-updated code immediately.
+  if [ "$PULL" = 1 ]; then
+    if git fetch --quiet origin "$MAIN_BRANCH" 2>/dev/null && git merge --ff-only --quiet FETCH_HEAD 2>/dev/null; then
+      log "Pulled latest origin/$MAIN_BRANCH."
+      # If the pull updated autopilot.sh ITSELF, hot-reload onto the new version
+      # by re-exec'ing at the top of the cycle — so autopilot-level improvements
+      # apply with no manual restart. The hash guard makes this fire only on a
+      # real change (the re-exec'd process re-fingerprints the current file), so
+      # there's no exec loop.
+      if [ "$(self_hash)" != "$SELF_HASH" ]; then
+        info "autopilot.sh changed on origin/$MAIN_BRANCH — reloading onto the new version…"
+        exec "$SELF" "$@"
+      fi
+    else
+      warn "Couldn't fast-forward to origin/$MAIN_BRANCH (local changes / not on $MAIN_BRANCH / offline) — staying on current code."
+    fi
+  fi
+
+  did_something=0
+
+  # Review side, review-first so we drain before adding. With REVIEW_GITHUB_TOKEN
+  # the review is posted by a DISTINCT identity (can review everyone, including
+  # your own work PRs). WITHOUT one, review_work.sh still reviews — as your local
+  # gh identity — it just skips PRs you authored (which then need a separate
+  # reviewer). Either way we run the review passes, so a work-only loop still
+  # helps drain the review queue instead of idling. Opt out with REVIEW_PER_WORK=0.
+  for _ in $(seq 1 "$REVIEW_PER_WORK"); do
+    fleet_handle_commands || break 2
+    info "review pass…"
+    run_pass review env MAX=1 POLL_SECONDS=0 ./scripts/review_work.sh "$@" && did_something=1
+  done
+
+  # Framing side: discover roots and sent-back discover/framing PRs are not
+  # claimable by start_work.sh (ADR-0014). Without this pass autopilot can look
+  # idle while discover rework such as PRs marked "Part of #<root>" is waiting.
+  if [ "$FRAMING" = "true" ] && [ "${FRAME_PER_WORK:-0}" -gt 0 ]; then
+    for _ in $(seq 1 "$FRAME_PER_WORK"); do
+      fleet_handle_commands || break 2
+      info "frame pass…"
+      run_pass frame env MAX=1 POLL_SECONDS=0 ./scripts/frame_work.sh "$@" && did_something=1
+    done
+  fi
+
+  # Work side (your normal identity).
+  fleet_handle_commands || break
+  info "work pass…"
+  run_pass work env MAX=1 POLL_SECONDS=0 ./scripts/start_work.sh "$@" && did_something=1
+
+  if [ "$MAX_CYCLES" != 0 ] && [ "$cycle" -ge "$MAX_CYCLES" ]; then
+    ok "Reached MAX_CYCLES=$MAX_CYCLES — stopping."; break
+  fi
+
+  # Both queues were empty this cycle — nap before looking again.
+  if [ "$did_something" = 0 ]; then
+    log "Nothing to review or work right now. Sleeping ${POLL_SECONDS}s… (Ctrl-C to stop)"
+    sleep "$POLL_SECONDS"
+  fi
+done
+fleet_cleanup_run_dir

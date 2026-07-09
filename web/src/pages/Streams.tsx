@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch, GitMerge, FileText, Network, Search, Cpu, ArrowRight, Loader2, CheckCircle2, LayoutGrid, Rows3, Users, ChevronUp, ChevronDown, ChevronsUpDown, ChevronRight, ListTree, UserCheck } from "lucide-react";
 import { useSnapshot } from "@/hooks/useSnapshot";
+import { useSeo } from "@/hooks/useSeo";
 import { Loading, ErrorState } from "@/components/shared/States";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -14,7 +15,7 @@ import { DomainBadge, StageBadge, StatusBadge } from "@/components/shared/Badges
 import { StreamProgress } from "@/components/shared/StreamProgress";
 import { streamStateStyle, harnessLabel, isStreamShipped, isAwaitingDirection, streamStageIndex, subtasksByStream } from "@/lib/streams";
 import { statusLabel } from "@/lib/meta";
-import { relativeTime, cleanTitle } from "@/lib/format";
+import { relativeTime, cleanTitle, publicAsset } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StreamSummary, IssueLite } from "@/lib/types";
 
@@ -109,42 +110,49 @@ function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }
   const needsHuman = isAwaitingDirection(s.state);
   return (
     <Link to={`/streams/${s.stream}`}>
-      <Card className={cn("group flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md", needsHuman && "border-amber-500/40 ring-1 ring-amber-500/30")}>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xs text-muted-foreground">#{s.stream}</span>
-          {needsHuman ? <DecisionPill /> : <StatePill state={s.state} />}
-          <DomainBadge domain={s.domain || null} />
-          {s.hasOverview ? <FileText className="ml-auto h-3.5 w-3.5 text-brand-cyan-dark" aria-label="Has overview" /> : null}
-        </div>
-        <div className="mt-2 line-clamp-2 font-serif text-base font-semibold leading-snug group-hover:text-brand-cyan-dark">{s.title}</div>
-
-        <div className="mt-3">
-          <StreamProgress state={s.state} compact />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
-          <span className="inline-flex items-center gap-1" title="Accepted work"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
-          <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
-        </div>
-
-        {(harnesses.length > 0 || models.length > 0) ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {harnesses.map((h) => <span key={h} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{harnessLabel(h)}</span>)}
-            {models.length > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-brand-indigo/10 px-2 py-0.5 text-[10px] font-medium text-brand-indigo"><Cpu className="h-3 w-3" />{models.length} model{models.length === 1 ? "" : "s"}</span> : null}
+      <Card className={cn("group flex h-full flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md", needsHuman && "border-amber-500/40 ring-1 ring-amber-500/30")}>
+        {s.image ? (
+          <div className="aspect-[16/9] overflow-hidden bg-secondary">
+            <img src={publicAsset(s.image)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
           </div>
         ) : null}
-
-        {subtasks.length > 0 ? (
-          <div className="mt-3 border-t border-border/60 pt-3">
-            <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ListTree className="h-3 w-3" /> Subtasks ({subtasks.length})</div>
-            <SubtaskList items={subtasks} max={3} />
+        <div className="flex flex-1 flex-col p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">#{s.stream}</span>
+            {needsHuman ? <DecisionPill /> : <StatePill state={s.state} />}
+            <DomainBadge domain={s.domain || null} />
+            {s.hasOverview ? <FileText className="ml-auto h-3.5 w-3.5 text-brand-cyan-dark" aria-label="Has overview" /> : null}
           </div>
-        ) : null}
+          <div className="mt-2 line-clamp-2 font-serif text-base font-semibold leading-snug group-hover:text-brand-cyan-dark">{s.title}</div>
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          {s.people.length > 0 ? <PeopleStrip people={s.people} steward={s.steward} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
-          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+          <div className="mt-3">
+            <StreamProgress state={s.state} compact />
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1" title="Issues (open / total)"><GitBranch className="h-3.5 w-3.5" /> {s.openIssues}/{s.issues}</span>
+            <span className="inline-flex items-center gap-1" title="Accepted work"><GitMerge className="h-3.5 w-3.5" /> {s.mergedPRs}</span>
+            <span className="inline-flex items-center gap-1" title="Findings"><FileText className="h-3.5 w-3.5" /> {s.findings}</span>
+          </div>
+
+          {(harnesses.length > 0 || models.length > 0) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {harnesses.map((h) => <span key={h} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{harnessLabel(h)}</span>)}
+              {models.length > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-brand-indigo/10 px-2 py-0.5 text-[10px] font-medium text-brand-indigo"><Cpu className="h-3 w-3" />{models.length} model{models.length === 1 ? "" : "s"}</span> : null}
+            </div>
+          ) : null}
+
+          {subtasks.length > 0 ? (
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ListTree className="h-3 w-3" /> Subtasks ({subtasks.length})</div>
+              <SubtaskList items={subtasks} max={3} />
+            </div>
+          ) : null}
+
+          <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+            {s.people.length > 0 ? <PeopleStrip people={s.people} steward={s.steward} /> : <span className="text-[11px] text-muted-foreground">No contributors yet</span>}
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">{s.updated ? relativeTime(s.updated) : ""} <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+          </div>
         </div>
       </Card>
     </Link>
@@ -153,7 +161,7 @@ function StreamCard({ s, subtasks }: { s: StreamSummary; subtasks: IssueLite[] }
 
 function CardGrid({ streams, subtasksMap }: { streams: StreamSummary[]; subtasksMap: Map<number, IssueLite[]> }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {streams.map((s) => <StreamCard key={s.stream} s={s} subtasks={subtasksMap.get(s.stream) ?? []} />)}
     </div>
   );
@@ -226,9 +234,14 @@ function StreamTable({ streams, subtasksMap, sort, onSort }: { streams: StreamSu
                     ) : null}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{s.stream}</TableCell>
-                  <TableCell className="min-w-[240px] max-w-[380px]">
-                    <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} className="line-clamp-1 font-medium hover:text-brand-cyan-dark">{s.title}</Link>
-                    <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
+                  <TableCell className="min-w-[280px] max-w-[480px] align-top">
+                    <div className="flex items-start gap-3">
+                      {s.image ? <img src={publicAsset(s.image)} alt="" loading="lazy" className="mt-0.5 h-10 w-16 shrink-0 rounded-md border border-border/60 object-cover" /> : null}
+                      <div className="min-w-0">
+                        <Link to={`/streams/${s.stream}`} onClick={(e) => e.stopPropagation()} title={s.title} className="block font-medium leading-snug hover:text-brand-cyan-dark">{s.title}</Link>
+                        <div className="mt-1.5 w-40"><StreamProgress state={s.state} compact /></div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>{isAwaitingDirection(s.state) ? <DecisionPill /> : <StatePill state={s.state} />}</TableCell>
                   <TableCell><DomainBadge domain={s.domain || null} /></TableCell>
@@ -273,7 +286,7 @@ function Segmented({ children }: { children: React.ReactNode }) {
 
 function SegButton({ active, onClick, title, children }: { active: boolean; onClick: () => void; title?: string; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} title={title} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+    <button type="button" onClick={onClick} title={title} aria-pressed={active} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
       {children}
     </button>
   );
@@ -281,6 +294,7 @@ function SegButton({ active, onClick, title, children }: { active: boolean; onCl
 
 export default function Streams() {
   const { data, error, loading } = useSnapshot();
+  useSeo({ title: "Streams", description: "Every problem we\u2019re working, start to finish \u2014 from a raw question to cited, human-checked evidence.", path: "/streams" });
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<View>(readView);
@@ -306,8 +320,8 @@ export default function Streams() {
     return { count: streams.length, inProgress, shipped, findings, merged, decisions, people: people.size };
   }, [streams]);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error || "No data"} />;
+  if (loading) return <div className="px-4 py-8 md:px-6"><Loading /></div>;
+  if (error || !data) return <div className="px-4 py-8 md:px-6"><ErrorState message={error || "No data"} /></div>;
 
   const needle = q.toLowerCase();
   const matchesText = (s: StreamSummary) => !q || s.title.toLowerCase().includes(needle) || String(s.stream).includes(q) || (s.domain || "").toLowerCase().includes(needle);
@@ -335,7 +349,7 @@ export default function Streams() {
   const nothing = view === "table" ? tableRows.length === 0 : (!showDecisions && !showProgress && !showShipped);
 
   return (
-    <div>
+    <div className="px-4 py-8 md:px-6">
       <PageHeader title="Streams">
         Every problem we're working, start to finish. Each stream begins as one Discover issue and fans out into researched, reviewed, merged work. Open one to see the original problem, the research behind it, the synthesised answer, and the models, harnesses and people involved.
       </PageHeader>
@@ -345,7 +359,7 @@ export default function Streams() {
       ) : (
         <>
           {/* Stats */}
-          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+          <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7">
             <StatCard label="Streams" value={totals.count} icon={Network} accent="#2E4057" />
             <StatCard label="Awaiting direction" value={totals.decisions} icon={UserCheck} accent="#D97706" />
             <StatCard label="In progress" value={totals.inProgress} icon={Loader2} accent="#0EA5E9" />
@@ -355,8 +369,8 @@ export default function Streams() {
             <StatCard label="Contributors" value={totals.people} icon={Users} accent="#1D76DB" />
           </section>
 
-          {/* Controls */}
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          {/* Controls — sticky so search/filter/view stay reachable while scrolling */}
+          <div className="sticky top-16 z-20 mb-6 -mx-4 flex flex-wrap items-center gap-3 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
             <div className="relative min-w-[180px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Search streams…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />

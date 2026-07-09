@@ -5,6 +5,7 @@ state: researching             # framing | researching | needs-synthesis | await
 steward: ""                    # GitHub handle of the human who owns direction
 domain: ""                     # child-welfare | grant-access | civic-transparency | ai-policy | biosecurity | other
 updated: YYYY-MM-DD
+image: ""                      # site path, e.g. /images/streams/<stream-slug>.jpg
 ---
 
 <!--

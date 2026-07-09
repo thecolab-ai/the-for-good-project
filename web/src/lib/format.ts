@@ -48,3 +48,9 @@ export function shortDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
+
+export function publicAsset(path: string): string {
+  if (!path) return "";
+  if (/^https?:\/\//.test(path)) return path;
+  return `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
+}

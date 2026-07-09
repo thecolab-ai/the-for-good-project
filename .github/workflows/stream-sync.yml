@@ -130,15 +130,21 @@ jobs:
             fi
           }
 
+          # OPEN children only. The queue (fg-common.sh fetch_open_issues) never
+          # reads closed issues, so relabelling them buys nothing — and each write
+          # fires another "labeled"/"unlabeled" event that re-runs this workflow,
+          # so a mature stream would amplify one root toggle into dozens of runs.
+          # A child that is reopened later is reconciled on its next label/edit
+          # event (the sync job skips the 'reopened' action itself).
           sync_stream_priority_children() {
-            issue_nums=$(gh issue list --repo "$REPO" --state all --label "$label" \
+            issue_nums=$(gh issue list --repo "$REPO" --state open --label "$label" \
               --json number --limit 1000 --jq '.[].number' 2>/dev/null || true)
             for child in $issue_nums; do
               [ "$child" = "$stream" ] && continue
               sync_priority issue "$child"
             done
 
-            pr_nums=$(gh pr list --repo "$REPO" --state all --label "$label" \
+            pr_nums=$(gh pr list --repo "$REPO" --state open --label "$label" \
               --json number --limit 1000 --jq '.[].number' 2>/dev/null || true)
             for child_pr in $pr_nums; do
               sync_priority pr "$child_pr"
@@ -166,6 +172,18 @@ jobs:
               if gh issue view "$stream" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")' 2>/dev/null | grep -q "status: needs-synthesis"; then
                 gh issue edit "$stream" --repo "$REPO" --remove-label "status: needs-synthesis" || true
                 gh issue comment "$stream" --repo "$REPO" --body "🔄 New work opened in this stream (#$NUM) — pulling it back out of the synthesis queue until the stream drains again." || true
+              fi
+            fi
+            # MISLINK CHECK (#291): a child's "Part of" must point at the
+            # stream ROOT, never at another child — that's what keeps the
+            # drain check, depth bound and synthesis roll-up exact. Flag a
+            # mislinked child ONCE with the exact repair to make.
+            po=$(printf '%s' "$BODY" | grep -oiE '^[[:space:]]*part of[[:space:]]*#[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            if [ -n "$po" ] && [ "$po" != "$stream" ] && [ "$NUM" != "$stream" ]; then
+              marker="<!-- fg-stream-mislink -->"
+              if ! gh issue view "$NUM" --repo "$REPO" --json comments --jq '.comments[].body' 2>/dev/null | grep -qF "$marker"; then
+                gh issue comment "$NUM" --repo "$REPO" --body "$(printf '%s\n%s' "$marker" "⚠️ This issue's \`Part of #$po\` points at a NON-ROOT issue; its stream root is **#$stream**. Children must link the stream root directly (#291): edit the body's first line to \`Part of #$stream. Split from #$po.\` so the stream roll-up and the fan-out depth limit stay exact.")" || true
+                echo "Flagged #$NUM as mislinked (Part of #$po, root #$stream)."
               fi
             fi
           fi
@@ -216,7 +234,7 @@ jobs:
               # research closing, ADR-0012) puts the stream back in the
               # MACHINE's court — re-synthesis runs before the steward gate.
               gh issue edit "$stream" --repo "$REPO" --add-label "status: needs-synthesis" --remove-label "status: awaiting-direction" || true
-              gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**. Anyone can run \`./synthesize_work.sh\` to have an agent draft the plain-language overview as a PR; a human **steward** then edits it, writes the direction decision — go deeper, pivot, proceed, or park — and merges. See \`docs/STREAMS.md\`. Nothing moves to solutions until then. (Automation counts labelled children — worth a quick scan for stragglers before synthesising.)" || true
+              gh issue comment "$stream" --repo "$REPO" --body "🧭 All open work in **Stream #$stream** is done. This is **gate G1**. Anyone can run \`scripts/synthesize_work.sh\` to have an agent draft the plain-language overview as a PR; a human **steward** then edits it, writes the direction decision — go deeper, pivot, proceed, or park — and merges. See \`docs/STREAMS.md\`. Nothing moves to solutions until then. (Automation counts labelled children — worth a quick scan for stragglers before synthesising.)" || true
               echo "Stream #$stream drained → root flagged needs-synthesis."
             else
               echo "Stream #$stream still has $open_children labelled + $unlabelled unlabelled open child issue(s)."

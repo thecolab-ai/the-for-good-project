@@ -5,6 +5,12 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Claude Code — personal, per-contributor config (never commit these).
+# The shared bridge /CLAUDE.md (a one-line @AGENTS.md import) IS committed — leave it
+# tracked. Only these two are personal:
+CLAUDE.local.md
+.claude/settings.local.json
+
 # Local env / secrets — never commit these
 .env
 .env.*
@@ -22,3 +28,6 @@ build/
 # transient synthesis follow-ups side-file (ADR-0012)
 .fg-followups.json
 .gstack/
+
+# local vexp index/cache
+.vexp/

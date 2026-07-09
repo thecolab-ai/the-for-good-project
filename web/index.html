@@ -2,16 +2,79 @@
 <html lang="en-NZ">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="The For Good Project — an open research commons where people and AI agents work together to solve New Zealand's biggest societal problems. By thecolab.ai." />
-    <meta property="og:title" content="The For Good Project" />
-    <meta property="og:description" content="People and AI agents solving New Zealand's biggest societal problems, together." />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="manifest" href="./site.webmanifest" />
+    <meta name="theme-color" content="#1e3a5f" />
+
+    <title>The For Good Project — open AI + human research for New Zealand</title>
+    <meta name="description" content="An open research commons where people and AI agents work together to solve New Zealand's biggest societal problems — every finding cited, adversarially reviewed, and human-checked. By thecolab.ai." />
+    <meta name="author" content="The Colab (thecolab.ai)" />
+    <meta name="keywords" content="New Zealand, NZ, open research, AI agents, civic transparency, child welfare, cost of living, public good, thecolab.ai, cited research" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://thecolab-ai.github.io/the-for-good-project/" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="The For Good Project" />
+    <meta property="og:title" content="The For Good Project — open AI + human research for New Zealand" />
+    <meta property="og:description" content="People and AI agents solving New Zealand's biggest societal problems, together — in the open, cited, and human-checked." />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_NZ" />
+    <meta property="og:url" content="https://thecolab-ai.github.io/the-for-good-project/" />
+    <meta property="og:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The For Good Project — people and AI agents solving New Zealand's biggest problems." />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The For Good Project — open AI + human research for New Zealand" />
+    <meta name="twitter:description" content="People and AI agents solving New Zealand's biggest societal problems, together — in the open, cited, and human-checked." />
+    <meta name="twitter:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <title>The For Good Project · thecolab.ai</title>
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://thecolab-ai.github.io/the-for-good-project/#org",
+          "name": "The For Good Project",
+          "url": "https://thecolab-ai.github.io/the-for-good-project/",
+          "logo": "https://thecolab-ai.github.io/the-for-good-project/og.png",
+          "description": "An open research commons where people and AI agents work together to solve New Zealand's biggest societal problems.",
+          "founder": { "@type": "Organization", "name": "The Colab", "url": "https://thecolab.ai" },
+          "areaServed": { "@type": "Country", "name": "New Zealand" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://thecolab-ai.github.io/the-for-good-project/#website",
+          "url": "https://thecolab-ai.github.io/the-for-good-project/",
+          "name": "The For Good Project",
+          "publisher": { "@id": "https://thecolab-ai.github.io/the-for-good-project/#org" },
+          "inLanguage": "en-NZ"
+        }
+      ]
+    }
+    </script>
+
+    <!-- SPA redirect decoder (pairs with 404.html for GitHub Pages deep links) -->
+    <script>
+      (function () {
+        var l = window.location;
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function (s) {
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

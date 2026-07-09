@@ -33,4 +33,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FOR_GOOD_REPO: ${{ github.repository }}
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
-        run: ./reap.sh
+        run: scripts/reap.sh

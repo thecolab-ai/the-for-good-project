@@ -56,6 +56,30 @@ robots/ToS, and no leaking of credentials or the runner's identity/location.
 The exact mechanism (residential proxy pool vs run-on-residential-machine vs
 per-site rules, and any caching) is a follow-up, not fixed by this ADR.
 
+> **Proposed 2026-07-07 — a candidate mechanism for the open follow-up above
+> (issue #118), pending maintainer ratification.** Issue #118 reserves the
+> egress-architecture decision (residential proxy pool vs run-on-residential
+> vs per-site rules) for a human infra sign-off — this PR does **not** settle
+> that decision; it ships a working *implementation* of one option (a metered
+> rotating-IP proxy, `p.webshare.io`) behind an off-by-default switch, as a
+> concrete proposal for the maintainer to accept, reject, or replace. It is
+> routed `review: human-only` for exactly that reason, and stays a proposal in
+> this record until a maintainer adds a dated ratification line here (as the
+> 2026-07-03 line below was added) and closes/updates #118. **What it does:**
+> `scripts/fetch.mjs` gains a **retry-through-proxy rung** (a fresh IP per
+> attempt clears IP-reputation walls probabilistically) and
+> `scripts/cloak-fetch.mjs` can browse **through** the proxy (stealth browser +
+> fresh IP — the strongest bypass). It is **selective by default** (only when
+> direct fails); `PROXY_ALL=1` routes all `curl` + Python `urllib` (every
+> `.skills` CLI) through it for blanket coverage, off by default because the
+> proxy is metered. The proxy URL is a **secret**: it lives git-ignored in
+> `~/.forgood/proxy.env` (sourced by `autopilot.sh`), read only from the
+> `FETCH_PROXY` env — never hard-coded, never committed, never printed with its
+> credentials (the tooling prints host:port only). **Verified working:** it
+> retrieves the real `catalogue.data.govt.nz` CKAN JSON that a direct fetch gets
+> an Incapsula challenge for. **Cost/ethics/ToS** (the substance #118 asks a
+> human to weigh) are **not** resolved here and remain open on #118.
+
 ## Consequences
 
 **Positive**
@@ -90,26 +114,40 @@ changes are adopted, not an agent self-adoption.*
 
 **Shipped:**
 - **Shared fetch ladder as one CLI** — [`scripts/fetch.mjs`](../../scripts/fetch.mjs)
-  runs curl → agent-browser (real Chrome) → CloakBrowser (stealth Chromium) in
-  order, returns the first real page, and prints *how* it fetched. It refuses to
-  pass a rendered bot-challenge as a successful read.
+  runs curl → CloakBrowser (stealth Chromium) in order, returns the first real
+  page, and prints *how* it fetched. It refuses to pass a rendered bot-challenge
+  as a successful read. *(This PR inserts a rotating-proxy retry rung between the
+  two, but that rung is the **Proposed 2026-07-07** mechanism above — a proposal
+  pending the #118 sign-off, **not** part of this 2026-07-03 ratification.)*
 - **Failure classification (§2)** — `fetch.mjs` exits `4` for genuinely DEAD
   (404 even in a browser) and `3` for BLOCKED (403 / bot-challenge / timeout →
   tooling/IP, not a defect). The researcher and reviewer prompts in
   `start_work.sh` / `review_work.sh` and [`AGENTS.md`](../../AGENTS.md) now point
   at this command and require stating how a source was fetched.
 - **Ladder order** — curl → the harness's built-in WebFetch/WebSearch tool →
-  `scripts/fetch.mjs` (real Chrome → stealth Chromium) → archive snapshot. The
-  WebFetch rung is called by the agent, not by `fetch.mjs` (a subprocess can't
-  invoke a harness tool), so it lives in the prompt guidance.
+  `scripts/fetch.mjs` (rotating proxy → Jina reader → stealth Chromium) → archive
+  snapshot. The WebFetch rung is called by the agent, not by `fetch.mjs` (a
+  subprocess can't invoke a harness tool), so it lives in the prompt guidance.
+- **Jina reader rung (added 2026-07-08)** — `fetch.mjs` tries the hosted
+  [Jina reader](https://r.jina.ai) (`https://r.jina.ai/<url>`) between the rotating
+  proxy and stealth Chromium: it fetches from its own reputable egress and renders
+  JS, clearing many IP-reputation / JS-challenge walls without a local browser, and
+  works even where CloakBrowser isn't installed. Agents can also call it directly
+  (WebFetch/curl on the `r.jina.ai/` URL). It is an **external service**, so only
+  public URLs go to it (never a credential-bearing URL); `JINA_API_KEY` raises the
+  rate limit and `NO_JINA=1` disables it. Because it's a proxy, a Jina failure is
+  classified **BLOCKED (tooling)**, never DEAD — only a real browser rung concludes a
+  link is dead (§2 preserved).
 - **Archive on cite (§3)** — [`scripts/archive-cite.mjs`](../../scripts/archive-cite.mjs)
   finds a recent Wayback snapshot (CDX API) or captures a fresh one and prints
   the snapshot URL; `fetch.mjs --archive` snapshots on success.
 
 **Still open (tracked separately):**
-- **Proxy / egress management (§4, Decision 4)** — datacentre-IP blocking is
-  unaddressed; needs a residential-egress decision (cost/ethics/operator). See
-  the tracking issue (#118).
+- **Proxy / egress management (§4, Decision 4)** — a rotating-IP proxy mechanism
+  is now **proposed** and implemented behind an off-by-default switch (see the
+  *Proposed 2026-07-07* note above), but the egress-architecture **decision**
+  (residential vs datacentre pool, cost / ethics / operator) remains open for a
+  human on the tracking issue (#118). Pending that sign-off.
 - **Caching layer** for repeated fetches, and a convention for how archive
   snapshots are stored/linked in a finding's frontmatter (today it's a URL
   beside the live link).

@@ -10,8 +10,7 @@
     "validate": "node scripts/validate-findings.mjs"
   },
   "dependencies": {
-    "agent-browser": "^0.31.1",
-    "cloakbrowser": "^0.4.3",
+    "cloakbrowser": "^0.4.8",
     "playwright-core": "^1.61.0"
   }
 }
