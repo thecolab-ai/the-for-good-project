@@ -59,5 +59,6 @@ routine fixes, copy changes, or web styling.
 | [0020](0020-adopt-stale-rework.md) | A stale changes-requested PR is adopted by a different worker (kind: rework) | Proposed |
 | [0021](0021-author-agnostic-rework-reconcile.md) | reap routes ANY unaddressed change-request back to changes-requested, regardless of author | Proposed |
 | [0022](0022-worker-injection-hardening-and-sandbox-defaults.md) | Harden worker prompts against injection + implement ADR-0005's sandboxed run defaults (Codex workspace-write+network, Claude auto) | Proposed |
+| [0023](0023-self-report-is-a-claim.md) | A party's statement about itself is a claim, not confirmation (method check 3) | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).
