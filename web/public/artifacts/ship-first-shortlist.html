@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="index, follow"/>
+<title>Ship-First Shortlist — The For Good Project</title>
+<meta name="description" content="Ten quick-win outcomes from The For Good Project, ranked on the actual synthesis evidence — impact, speed, evidence strength and risk, with pros, cons and a verdict for each."/>
+<meta property="og:title" content="Ship-First Shortlist — The For Good Project"/>
+<meta property="og:description" content="Ten quick-win outcomes ranked on real synthesis evidence. Sort, filter, and see the pros, cons and verdict for each."/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="https://thecolab-ai.github.io/the-for-good-project/og.png"/>
+<style>
+:root{
+  --cream:#faf8f3;--card:#fff;--ink:#1b1b22;--navy:#1e3a5f;--muted:#5b5b66;--line:#e6e0d4;
+  --blue:#2563eb;--emerald:#0f766e;--teal:#0e7490;--amber:#c2410c;--red:#b91c1c;--violet:#6d28d9;--olive:#3f6212;--slate:#475569;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);line-height:1.55;font-size:15px}
+.serif{font-family:Georgia,'Times New Roman',serif}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+/* hero */
+.hero{background:linear-gradient(135deg,#16273f,#1e3a5f 55%,#26518a);color:#fff;border-radius:0 0 26px 26px;padding:40px 24px 34px;margin-bottom:22px}
+.hero-in{max-width:1040px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8fb4e6;font-weight:800}
+.hero h1{font-size:clamp(30px,6vw,48px);line-height:1.03;margin:12px 0 12px;font-weight:800}
+.hero p{color:#d7e3f5;max-width:660px;margin:0}
+.axes{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.axis{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 12px;font-size:12px;color:#eaf1fb}
+.axis b{color:#fff}
+/* controls */
+.controls{position:sticky;top:0;z-index:20;background:rgba(250,248,243,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 0;margin-bottom:20px}
+.controls-in{max-width:1040px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 20px}
+.ctl-label{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
+select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.12s}
+.fchip.on{color:#fff}
+.reset{margin-left:auto;font-size:12px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:9px;padding:6px 11px;cursor:pointer}
+/* cards */
+#list{display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-left:7px solid var(--navy);border-radius:16px;padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:.15s}
+.card:hover{box-shadow:0 6px 22px rgba(30,58,95,.09)}
+.chead{display:flex;align-items:flex-start;gap:14px;cursor:pointer}
+.rank{font-family:Georgia,serif;font-size:32px;font-weight:800;color:var(--navy);line-height:1;min-width:42px}
+.ctitle{flex:1;min-width:0}
+.stream{font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--muted)}
+.ctitle h3{margin:3px 0 0;font-size:18px;color:var(--navy);font-weight:800}
+.outcome{margin:6px 0 0;color:#33333c;font-size:14px}
+.vb{align-self:flex-start;display:inline-block;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:800;color:#fff;white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
+.tag{border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;border:1px solid var(--line);background:#f7f4ee;color:#43434d}
+.tag b{color:var(--navy)}
+.chip-hi{background:#e7f4ee;border-color:#bfe3d0;color:#0f766e}
+.chip-md{background:#fef3e6;border-color:#f6dcbe;color:#b45309}
+/* score bars */
+.scores{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 2px}
+.sc{font-size:11px}
+.sc .lab{color:var(--muted);font-weight:700;margin-bottom:3px;display:flex;justify-content:space-between}
+.bar{height:7px;border-radius:999px;background:#ece6da;overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:999px;background:var(--navy)}
+/* expand */
+.exp{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.card.open .exp{max-height:640px}
+.card.open{border-left-width:9px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.colh{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
+.pro .colh{color:var(--emerald)}.con .colh{color:var(--red)}
+.cols ul{margin:0;padding-left:16px}.cols li{margin-bottom:5px;font-size:13.5px;color:#33333c}
+.verdict{margin-top:12px;font-size:13px;color:var(--muted)}
+.links{margin-top:12px;display:flex;gap:14px;font-size:13px;font-weight:600}
+.hint{font-size:11px;color:var(--muted);margin-top:8px}
+.foot{margin-top:26px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:620px){.scores{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="hero"><div class="hero-in">
+  <div class="eyebrow">The For Good Project · Direction Session</div>
+  <h1 class="serif">Ship-First Shortlist</h1>
+  <p>Ten quick-win outcomes that could make a real New Zealander better off — ranked not on gut, but on what each stream's <b style="color:#fff">own synthesis evidence</b> actually says. Sort by any axis, filter by verdict, and open a card for the full pros, cons and blockers.</p>
+  <div class="axes">
+    <span class="axis">👤 <b>Impact</b> — real person better off</span>
+    <span class="axis">⚡ <b>Speed</b> — how close to a usable thing</span>
+    <span class="axis">📚 <b>Evidence</b> — the findings' own confidence marks</span>
+    <span class="axis">🛡️ <b>Low risk</b> — free of legal / data / sensitivity blockers</span>
+  </div>
+</div></div>
+
+<div class="controls"><div class="controls-in">
+  <span class="ctl-label">Sort by</span>
+  <select id="sort">
+    <option value="rank">Overall rank</option>
+    <option value="impact">Real-person impact</option>
+    <option value="speed">Speed to ship</option>
+    <option value="evidence">Evidence strength</option>
+    <option value="risk">Low risk</option>
+    <option value="total">Total score</option>
+  </select>
+  <span class="ctl-label" style="margin-left:8px">Verdict</span>
+  <div class="chips" id="filters"></div>
+  <button class="reset" id="reset">Reset</button>
+</div></div>
+
+<div class="wrap">
+  <div id="list"></div>
+  <div class="foot">
+    Evidence-ranked by Clawd from each stream's merged synthesis (their confidence marks, proposed-output effort, and stated blockers) — The For Good Project. A first draft for the human direction session; every item still needs a <b>G1 "go"</b> and an <b>SME quality-check</b> before it ships. Tap any card to expand.
+  </div>
+</div>
+
+<script>
+const SITE="https://thecolab-ai.github.io/the-for-good-project";
+const VC={build:"#0f766e",strong:"#2563eb",good:"#0e7490",quick:"#3f6212",civic:"#475569",care:"#c2410c",block:"#b91c1c",val:"#6d28d9"};
+const VLABEL={build:"BUILD FIRST",strong:"STRONGEST EVIDENCE",good:"GOOD",quick:"QUICK · LOW-RISK",civic:"CIVIC · NEAR-READY",care:"HIGH-CARE",block:"BLOCKED",val:"VALIDATE FIRST"};
+const DATA=[
+ {rank:1,stream:442,domain:"AGED CARE",title:"Aged-care family funding guide",verdict:"build",
+  outcome:"One plain-English explainer of the subsidy, asset test, home loan, weekly cap and premium charges — currently scattered across a dozen government pages.",
+  who:"Families facing a placement under stress",effort:"Small",conf:"2 High / 14 Medium",confHi:true,sme:"Jay (11yrs aged-care finance)",
+  s:{impact:5,speed:5,evidence:4,risk:4},
+  pros:["Consolidates genuinely confusing, high-stakes info into one place.","SME already onboard to verify — quality locked.","The reform-watch component is High confidence.","Pure stress-relief at a hard moment."],
+  cons:["Needs annual re-checking against current official rates.","Needs a real 'home' where families actually find it."],
+  vtext:"The one to ship first. Survived the evidence check; small, safe, and someone is measurably better off."},
+ {rank:2,stream:434,domain:"HEALTH",title:"Hospital wait-times brief",verdict:"strong",
+  outcome:"A plain public read on where waits are worst, plus a 'delayed-care harm' briefing explaining why waits matter beyond the headline percentages.",
+  who:"Patients, advocates, journalists, funders",effort:"Small (harm brief)",conf:"6 High / 11 Medium — best of the ten",confHi:true,sme:"",
+  s:{impact:3,speed:4,evidence:5,risk:4},
+  pros:["By far the sturdiest verified evidence in the set.","A Small, High-confidence artifact is ready to draft.","Topical and widely useful."],
+  cons:["More 'help people understand the system' than cash-in-hand.","Needs regular refresh + careful wording so unlike measures aren't ranked as equal."],
+  vtext:"The sleeper. If you want the win with the most bullet-proof facts behind it, it's this."},
+ {rank:3,stream:256,domain:"ENERGY",title:"Power-bill explainer + hardship brief",verdict:"good",
+  outcome:"Why bills keep climbing (without overstating dry-year or company profit), plus a brief pointing budgeting services at the households at the sharpest edge.",
+  who:"Households in winter energy hardship",effort:"Small",conf:"1 High / 6 Medium",confHi:false,sme:"",
+  s:{impact:4,speed:5,evidence:3,risk:4},
+  pros:["Seasonally urgent — winter, right now.","Clear, vulnerable beneficiary.","Small effort to a usable explainer."],
+  cons:["Thinner evidence base than the top two.","Needs a sector-expert wording check (dry-year pass-through is easy to overstate)."],
+  vtext:"Timely and humane; get the electricity-market wording checked before publish."},
+ {rank:4,stream:254,domain:"CLIMATE / HOUSING",title:"Flood-risk buyer's guide",verdict:"good",
+  outcome:"What to check before buying a flood-risk home — what a LIM does and doesn't mean, why the insurance quote matters, and what Natural Hazards Cover won't cover.",
+  who:"Home buyers, advisers, conveyancers",effort:"Small",conf:"0 High / 14 Medium",confHi:false,sme:"Noy · Storey (found via expert-finder)",
+  s:{impact:4,speed:4,evidence:3,risk:3},
+  pros:["SMEs already identified — verification is a phone call away.","Real pre-decision value: helps avoid a stranded asset."],
+  cons:["All-Medium evidence (nothing High yet).","Must stay strictly 'information, not advice'; needs conveyancing/insurance review."],
+  vtext:"Strong quiet pick — the SME layer is basically pre-loaded."},
+ {rank:5,stream:60,domain:"CONSUMER CREDIT",title:"Credit true-cost explainer",verdict:"good",
+  outcome:"Education-only: realistic scenarios showing 'cost if paid on time' vs 'cost if a payment is missed' — no product recommendations.",
+  who:"Anyone weighing up a small loan",effort:"Small (education version)",conf:"1 High / 19 Medium",confHi:false,sme:"",
+  s:{impact:4,speed:4,evidence:3,risk:3},
+  pros:["The 'existing comparators miss the missed-payment cost' gap is High confidence.","Genuinely protective for people in a money-tight moment."],
+  cons:["Financial-advice boundary: neutral wording + legal review required.","Anything personalised must wait for MoneyTalks / FinCap validation."],
+  vtext:"Ship the education-only version; keep the advice line well clear."},
+ {rank:6,stream:390,domain:"ENVIRONMENT",title:"'Where does NZ plastic go?' explainer",verdict:"quick",
+  outcome:"Explain the packaging flow, what the 17.1% figure means (and doesn't), and why plastics 1, 2 and 5 are treated differently at kerbside.",
+  who:"Households, educators, councils",effort:"Small",conf:"0 High / 7 Medium",confHi:false,sme:"",
+  s:{impact:2,speed:5,evidence:3,risk:5},
+  pros:["Low sensitivity, very fast to produce.","Corrects widespread 'wishcycling' confusion."],
+  cons:["Thin, all-Medium evidence.","Modest life-impact (informational); must not imply we know the final fate of exported plastic."],
+  vtext:"Great low-risk warm-up; won't move a needle much on its own."},
+ {rank:7,stream:667,domain:"CIVIC TRANSPARENCY",title:"'Fastest repealer?' myth-buster",verdict:"civic",
+  outcome:"A cautious public explainer on what the 'fastest repealer in the West' law-change numbers actually mean — counting instead of guessing.",
+  who:"Journalists, voters, officials",effort:"Small",conf:"0 High / 16 Medium / 2 Low",confHi:false,sme:"",
+  s:{impact:2,speed:5,evidence:3,risk:4},
+  pros:["Research is basically done — mostly a polish-and-publish.","Defuses a viral, misleading claim."],
+  cons:["Civic literacy, not personal-life impact.","Must caveat clearly: not yet a whole-statute-book replication."],
+  vtext:"Cheap credibility win; won't satisfy 'improved a life.'"},
+ {rank:8,stream:443,domain:"YOUTH / HEALTH",title:"Youth mental-health explainer",verdict:"care",
+  outcome:"Stitch the scattered official numbers into one readable 'state of youth mental health' picture, plus a 'what the evidence supports' guide for community groups.",
+  who:"Rangatahi & whānau, small NGOs, schools",effort:"Small doc, slow to publish safely",conf:"0 High / 17 Medium",confHi:false,sme:"Needs clinical + Māori/Pacific/lived-experience sign-off",
+  s:{impact:5,speed:2,evidence:3,risk:2},
+  pros:["Enormous human importance; regional data now recovered.","Lian's expertise is a natural fit."],
+  cons:["Sensitive — needs clinical + Māori/Pacific/lived-experience sign-off before publish.","Māori data-sovereignty considerations. Stream's own line: 'nobody can yet show which services work.'"],
+  vtext:"Do it — but properly, with authority sign-off. Not a 'quick' win."},
+ {rank:9,stream:61,domain:"COST OF LIVING",title:"Supermarket deal-checker",verdict:"block",
+  outcome:"Help shoppers tell a real special from a manufactured one — was/now, loyalty prices, promo cycles, cheapest-store claims, unit prices.",
+  who:"Households on a tight food budget",effort:"Small once unblocked",conf:"3 High / 24 Medium (strong)",confHi:true,sme:"",
+  s:{impact:4,speed:2,evidence:4,risk:2},
+  pros:["Strong evidence and near-universal appeal.","Pricing-law map is High confidence."],
+  cons:["Gated on a Grocer data-rights permission / legal review before any product-level page.","Named product/store/date examples must be held back until cleared."],
+  vtext:"Great idea, real blocker. Chase the data-rights answer before spending build time."},
+ {rank:10,stream:2,domain:"GRANT ACCESS",title:"Small-charity grant finder",verdict:"val",
+  outcome:"Help small charities find and qualify for grants they're eligible for — potentially routing real money to good organisations.",
+  who:"Small charities leaving money on the table",effort:"Useful dataset: Large",conf:"1 High / 17 Medium",confHi:false,sme:"",
+  s:{impact:4,speed:2,evidence:3,risk:3},
+  pros:["If real, it channels actual funding to good orgs — high appeal."],
+  cons:["The stream's own #1 action is 'ask charities directly to test the core claim first' — we haven't proven they actually miss grants.","The usable grants dataset is Large effort and goes stale fast."],
+  vtext:"Tempting, but validate the premise before betting a build on it."}
+];
+const AX=[["impact","👤 Impact"],["speed","⚡ Speed"],["evidence","📚 Evidence"],["risk","🛡️ Low risk"]];
+let sortKey="rank", active=new Set();
+
+const filtersEl=document.getElementById("filters");
+[...new Set(DATA.map(d=>d.verdict))].forEach(v=>{
+  const b=document.createElement("button");b.className="fchip";b.textContent=VLABEL[v];b.style.borderColor=VC[v];b.style.color=VC[v];
+  b.onclick=()=>{ if(active.has(v)){active.delete(v);b.classList.remove("on");b.style.background="#fff";b.style.color=VC[v];}
+    else{active.add(v);b.classList.add("on");b.style.background=VC[v];b.style.color="#fff";} render(); };
+  filtersEl.appendChild(b);
+});
+document.getElementById("sort").onchange=e=>{sortKey=e.target.value;render();};
+document.getElementById("reset").onclick=()=>{sortKey="rank";document.getElementById("sort").value="rank";active.clear();[...filtersEl.children].forEach((b,i)=>{b.classList.remove("on");const v=[...new Set(DATA.map(d=>d.verdict))][i];b.style.background="#fff";b.style.color=VC[v];});render();};
+
+function render(){
+  let rows=DATA.filter(d=>active.size===0||active.has(d.verdict));
+  const tot=d=>d.s.impact+d.s.speed+d.s.evidence+d.s.risk;
+  rows.sort((a,b)=> sortKey==="rank"?a.rank-b.rank : sortKey==="total"?tot(b)-tot(a) : b.s[sortKey]-a.s[sortKey] || a.rank-b.rank);
+  const list=document.getElementById("list");
+  list.innerHTML=rows.map(d=>{
+    const c=VC[d.verdict];
+    const bars=AX.map(([k,lab])=>`<div class="sc"><div class="lab"><span>${lab}</span><span>${d.s[k]}/5</span></div><div class="bar"><span style="width:${d.s[k]*20}%;background:${c}"></span></div></div>`).join("");
+    const pros=d.pros.map(p=>`<li>${p}</li>`).join(""), cons=d.cons.map(p=>`<li>${p}</li>`).join("");
+    return `<div class="card" style="border-left-color:${c}">
+      <div class="chead" onclick="this.parentNode.classList.toggle('open')">
+        <div class="rank">${d.rank}</div>
+        <div class="ctitle"><div class="stream">STREAM #${d.stream} · ${d.domain}</div>
+          <h3 class="serif">${d.title}</h3><p class="outcome">${d.outcome}</p></div>
+        <span class="vb" style="background:${c}">${VLABEL[d.verdict]}</span>
+      </div>
+      <div class="meta">
+        <span class="tag">👤 <b>${d.who}</b></span>
+        <span class="tag">⚡ Effort: <b>${d.effort}</b></span>
+        <span class="tag ${d.confHi?'chip-hi':'chip-md'}">📚 ${d.conf}</span>
+        ${d.sme?`<span class="tag">🧑‍⚖️ ${d.sme}</span>`:""}
+      </div>
+      <div class="scores">${bars}</div>
+      <div class="hint">▸ Tap to see pros, cons &amp; verdict</div>
+      <div class="exp">
+        <div class="cols">
+          <div class="pro"><div class="colh">Pros</div><ul>${pros}</ul></div>
+          <div class="con"><div class="colh">Cons / blockers</div><ul>${cons}</ul></div>
+        </div>
+        <div class="verdict">📌 <b style="color:${c}">Verdict:</b> ${d.vtext}</div>
+        <div class="links"><a href="${SITE}/streams/${d.stream}" target="_blank" rel="noreferrer">Open stream #${d.stream} →</a></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+render();
+</script>
+</body>
+</html>
