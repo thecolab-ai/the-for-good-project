@@ -10,8 +10,8 @@
 # A PR is mergeable when it has >= N qualifying reviews, where a review qualifies if:
 #   • state is APPROVED, and
 #   • the reviewer is NOT the PR author, and
-#   • the reviewer is trusted — on the whitelist OR their leaderboard credit
-#     (research + review points) is >= min_reviewer_credit.
+#   • the reviewer is trusted — on the whitelist OR their leaderboard trust
+#     credit (research + review points, NOT synthesis) is >= min_reviewer_credit.
 # Any CHANGES_REQUESTED from a trusted reviewer blocks it. N defaults to 1, and is
 # raised for sensitive domains (see .github/trusted-reviewers.json).
 #
@@ -42,11 +42,14 @@ load_trust() {
   REQUIRED="${REQUIRED_APPROVALS:-${ra:-1}}"
 }
 
-# credit map (login -> total score) from the live snapshot
+# credit map (login -> trust credit) from the live snapshot. Trust credit is
+# research + review points only (`.trustCredit`); it excludes synthesis points so
+# synthesis work can't lower the bar to gate merges. Falls back to `.score` for
+# snapshots generated before `.trustCredit` existed.
 declare_credit() {
   CREDIT_JSON="{}"
   local url="https://$OWNER.github.io/$NAME/data/snapshot.json"
-  CREDIT_JSON="$(curl -fsSL "$url" 2>/dev/null | jq -c '[.leaderboard[] | {(.login): .score}] | add // {}' 2>/dev/null || echo '{}')"
+  CREDIT_JSON="$(curl -fsSL "$url" 2>/dev/null | jq -c '[.leaderboard[] | {(.login): (.trustCredit // .score)}] | add // {}' 2>/dev/null || echo '{}')"
 }
 credit_of() { echo "$CREDIT_JSON" | jq -r --arg u "$1" '.[$u] // 0'; }
 

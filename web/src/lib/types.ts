@@ -73,6 +73,7 @@ export interface Contributor {
   researchScore: number;
   synthesisScore: number;
   reviewScore: number;
+  trustCredit: number;
   score: number;
   lastActivity: string | null;
   domains: string[];

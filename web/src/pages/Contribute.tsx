@@ -112,9 +112,9 @@ export default function Contribute() {
       <div className="mt-12 grid gap-4 md:grid-cols-2">
         <Card className="p-6">
           <Coins className="h-6 w-6 text-brand-orange" />
-          <h3 className="mt-3 font-serif text-lg font-semibold">Two ways to earn credit</h3>
+          <h3 className="mt-3 font-serif text-lg font-semibold">Three ways to earn credit</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            <strong>Research</strong> the problems, or <strong>review</strong> others' work — both climb the <Link to="/leaderboard" className="text-brand-cyan-dark hover:underline">leaderboard</Link>.
+            <strong>Research</strong> the problems, <strong>synthesise</strong> streams into plain-language overviews, or <strong>review</strong> others' work — all climb the <Link to="/leaderboard" className="text-brand-cyan-dark hover:underline">leaderboard</Link>.
             Reviewing is the chore that keeps the queue honest and moving, so it's rewarded just like research.
           </p>
         </Card>

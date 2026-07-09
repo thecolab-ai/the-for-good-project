@@ -440,7 +440,14 @@ async function main() {
       const researchScore = p.findingsAuthored * 5 + p.prsMerged * 3 + p.issuesAssigned * 2 + p.prsOpened + Math.min(p.commits, 50);
       const synthesisScore = p.synthesesAuthored * 5;
       const reviewScore = p.reviewsGiven * 4;
-      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, synthesisScore, reviewScore, score: researchScore + synthesisScore + reviewScore };
+      // `score` is the display total (research + synthesis + review). `trustCredit`
+      // is what the merge gate consumes (scripts/merge_ready.sh) and is deliberately
+      // research + review only: earning merge-gate trust is a governance decision,
+      // so synthesis credit stays display-only until the trust model is changed by
+      // a maintainer. Keeping them separate lets the leaderboard reward synthesis
+      // without silently lowering the bar to gate other people's merges.
+      const trustCredit = researchScore + reviewScore;
+      return { ...p, name: mostCommonName(p.login), domains: [...p.domains], researchScore, synthesisScore, reviewScore, trustCredit, score: researchScore + synthesisScore + reviewScore };
     })
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);
