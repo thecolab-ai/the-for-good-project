@@ -91,10 +91,10 @@
   color: "0EA5E9"
   description: "Relates to a subject-matter expert / advisor"
 
-# --- Priority: workers pick these up before the rest of the queue (see scripts/fg-common.sh) ---
+# --- Priority: set on stream roots; stream-sync propagates to children for queue ordering ---
 - name: "priority: high"
   color: "B60205"
-  description: "Jump the queue — start_work.sh/review picks these up first"
+  description: "Stream-level queue jump — inherited by children for start_work.sh/review ordering"
 
 # --- Meta ---
 - name: "good first issue"

@@ -32,6 +32,15 @@ number of the originating Discover issue — everything descending from issue
   [`.github/workflows/stream-sync.yml`](../.github/workflows/stream-sync.yml):
   a new `stage: discover` issue roots its own stream; children inherit it from
   a `Stream: #n` or `Part of #<parent>` line in their body.
+- **Priority belongs to the root** ([ADR-0024](adr/0024-stream-level-priority.md)).
+  A steward/maintainer marks the stream root with `priority: high` when the whole
+  problem should jump the queue; the same Action propagates that label to the
+  stream's children and removes it from them when the root is deprioritised. A
+  child is never prioritised on its own — the label there is inherited, and the
+  Action will strip one set by hand. The jump-queue itself stays bounded to
+  `HIGH_PRIORITY_CAP` streams (#293 / [ADR-0013](adr/0013-pipeline-guardrails.md)),
+  which counts *streams* rather than issues precisely so a prioritised stream can
+  inherit the label across all its children without eating the cap.
 - **Body convention** (keeps the roll-up exact, #291): every child issue
   carries `Part of #<root>` — the **stream root**, never another child. An
   issue split off a non-root issue *also* carries `Split from #<issue>` on

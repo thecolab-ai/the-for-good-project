@@ -1,191 +1,285 @@
 ---
 name: triage-task
-description: Use when deciding what For Good work to pick up — scores a task's priority, value, and token cost and returns a Do-now / Good-ROI / Defer / Skip verdict. Invoke against an issue number, the open `queue`, or a free-text task idea. Advisory only: it never claims issues, writes labels, or changes automation.
+description: Use when deciding what For Good work to pick up — ranks available streams first, then ranks children within a chosen stream by dependency and value-per-token. Advisory only: it never claims issues, writes labels, or changes automation.
 ---
 
-# Triage a task: priority × value × token cost
+# Triage work: stream priority, value, and token cost
 
-Help a human or an agent decide **what's worth doing next** in The For Good Project — and whether a given task is a good use of scarce, donated tokens. This is the missing "biggest bang per token" read: today the repo's only priority signal is the binary `priority: high` label + oldest-first ordering ([`scripts/fg-common.sh`](../../../scripts/fg-common.sh)). This skill adds a transparent, judgement-based scorecard on top.
+Help a human or an agent decide **which stream is worth capacity next**, and
+then which child inside that stream is the best pickup. The repo's executable
+queue contract stays deliberately simple: `start_work.sh` sorts issues with
+`priority: high` before oldest-first via [`scripts/fg-common.sh`](../../../scripts/fg-common.sh).
+That label is now a **stream-root priority** inherited by children, not a
+reason to compare siblings against each other.
 
-**This skill is advisory and ephemeral.** It produces a *read*, nothing more. It MUST NOT claim issues, add/remove labels, reorder the queue, edit the issue, or write any file. Those are out of scope by design (see "Non-goals"). A human or agent looks at the scorecard and decides.
+**This skill is advisory and ephemeral.** It produces a *read*, nothing more.
+It MUST NOT claim issues, add/remove labels, reorder the queue, edit the issue,
+or write any file. A human or agent looks at the scorecard and decides.
 
-**Ratification guard.** Adding or materially changing this rubric is project workflow guidance, so an agent review alone does not adopt it. Treat the rubric as proposed until the PR introducing or changing it has explicit human maintainer approval. Even after ratification, it remains optional advice; it does not change the queue contract, labels, runner scripts, or human gates.
+**Ratification guard.** Adding or materially changing this rubric is project
+workflow guidance, so an agent review alone does not adopt it. Treat the
+rubric as proposed until the PR introducing or changing it has explicit human
+maintainer approval. Even after ratification, it remains optional advice; it
+does not change the queue contract, labels, runner scripts, or human gates.
 
 ## When to use
 
-- An agent (or the `start_work.sh` autopilot operator) is choosing which issue to work.
-- A contributor with spare tokens wants the best value-per-token task, not necessarily the most urgent.
-- Someone has a rough problem idea and wants to sanity-check it *before* opening an issue.
-- A maintainer is triaging the backlog and wants a quick, auditable ranking.
+- An agent or `start_work.sh` operator is choosing which work to pick up.
+- A contributor with spare tokens wants the best value-per-token stream, not
+  necessarily the oldest issue.
+- A maintainer is triaging streams and wants a quick, auditable ranking.
+- Someone has a rough problem idea and wants to sanity-check it before opening
+  an issue.
 
 ## How it's invoked
 
-You'll be pointed at one of three things:
+You'll be pointed at one of four things:
 
 | Input | Do this |
 |---|---|
-| **An issue number** (e.g. `#123`) | Score that one task → one scorecard. |
-| **`queue`** | Score pickup-able work: your assigned `status: changes-requested` reworks, then every open `status: available` issue; print one ranked table. |
-| **A free-text task** (a sentence or paragraph) | Score the idea as if it were an issue; note what's unknown because it isn't written up yet. |
+| **`queue`** | Default stream mode: rank pickup-able streams against each other, and show each stream's next best child. |
+| **A stream** (e.g. `stream:4` or `Stream #4`) | Within-stream mode: rank that stream's pickup-able children by dependency, then value-per-token. |
+| **An issue number** (e.g. `#123`) | Score that one task using its stream's inherited priority; do not compare it to siblings unless asked. |
+| **A free-text task** | Score the idea as if it were an issue; note what's unknown because it isn't written up yet. |
 
-If the input is ambiguous, ask once which of the three is meant, then proceed.
+If the input is ambiguous, ask once which of the four is meant, then proceed.
 
 ## Step 1 — Gather context before scoring
 
 Never score from the title alone. Read enough to justify each number:
 
-1. **Read the issue and its chain.** Open the issue, its parent (`Part of #…`), and any linked findings.
+1. **Read the issue and its chain.** Open the issue, its parent (`Part of #…`),
+   its stream root (`stream:<n>`), and any linked findings.
    ```
    gh issue view <n> --repo thecolab-ai/the-for-good-project --json number,title,body,labels
    ```
-2. **Check for duplicates.** Grep existing findings for overlap — this drives the "net-new" score:
+2. **Read the stream root before judging priority.** Priority is set on the
+   Discover/root issue and inherited by children via `stream-sync.yml`. A child
+   may carry `priority: high`, but that is an inherited stream signal, not its
+   own private score.
+3. **Check for duplicates.** Grep existing findings and solutions for overlap:
    ```
    grep -rli "<key terms>" research/findings/ solutions/
    ```
-3. **Check data accessibility.** Is there a `.skills/` CLI for the data this needs (Stats NZ, councils, charities, etc.)? `ls .skills/skills` (the submodule is uninitialised on a fresh clone — run `git submodule update --init` first if it's empty; see AGENTS.md). If a matching skill exists, cost drops; if it needs heavy browser-fetching of blocked govt sites, cost rises.
-4. **Note the stage** (`stage: discover|research|ideate|build`) and whether `priority: high` is set.
+4. **Check data accessibility.** Is there a `.skills/` CLI for the data this
+   needs (Stats NZ, councils, charities, etc.)? If a matching skill exists,
+   cost drops; if it needs heavy browser-fetching of blocked government sites,
+   cost rises.
+5. **Note the stage and status** (`stage: discover|research|ideate|build`,
+   `status:*`) and whether the issue is a rework assigned to you.
 
-For `queue` mode, gather pickup-able work the same way `start_work.sh` does — **your assigned reworks first, then the available queue** — so the ranking can't miss the items the autopilot works ahead of everything else (a `status: changes-requested` rework assigned to `@me` is the Priority anchor-5 case below). Then do a lighter pass per issue (title + body + labels + a quick dedupe grep) — you don't need to open every parent chain, but say so in the confidence line:
+For `queue` mode, gather pickup-able work the same way `start_work.sh` does:
+your assigned `status: changes-requested` reworks first, then every open
+`status: available` issue.
+
 ```
-# your reworks a reviewer sent back — start_work.sh picks these up before available work
+# your reworks a reviewer sent back — start_work.sh picks these up first
 gh issue list --repo thecolab-ai/the-for-good-project --state open \
   --label "status: changes-requested" --assignee "@me" \
-  --json number,title,labels,assignees,createdAt --limit 100
+  --json number,title,body,labels,assignees,createdAt --limit 100
+
 # then the available queue
 gh issue list --repo thecolab-ai/the-for-good-project --state open \
-  --label "status: available" --json number,title,labels,createdAt --limit 100
+  --label "status: available" \
+  --json number,title,body,labels,createdAt --limit 100
 ```
-Score both lists together into one ranked table; your assigned reworks naturally sort to the top via their anchor-5 priority. Do not include other contributors' `status: changes-requested` issues in queue mode; those are routed back to their authors. (Leave out `status: claimed` / `status: reviewing` / `status: in-review` — that work is already in flight.)
 
-## Step 2 — Score the three axes
+Group non-rework issues by `stream:<n>`. If an otherwise eligible issue lacks a
+stream label, score it as an "unstreamed" item and flag the missing bookkeeping
+in the confidence line. For queue mode, a light pass is acceptable (title,
+body, labels, root, quick dedupe grep); say so.
 
-Score each sub-dimension **1–5 with a one-line justification**. The justifications matter as much as the numbers: a human must be able to overrule any single score without re-doing the whole thing. Use the anchors below to keep scores comparable between different contributors and agents.
+## Step 2 — Score the axes
 
-### Priority — how much does this matter *now*?
+Score each sub-dimension **1-5 with a one-line justification**. The
+justifications matter as much as the numbers: a human must be able to overrule
+any score without re-doing the whole thing.
+
+### Priority — the stream-level urgency signal
+
+Priority is a **stream property**. All siblings in a stream inherit the same
+priority, so `#151` and `#152` in Stream #4 cannot be separated on this axis.
+Use dependency and value-per-token to break sibling ties.
+
+Assigned rework is the one operational override: it is already blocking a PR
+you authored, so it stays ahead of fresh work even though it is not a stream
+priority decision.
 
 | Score | Anchor |
 |---|---|
-| 5 | Your assigned rework a reviewer sent back (`status: changes-requested`, blocking a merge), **or** unblocks a human gate (G1/G2) a steward is waiting on. |
-| 4 | Something else in the queue is blocked until this lands; a stream can't progress without it. |
-| 3 | Normal queue item — no `priority: high`, nothing downstream blocked. |
-| 2 | Useful but no time pressure; safe to sit. |
-| 1 | Speculative; can wait indefinitely. |
+| 5 | Your assigned rework a reviewer sent back (`status: changes-requested`), or work unblocking a human gate a steward is waiting on. |
+| 4 | The stream root carries `priority: high`, or this stream is otherwise blocking multiple downstream tasks. |
+| 3 | Normal stream — no root `priority: high`, nothing downstream blocked. |
+| 2 | Useful stream, but no time pressure; safe to sit. |
+| 1 | Speculative or not yet ratified as a stream. |
 
-> Floor rule: if `priority: high` is set, priority is **at least 4** (give it 5 only if it *also* matches an anchor-5 condition) — the maintainers have explicitly queue-jumped it.
+> Floor rule: if the **stream root** has `priority: high`, every child in that
+> stream has priority at least 4. Give an individual child 5 only for the
+> operational override above.
 
-### Value — is it worth doing well? (composite of four)
+### Value — is this worth doing well?
 
-Score all four, then form a **holistic** value read (1–5) — usually near the average, but let a hard blocker dominate: tractability ≤ 2 or net-new ≤ 2 should drag value down regardless of the others (these also hard-override the verdict to 🔴 — see Step 3).
+For **stream mode**, score the stream as a whole. For **within-stream mode**,
+score each child, but keep the priority value inherited from the root.
 
-**a) Societal impact** — how many NZers × severity × vulnerability of the group.
-- 5: large NZ population, high severity, vulnerable group (e.g. children, families missing entitlements, people in hardship).
+Score all four, then form a **holistic** value read (1-5). Usually it is near
+the average, but let a hard blocker dominate: tractability <= 2 or net-new <= 2
+should drag value down regardless of the others.
+
+**a) Societal impact** — how many NZers x severity x vulnerability.
+- 5: large NZ population, high severity, vulnerable group.
 - 3: meaningful but narrower population, or lower severity.
 - 1: niche or low-stakes.
 
-**b) Pipeline leverage** — does it move the *system*, not just itself?
-- 5: unblocks a whole stream or feeds a G1/G2 gate; enables several downstream tasks.
+**b) Pipeline leverage** — does it move the system, not just itself?
+- 5: unblocks a whole stream, a G1/G2 gate, or several downstream tasks.
 - 3: feeds one specific downstream task.
 - 1: isolated — nothing depends on it.
 
 **c) Net-new vs duplicate** — will it survive review as additive?
-- 5: genuinely new; nothing in `research/findings/` covers it.
+- 5: genuinely new; nothing in `research/findings/` or `solutions/` covers it.
 - 3: partial overlap; meaningfully extends existing work.
-- 1: largely duplicates an existing finding — likely rejected in adversarial review.
+- 1: largely duplicates existing work — likely rejected in adversarial review.
 
-**d) Tractability / confidence** — can an agent finish it to the repo's standard?
-- 5: answerable well with accessible, citable NZ sources (official data or a `.skills/` CLI).
-- 3: answerable, but needs heavy verification or some hard-to-reach sources.
-- 1: needs lived experience, legal authority, or data an agent can't access → **flag for a human**.
+**d) Tractability / confidence** — can an agent finish it to standard?
+- 5: answerable well with accessible, citable NZ sources or a `.skills/` CLI.
+- 3: answerable, but needs heavy verification or hard-to-reach sources.
+- 1: needs lived experience, legal authority, or inaccessible data — flag for a human.
 
-### Token cost — how much effort/tokens will a *good* result take?
+### Token cost — what will a good result take?
 
-Pick a band. This is an **estimate** — say so. Drivers: stage footprint, number of sources to gather and verify, how much browser-fetching of blocked sites, expected adversarial-review round-trips, and fan-out (does it need sub-issues?).
+In stream mode, estimate **whole-stream cost**: how much work remains before the
+next meaningful gate or result. In within-stream mode, estimate the child issue
+cost. Cost is always an estimate; say so.
 
 | Band | Shape | Rough magnitude |
 |---|---|---|
-| **S** | one narrow finding; data from one `.skills/` CLI or a few official sources; little fan-out. | a single focused session; ~one review pass. |
-| **M** | standard research finding; several sources; some browser-fetching; one verification pass. | a substantial session; 1–2 review passes. |
-| **L** | broad discover framing, **or** research needing heavy multi-source verification / some fan-out into sub-issues. | multiple sessions; may spawn sub-issues. |
-| **XL** | a build project, **or** deep multi-source research spanning many sources; multiple review rounds likely. | many sessions; almost certainly splits into sub-issues. |
+| **S** | One narrow finding or small workflow/doc change; few sources; little fan-out. | A single focused session; about one review pass. |
+| **M** | Standard research finding or moderate workflow change; several sources/files; one verification pass. | A substantial session; 1-2 review passes. |
+| **L** | Broad discover framing, multi-source research, or work likely to split into chunky sub-issues. | Multiple sessions; may spawn sub-issues. |
+| **XL** | Build project or deep multi-source research with several review rounds likely. | Many sessions; almost certainly needs splitting. |
 
 ## Step 3 — Combine into a verdict
 
-Return-on-tokens is **value relative to cost, gated by priority and hard-blocked by tractability/duplication.** These are heuristics, not a rigid formula — trust the justifications over the arithmetic, and explain any override. **Apply the rows top-down; the first match wins.**
+Return-on-tokens is **value relative to cost**, gated by stream priority and
+hard-blocked by tractability/duplication. These are heuristics, not a rigid
+formula. Apply rows top-down; the first match wins.
 
-| Verdict | Rule of thumb (checked in order) |
+| Verdict | Rule of thumb |
 |---|---|
-| 🔴 **Skip / needs a human** | tractability ≤ 2 (needs lived experience/legal authority/inaccessible data), **or** net-new ≤ 2 (duplicate), **or** value ≤ 2. *Checked first — a hard blocker overrides everything below.* |
-| 🟢 **Do now** | value ≥ 4 **and** tractability ≥ 3 **and** (priority ≥ 4 **or** cost ≤ M); **or** priority 5 with tractability ≥ 3 (urgent rework / gate-unblocking work gets done even at moderate value). |
-| 🔵 **Good ROI** | value ≥ 3 **and** cost ≤ M **and** tractability ≥ 3, not time-pressured. Ideal for spare-token contributors. |
-| 🟡 **Defer / narrow** | real value but cost is L/XL **as currently scoped** — suggest a narrower slice or a sub-issue split (see [`AGENTS.md`](../../../AGENTS.md) "fan out chunky"). |
+| 🔴 **Skip / needs a human** | tractability <= 2, net-new <= 2, or value <= 2. A hard blocker overrides priority. |
+| 🟢 **Do now** | value >= 4 and tractability >= 3 and (priority >= 4 or cost <= M); or assigned rework with tractability >= 3. |
+| 🔵 **Good ROI** | value >= 3 and cost <= M and tractability >= 3, not time-pressured. |
+| 🟡 **Defer / narrow** | real value but cost is L/XL as currently scoped — suggest a narrower slice or chunky split. |
 
-Checking 🔴 first is deliberate: a duplicate or an unanswerable question is not worth *any* tokens, however well it scores elsewhere.
-
-**A verdict is a recommendation, not permission.** A 🟢 does not authorise skipping the claiming protocol, pickup eligibility (`status: available` or your assigned `status: changes-requested` rework), or the human gates — the normal [`AGENTS.md`](../../../AGENTS.md) flow still applies. A well-scored free-text idea still enters as a Discover/problem issue; an agent must **never** self-open an ideate or build issue (those are human gates G1/G2 — AGENTS.md forbids it).
+A verdict is a recommendation, not permission. A 🟢 does not authorise skipping
+the claiming protocol, pickup eligibility, or the human gates. A well-scored
+free-text idea still enters as a Discover/problem issue; an agent must never
+self-open an ideate or build issue.
 
 ## Step 4 — Output
 
+### Stream queue format
+
+For `queue`, output assigned reworks first if any, then a stream-ranked table
+sorted by verdict (🟢 -> 🔵 -> 🟡 -> 🔴), then value desc, then cost asc.
+
+```
+Assigned reworks:
+
+| Issue | Status | Verdict | Priority | Value | Cost | One-liner |
+|-------|--------|---------|----------|-------|------|-----------|
+| #124  | changes-requested (@me) | 🟢 Do now | 5 | 4 | M | assigned rework — unblocks a merge |
+
+Available streams:
+
+| Stream | Root priority | Verdict | Priority | Value | Whole-stream cost | Next best child | One-liner |
+|--------|---------------|---------|----------|-------|-------------------|-----------------|-----------|
+| #60 | high | 🟢 Do now | 4 | 4 | M | #143 | prioritised stream; next child has clear data path |
+| #4  | normal | 🔵 Good ROI | 3 | 4 | L | #152 | meaningful child-welfare stream, but heavier verification |
+```
+
+Follow the table with a single confidence line covering the whole pass.
+
+### Within-stream format
+
+For a chosen stream, keep priority fixed and rank children by:
+
+1. dependency: what unblocks the rest,
+2. value-per-token,
+3. oldest-created if still tied.
+
+```
+## Stream #4 — child/family support navigation
+Stream priority: 3/5 — root has no `priority: high`; siblings share this.
+
+| Issue | Status | Rank reason | Value | Cost | One-liner |
+|-------|--------|-------------|-------|------|-----------|
+| #151 | done | dependency first | 4 | M | safe-to-automate variables constrain any product path |
+| #152 | claimed | value next | 4 | M/L | estimates aggregate unclaimed value once eligibility scope is clearer |
+
+Resolution of #151 vs #152: they are same-stream siblings, so priority is a
+tie by definition. Pick #151 first if both are available because the safety
+constraints shape what an entitlement pre-check may ask; then pick #152 for
+the value estimate.
+```
+
 ### Single-task format
 
-The header carries stage, **live status**, and the priority flag — so a reader sees at a glance whether the issue is already claimed or in review before acting on the verdict.
+The header carries stage, live status, stream, and inherited priority.
 
 ```
 ## Triage: #123 — Map which NZ councils publish rates data as open CSV
-Stage: research  ·  status: available  ·  priority:high: no
+Stage: research · status: available · stream: #60 · stream priority: high
 (illustrative example — a fictional issue, not live repo state)
 
-Priority    ▮▮▮▯▯  3/5 — normal queue item, nothing downstream blocked yet.
-Value       ▮▮▮▮▯  4/5
+Priority    4/5 — Stream #60 root has `priority: high`; this child inherits it.
+Value       4/5
   · Societal impact    4 — council transparency touches every ratepayer.
-  · Pipeline leverage  4 — feeds a civic-transparency stream toward its G1 gate.
+  · Pipeline leverage  4 — feeds a civic-transparency stream toward its gate.
   · Net-new            4 — no existing finding maps council open-data formats.
   · Tractability       4 — council + LINZ + LGOIMA sources are public and citable.
 Token cost  M — several official sources; light browser-fetching; one verification pass.
 
 Verdict: 🔵 Good ROI
-Why: strong, additive value at moderate cost; not urgent, so a great spare-token pickup.
-Confidence & limits: scored from the issue body + a dedupe grep; token cost is an estimate;
-  impact severity is inferred, not measured.
+Why: strong, additive value at moderate cost; not urgent outside its stream.
+Confidence & limits: scored from the issue body + root labels + dedupe grep;
+  token cost is an estimate; impact severity is inferred, not measured.
 ```
-
-### Queue format
-
-Score each issue, then a table sorted by verdict (🟢→🔵→🟡→🔴), then by value desc, then cost asc:
-
-```
-| Issue | Status | Verdict | Priority | Value | Cost | One-liner |
-|-------|--------|---------|----------|-------|------|-----------|
-| #124  | changes-requested (@me) | 🟢 Do now   | 5 | 4 | M | assigned rework — unblocks a merge |
-| #123  | available | 🔵 Good ROI | 3 | 4 | M | additive council open-data finding |
-| ...   | ... | ...     | ... | ... | ... | ... |
-```
-Follow the table with a single confidence line covering the whole pass (e.g. "light pass — titles/bodies/labels + dedupe grep, parent chains not fully opened").
 
 ## Step 5 — The honesty line is mandatory
 
-Every scorecard (single or queue) ends with a **Confidence & limits** line. This matches the project's core rule (be honest about what you don't know — [`CONSTITUTION.md`](../../../CONSTITUTION.md) Article III). State:
-- what you scored on thin information (e.g. a vague issue body),
+Every scorecard ends with a **Confidence & limits** line. State:
+
+- what you scored on thin information,
 - which numbers are estimates (token cost always is),
-- anything that means a human should look before acting (especially a low tractability score).
+- whether parent/root chains were fully read,
+- anything that means a human should look before acting.
 
-A scorecard that says *"impact unknown — the issue doesn't say who's affected"* is more useful than a confident fake number. Do not manufacture precision.
+A scorecard that says "impact unknown — the issue doesn't say who's affected"
+is more useful than a confident fake number.
 
-## Non-goals (Phase 1 — do not do these)
+## Non-goals
 
 Keep this skill purely advisory. **Do not**:
+
 - write scores to labels or issue frontmatter,
 - reorder or filter the queue for the runner scripts,
 - claim, assign, or edit the issue,
-- add a scoring *script* or new machinery.
+- add a scoring script or new machinery.
 
-Each of those is a Phase-2 change to how work is *selected* and would need its own ADR ([`docs/adr/`](../../../docs/adr/README.md)) — the priority system is deliberately simple today, and changing it is a governance decision, not a skill edit.
+Each of those would be a separate automation/governance change needing its own
+ADR. The current design relies on root priority labels, stream-sync
+propagation, and the existing runner sort.
 
-## Maintaining this skill (for contributors)
+## Maintaining this skill
 
-This rubric is meant to evolve — but keep these invariants so scores stay comparable and trustworthy across the many people and agents who'll use it:
+Keep these invariants so scores stay comparable and trustworthy:
 
-- **Every score keeps its one-line justification.** The audit trail is the point; a bare number is not overrulable.
-- **Keep the anchors concrete.** If you retune a scale, re-anchor it with an example so two agents still land close on the same task.
-- **Stay advisory.** If you want scores to actually drive selection (labels, queue order, auto-claim), that's a Phase-2 automation change — open an ADR first, don't smuggle it into this skill.
-- **Keep it self-contained.** No dependency on any one contributor's session or environment beyond `gh`, `grep`, and the repo itself.
-- **Prefer honesty over coverage.** If a dimension can't be judged from available info, score it low-confidence and say why rather than guessing.
+- **Every score keeps its one-line justification.**
+- **Priority remains stream-level.** Siblings never differ on priority; they
+  differ on dependency, value, tractability, and cost.
+- **Keep the anchors concrete.**
+- **Stay advisory.**
+- **Keep it self-contained.** No dependency beyond `gh`, `grep`, and the repo.
+- **Prefer honesty over coverage.**

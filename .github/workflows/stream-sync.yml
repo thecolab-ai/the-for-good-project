@@ -1,4 +1,5 @@
-# Keep stream:<n> labels in sync — label bookkeeping only, zero model tokens.
+# Keep stream:<n> labels and inherited stream priority in sync — label
+# bookkeeping only, zero model tokens.
 # See docs/STREAMS.md for the Stream concept.
 #
 # Rules:
@@ -9,6 +10,8 @@
 #  - Any issue/PR whose body starts a line with "Part of #p" (or a closing
 #    ref) inherits the parent's stream:<n> label — line-anchored so prose
 #    like "as part of #30's discussion" doesn't mis-parent it.
+#  - A child issue/PR inherits "priority: high" from its stream root. Removing
+#    that label from the root removes it from children too.
 #  - When the LAST open child issue in a stream closes, the root issue gets
 #    "status: needs-synthesis" — the human G1 queue. A genuinely NEW child
 #    (or a reopened one) removes it again: synthesis waits for the drain.
@@ -16,7 +19,7 @@ name: Stream sync
 
 on:
   issues:
-    types: [opened, edited, labeled, closed, reopened]
+    types: [opened, edited, labeled, unlabeled, closed, reopened]
   pull_request_target:
     types: [opened, edited]
 
@@ -40,7 +43,7 @@ jobs:
     if: github.event.action != 'closed' && github.event.action != 'reopened'
     runs-on: ubuntu-latest
     steps:
-      - name: Apply stream label
+      - name: Apply stream and inherited priority labels
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -48,6 +51,7 @@ jobs:
           BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
           IS_PR: ${{ github.event.pull_request != null }}
           ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name || '' }}
           LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
           set -euo pipefail
@@ -87,6 +91,7 @@ jobs:
             esac
           fi
           label="stream:$stream"
+          priority_label="priority: high"
 
           # Ensure the label exists (title of the root issue as description).
           if ! gh label list --repo "$REPO" --search "$label" --json name --jq '.[].name' | grep -qx "$label"; then
@@ -95,10 +100,70 @@ jobs:
               --description "Stream #$stream${title:+ — $title}" 2>/dev/null || true
           fi
 
+          root_has_priority=false
+          if gh issue view "$stream" --repo "$REPO" --json labels \
+            --jq '.labels[].name' 2>/dev/null | grep -qx "$priority_label"; then
+            root_has_priority=true
+          fi
+
+          sync_priority() {
+            kind="$1"
+            target="$2"
+
+            # The root owns its priority label; never rewrite it from itself.
+            if [ "$kind" = "issue" ] && [ "$target" = "$stream" ]; then
+              return 0
+            fi
+
+            if [ "$root_has_priority" = "true" ]; then
+              if [ "$kind" = "pr" ]; then
+                gh pr edit "$target" --repo "$REPO" --add-label "$priority_label" || true
+              else
+                gh issue edit "$target" --repo "$REPO" --add-label "$priority_label" || true
+              fi
+            else
+              if [ "$kind" = "pr" ]; then
+                gh pr edit "$target" --repo "$REPO" --remove-label "$priority_label" 2>/dev/null || true
+              else
+                gh issue edit "$target" --repo "$REPO" --remove-label "$priority_label" 2>/dev/null || true
+              fi
+            fi
+          }
+
+          # OPEN children only. The queue (fg-common.sh fetch_open_issues) never
+          # reads closed issues, so relabelling them buys nothing — and each write
+          # fires another "labeled"/"unlabeled" event that re-runs this workflow,
+          # so a mature stream would amplify one root toggle into dozens of runs.
+          # A child that is reopened later is reconciled on its next label/edit
+          # event (the sync job skips the 'reopened' action itself).
+          sync_stream_priority_children() {
+            issue_nums=$(gh issue list --repo "$REPO" --state open --label "$label" \
+              --json number --limit 1000 --jq '.[].number' 2>/dev/null || true)
+            for child in $issue_nums; do
+              [ "$child" = "$stream" ] && continue
+              sync_priority issue "$child"
+            done
+
+            pr_nums=$(gh pr list --repo "$REPO" --state open --label "$label" \
+              --json number --limit 1000 --jq '.[].number' 2>/dev/null || true)
+            for child_pr in $pr_nums; do
+              sync_priority pr "$child_pr"
+            done
+          }
+
           if [ "$IS_PR" = "true" ]; then
             gh pr edit "$NUM" --repo "$REPO" --add-label "$label" || true
+            sync_priority pr "$NUM"
           else
             gh issue edit "$NUM" --repo "$REPO" --add-label "$label" || true
+            sync_priority issue "$NUM"
+
+            if [ "$NUM" = "$stream" ] && [ "$EVENT_LABEL" = "$priority_label" ]; then
+              case "$ACTION" in
+                labeled|unlabeled) sync_stream_priority_children ;;
+              esac
+            fi
+
             # A genuinely NEW child in a stream flagged for synthesis → the
             # drain isn't done after all; pull the root out of the G1 queue.
             # Only on 'opened' (edits/labels of old — possibly closed — children
