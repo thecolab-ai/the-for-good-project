@@ -1,0 +1,96 @@
+name: spam-guard
+
+# Auto-moderate spam from UNTRUSTED (non-contributor) authors on issues and
+# issue comments.
+#
+# By DEFAULT this only acts on content that matches spam signatures, so genuine
+# no-code contributions (paste-backs, questions) from newcomers are never
+# touched — the open contribution door stays open. Flip the repo variable
+# SPAM_GUARD_STRICT=true to instead act on ANY non-contributor content (blunt;
+# not recommended — it breaks the point of a public repo).
+#
+# Actions:
+#   - spam COMMENT  -> deleted (needs only the default GITHUB_TOKEN).
+#   - spam ISSUE    -> labelled `spam`, closed (not planned) and locked. True
+#     hard-delete of an issue needs elevated rights the default token lacks, so
+#     add an admin PAT as the secret SPAM_ADMIN_TOKEN and it will also delete
+#     the issue via the GraphQL deleteIssue mutation.
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  moderate:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    steps:
+      - name: Moderate untrusted spam
+        uses: actions/github-script@v7
+        env:
+          STRICT: ${{ vars.SPAM_GUARD_STRICT }}
+          SPAM_ADMIN_TOKEN: ${{ secrets.SPAM_ADMIN_TOKEN }}
+        with:
+          script: |
+            const p = context.payload;
+            const isComment = context.eventName === 'issue_comment';
+
+            // 1) Trusted authors are never moderated.
+            const assoc = (isComment ? p.comment.author_association : p.issue.author_association) || 'NONE';
+            const TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR'];
+            if (TRUSTED.includes(assoc)) { core.info(`Trusted author (${assoc}) — skipping.`); return; }
+
+            const user = isComment ? p.comment.user : p.issue.user;
+            if (!user || user.type === 'Bot' || String(user.login).endsWith('[bot]')) return;
+
+            // 2) Spam signatures (kept deliberately narrow to avoid false positives).
+            const body = isComment ? (p.comment.body || '') : `${p.issue.title || ''}\n${p.issue.body || ''}`;
+            const RULES = [
+              /\bapi[\s-]?keys?\b[\s\S]{0,40}\b(cheap|discount|billing|quota|100\s*\+)/i,
+              /ggboy|aitoken|token[\s\S]{0,8}\.(xin|top|xyz|shop)\b/i,
+              /(gpt|claude|gemini)[\s\S]{0,30}(key|token|billing|quota|api)/i,
+              /(充值|折扣|额度|代充|低价|发卡|车头)/,
+              /\b(t\.me\/|wa\.me\/|bit\.ly\/|discord\.gg\/)/i,
+              /\b(usdt|airdrop|forex\s*signal|casino|betting|seo\s*service)\b/i,
+            ];
+            const cjkPlusLink = /[一-鿿]/.test(body) && /https?:\/\//i.test(body);
+            const isSpam = cjkPlusLink || RULES.some((r) => r.test(body));
+
+            const STRICT = String(process.env.STRICT || '').toLowerCase() === 'true';
+            if (!isSpam && !STRICT) {
+              core.info(`Non-trusted (${assoc}) but no spam signature — leaving it (open contribution).`);
+              return;
+            }
+            const reason = (STRICT && !isSpam) ? 'strict non-contributor mode' : 'spam signature';
+
+            // 3) Act.
+            if (isComment) {
+              await github.rest.issues.deleteComment({ ...context.repo, comment_id: p.comment.id });
+              core.notice(`🗑 Deleted comment ${p.comment.id} by @${user.login} (${assoc}) — ${reason}.`);
+              return;
+            }
+
+            const n = p.issue.number;
+            try { await github.rest.issues.addLabels({ ...context.repo, issue_number: n, labels: ['spam'] }); } catch (e) { /* label may not exist */ }
+            await github.rest.issues.update({ ...context.repo, issue_number: n, state: 'closed', state_reason: 'not_planned' });
+            try { await github.rest.issues.lock({ ...context.repo, issue_number: n, lock_reason: 'spam' }); } catch (e) { /* best effort */ }
+
+            let deleted = false;
+            const pat = process.env.SPAM_ADMIN_TOKEN;
+            if (pat) {
+              try {
+                const { getOctokit } = require('@actions/github');
+                await getOctokit(pat).graphql(
+                  `mutation($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { id } } }`,
+                  { id: p.issue.node_id },
+                );
+                deleted = true;
+              } catch (e) { core.warning(`Hard-delete failed (${e.message}); left it closed + locked.`); }
+            }
+            core.notice(`${deleted ? '🗑 Deleted' : '🔒 Closed + locked'} issue #${n} by @${user.login} (${assoc}) — ${reason}.`);
