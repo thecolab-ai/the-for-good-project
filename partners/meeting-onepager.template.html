@@ -1,0 +1,208 @@
+<!doctype html>
+<!--
+  The For Good Project — partner meeting one-pager (TEMPLATE)
+
+  A reusable, self-contained one-pager to open or screen-share in a partner /
+  problem-holder conversation. Print-friendly (A4). Light + dark themes.
+
+  HOW TO USE
+  1. Copy this file OUT of the repo before filling it in (e.g. to your local
+     working folder). Fill the {{PLACEHOLDERS}}.
+  2. DO NOT commit a filled copy back into the repo. Attendee names are personal
+     data and the repo's consent gate forbids personal names in any file
+     (CONSTITUTION.md Art. III, partners/README.md). Only this blank template,
+     with placeholders, lives in the repo.
+  3. Refresh the "What we're working on" figures from the live board
+     (https://forgood.thecolab.ai/board) or after running
+     web/scripts/build-data.mjs, and update {{AS_AT}}.
+
+  PLACEHOLDERS: {{MEETING_WITH}} {{DATE}} {{ATTENDEES}} {{THE_ASK}}
+                {{FINDINGS}} {{COMPLETED}} {{BUILT}} {{SOURCES}} {{AS_AT}}
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The For Good Project — meeting one-pager</title>
+<style>
+  :root{
+    --serif:"Charter","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+
+    --paper:#f6f7f9; --card:#ffffff; --ink:#161f2c; --muted:#5c6675;
+    --line:#e2e6ec; --line-strong:#cdd3dc;
+    --accent:#23466d;          /* navy — AI does the volume */
+    --accent-soft:#eef2f7;
+    --human:#b9772a;           /* ochre — a human decides */
+    --human-soft:#f6ecdc;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0e1520; --card:#16202e; --ink:#eaeef3; --muted:#9aa6b6;
+      --line:#25303f; --line-strong:#33404f;
+      --accent:#6ea3d8; --accent-soft:#1a2836;
+      --human:#e2a54e; --human-soft:#2a2113;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#f6f7f9; --card:#ffffff; --ink:#161f2c; --muted:#5c6675;
+    --line:#e2e6ec; --line-strong:#cdd3dc;
+    --accent:#23466d; --accent-soft:#eef2f7; --human:#b9772a; --human-soft:#f6ecdc;
+  }
+  :root[data-theme="dark"]{
+    --paper:#0e1520; --card:#16202e; --ink:#eaeef3; --muted:#9aa6b6;
+    --line:#25303f; --line-strong:#33404f;
+    --accent:#6ea3d8; --accent-soft:#1a2836; --human:#e2a54e; --human-soft:#2a2113;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:16px/1.55 var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  .sheet{max-width:840px; margin:0 auto; padding:44px 48px 40px}
+  h1,h2,h3,h4{font-family:var(--serif); font-weight:600; margin:0; letter-spacing:-.01em; text-wrap:balance}
+  p{margin:.4em 0}
+  a{color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px}
+  .eyebrow{font:600 11px/1 var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--muted)}
+
+  /* Masthead */
+  header{border-bottom:2px solid var(--ink); padding-bottom:20px; margin-bottom:8px}
+  h1{font-size:33px; margin:10px 0 4px}
+  .tagline{color:var(--muted); font-size:14.5px; max-width:60ch}
+  .meeting{margin-top:18px; font:14px/1.4 var(--sans); color:var(--ink)}
+  .meeting b{color:var(--accent)}
+
+  section{margin:28px 0}
+  h2{font-size:13px; font-family:var(--mono); font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; display:flex; align-items:center; gap:10px}
+  h2::after{content:""; flex:1; height:1px; background:var(--line)}
+  .lead{font-size:16.5px; line-height:1.5; max-width:64ch}
+  .muted{color:var(--muted)}
+
+  ul.people{list-style:none; margin:0; padding:0}
+  ul.people li{padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px}
+  ul.people li:last-child{border-bottom:0}
+  ul.people b{font-family:var(--serif); font-size:16px}
+
+  /* Process timeline — the hero */
+  .flow{list-style:none; margin:6px 0 0; padding:0; position:relative}
+  .flow::before{content:""; position:absolute; left:16px; top:14px; bottom:16px; width:2px; background:var(--line-strong)}
+  .step{position:relative; padding:0 0 18px 48px; min-height:34px}
+  .node{position:absolute; left:0; top:0; width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; font:600 14px/34px var(--mono); text-align:center; box-shadow:0 0 0 4px var(--paper)}
+  @media (prefers-color-scheme:dark){ .node{color:#0e1520} }
+  :root[data-theme="light"] .node{color:#fff}
+  :root[data-theme="dark"] .node{color:#0e1520}
+  .step h4{font-size:16.5px; margin:5px 0 2px}
+  .step p{margin:0; font-size:13.5px; line-height:1.45; color:var(--muted); max-width:58ch}
+  .gate{position:relative; padding:0 0 18px 48px; font:600 11px/1 var(--sans); letter-spacing:.09em; text-transform:uppercase; color:var(--human)}
+  .gate::before{content:""; position:absolute; left:9px; top:1px; width:16px; height:16px; background:var(--human); border-radius:4px; transform:rotate(45deg); box-shadow:0 0 0 4px var(--paper)}
+  .gate span{display:inline-block; padding-top:2px}
+  .flow-caption{margin-top:2px; padding:11px 14px; background:var(--accent-soft); border-radius:9px; font-size:13px; color:var(--ink)}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin:14px 0 0; font-size:12px; color:var(--muted)}
+  .legend span{display:inline-flex; align-items:center; gap:7px}
+  .dot{width:11px; height:11px; border-radius:50%; background:var(--accent)}
+  .dot.h{border-radius:3px; transform:rotate(45deg); background:var(--human)}
+
+  /* Stats + themes */
+  .stats{display:flex; flex-wrap:wrap; gap:10px; margin:4px 0 16px}
+  .stat{flex:1 1 130px; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:13px 15px}
+  .stat .n{font:600 27px/1 var(--serif); color:var(--accent); font-variant-numeric:tabular-nums}
+  .stat .l{font:600 10.5px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:8px}
+  .themes{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px}
+  .theme{background:var(--card); border:1px solid var(--line); border-radius:11px; padding:15px 17px}
+  .theme h3{font-size:15.5px; margin-bottom:5px}
+  .theme p{margin:0; font-size:13px; line-height:1.45; color:var(--muted)}
+
+  /* The ask */
+  .ask{background:var(--card); border:1px solid var(--line-strong); border-left:4px solid var(--human); border-radius:12px; padding:18px 20px}
+  .ask ul{margin:.5em 0 0; padding-left:1.1em}
+  .ask li{margin:.35em 0}
+
+  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--line); font:12.5px/1.4 var(--mono); color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+
+  @media (max-width:640px){ .themes{grid-template-columns:1fr} .sheet{padding:30px 22px} }
+  @media print{
+    :root{ --paper:#fff; --card:#fff; --ink:#14304f; }
+    body{background:#fff}
+    .sheet{max-width:none; padding:0}
+    .stat,.theme,.ask,.step,.gate,.flow-caption{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div class="eyebrow">Open research commons · by thecolab.ai</div>
+    <h1>The For Good Project</h1>
+    <div class="tagline">People and AI working NZ's hardest public problems. Everything cited, a human at every gate.</div>
+    <div class="meeting">Conversation with <b>{{MEETING_WITH}}</b> · {{DATE}}</div>
+  </header>
+
+  <section>
+    <h2>What this is</h2>
+    <p class="lead">An open workspace where people and AI agents work a real NZ problem to a standard a real decision can rest on. AI does the volume; people decide what matters. Free, and all in the open.</p>
+  </section>
+
+  <section>
+    <h2>On the call</h2>
+    <!-- One line each: name — what they bring, and why they're here. -->
+    <ul class="people">
+      {{ATTENDEES}}
+    </ul>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="flow">
+      <li class="step"><span class="node">1</span><h4>Discover</h4><p>Frame a real NZ problem into sharp, researchable questions.</p></li>
+      <li class="step"><span class="node">2</span><h4>Research</h4><p>Answer each question with citations. Every finding is independently challenged before it's accepted; surprising claims need two sources.</p></li>
+      <li class="gate"><span>A human decides — go deeper, or move on</span></li>
+      <li class="step"><span class="node">3</span><h4>Ideate</h4><p>Turn the findings into feasible solutions.</p></li>
+      <li class="gate"><span>A human decides — what's worth building</span></li>
+      <li class="step"><span class="node">4</span><h4>Build</h4><p>Ship a real tool, guide or brief people can use.</p></li>
+    </ol>
+    <div class="legend">
+      <span><i class="dot"></i> AI does the volume</span>
+      <span><i class="dot h"></i> A human decides at every gate</span>
+    </div>
+    <p class="flow-caption">Nothing moves toward a solution unsteered, and no personal or identifying data goes in, ever. <a href="https://forgood.thecolab.ai/partners">See how partnering works</a>.</p>
+  </section>
+
+  <section>
+    <h2>What we're working on <span class="muted" style="font-family:var(--sans); font-weight:400; text-transform:none; letter-spacing:0; font-size:12px; margin-left:auto">live · as at {{AS_AT}}</span></h2>
+    <p class="muted" style="margin-top:-4px">The whole board, not a shortlist. Where does your world connect?</p>
+    <div class="stats">
+      <div class="stat"><div class="n">{{FINDINGS}}</div><div class="l">Cited findings</div></div>
+      <div class="stat"><div class="n">{{COMPLETED}}</div><div class="l">Completed</div></div>
+      <div class="stat"><div class="n">{{BUILT}}</div><div class="l">Things built</div></div>
+      <div class="stat"><div class="n">{{SOURCES}}</div><div class="l">Data sources</div></div>
+    </div>
+    <!-- Stable themes; refresh the example streams per meeting from the live board. -->
+    <div class="themes">
+      <div class="theme"><h3>Cost of living &amp; essentials</h3><p>electricity affordability &amp; dry-year risk; rooftop / community solar &amp; renter energy access; grocery pricing.</p></div>
+      <div class="theme"><h3>Care &amp; social support</h3><p>aged-care quality &amp; funding; child welfare and the support people are entitled to.</p></div>
+      <div class="theme"><h3>Charities &amp; fair access</h3><p>grant access: helping charities get the funding they're due; civic transparency.</p></div>
+      <div class="theme"><h3>Environment, biosecurity &amp; policy</h3><p>biosecurity; how AI should serve the public interest.</p></div>
+    </div>
+    <p class="muted" style="margin-top:12px; font-size:13px">Every finding is at <a href="https://forgood.thecolab.ai/board">forgood.thecolab.ai/board</a>.</p>
+  </section>
+
+  <section>
+    <h2>What we're asking</h2>
+    <div class="ask">
+      <!-- Keep it small and specific — one or two things, not a menu. -->
+      {{THE_ASK}}
+    </div>
+  </section>
+
+  <footer>
+    <span>The For Good Project · by thecolab.ai</span>
+    <span>forgood.thecolab.ai</span>
+  </footer>
+
+</div>
+</body>
+</html>
