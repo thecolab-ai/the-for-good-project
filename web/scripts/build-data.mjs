@@ -69,10 +69,10 @@ async function gh(url, attempt = 0) {
   return res;
 }
 
-async function ghPaged(pathname) {
+async function ghPaged(pathname, maxPages = 20) {
   const out = [];
   let url = `${API}${pathname}${pathname.includes("?") ? "&" : "?"}per_page=100`;
-  for (let i = 0; i < 20 && url; i++) {
+  for (let i = 0; i < maxPages && url; i++) {
     const res = await gh(url);
     out.push(...(await res.json()));
     const link = res.headers.get("link") || "";
@@ -123,6 +123,37 @@ async function main() {
     headRefName: p.head?.ref || "",
   }]));
   const mergedByNumber = new Map(rawPulls.map((p) => [p.number, !!p.merged_at]));
+
+  // Comments, in ONE bulk pass. The repo-level comments endpoint returns every
+  // issue AND PR-conversation comment across the whole repo, newest-first and
+  // 100 per page — so we replace what used to be one paginated request PER
+  // commented issue (hundreds of sequential round-trips that re-fetched every
+  // long-closed thread each run, and grew with repo age) with a dozen dense
+  // pages. sort=created&direction=desc + a page cap keeps the work BOUNDED: we
+  // keep the newest ~5000 comments, which covers the live feed and every
+  // recent/open issue's thread; the oldest closed threads thin out gracefully.
+  const commentsByIssue = new Map(); // issue/PR number -> [{author,avatar,body,createdAt,url}] (chronological)
+  try {
+    const rawComments = await ghPaged(`/repos/${OWNER}/${NAME}/issues/comments?sort=created&direction=desc`, 50);
+    for (const c of rawComments) {
+      const m = String(c.issue_url || "").match(/\/(\d+)$/);
+      if (!m) continue;
+      const n = Number(m[1]);
+      if (!commentsByIssue.has(n)) commentsByIssue.set(n, []);
+      commentsByIssue.get(n).push({
+        author: c.user?.login || "unknown",
+        avatar: c.user?.avatar_url || "",
+        body: c.body || "",
+        createdAt: c.created_at,
+        url: c.html_url,
+      });
+    }
+    // The per-issue endpoint returned threads oldest→newest; preserve that so
+    // the issue-detail page renders in the same order it always has.
+    for (const arr of commentsByIssue.values()) arr.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  } catch (e) {
+    console.warn("comments unavailable:", e.message);
+  }
 
   // PR reviews (who reviewed whose PR) — used for review credit. A review counts
   // only if it's a substantive verdict (APPROVED / CHANGES_REQUESTED) and the
@@ -191,19 +222,9 @@ async function main() {
     const stage = pick(labels, "stage:") || "none";
     const status = pick(labels, "status:") || "none";
     const domain = pick(labels, "domain:");
-    let commentsList;
-    if (it.comments > 0 && it.comments <= 60) {
-      try {
-        const cs = await ghPaged(`/repos/${OWNER}/${NAME}/issues/${it.number}/comments`);
-        commentsList = cs.map((c) => ({
-          author: c.user?.login || "unknown",
-          avatar: c.user?.avatar_url || "",
-          body: c.body || "",
-          createdAt: c.created_at,
-          url: c.html_url,
-        }));
-      } catch { /* ignore */ }
-    }
+    // Comments were fetched in one bulk pass above (commentsByIssue); just look
+    // them up here instead of making a per-issue API call.
+    const commentsList = commentsByIssue.get(it.number);
     issues.push({
       number: it.number,
       title: it.title,
