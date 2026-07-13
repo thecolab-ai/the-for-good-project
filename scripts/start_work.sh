@@ -453,9 +453,16 @@ finish_issue() {  # $1 = issue number
 ⚠️ The agent finished without opening a PR (empty attempt $attempts/$EMPTY_ATTEMPT_CAP) — releasing this back to **available** for someone else to pick up. After $EMPTY_ATTEMPT_CAP empty attempts it is parked \`status: blocked\` instead of re-released (#766)." >/dev/null
       warn "#$n released (no PR opened, empty attempt $attempts/$EMPTY_ATTEMPT_CAP)"
     fi
-    # Fleet-claimed: also release the server's lease as abandoned (labels are
-    # already reverted above; the server's own revert is an idempotent no-op).
-    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then fleet_release "$n" abandoned; fi
+    # Fleet-claimed: release the server's lease too — but the outcome MUST match
+    # the label we just set. `abandoned` makes the server revert labels+assignee
+    # to the pre-claim state (`status: available`), which would clobber a `blocked`
+    # transition and re-queue the issue seconds later (defeating the backoff on the
+    # fleet path). So release `done` in the block case — that frees the lease and
+    # leaves our `blocked` label untouched — and only `abandoned` when we actually
+    # released back to `available` (there the server's revert is an idempotent no-op).
+    if [ "${FLEET_CLAIMED:-0}" = 1 ]; then
+      if [ "$verdict" = block ]; then fleet_release "$n" done; else fleet_release "$n" abandoned; fi
+    fi
   fi
   CLAIMED_ISSUE=""
 }

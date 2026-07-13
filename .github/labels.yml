@@ -37,7 +37,7 @@
   description: "Waiting on the stream steward's direction decision"
 - name: "status: blocked"
   color: "B60205"
-  description: "Human-set only: waiting on something. Runners ignore it (they only pick up status: available)"
+  description: "Human-set, plus one automated exception — start_work.sh's claim-fail backoff parks a chronically no-PR issue here (#766, ADR-0025). Un-blocking is human-only. Runners ignore it (they only pick up status: available)"
 - name: "status: done"
   color: "5319E7"
   description: "Merged and complete"
