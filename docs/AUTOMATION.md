@@ -58,7 +58,7 @@ The full vocabulary, in one table:
 | `status: changes-requested` | issues | `review_work.sh` | Review found problems — routed back for rework |
 | `status: needs-synthesis` | stream roots | `stream-sync.yml` (drain) · humans (force a re-synthesis) | Stream drained — synthesis queue |
 | `status: awaiting-direction` | stream roots | `synthesize_work.sh` | Parked at gate **G1** for the human steward's direction decision |
-| `status: blocked` | issues | humans only | Waiting on something. Runners ignore it either way |
+| `status: blocked` | issues | humans · `start_work.sh` (claim-fail cap, #766) | Waiting on something. Runners ignore it either way. Only the backoff (ADR-0025) sets it automatically; un-blocking is human-only |
 | `status: done` | issues | merge automation | Merged and complete |
 | `review: claimed` | PRs | `review_work.sh` | A reviewer is holding this PR (double-review lock) |
 | `review: human-only` | PRs | maintainers | Pipeline/governance change — humans review and merge, agents skip |
