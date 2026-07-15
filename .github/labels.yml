@@ -69,6 +69,9 @@
 - name: "feedback"
   color: "0EA5E9"
   description: "Stakeholder / domain-expert feedback on a stream"
+- name: "feedback: needs-fix"
+  color: "E11D48"
+  description: "Feedback filing failed the consent/PII validator (ADR-0026) — see the report comment for the exact repair"
 
 # --- Review: PR-scoped review-loop markers (NOT issue lifecycle states) ---
 - name: "review: claimed"

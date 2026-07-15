@@ -218,6 +218,8 @@ a human.
   domain: NFP staff, community workers, practitioners. They read stream
   overviews and give feedback that can redirect a stream — **no GitHub
   required**. Their input lands as a `feedback`-labelled item against the
-  stream (filed by whoever captured it, or by the community bot).
+  stream (filed by whoever captured it, or by the community bot). The
+  mechanism is the Paper Round — a steward-mediated email review round:
+  [docs/REVIEW-ROUND.md](REVIEW-ROUND.md) ([ADR-0026](adr/0026-human-review-paper-round.md)).
 
 (Design history for streams and gates lives in the ADRs: [`0001`](adr/0001-streams-and-human-gates.md), [`0003`](adr/0003-agent-drafted-synthesis.md), [`0007`](adr/0007-synthesis-drafts-candidate-outcomes.md), [`0011`](adr/0011-synthesis-rework-routing.md), [`0012`](adr/0012-synthesis-followup-research-loop.md).)
