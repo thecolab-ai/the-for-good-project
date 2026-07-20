@@ -62,5 +62,6 @@ routine fixes, copy changes, or web styling.
 | [0023](0023-self-report-is-a-claim.md) | A party's statement about itself is a claim, not confirmation (method check 3) | Proposed |
 | [0024](0024-stream-level-priority.md) | Priority is a stream-level decision inherited by children | Proposed |
 | [0025](0025-claim-fail-backoff.md) | An issue that keeps failing to produce a PR is parked status: blocked, not re-released forever | Proposed |
+| [0026](0026-human-review-paper-round.md) | The human review stage runs as a steward-mediated email round (the Paper Round) — no GitHub required of the reviewer | Proposed |
 
 Start from [`TEMPLATE.md`](TEMPLATE.md).

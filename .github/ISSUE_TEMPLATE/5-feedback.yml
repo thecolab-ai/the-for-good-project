@@ -1,0 +1,83 @@
+name: "💬 Stakeholder feedback (filed on a reviewer's behalf)"
+description: File a review round's feedback against a stream — used by the steward or whoever captured it. The reviewer never needs GitHub.
+title: "[Feedback] <stream topic> — review round"
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This lands a non-GitHub reviewer's judgement in the repo (**[ADR-0026](../blob/main/docs/adr/0026-human-review-paper-round.md)**). Before filing, you must have followed the SOP in [`docs/REVIEW-ROUND.md`](../blob/main/docs/REVIEW-ROUND.md): sanitized the reply (no names, emails, phones — run `npm run redact-check`), read the transcription back to the reviewer, and recorded their consent in `partners/`. A validator checks this issue mechanically and fails closed with the exact fix if something's off.
+  - type: input
+    id: stream
+    attributes:
+      label: Stream
+      description: "The stream root this feedback is about — write it exactly as `Stream: #<number>` so the stream label propagates automatically."
+      placeholder: "Stream: #442"
+    validations:
+      required: true
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer (role + sector — never a name)
+      description: Who gave this feedback, described at their consent level. No personal name, ever.
+      placeholder: "an aged-care banker (15 yrs in the sector)"
+    validations:
+      required: true
+  - type: dropdown
+    id: consent
+    attributes:
+      label: Consent tier
+      description: What the reviewer agreed to (ADR-0010). When in doubt, private.
+      options:
+        - private — role + sector only, no organisation named (default)
+        - org-named — the organisation may be named in this feedback
+        - public — the organisation is openly credited as a reviewer
+    validations:
+      required: true
+  - type: input
+    id: organisation
+    attributes:
+      label: Organisation (only if tier is org-named or public)
+      description: Must match a `partners/` record whose recorded consent allows it. Leave empty for private.
+    validations:
+      required: false
+  - type: textarea
+    id: verdicts
+    attributes:
+      label: What the reviewer said — verdicts on the sheet
+      description: Their words (sanitized), one row per claim from the review sheet.
+      placeholder: |
+        | # | Claim (short) | Verdict | Correction / detail | Where they'd check |
+        |---|---|---|---|---|
+        | 1 | Subsidy cap is $X/week | Wrong | Cap is $Y since the 2025 review | MSD operational guidelines |
+        | 2 | 40% of facilities run at a loss | Can't say | Outside their patch | — |
+    validations:
+      required: true
+  - type: textarea
+    id: judgement
+    attributes:
+      label: Judgement answers (worth pursuing? which direction first?)
+      description: Their answers to the sheet's two closing questions, if given.
+    validations:
+      required: false
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Provenance
+      description: Who filed this, on whose behalf, read-back date, and where consent is recorded.
+      placeholder: "Filed by @steward on behalf of the reviewer above. Read-back confirmed 2026-07-15. Consent (tier + date) recorded in partners/ via manage-partner."
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file (the SOP's hard gates — docs/REVIEW-ROUND.md)
+      options:
+        - label: I sanitized the reply BEFORE any agent saw it, and no personal name, email, phone number, or identifying detail of any individual appears above (I ran `npm run redact-check` on this body).
+          required: true
+        - label: I read the transcribed verdicts back to the reviewer and they confirmed I haven't misquoted them.
+          required: true
+        - label: The consent tier above is what the reviewer actually agreed to, and it is recorded (tier + date + how) in their `partners/` record.
+          required: true
+        - label: The raw reply will be deleted within 30 days of this round closing.
+          required: true
