@@ -14,6 +14,9 @@
     --paper: #faf7f0;
     --line: #e4ddce;
     --good: #1a7f4b;
+    --high: #1a7f4b;
+    --medium: #b8860b;
+    --low: #a83232;
   }
   * { box-sizing: border-box; }
   body {
@@ -46,7 +49,7 @@
     font-size: 14px;
   }
   main {
-    max-width: 560px;
+    max-width: 620px;
     margin: 0 auto;
     padding: 20px 16px 60px;
   }
@@ -83,6 +86,17 @@
     color: #555;
     margin: 0 0 4px;
   }
+  .method-box {
+    background: #f6f3ea;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: #444;
+  }
+  .method-box ol { margin: 6px 0 0; padding-left: 18px; }
+  .method-box li { margin-bottom: 3px; }
   .skills-note {
     font-size: 13px;
     color: #555;
@@ -120,18 +134,29 @@
     font-weight: 500;
     flex: 1 1 100%;
   }
-  textarea {
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--navy-2);
+    margin: 14px 0 6px;
+  }
+  label.field-label:first-of-type { margin-top: 0; }
+  textarea, input[type="text"], input[type="url"], select {
     width: 100%;
-    min-height: 110px;
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 10px;
     font-size: 14px;
     font-family: inherit;
-    resize: vertical;
   }
+  textarea#reportBody { min-height: 150px; resize: vertical; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
   .submit-btn {
-    margin-top: 10px;
+    margin-top: 16px;
     width: 100%;
     padding: 12px;
     border: none;
@@ -147,31 +172,66 @@
     background: #0e1224;
     color: #7ee787;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
+    font-size: 11px;
     border-radius: 8px;
     padding: 12px;
     white-space: pre-wrap;
     word-break: break-word;
     margin-top: 12px;
     display: none;
+    max-height: 260px;
+    overflow-y: auto;
   }
   .wall {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
     margin-top: 10px;
   }
-  .wall-item {
-    border-left: 3px solid var(--gold);
-    background: #fbf8f1;
-    padding: 10px 12px;
-    border-radius: 0 8px 8px 0;
-    font-size: 13px;
+  .report {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    background: #fffdf8;
+    padding: 14px 16px;
+    border-radius: 0 10px 10px 0;
   }
-  .wall-item .meta {
+  .report .report-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .report .report-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy-2);
+  }
+  .chip {
     font-size: 11px;
-    color: #888;
-    margin-bottom: 4px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .chip.high { background: var(--high); }
+  .chip.medium { background: var(--medium); }
+  .chip.low { background: var(--low); }
+  .report .report-body {
+    font-size: 13.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .report .report-source {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  .report .report-source a { color: var(--navy-2); }
+  .report .report-meta {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #999;
   }
   .empty {
     font-size: 13px;
@@ -196,7 +256,7 @@
 
 <header>
   <div class="eyebrow">The Colab × For Good — Tech Expo POC</div>
-  <h1>Scan. Get a task. Point your own AI at it.</h1>
+  <h1>Scan. Get a brief. Produce a real research report.</h1>
   <p>Proof of concept — simulates the live distributed-research demo. No real backend yet: everything below runs in your browser only.</p>
 </header>
 
@@ -206,13 +266,25 @@
   </div>
 
   <div class="card">
-    <h2>Your task</h2>
+    <h2>Your research brief</h2>
     <p class="task-text" id="taskText">Loading…</p>
-    <p class="task-hint">Open it in your own Claude or ChatGPT app, get an answer, then come back and paste it in below.</p>
+    <p class="task-hint">Open it in your own Claude or ChatGPT app, let it do the work, then come back and paste the structured result in below.</p>
+
+    <div class="method-box">
+      This follows The Colab's own For Good research method — every task asks for:
+      <ol>
+        <li><strong>Executive answer</strong> — the direct answer, 1–2 sentences</li>
+        <li><strong>Evidence</strong> — 2–3 sourced facts, not vibes</li>
+        <li><strong>Confidence</strong> — High / Medium / Low, honestly rated</li>
+        <li><strong>What would change this</strong> — what info would flip the conclusion</li>
+      </ol>
+      Same shape as a real finding in <code>research/findings/</code> on the For Good repo — just compressed into a 5–10 minute phone task.
+    </div>
+
     <p class="skills-note">
-      These tasks lean on <a href="https://github.com/thecolab-ai/.skills" target="_blank" rel="noopener">thecolab-ai/.skills</a> —
+      Grounded in <a href="https://github.com/thecolab-ai/.skills" target="_blank" rel="noopener">thecolab-ai/.skills</a> —
       100+ keyless, open NZ public-data tools (fuel prices, DOC huts, libraries, grants, GeoNet, and more) built by The Colab community.
-      Your AI doesn't need the skill installed — it just needs to find the same public data any way it can.
+      Your AI doesn't need the skill installed — it just needs to find the same kind of public data any way it can, and cite it.
     </p>
 
     <div class="btn-row">
@@ -220,21 +292,39 @@
       <a class="btn secondary" id="openChatGPT" href="#" target="_blank" rel="noopener">Open with ChatGPT</a>
     </div>
     <div class="btn-row">
-      <button class="btn reroll" id="reroll" type="button">🎲 Give me a different task</button>
+      <button class="btn reroll" id="reroll" type="button">🎲 Give me a different brief</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>Submit your finding</h2>
-    <textarea id="answer" placeholder="Paste what your AI told you (a sentence or two is fine)…"></textarea>
-    <button class="submit-btn" id="submitBtn">Submit to the live wall</button>
+    <h2>Submit your research report</h2>
+
+    <label class="field-label" for="reportBody">Full report (paste your AI's structured answer)</label>
+    <textarea id="reportBody" placeholder="Executive answer: ...&#10;Evidence: ...&#10;Confidence: ...&#10;What would change this: ..."></textarea>
+
+    <div class="row2">
+      <div>
+        <label class="field-label" for="confidence">Confidence</label>
+        <select id="confidence">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label" for="sourceUrl">Primary source URL (optional)</label>
+        <input type="url" id="sourceUrl" placeholder="https://…" />
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn">Submit report to the live wall</button>
     <div class="log" id="log"></div>
   </div>
 
   <div class="card">
-    <h2>Live wall (this device only, for now)</h2>
+    <h2>Live research wall (this device only, for now)</h2>
     <div class="wall" id="wall">
-      <p class="empty">No submissions yet — yours will show up here.</p>
+      <p class="empty">No reports yet — yours will show up here.</p>
     </div>
   </div>
 </main>
@@ -247,35 +337,51 @@
   const TASKS = [
     {
       id: "fuel",
-      label: "Today's average NZ 91 petrol price",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills for the kind of live NZ public data it uses — this one covers fuel prices). Task: find today's approximate average NZ price per litre for 91 petrol, from any public source you can access. Reply in 2-3 sentences with your answer and where it came from."
+      label: "What's today's approximate average NZ price for 91 petrol, and how has it moved recently?",
+      skill: "fuelclock-nz"
     },
     {
       id: "doc-hut",
-      label: "One DOC hut within 50km of Wellington, and its bunk count",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a doc-nz tool for exactly this kind of data). Task: name one Department of Conservation hut within roughly 50km of Wellington and how many bunks it has, from any public source you can access. Reply in 2-3 sentences with your answer and source."
+      label: "Name a DOC hut within roughly 50km of Wellington, its bunk count, and what it costs to book.",
+      skill: "doc-nz"
     },
     {
       id: "quake",
-      label: "The most recent NZ earthquake over magnitude 3.0",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a geonet-nz tool for exactly this). Task: find the most recent New Zealand earthquake of magnitude 3.0 or greater — when and roughly where. Reply in 2-3 sentences with your answer and source."
+      label: "What was New Zealand's most recent earthquake of magnitude 3.0 or greater — when, where, how strong?",
+      skill: "geonet-nz"
     },
     {
       id: "grant",
-      label: "One Class 4 gambling-grant recipient in your region",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a class4-grants-nz tool for exactly this). Task: find one organisation that has received a Class 4 gambling-machine grant in New Zealand, and roughly how much. Reply in 2-3 sentences with your answer and source."
+      label: "Find one organisation that has received a Class 4 gambling-machine grant in NZ, and roughly how much.",
+      skill: "class4-grants-nz"
     },
     {
       id: "library",
-      label: "Whether a popular book is available at a local public library",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has an nz-libraries tool for exactly this). Task: check whether a well-known recent bestselling book is listed as available at any New Zealand public library you can find information on. Reply in 2-3 sentences with your answer and source."
+      label: "Check whether a well-known recent bestselling book is listed as available at any NZ public library.",
+      skill: "nz-libraries"
     },
     {
       id: "roadworks",
-      label: "How many NZTA state-highway roadworks are active in one region right now",
-      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has an nz-road-closures tool for exactly this). Task: find roughly how many NZTA/Waka Kotahi state-highway roadworks or closures are currently active in one New Zealand region of your choice. Reply in 2-3 sentences with your answer and source."
+      label: "Roughly how many NZTA state-highway roadworks or closures are currently active in one NZ region?",
+      skill: "nz-road-closures"
     }
   ];
+
+  function buildPrompt(task) {
+    return [
+      "You're helping The Colab's For Good project, an open New Zealand research commons.",
+      "It follows a strict research method (see thecolab-ai/the-for-good-project, docs/METHOD.md) and vendors 100+ keyless NZ public-data tools at github.com/thecolab-ai/.skills — this task is the kind the '" + task.skill + "' tool covers, but you don't need the tool itself, just find the equivalent public data any way you can.",
+      "",
+      "TASK: " + task.label,
+      "",
+      "Produce a short, well-sourced research brief — not a one-liner — in EXACTLY this structure:",
+      "1. Executive answer: the direct answer, 1-2 sentences.",
+      "2. Evidence: 2-3 bullet points, each a specific fact with a real, named source (publication/site + what it says).",
+      "3. Confidence: High / Medium / Low, with one sentence on why.",
+      "4. What would change this: one sentence on what information would change the conclusion.",
+      "Keep the whole thing tight enough to read in under a minute — this is a 5-10 minute task, not a deep dive."
+    ].join("\n");
+  }
 
   let current = null;
 
@@ -288,10 +394,11 @@
   function renderTask(task) {
     current = task;
     document.getElementById("taskText").textContent = task.label;
+    const prompt = buildPrompt(task);
     document.getElementById("openClaude").href =
-      "https://claude.ai/new?q=" + encodeURIComponent(task.prompt);
+      "https://claude.ai/new?q=" + encodeURIComponent(prompt);
     document.getElementById("openChatGPT").href =
-      "https://chatgpt.com/?q=" + encodeURIComponent(task.prompt);
+      "https://chatgpt.com/?q=" + encodeURIComponent(prompt);
   }
 
   document.getElementById("reroll").addEventListener("click", () => {
@@ -304,22 +411,35 @@
   const wall = document.getElementById("wall");
   const submitBtn = document.getElementById("submitBtn");
 
+  function randomDeviceId() {
+    return "device-" + Math.random().toString(36).slice(2, 8);
+  }
+  const deviceId = randomDeviceId();
+
   submitBtn.addEventListener("click", () => {
-    const answerEl = document.getElementById("answer");
-    const answer = answerEl.value.trim();
-    if (!answer) {
-      answerEl.focus();
+    const bodyEl = document.getElementById("reportBody");
+    const body = bodyEl.value.trim();
+    if (!body) {
+      bodyEl.focus();
       return;
     }
+    const confidence = document.getElementById("confidence").value;
+    const sourceUrl = document.getElementById("sourceUrl").value.trim();
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting…";
 
     const payload = {
-      task: current.id,
-      taskLabel: current.label,
-      answer,
-      ts: new Date().toISOString()
+      task_id: current.id,
+      task_label: current.label,
+      skill_reference: current.skill,
+      report_body: body,
+      confidence,
+      source_url: sourceUrl || null,
+      device_id: deviceId,
+      submitted_at: new Date().toISOString(),
+      agent: "unspecified (Claude or ChatGPT, self-reported)",
+      schema: "for-good.tech-expo-poc.v1"
     };
 
     log.style.display = "block";
@@ -328,21 +448,29 @@
       JSON.stringify(payload, null, 2) +
       "\n\n> 202 Accepted (SIMULATED — no real backend wired up yet)";
 
-    // Simulated network delay so it reads as "doing something" on stage.
     setTimeout(() => {
       const empty = wall.querySelector(".empty");
       if (empty) empty.remove();
 
+      const conf = (confidence || "Medium").toLowerCase();
       const item = document.createElement("div");
-      item.className = "wall-item";
+      item.className = "report";
       item.innerHTML =
-        '<div class="meta">' + payload.taskLabel + " · just now</div>" +
-        "<div>" + answer.replace(/</g, "&lt;") + "</div>";
+        '<div class="report-head">' +
+          '<div class="report-title">' + payload.task_label + '</div>' +
+          '<span class="chip ' + conf + '">' + confidence + '</span>' +
+        '</div>' +
+        '<div class="report-body">' + body.replace(/</g, "&lt;") + '</div>' +
+        (sourceUrl
+          ? '<div class="report-source">Source: <a href="' + sourceUrl.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener">' + sourceUrl.replace(/</g, "&lt;") + '</a></div>'
+          : '') +
+        '<div class="report-meta">' + deviceId + ' · just now · simulated, this device only</div>';
       wall.prepend(item);
 
       submitBtn.disabled = false;
-      submitBtn.textContent = "Submit to the live wall";
-      answerEl.value = "";
+      submitBtn.textContent = "Submit report to the live wall";
+      bodyEl.value = "";
+      document.getElementById("sourceUrl").value = "";
     }, 600);
   });
 </script>
