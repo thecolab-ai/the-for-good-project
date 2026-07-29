@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Colab × For Good — Live Research Demo (POC)</title>
+<meta name="robots" content="noindex" />
+<style>
+  :root {
+    --navy: #0b1530;
+    --navy-2: #131f45;
+    --gold: #d9b26a;
+    --ink: #1a1a1a;
+    --paper: #faf7f0;
+    --line: #e4ddce;
+    --good: #1a7f4b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--navy), var(--navy-2));
+    color: #fff;
+    padding: 28px 20px 24px;
+  }
+  header .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  header h1 {
+    margin: 6px 0 4px;
+    font-size: 22px;
+    line-height: 1.25;
+  }
+  header p {
+    margin: 0;
+    color: #cfd6ea;
+    font-size: 14px;
+  }
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+  .banner {
+    background: #fff3cd;
+    border: 1px solid #e9c46a;
+    color: #6b4c00;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 15px;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--navy-2);
+  }
+  .task-text {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .task-hint {
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 4px;
+  }
+  .skills-note {
+    font-size: 13px;
+    color: #555;
+  }
+  .skills-note a { color: var(--navy-2); }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    flex: 1 1 150px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid var(--navy);
+    color: #fff;
+    background: var(--navy);
+  }
+  .btn.secondary {
+    background: #fff;
+    color: var(--navy);
+  }
+  .btn.reroll {
+    background: transparent;
+    color: var(--navy-2);
+    border: 1px dashed var(--line);
+    font-weight: 500;
+    flex: 1 1 100%;
+  }
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .submit-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 9px;
+    background: var(--good);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .log {
+    background: #0e1224;
+    color: #7ee787;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 12px;
+    display: none;
+  }
+  .wall {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .wall-item {
+    border-left: 3px solid var(--gold);
+    background: #fbf8f1;
+    padding: 10px 12px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+  }
+  .wall-item .meta {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  .empty {
+    font-size: 13px;
+    color: #888;
+    font-style: italic;
+  }
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    padding: 10px 20px 40px;
+  }
+  code {
+    background: #f1ede0;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">The Colab × For Good — Tech Expo POC</div>
+  <h1>Scan. Get a task. Point your own AI at it.</h1>
+  <p>Proof of concept — simulates the live distributed-research demo. No real backend yet: everything below runs in your browser only.</p>
+</header>
+
+<main>
+  <div class="banner">
+    This is a <strong>simulation</strong> for planning purposes. "Open with Claude/ChatGPT" links are best-effort deep links (providers can change how these behave — test before the event). Submissions below are <strong>not</strong> sent anywhere real yet; a shared live wall for the big screen needs a small backend, which is the next build step.
+  </div>
+
+  <div class="card">
+    <h2>Your task</h2>
+    <p class="task-text" id="taskText">Loading…</p>
+    <p class="task-hint">Open it in your own Claude or ChatGPT app, get an answer, then come back and paste it in below.</p>
+    <p class="skills-note">
+      These tasks lean on <a href="https://github.com/thecolab-ai/.skills" target="_blank" rel="noopener">thecolab-ai/.skills</a> —
+      100+ keyless, open NZ public-data tools (fuel prices, DOC huts, libraries, grants, GeoNet, and more) built by The Colab community.
+      Your AI doesn't need the skill installed — it just needs to find the same public data any way it can.
+    </p>
+
+    <div class="btn-row">
+      <a class="btn" id="openClaude" href="#" target="_blank" rel="noopener">Open with Claude</a>
+      <a class="btn secondary" id="openChatGPT" href="#" target="_blank" rel="noopener">Open with ChatGPT</a>
+    </div>
+    <div class="btn-row">
+      <button class="btn reroll" id="reroll" type="button">🎲 Give me a different task</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Submit your finding</h2>
+    <textarea id="answer" placeholder="Paste what your AI told you (a sentence or two is fine)…"></textarea>
+    <button class="submit-btn" id="submitBtn">Submit to the live wall</button>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>Live wall (this device only, for now)</h2>
+    <div class="wall" id="wall">
+      <p class="empty">No submissions yet — yours will show up here.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  thecolab.ai — For Good project — Tech Expo demo build, draft, not for public distribution yet.
+</footer>
+
+<script>
+  const TASKS = [
+    {
+      id: "fuel",
+      label: "Today's average NZ 91 petrol price",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills for the kind of live NZ public data it uses — this one covers fuel prices). Task: find today's approximate average NZ price per litre for 91 petrol, from any public source you can access. Reply in 2-3 sentences with your answer and where it came from."
+    },
+    {
+      id: "doc-hut",
+      label: "One DOC hut within 50km of Wellington, and its bunk count",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a doc-nz tool for exactly this kind of data). Task: name one Department of Conservation hut within roughly 50km of Wellington and how many bunks it has, from any public source you can access. Reply in 2-3 sentences with your answer and source."
+    },
+    {
+      id: "quake",
+      label: "The most recent NZ earthquake over magnitude 3.0",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a geonet-nz tool for exactly this). Task: find the most recent New Zealand earthquake of magnitude 3.0 or greater — when and roughly where. Reply in 2-3 sentences with your answer and source."
+    },
+    {
+      id: "grant",
+      label: "One Class 4 gambling-grant recipient in your region",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has a class4-grants-nz tool for exactly this). Task: find one organisation that has received a Class 4 gambling-machine grant in New Zealand, and roughly how much. Reply in 2-3 sentences with your answer and source."
+    },
+    {
+      id: "library",
+      label: "Whether a popular book is available at a local public library",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has an nz-libraries tool for exactly this). Task: check whether a well-known recent bestselling book is listed as available at any New Zealand public library you can find information on. Reply in 2-3 sentences with your answer and source."
+    },
+    {
+      id: "roadworks",
+      label: "How many NZTA state-highway roadworks are active in one region right now",
+      prompt: "You're helping The Colab's For Good project, an open NZ research commons (see github.com/thecolab-ai/.skills — it has an nz-road-closures tool for exactly this). Task: find roughly how many NZTA/Waka Kotahi state-highway roadworks or closures are currently active in one New Zealand region of your choice. Reply in 2-3 sentences with your answer and source."
+    }
+  ];
+
+  let current = null;
+
+  function pickTask(excludeId) {
+    let pool = TASKS;
+    if (excludeId && TASKS.length > 1) pool = TASKS.filter(t => t.id !== excludeId);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function renderTask(task) {
+    current = task;
+    document.getElementById("taskText").textContent = task.label;
+    document.getElementById("openClaude").href =
+      "https://claude.ai/new?q=" + encodeURIComponent(task.prompt);
+    document.getElementById("openChatGPT").href =
+      "https://chatgpt.com/?q=" + encodeURIComponent(task.prompt);
+  }
+
+  document.getElementById("reroll").addEventListener("click", () => {
+    renderTask(pickTask(current && current.id));
+  });
+
+  renderTask(pickTask());
+
+  const log = document.getElementById("log");
+  const wall = document.getElementById("wall");
+  const submitBtn = document.getElementById("submitBtn");
+
+  submitBtn.addEventListener("click", () => {
+    const answerEl = document.getElementById("answer");
+    const answer = answerEl.value.trim();
+    if (!answer) {
+      answerEl.focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
+
+    const payload = {
+      task: current.id,
+      taskLabel: current.label,
+      answer,
+      ts: new Date().toISOString()
+    };
+
+    log.style.display = "block";
+    log.textContent =
+      "> POST /api/submissions\n" +
+      JSON.stringify(payload, null, 2) +
+      "\n\n> 202 Accepted (SIMULATED — no real backend wired up yet)";
+
+    // Simulated network delay so it reads as "doing something" on stage.
+    setTimeout(() => {
+      const empty = wall.querySelector(".empty");
+      if (empty) empty.remove();
+
+      const item = document.createElement("div");
+      item.className = "wall-item";
+      item.innerHTML =
+        '<div class="meta">' + payload.taskLabel + " · just now</div>" +
+        "<div>" + answer.replace(/</g, "&lt;") + "</div>";
+      wall.prepend(item);
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit to the live wall";
+      answerEl.value = "";
+    }, 600);
+  });
+</script>
+
+</body>
+</html>
