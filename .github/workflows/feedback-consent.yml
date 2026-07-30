@@ -1,0 +1,96 @@
+# Consent/PII gate for stakeholder feedback (ADR-0026) — zero model tokens.
+#
+# Every `feedback`-labelled issue (the Paper Round's landing artifact,
+# docs/REVIEW-ROUND.md) is validated mechanically by
+# scripts/check-feedback-consent.mjs: stream link, consent tier, org-naming
+# vs the partners/ registry, emails/phones/secrets, and the SOP's hard
+# gates. Failures FAIL CLOSED: the issue gets `feedback: needs-fix` plus a
+# comment with the exact repair; a later edit that passes clears the label.
+#
+# The same run counts feedback rounds in the last 30 days — ADR-0026's
+# escalation trigger (>5/month => consider the v2 web surface) is observable,
+# not self-reported.
+name: Feedback consent gate
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: feedback-consent-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'feedback') ||
+      github.event.label.name == 'feedback'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate the filing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -uo pipefail
+          fixlabel="feedback: needs-fix"
+          marker="<!-- feedback-consent-report -->"
+
+          ok=0; report=$(node scripts/check-feedback-consent.mjs) || ok=$?
+          printf '%s\n' "$report" >> "$GITHUB_STEP_SUMMARY"
+
+          # Upsert one report comment instead of stacking a new one per edit.
+          existing=$(gh api "repos/$REPO/issues/$NUM/comments" --paginate \
+            --jq "[.[] | select(.body | startswith(\"$marker\"))][0].id // empty" 2>/dev/null || true)
+          body=$(printf '%s\n%s' "$marker" "$report")
+
+          if [ "$ok" -ne 0 ]; then
+            gh label create "$fixlabel" --repo "$REPO" --color E11D48 \
+              --description "Feedback filing failed the consent/PII validator — see the report comment" 2>/dev/null || true
+            gh issue edit "$NUM" --repo "$REPO" --add-label "$fixlabel" || true
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "repos/$REPO/issues/comments/$existing" -f body="$body" >/dev/null
+            else
+              gh issue comment "$NUM" --repo "$REPO" --body "$body" >/dev/null
+            fi
+            echo "::error::Feedback filing on #$NUM failed the consent/PII validator (fail closed)."
+            exit 1
+          fi
+
+          # Passing: clear our label and refresh the report comment if one exists.
+          if gh issue view "$NUM" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qxF "$fixlabel"; then
+            gh issue edit "$NUM" --repo "$REPO" --remove-label "$fixlabel" || true
+            [ -n "$existing" ] && gh api -X PATCH "repos/$REPO/issues/comments/$existing" -f body="$body" >/dev/null
+          fi
+          echo "Feedback filing on #$NUM passes."
+
+      - name: Count rounds (ADR-0026 escalation trigger)
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          set -uo pipefail
+          since=$(date -u -d '30 days ago' +%Y-%m-%d)
+          count=$(gh issue list --repo "$REPO" --label feedback --state all \
+            --search "created:>=$since" --json number --jq 'length' 2>/dev/null || echo 0)
+          echo "Feedback rounds in the last 30 days: $count (trigger: >5 — ADR-0026)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -gt 5 ]; then
+            marker="<!-- feedback-volume-note -->"
+            existing=$(gh api "repos/$REPO/issues/$NUM/comments" --paginate \
+              --jq "[.[] | select(.body | startswith(\"$marker\"))][0].id // empty" 2>/dev/null || true)
+            [ -n "$existing" ] && exit 0
+            gh issue comment "$NUM" --repo "$REPO" --body "$(printf '%s\n%s' "$marker" \
+              "📈 That's **$count feedback rounds in the last 30 days** — past the >5/month tripwire in [ADR-0026](../blob/main/docs/adr/0026-human-review-paper-round.md). The email round may be saturating: time for a steward/maintainer to consider the pre-agreed v2 (a web review surface reusing this same feedback structure), via a superseding ADR.")" >/dev/null || true
+          fi

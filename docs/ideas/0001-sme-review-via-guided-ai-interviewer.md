@@ -1,6 +1,6 @@
 # IR-0001: SME review via a guided (voice-optional) AI interviewer
 
-- **Status:** exploring
+- **Status:** exploring — positioned as a v2 rung of the Paper Round ([ADR-0026](../adr/0026-human-review-paper-round.md)): the interviewer would feed the same review sheet + feedback filing, not replace them
 - **Date:** 2026-07-09
 - **Champions:** Matt (raised it), Adam (voice-driven adaptive questionnaire), Joe Sutheran (custom-GPT interviewer with a shareable transcript)
 - **Discussion:** For Good WhatsApp thread, 2026-07-09 (during the first live SME review of the #442 aged-care funding guide)

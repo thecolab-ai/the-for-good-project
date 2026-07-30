@@ -7,7 +7,9 @@
     "fetch": "node scripts/fetch.mjs",
     "archive": "node scripts/archive-cite.mjs",
     "cloak": "node scripts/cloak-fetch.mjs",
-    "validate": "node scripts/validate-findings.mjs"
+    "validate": "node scripts/validate-findings.mjs",
+    "redact-check": "node scripts/redact-check.mjs",
+    "check-feedback-consent": "node scripts/check-feedback-consent.mjs"
   },
   "dependencies": {
     "cloakbrowser": "^0.4.8",
