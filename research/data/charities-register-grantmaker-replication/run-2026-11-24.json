@@ -1,0 +1,1569 @@
+{
+  "meta": {
+    "accessedAt": "2026-11-24T00:23:29.361Z",
+    "source": "https://www.odata.charities.govt.nz (Charities Services open data, CC BY 3.0 NZ)",
+    "published": {
+      "pulledAt": "2026-07-02T10:33:00Z",
+      "conservativeCount": 5568,
+      "conservativeSum": 1210961861,
+      "broadCount": 10873,
+      "broadSum": 1855868384
+    },
+    "definitions": {
+      "explicitSignal": "PurposeToGiveGrantsAndDonations OR OrganisationGeneratesFundsGrantsDonationsToOthers OR MainActivityId in {2,3}",
+      "grantSpend": "GrantsPaidWithinNZ + GrantsPaidOutsideNZ + GrantsorDonationsPaid + GrantsAndDonationsMade",
+      "conservative": "explicit signal AND grantSpend > 0 on the latest return",
+      "broad": "grantSpend > 0 on the latest return",
+      "staleBefore": "2024-01-01",
+      "passThrough": "(GrantsRevenueFromOtherSources + GeneralGrantsReceived + AllOtherGrantsAndSponsorship) / TotalGrossIncome >= 0.5"
+    },
+    "pulls": {
+      "registeredOrganisations": 29334,
+      "registeredGroups": 292,
+      "latestReturnRows": 27616,
+      "annualReturnRowsAllYears": 432743
+    }
+  },
+  "faithful": {
+    "signalEntities": 9728,
+    "signalWithLatestReturn": 9116,
+    "signalWithoutLatestReturn": 612,
+    "conservative": {
+      "entities": 5629,
+      "grantSpendNZD": 1522261720
+    },
+    "broad": {
+      "entities": 11066,
+      "grantSpendNZD": 2093081600
+    },
+    "changeVsPublished": {
+      "conservativeEntities": 61,
+      "conservativeSpendNZD": 311299859,
+      "broadEntities": 193,
+      "broadSpendNZD": 237213216
+    }
+  },
+  "independent": {
+    "registeredEntitiesWithAnyReturn": 27615,
+    "conservative": {
+      "entities": 5629,
+      "grantSpendNZD": 1522261720
+    },
+    "broad": {
+      "entities": 11066,
+      "grantSpendNZD": 2093081600
+    },
+    "agreementWithFaithful": {
+      "inBoth": 5629,
+      "onlyFaithful": 0,
+      "onlyIndependent": 0,
+      "sameAnnualReturnId": 5629,
+      "sameGrantSpend": 5629,
+      "onlyFaithfulSample": [],
+      "onlyIndependentSample": []
+    }
+  },
+  "sensitivity": {
+    "latestReturnYear": {
+      "2008": {
+        "entities": 1,
+        "grantSpendNZD": 1440
+      },
+      "2009": {
+        "entities": 1,
+        "grantSpendNZD": 161550
+      },
+      "2011": {
+        "entities": 4,
+        "grantSpendNZD": 1982966
+      },
+      "2014": {
+        "entities": 2,
+        "grantSpendNZD": 146100
+      },
+      "2015": {
+        "entities": 20,
+        "grantSpendNZD": 25446702
+      },
+      "2016": {
+        "entities": 5,
+        "grantSpendNZD": 681176
+      },
+      "2017": {
+        "entities": 10,
+        "grantSpendNZD": 1234699
+      },
+      "2018": {
+        "entities": 1,
+        "grantSpendNZD": 760
+      },
+      "2019": {
+        "entities": 7,
+        "grantSpendNZD": 588069
+      },
+      "2020": {
+        "entities": 2,
+        "grantSpendNZD": 14500
+      },
+      "2021": {
+        "entities": 6,
+        "grantSpendNZD": 112551
+      },
+      "2022": {
+        "entities": 8,
+        "grantSpendNZD": 595558
+      },
+      "2023": {
+        "entities": 4,
+        "grantSpendNZD": 260850
+      },
+      "2024": {
+        "entities": 166,
+        "grantSpendNZD": 12613488
+      },
+      "2025": {
+        "entities": 2474,
+        "grantSpendNZD": 817299064
+      },
+      "2026": {
+        "entities": 2918,
+        "grantSpendNZD": 661122247
+      }
+    },
+    "stale": {
+      "entities": 71,
+      "grantSpendNZD": 31226921,
+      "largest": [
+        {
+          "registrationNumber": "CC43066",
+          "yearEnded": "2015-03-31",
+          "grantSpendNZD": 21193000
+        },
+        {
+          "registrationNumber": "CC40357",
+          "yearEnded": "2015-06-30",
+          "grantSpendNZD": 2218518
+        },
+        {
+          "registrationNumber": "CC23052",
+          "yearEnded": "2011-06-30",
+          "grantSpendNZD": 1696169
+        },
+        {
+          "registrationNumber": "CC50870",
+          "yearEnded": "2017-03-31",
+          "grantSpendNZD": 765138
+        },
+        {
+          "registrationNumber": "CC37698",
+          "yearEnded": "2019-03-31",
+          "grantSpendNZD": 420000
+        }
+      ]
+    },
+    "groupMemberOverlap": {
+      "groupsInSet": 42,
+      "groupSpendNZD": 153604882,
+      "membersUnderGroupsInSet": {
+        "entities": 21,
+        "grantSpendNZD": 28506820
+      }
+    },
+    "passThrough": {
+      "entities": 178,
+      "grantSpendNZD": 115381492
+    },
+    "spendFieldCoverageByYear": {
+      "2007": {
+        "returns": 81,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 81,
+          "GrantsPaidOutsideNZ": 81,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 1874517,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2008": {
+        "returns": 1175,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 1175,
+          "GrantsPaidOutsideNZ": 1175,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 64579135,
+          "GrantsPaidOutsideNZ": 5364417,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2009": {
+        "returns": 4142,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 4142,
+          "GrantsPaidOutsideNZ": 4142,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 296723639,
+          "GrantsPaidOutsideNZ": 36321519,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2010": {
+        "returns": 4649,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 4649,
+          "GrantsPaidOutsideNZ": 4649,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 405808099,
+          "GrantsPaidOutsideNZ": 51808573,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2011": {
+        "returns": 5049,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 5049,
+          "GrantsPaidOutsideNZ": 5049,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 439475237,
+          "GrantsPaidOutsideNZ": 45346623,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2012": {
+        "returns": 5372,
+        "allSpendFieldsNull": 1,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 5371,
+          "GrantsPaidOutsideNZ": 5370,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 500576958,
+          "GrantsPaidOutsideNZ": 49862626,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2013": {
+        "returns": 5657,
+        "allSpendFieldsNull": 3,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 5654,
+          "GrantsPaidOutsideNZ": 5653,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 440630041,
+          "GrantsPaidOutsideNZ": 50848042,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2014": {
+        "returns": 5894,
+        "allSpendFieldsNull": 12,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 5882,
+          "GrantsPaidOutsideNZ": 5881,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 568730751,
+          "GrantsPaidOutsideNZ": 52943047,
+          "GrantsorDonationsPaid": 0,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2015": {
+        "returns": 6092,
+        "allSpendFieldsNull": 3,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 6084,
+          "GrantsPaidOutsideNZ": 6084,
+          "GrantsorDonationsPaid": 5,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 646265964,
+          "GrantsPaidOutsideNZ": 62924704,
+          "GrantsorDonationsPaid": 83358,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2016": {
+        "returns": 6383,
+        "allSpendFieldsNull": 320,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 201,
+          "GrantsPaidOutsideNZ": 201,
+          "GrantsorDonationsPaid": 5862,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 5605983,
+          "GrantsPaidOutsideNZ": 25627,
+          "GrantsorDonationsPaid": 227684556,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2017": {
+        "returns": 6575,
+        "allSpendFieldsNull": 345,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6230,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 246322213,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2018": {
+        "returns": 6720,
+        "allSpendFieldsNull": 346,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6374,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 291485809,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2019": {
+        "returns": 6928,
+        "allSpendFieldsNull": 361,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6567,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 290044970,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2020": {
+        "returns": 7169,
+        "allSpendFieldsNull": 374,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6795,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 256336062,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2021": {
+        "returns": 7373,
+        "allSpendFieldsNull": 394,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6979,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 279066742,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2022": {
+        "returns": 7621,
+        "allSpendFieldsNull": 431,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 7190,
+          "GrantsAndDonationsMade": 0
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 294872267,
+          "GrantsAndDonationsMade": 0
+        }
+      },
+      "2023": {
+        "returns": 7913,
+        "allSpendFieldsNull": 423,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 7381,
+          "GrantsAndDonationsMade": 109
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 313096290,
+          "GrantsAndDonationsMade": 23526367
+        }
+      },
+      "2024": {
+        "returns": 8164,
+        "allSpendFieldsNull": 298,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 6736,
+          "GrantsAndDonationsMade": 1130
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 258038672,
+          "GrantsAndDonationsMade": 540152951
+        }
+      },
+      "2025": {
+        "returns": 8259,
+        "allSpendFieldsNull": 20,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 4879,
+          "GrantsAndDonationsMade": 3360
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 83923373,
+          "GrantsAndDonationsMade": 1307172167
+        }
+      },
+      "2026": {
+        "returns": 4746,
+        "allSpendFieldsNull": 0,
+        "nonNull": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 2865,
+          "GrantsAndDonationsMade": 1881
+        },
+        "sumNZD": {
+          "GrantsPaidWithinNZ": 0,
+          "GrantsPaidOutsideNZ": 0,
+          "GrantsorDonationsPaid": 36302047,
+          "GrantsAndDonationsMade": 624820200
+        }
+      }
+    },
+    "blindSignalEntities": {
+      "entities": 47,
+      "byTier": {
+        "Tier2": 44,
+        "Tier1": 3
+      },
+      "totalExpenditureUpperBoundNZD": 563579834
+    },
+    "grantSpendAboveTotalExpenditure": {
+      "entities": 0,
+      "grantSpendNZD": 0
+    },
+    "multipleSpendFieldsPositive": {
+      "entities": 0,
+      "grantSpendNZD": 0
+    },
+    "concentration": {
+      "top10": {
+        "entities": 10,
+        "grantSpendNZD": 466108118,
+        "shareOfTotal": 0.3062
+      },
+      "top50": {
+        "entities": 50,
+        "grantSpendNZD": 893755573,
+        "shareOfTotal": 0.5871
+      },
+      "top165": {
+        "entities": 165,
+        "grantSpendNZD": 1148214536,
+        "shareOfTotal": 0.7543
+      }
+    },
+    "sizeBands": [
+      {
+        "atLeastNZD": 1000,
+        "entities": 5338
+      },
+      {
+        "atLeastNZD": 10000,
+        "entities": 3743
+      },
+      {
+        "atLeastNZD": 100000,
+        "entities": 1101
+      },
+      {
+        "atLeastNZD": 1000000,
+        "entities": 184
+      }
+    ],
+    "changedSinceJulyPull": {
+      "entities": 2768,
+      "grantSpendNZD": 801966794,
+      "note": "ModifiedOn later than the published pull time"
+    },
+    "julyProxy": {
+      "conservative": {
+        "entities": 5474,
+        "grantSpendNZD": 1307610874
+      },
+      "broad": {
+        "entities": 10742,
+        "grantSpendNZD": 1840041747
+      },
+      "note": "returns modified after the published pull removed, latest re-picked"
+    },
+    "fixedYears": [
+      {
+        "yearEnded": "2023",
+        "conservative": {
+          "entities": 4676,
+          "grantSpendNZD": 336202387
+        },
+        "broad": {
+          "entities": 9127,
+          "grantSpendNZD": 476325871
+        }
+      },
+      {
+        "yearEnded": "2024",
+        "conservative": {
+          "entities": 4963,
+          "grantSpendNZD": 798134476
+        },
+        "broad": {
+          "entities": 9620,
+          "grantSpendNZD": 1069996396
+        }
+      },
+      {
+        "yearEnded": "2025",
+        "conservative": {
+          "entities": 5251,
+          "grantSpendNZD": 1390777885
+        },
+        "broad": {
+          "entities": 10240,
+          "grantSpendNZD": 1918998801
+        }
+      }
+    ],
+    "top10": [
+      {
+        "registrationNumber": "CC40763",
+        "name": "Health Research Council Of New Zealand",
+        "yearEnded": "2025-06-30",
+        "grantSpendNZD": 123565000,
+        "history": [
+          {
+            "yearEnded": "2009-06-30",
+            "grantSpendNZD": 70062000
+          },
+          {
+            "yearEnded": "2010-06-30",
+            "grantSpendNZD": 79241000
+          },
+          {
+            "yearEnded": "2011-06-30",
+            "grantSpendNZD": 85752000
+          },
+          {
+            "yearEnded": "2012-06-30",
+            "grantSpendNZD": 86462000
+          },
+          {
+            "yearEnded": "2013-06-30",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2014-06-30",
+            "grantSpendNZD": 75411000
+          },
+          {
+            "yearEnded": "2015-06-30",
+            "grantSpendNZD": 80960000
+          },
+          {
+            "yearEnded": "2016-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2025-06-30",
+            "grantSpendNZD": 123565000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC38999",
+        "name": "Foundation North Grants Limited",
+        "yearEnded": "2026-03-31",
+        "grantSpendNZD": 72468000,
+        "history": [
+          {
+            "yearEnded": "2009-03-31",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2010-03-31",
+            "grantSpendNZD": 27495000
+          },
+          {
+            "yearEnded": "2011-03-31",
+            "grantSpendNZD": 14084000
+          },
+          {
+            "yearEnded": "2012-03-31",
+            "grantSpendNZD": 22822000
+          },
+          {
+            "yearEnded": "2013-03-30",
+            "grantSpendNZD": 21100000
+          },
+          {
+            "yearEnded": "2014-03-31",
+            "grantSpendNZD": 34913000
+          },
+          {
+            "yearEnded": "2015-03-31",
+            "grantSpendNZD": 38690000
+          },
+          {
+            "yearEnded": "2016-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-03-31",
+            "grantSpendNZD": 52134000
+          },
+          {
+            "yearEnded": "2025-03-31",
+            "grantSpendNZD": 68867000
+          },
+          {
+            "yearEnded": "2026-03-31",
+            "grantSpendNZD": 72468000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC37140",
+        "name": "National Assistance Fund",
+        "yearEnded": "2025-12-31",
+        "grantSpendNZD": 57219587,
+        "history": [
+          {
+            "yearEnded": "2010-06-30",
+            "grantSpendNZD": 31202726
+          },
+          {
+            "yearEnded": "2011-06-30",
+            "grantSpendNZD": 29633420
+          },
+          {
+            "yearEnded": "2012-06-30",
+            "grantSpendNZD": 26668564
+          },
+          {
+            "yearEnded": "2013-06-30",
+            "grantSpendNZD": 25552566
+          },
+          {
+            "yearEnded": "2014-06-30",
+            "grantSpendNZD": 29406090
+          },
+          {
+            "yearEnded": "2015-06-30",
+            "grantSpendNZD": 27878208
+          },
+          {
+            "yearEnded": "2016-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-06-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2025-12-31",
+            "grantSpendNZD": 57219587
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC10985",
+        "name": "The University Of Auckland Foundation",
+        "yearEnded": "2025-12-31",
+        "grantSpendNZD": 41903000,
+        "history": [
+          {
+            "yearEnded": "2008-12-31",
+            "grantSpendNZD": 2021000
+          },
+          {
+            "yearEnded": "2009-12-31",
+            "grantSpendNZD": 3900000
+          },
+          {
+            "yearEnded": "2010-12-31",
+            "grantSpendNZD": 3917000
+          },
+          {
+            "yearEnded": "2011-12-31",
+            "grantSpendNZD": 5360000
+          },
+          {
+            "yearEnded": "2012-12-31",
+            "grantSpendNZD": 5215620
+          },
+          {
+            "yearEnded": "2013-12-31",
+            "grantSpendNZD": 8150990
+          },
+          {
+            "yearEnded": "2014-12-31",
+            "grantSpendNZD": 15244059
+          },
+          {
+            "yearEnded": "2015-12-31",
+            "grantSpendNZD": 6774413
+          },
+          {
+            "yearEnded": "2016-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-12-31",
+            "grantSpendNZD": 41727000
+          },
+          {
+            "yearEnded": "2025-12-31",
+            "grantSpendNZD": 41903000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC57090",
+        "name": "New Zealand Community Trust",
+        "yearEnded": "2025-09-30",
+        "grantSpendNZD": 36334000,
+        "history": [
+          {
+            "yearEnded": "2019-09-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-09-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-09-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-09-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-09-30",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-09-30",
+            "grantSpendNZD": 38356000
+          },
+          {
+            "yearEnded": "2025-09-30",
+            "grantSpendNZD": 36334000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC43060",
+        "name": "Waikato Raupatu Lands Trust and Group",
+        "yearEnded": "2026-03-31",
+        "grantSpendNZD": 32742000,
+        "history": [
+          {
+            "yearEnded": "2016-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2025-03-31",
+            "grantSpendNZD": 32674000
+          },
+          {
+            "yearEnded": "2026-03-31",
+            "grantSpendNZD": 32742000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC24620",
+        "name": "Activate Foundation Trust",
+        "yearEnded": "2025-12-31",
+        "grantSpendNZD": 29251168,
+        "history": [
+          {
+            "yearEnded": "2008-12-31",
+            "grantSpendNZD": 135000
+          },
+          {
+            "yearEnded": "2009-12-31",
+            "grantSpendNZD": 81000
+          },
+          {
+            "yearEnded": "2010-12-31",
+            "grantSpendNZD": 219300
+          },
+          {
+            "yearEnded": "2011-12-31",
+            "grantSpendNZD": 112267
+          },
+          {
+            "yearEnded": "2012-12-31",
+            "grantSpendNZD": 226185
+          },
+          {
+            "yearEnded": "2013-12-31",
+            "grantSpendNZD": 150000
+          },
+          {
+            "yearEnded": "2014-12-31",
+            "grantSpendNZD": 300000
+          },
+          {
+            "yearEnded": "2015-12-31",
+            "grantSpendNZD": 325000
+          },
+          {
+            "yearEnded": "2016-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-12-31",
+            "grantSpendNZD": 385000
+          },
+          {
+            "yearEnded": "2024-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2025-12-31",
+            "grantSpendNZD": 29251168
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC40774",
+        "name": "The Gift Trust",
+        "yearEnded": "2026-03-31",
+        "grantSpendNZD": 26623363,
+        "history": [
+          {
+            "yearEnded": "2010-03-31",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2011-03-31",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2012-03-30",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2013-03-30",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2014-03-31",
+            "grantSpendNZD": 0
+          },
+          {
+            "yearEnded": "2015-03-31",
+            "grantSpendNZD": 169010
+          },
+          {
+            "yearEnded": "2016-03-31",
+            "grantSpendNZD": 93005
+          },
+          {
+            "yearEnded": "2017-03-31",
+            "grantSpendNZD": 115794
+          },
+          {
+            "yearEnded": "2018-03-31",
+            "grantSpendNZD": 185399
+          },
+          {
+            "yearEnded": "2019-03-31",
+            "grantSpendNZD": 373366
+          },
+          {
+            "yearEnded": "2020-03-31",
+            "grantSpendNZD": 538301
+          },
+          {
+            "yearEnded": "2021-03-31",
+            "grantSpendNZD": 1603958
+          },
+          {
+            "yearEnded": "2022-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-03-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-03-31",
+            "grantSpendNZD": 59853637
+          },
+          {
+            "yearEnded": "2025-03-31",
+            "grantSpendNZD": 16874477
+          },
+          {
+            "yearEnded": "2026-03-31",
+            "grantSpendNZD": 26623363
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC61455",
+        "name": "Saint John's College Trust Board Group",
+        "yearEnded": "2025-12-31",
+        "grantSpendNZD": 23532000,
+        "history": [
+          {
+            "yearEnded": "2022-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2025-12-31",
+            "grantSpendNZD": 23532000
+          }
+        ]
+      },
+      {
+        "registrationNumber": "CC30871",
+        "name": "The University of Auckland Medical & Health Sciences Foundation",
+        "yearEnded": "2025-12-31",
+        "grantSpendNZD": 22470000,
+        "history": [
+          {
+            "yearEnded": "2008-12-31",
+            "grantSpendNZD": 1823000
+          },
+          {
+            "yearEnded": "2009-12-31",
+            "grantSpendNZD": 1110000
+          },
+          {
+            "yearEnded": "2010-12-31",
+            "grantSpendNZD": 1648000
+          },
+          {
+            "yearEnded": "2011-12-31",
+            "grantSpendNZD": 2027000
+          },
+          {
+            "yearEnded": "2012-12-31",
+            "grantSpendNZD": 2272264
+          },
+          {
+            "yearEnded": "2013-12-31",
+            "grantSpendNZD": 6543550
+          },
+          {
+            "yearEnded": "2014-12-31",
+            "grantSpendNZD": 5654754
+          },
+          {
+            "yearEnded": "2015-12-31",
+            "grantSpendNZD": 6833145
+          },
+          {
+            "yearEnded": "2016-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2017-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2018-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2019-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2020-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2021-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2022-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2023-12-31",
+            "grantSpendNZD": null
+          },
+          {
+            "yearEnded": "2024-12-31",
+            "grantSpendNZD": 23259000
+          },
+          {
+            "yearEnded": "2025-12-31",
+            "grantSpendNZD": 22470000
+          }
+        ]
+      }
+    ],
+    "yearEnded2026": {
+      "entities": 2918,
+      "grantSpendNZD": 661122247
+    }
+  },
+  "spotCheckSample": [
+    {
+      "registrationNumber": "CC40763",
+      "entityType": "Organisation",
+      "yearEnded": "2025-06-30",
+      "reportingTier": "Tier1",
+      "grantSpendNZD": 123565000,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 123565000
+      },
+      "totalExpenditureNZD": 130464000,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC40763"
+    },
+    {
+      "registrationNumber": "CC49724",
+      "entityType": "Organisation",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier2",
+      "grantSpendNZD": 21558000,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 21558000
+      },
+      "totalExpenditureNZD": 21611000,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC49724"
+    },
+    {
+      "registrationNumber": "CC20440",
+      "entityType": "Organisation",
+      "yearEnded": "2025-12-31",
+      "reportingTier": "Tier2",
+      "grantSpendNZD": 12673000,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 12673000
+      },
+      "totalExpenditureNZD": 14270000,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC20440"
+    },
+    {
+      "registrationNumber": "CC54900",
+      "entityType": "Group",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier2",
+      "grantSpendNZD": 8634843,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 8634843
+      },
+      "totalExpenditureNZD": 14525986,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC54900"
+    },
+    {
+      "registrationNumber": "CC22820",
+      "entityType": "Organisation",
+      "yearEnded": "2026-06-30",
+      "reportingTier": "Tier1",
+      "grantSpendNZD": 6185000,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 6185000
+      },
+      "totalExpenditureNZD": 6726000,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC22820"
+    },
+    {
+      "registrationNumber": "CC10006",
+      "entityType": "Organisation",
+      "yearEnded": "2026-05-31",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 48475,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 48475
+      },
+      "totalExpenditureNZD": 75439,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC10006"
+    },
+    {
+      "registrationNumber": "CC20979",
+      "entityType": "Organisation",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 7947,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 7947
+      },
+      "totalExpenditureNZD": 12591,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC20979"
+    },
+    {
+      "registrationNumber": "CC23442",
+      "entityType": "Organisation",
+      "yearEnded": "2025-03-31",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 313970,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 313970
+      },
+      "totalExpenditureNZD": 446373,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC23442"
+    },
+    {
+      "registrationNumber": "CC25678",
+      "entityType": "Organisation",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 270000,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 270000
+      },
+      "totalExpenditureNZD": 330578,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC25678"
+    },
+    {
+      "registrationNumber": "CC27897",
+      "entityType": "Organisation",
+      "yearEnded": "2025-03-31",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 6100,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 6100,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 59890,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC27897"
+    },
+    {
+      "registrationNumber": "CC30631",
+      "entityType": "Organisation",
+      "yearEnded": "2025-03-31",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 12090,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 12090,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 12090,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC30631"
+    },
+    {
+      "registrationNumber": "CC33529",
+      "entityType": "Organisation",
+      "yearEnded": "2025-06-30",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 34143,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 34143,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 43560,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC33529"
+    },
+    {
+      "registrationNumber": "CC37142",
+      "entityType": "Organisation",
+      "yearEnded": "2025-12-31",
+      "reportingTier": "Tier2",
+      "grantSpendNZD": 150017,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 150017
+      },
+      "totalExpenditureNZD": 174834,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC37142"
+    },
+    {
+      "registrationNumber": "CC40030",
+      "entityType": "Organisation",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 38550,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 38550
+      },
+      "totalExpenditureNZD": 41431,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC40030"
+    },
+    {
+      "registrationNumber": "CC44267",
+      "entityType": "Organisation",
+      "yearEnded": "2025-06-30",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 24277,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 24277,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 29377,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC44267"
+    },
+    {
+      "registrationNumber": "CC47840",
+      "entityType": "Organisation",
+      "yearEnded": "2026-04-30",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 8660,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 8660,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 10652,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC47840"
+    },
+    {
+      "registrationNumber": "CC50975",
+      "entityType": "Organisation",
+      "yearEnded": "2025-10-31",
+      "reportingTier": "Tier2",
+      "grantSpendNZD": 1388376,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 1388376
+      },
+      "totalExpenditureNZD": 1594978,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC50975"
+    },
+    {
+      "registrationNumber": "CC53863",
+      "entityType": "Organisation",
+      "yearEnded": "2025-06-30",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 12184,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 12184,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 21762,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC53863"
+    },
+    {
+      "registrationNumber": "CC57027",
+      "entityType": "Organisation",
+      "yearEnded": "2025-06-30",
+      "reportingTier": "Tier3",
+      "grantSpendNZD": 241504,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": null,
+        "GrantsAndDonationsMade": 241504
+      },
+      "totalExpenditureNZD": 1344480,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC57027"
+    },
+    {
+      "registrationNumber": "CC60352",
+      "entityType": "Organisation",
+      "yearEnded": "2026-03-31",
+      "reportingTier": "Tier4",
+      "grantSpendNZD": 26808,
+      "fields": {
+        "GrantsPaidWithinNZ": null,
+        "GrantsPaidOutsideNZ": null,
+        "GrantsorDonationsPaid": 26808,
+        "GrantsAndDonationsMade": null
+      },
+      "totalExpenditureNZD": 28775,
+      "summaryUrl": "https://www.charities.govt.nz/charities-in-new-zealand/the-charities-register/charity-summary/?ent=CC60352"
+    }
+  ]
+}
